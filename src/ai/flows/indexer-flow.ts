@@ -3,7 +3,7 @@
 /**
  * @fileOverview A flow for indexing file content.
  *
- * - indexFile - A function that takes file content, generates embeddings, and stores them.
+ * - indexFile - A function that takes a file URL, downloads it, generates embeddings, and stores them.
  * - IndexFileInput - The input type for the indexFile function.
  * - IndexFileOutput - The return type for the indexFile function.
  */
@@ -21,9 +21,7 @@ const db = getFirestore(app);
 
 const IndexFileInputSchema = z.object({
   fileName: z.string().describe('The name of the file being indexed.'),
-  fileContent: z
-    .string()
-    .describe('The full text content of the file.'),
+  fileUrl: z.string().url().describe('The public download URL of the file.'),
 });
 export type IndexFileInput = z.infer<typeof IndexFileInputSchema>;
 
@@ -49,16 +47,24 @@ const indexFileFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      // 1. Generate an embedding for the file content.
+      // 1. Download the file content from the URL.
+      const response = await fetch(input.fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`);
+      }
+      // This works for text-based files. For PDFs, DOCX, etc., a more complex parser would be needed.
+      const fileContent = await response.text();
+
+      // 2. Generate an embedding for the file content.
       const { embedding } = await ai.embed({
         model: 'googleai/text-embedding-004',
-        content: input.fileContent,
+        content: fileContent,
       });
 
-      // 2. Save the content and its embedding to Firestore.
+      // 3. Save the content and its embedding to Firestore.
       const docRef = await addDoc(collection(db, 'file_chunks'), {
         fileName: input.fileName,
-        text: input.fileContent,
+        text: fileContent,
         embedding: embedding,
       });
 

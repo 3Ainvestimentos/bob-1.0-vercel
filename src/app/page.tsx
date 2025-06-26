@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getStorage, ref, listAll, uploadBytes, getDownloadURL, deleteObject, getBlob, type StorageReference } from 'firebase/storage';
+import { getStorage, ref, listAll, uploadBytes, getDownloadURL, deleteObject, type StorageReference } from 'firebase/storage';
 import { app } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -122,11 +122,7 @@ function FileManager() {
   const handleIndexFile = async (file: StoredFile) => {
     setIsIndexing(prev => ({...prev, [file.name]: true}));
     try {
-      const blob = await getBlob(file.ref);
-      // This works for text-based files. For PDFs, DOCX, etc., a more complex parser would be needed.
-      const text = await blob.text();
-      
-      const result = await indexFile({ fileName: file.name, fileContent: text });
+      const result = await indexFile({ fileName: file.name, fileUrl: file.url });
 
       if (result.success) {
         toast({
