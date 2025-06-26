@@ -120,17 +120,19 @@ function FileManager() {
   };
 
   const handleIndexFile = async (file: StoredFile) => {
-    setIsIndexing(prev => ({...prev, [file.name]: true}));
+    setIsIndexing(prev => ({ ...prev, [file.name]: true }));
     try {
       const result = await indexFile({ fileName: file.name, fileUrl: file.url });
 
-      if (result.success) {
+      if (result && result.success) {
         toast({
           title: 'Indexação Concluída',
           description: `O arquivo "${file.name}" foi processado e adicionado à memória do chatbot.`,
         });
       } else {
-        throw new Error(result.message);
+        // If result is falsy or doesn't have a message, provide a generic one.
+        const errorMessage = result?.message || 'Ocorreu um erro desconhecido durante a indexação.';
+        throw new Error(errorMessage);
       }
     } catch (error: any) {
       console.error("Error indexing file:", error);
@@ -140,7 +142,7 @@ function FileManager() {
         description: error.message || `Não foi possível indexar o arquivo "${file.name}".`,
       });
     } finally {
-      setIsIndexing(prev => ({...prev, [file.name]: false}));
+      setIsIndexing(prev => ({ ...prev, [file.name]: false }));
     }
   }
 
