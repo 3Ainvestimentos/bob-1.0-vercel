@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow for indexing file content.
@@ -82,9 +81,11 @@ const indexFileFlow = ai.defineFlow(
       };
     } catch (e: any) {
       console.error('Error during indexing flow:', e);
+      // Enhance error message to include Firebase error code if available for better diagnostics.
+      const errorMessage = e.code ? `[Code: ${e.code}] ${e.message}` : e.message;
       return {
         success: false,
-        message: `Failed to index: ${e.message}`,
+        message: `Failed to index: ${errorMessage}`,
       };
     }
   }
