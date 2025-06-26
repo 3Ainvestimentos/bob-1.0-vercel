@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Trash2, Download, Copy, Loader2 } from 'lucide-react';
+import { Upload, FileText, Trash2, Download, Copy, Loader2, LogIn } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useAuth } from '@/context/auth-context';
 
 interface StoredFile {
   ref: StorageReference;
@@ -16,18 +17,22 @@ interface StoredFile {
   url: string;
 }
 
-export default function HomePage() {
+function FileManager() {
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchFiles = useCallback(async () => {
+    if (!user) return; // Don't fetch if no user
     setIsLoading(true);
     try {
       const storage = getStorage(app);
+      // Optional: You can create user-specific folders
+      // const listRef = ref(storage, `users/${user.uid}/`);
       const listRef = ref(storage, '/');
       const res = await listAll(listRef);
       const filePromises = res.items.map(async (itemRef) => {
@@ -41,12 +46,12 @@ export default function HomePage() {
       toast({
         variant: 'destructive',
         title: 'Erro ao carregar arquivos',
-        description: error.message || 'Não foi possível listar os arquivos do bucket.',
+        description: error.message || 'Não foi possível listar os arquivos. Verifique as regras de segurança do Storage.',
       });
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, user]);
 
   useEffect(() => {
     fetchFiles();
@@ -59,9 +64,11 @@ export default function HomePage() {
   };
 
   const handleUpload = async () => {
-    if (!fileToUpload) return;
+    if (!fileToUpload || !user) return;
     setIsUploading(true);
     const storage = getStorage(app);
+    // Optional: You can create user-specific folders
+    // const fileRef = ref(storage, `users/${user.uid}/${fileToUpload.name}`);
     const fileRef = ref(storage, `/${fileToUpload.name}`);
     try {
       await uploadBytes(fileRef, fileToUpload);
@@ -204,4 +211,36 @@ export default function HomePage() {
       </section>
     </div>
   );
+}
+
+
+export default function HomePage() {
+    const { user, loading, signIn } = useAuth();
+  
+    if (loading) {
+      // The AuthProvider already shows a global loader, so we can return null
+      // or a minimal loader here to avoid layout shifts.
+      return null;
+    }
+  
+    if (!user) {
+      return (
+        <div className="container mx-auto flex h-[calc(100vh-8rem)] items-center justify-center">
+            <Card className="w-full max-w-sm text-center">
+                <CardHeader>
+                    <CardTitle>Acesso Restrito</CardTitle>
+                    <CardDescription>Você precisa estar autenticado para acessar esta página.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={signIn}>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Entrar com Google
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+      );
+    }
+  
+    return <FileManager />;
 }
