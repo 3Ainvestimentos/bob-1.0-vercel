@@ -111,10 +111,14 @@ const indexFileFlow = ai.defineFlow(
           content: chunk,
         });
 
-        const embedding = embedResponse?.embedding;
+        if (!embedResponse) {
+          throw new Error('Embedding API returned an undefined or null response.');
+        }
+
+        const embedding = embedResponse.embedding;
 
         if (!embedding) {
-          throw new Error('Embedding API returned an invalid or empty response for a chunk.');
+          throw new Error('Embedding API returned a response without an embedding property.');
         }
         
         await adminDb.collection('file_chunks').add({
