@@ -1,78 +1,206 @@
-"use client";
+'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
-import type { Meeting } from '@/types';
-import { DashboardMetrics } from '@/components/dashboard-metrics';
-import { DataTable } from '@/components/data-table';
-import { Separator } from '@/components/ui/separator';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { getStorage, ref, listAll, uploadBytes, getDownloadURL, deleteObject, type StorageReference } from 'firebase/storage';
+import { app } from '@/lib/firebase';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Upload, FileText, Trash2, Download, Copy, Loader2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
-const DUMMY_MEETINGS_DATA: Meeting[] = [
-  { id: 'm1', name: 'Project Kickoff', date: '2024-08-01T10:00:00Z', attendees: 10, status: 'Scheduled' },
-  { id: 'm2', name: 'Sprint Planning', date: '2024-08-05T14:00:00Z', attendees: 8, status: 'Scheduled' },
-  { id: 'm3', name: 'Client Demo', date: '2024-07-20T11:00:00Z', attendees: 5, status: 'Completed' },
-  { id: 'm4', name: 'Retrospective', date: '2024-08-12T16:00:00Z', attendees: 7, status: 'Scheduled' },
-  { id: 'm5', name: 'Stakeholder Update', date: '2024-07-28T09:00:00Z', attendees: 3, status: 'Completed' },
-  { id: 'm6', name: 'Design Review', date: '2024-08-15T13:00:00Z', attendees: 6, status: 'Scheduled' },
-  { id: 'm7', name: 'Q3 Planning', date: '2024-06-10T10:00:00Z', attendees: 12, status: 'Completed' },
-  { id: 'm8', name: 'Cancelled Meeting', date: '2024-08-02T10:00:00Z', attendees: 4, status: 'Cancelled' },
-];
+interface StoredFile {
+  ref: StorageReference;
+  name: string;
+  url: string;
+}
 
-export default function DataVisorPage() {
-  const [meetingsData] = useState<Meeting[]>(DUMMY_MEETINGS_DATA);
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+export default function HomePage() {
+  const [files, setFiles] = useState<StoredFile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  const handleRowSelect = useCallback((id: string, isSelected: boolean) => {
-    setSelectedRows(prevSelectedRows => {
-      const newSelectedRows = new Set(prevSelectedRows);
-      if (isSelected) {
-        newSelectedRows.add(id);
-      } else {
-        newSelectedRows.delete(id);
-      }
-      return newSelectedRows;
-    });
-  }, []);
-
-  const handleSelectAll = useCallback((isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedRows(new Set(meetingsData.map(meeting => meeting.id)));
-    } else {
-      setSelectedRows(new Set());
+  const fetchFiles = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const storage = getStorage(app);
+      const listRef = ref(storage, '/');
+      const res = await listAll(listRef);
+      const filePromises = res.items.map(async (itemRef) => {
+        const url = await getDownloadURL(itemRef);
+        return { ref: itemRef, name: itemRef.name, url };
+      });
+      const fetchedFiles = await Promise.all(filePromises);
+      setFiles(fetchedFiles);
+    } catch (error: any) {
+      console.error("Error fetching files:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao carregar arquivos',
+        description: error.message || 'Não foi possível listar os arquivos do bucket.',
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [meetingsData]);
-  
-  const memoizedMeetingsData = useMemo(() => meetingsData, [meetingsData]);
+  }, [toast]);
+
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setFileToUpload(event.target.files[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!fileToUpload) return;
+    setIsUploading(true);
+    const storage = getStorage(app);
+    const fileRef = ref(storage, `/${fileToUpload.name}`);
+    try {
+      await uploadBytes(fileRef, fileToUpload);
+      toast({
+        title: 'Upload concluído',
+        description: `O arquivo "${fileToUpload.name}" foi enviado com sucesso.`,
+      });
+      setFileToUpload(null);
+      if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      fetchFiles(); // Refresh file list
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro no upload',
+        description: error.message || `Não foi possível enviar o arquivo "${fileToUpload.name}".`,
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDelete = async (fileRef: StorageReference) => {
+    try {
+      await deleteObject(fileRef);
+      toast({
+        title: 'Arquivo excluído',
+        description: `O arquivo "${fileRef.name}" foi excluído com sucesso.`,
+      });
+      fetchFiles(); // Refresh file list
+    } catch (error: any) {
+      console.error("Error deleting file:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao excluir',
+        description: error.message || `Não foi possível excluir o arquivo "${fileRef.name}".`,
+      });
+    }
+  };
+
+  const copyToClipboard = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast({
+      title: 'URL Copiada!',
+      description: 'O link para o arquivo foi copiado para a área de transferência.',
+    });
+  };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
-      <header className="text-center md:text-left">
-        <h1 className="text-4xl font-headline font-bold text-primary">Dashboard de Reuniões</h1>
+    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+      <header className="mb-8">
+        <h1 className="text-4xl font-headline font-bold text-primary">Gerenciador de Arquivos</h1>
         <p className="text-lg text-muted-foreground mt-1">
-          Visão interativa dos dados de suas reuniões.
+          Faça upload, visualize e gerencie seus arquivos no Firebase Storage.
         </p>
       </header>
 
-      <section aria-labelledby="dashboard-title">
-        <h2 id="dashboard-title" className="text-2xl font-headline font-semibold mb-4 sr-only">
-          Métricas do Dashboard
-        </h2>
-        <DashboardMetrics data={memoizedMeetingsData} selectedRows={selectedRows} />
-      </section>
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Novo Upload</CardTitle>
+          <CardDescription>Selecione um arquivo para enviar para o bucket.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Input
+              type="file"
+              onChange={handleFileSelect}
+              ref={fileInputRef}
+              className="flex-grow"
+              disabled={isUploading}
+            />
+            <Button onClick={handleUpload} disabled={!fileToUpload || isUploading}>
+              {isUploading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              {isUploading ? 'Enviando...' : 'Enviar Arquivo'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Separator className="my-6 md:my-8" />
-
-      <section aria-labelledby="data-table-title" className="flex-grow flex flex-col">
-        <h2 id="data-table-title" className="text-2xl font-headline font-semibold mb-4">
-          Visão Geral das Reuniões
-        </h2>
-        <div className="flex-grow">
-           <DataTable
-            data={memoizedMeetingsData}
-            selectedRows={selectedRows}
-            onRowSelect={handleRowSelect}
-            onSelectAll={handleSelectAll}
-          />
-        </div>
+      <section>
+        <h2 className="text-2xl font-headline font-semibold mb-4">Arquivos no Bucket</h2>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-4 text-muted-foreground">Carregando arquivos...</p>
+          </div>
+        ) : files.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {files.map((file) => (
+              <Card key={file.name}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 truncate">
+                    <FileText className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate">{file.name}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardFooter className="flex justify-between gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => copyToClipboard(file.url)}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <a href={file.url} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="icon">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </a>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="icon">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação não pode ser desfeita. Isso excluirá permanentemente o arquivo "{file.name}" do seu bucket.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(file.ref)}>
+                          Sim, excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground py-10">Nenhum arquivo encontrado no bucket.</p>
+        )}
       </section>
     </div>
   );

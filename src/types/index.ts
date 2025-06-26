@@ -1,7 +1,1 @@
-export interface Meeting {
-  id: string;
-  name: string;
-  date: string; // ISO string format
-  attendees: number;
-  status: 'Scheduled' | 'Completed' | 'Cancelled';
-}
+// This file is intentionally left blank as there are no custom global types needed at the moment.
