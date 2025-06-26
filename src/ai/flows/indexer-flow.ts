@@ -38,8 +38,17 @@ const indexFileFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      // Dynamically import the admin SDK only when the flow is running on the server.
-      const { adminDb } = await import('@/lib/firebase-admin');
+      // Dynamically import and initialize the Admin SDK inside the flow.
+      // This is a robust way to ensure it's only used on the server and
+      // avoids Next.js/Turbopack bundling issues.
+      const admin = await import('firebase-admin');
+      if (admin.apps.length === 0) {
+        admin.initializeApp({
+          credential: admin.credential.applicationDefault(),
+        });
+        console.log('Firebase Admin SDK initialized inside flow.');
+      }
+      const adminDb = admin.firestore();
       
       // 1. Download the file content from the URL.
       const response = await fetch(input.fileUrl);
