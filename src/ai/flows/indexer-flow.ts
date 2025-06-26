@@ -9,14 +9,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import {
-  getFirestore,
-  collection,
-  addDoc,
-} from 'firebase/firestore';
-import { app } from '@/lib/firebase';
-
-const db = getFirestore(app);
+import { adminDb } from '@/lib/firebase-admin';
 
 const IndexFileInputSchema = z.object({
   fileName: z.string().describe('The name of the file being indexed.'),
@@ -66,8 +59,8 @@ const indexFileFlow = ai.defineFlow(
       const { embedding } = embedResponse;
 
 
-      // 3. Save the content and its embedding to Firestore.
-      const docRef = await addDoc(collection(db, 'file_chunks'), {
+      // 3. Save the content and its embedding to Firestore using the Admin SDK.
+      const docRef = await adminDb.collection('file_chunks').add({
         fileName: input.fileName,
         text: fileContent,
         embedding: embedding,
