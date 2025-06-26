@@ -38,27 +38,32 @@ const indexFileFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      // Dynamically import and initialize the Admin SDK inside the flow.
-      // This is a robust way to ensure it's only used on the server and
-      // avoids Next.js/Turbopack bundling issues.
-      const admin = await import('firebase-admin');
-      if (admin.apps.length === 0) {
-        admin.initializeApp({
-          credential: admin.credential.applicationDefault(),
-        });
-        console.log('Firebase Admin SDK initialized inside flow.');
+      // Step 1: Initialize Firebase Admin SDK. This is in its own try/catch
+      // to isolate initialization errors, which have been the source of issues.
+      let adminDb;
+      try {
+        const admin = await import('firebase-admin');
+        if (admin.apps.length === 0) {
+          admin.initializeApp({
+            credential: admin.credential.applicationDefault(),
+          });
+          console.log('Firebase Admin SDK initialized inside flow.');
+        }
+        adminDb = admin.firestore();
+      } catch (e: any) {
+        console.error('CRITICAL: Firebase Admin SDK initialization failed.', e);
+        // This is a critical failure. We provide a more specific error message.
+        throw new Error(`Firebase Admin init failed: ${e.message}. Ensure your server environment has credentials.`);
       }
-      const adminDb = admin.firestore();
-      
-      // 1. Download the file content from the URL.
+
+      // Step 2: Download the file content from the URL.
       const response = await fetch(input.fileUrl);
       if (!response.ok) {
         throw new Error(`Failed to download file: ${response.statusText}`);
       }
-      // This works for text-based files. For PDFs, DOCX, etc., a more complex parser would be needed.
       const fileContent = await response.text();
 
-      // 2. Generate an embedding for the file content.
+      // Step 3: Generate an embedding for the file content.
       const embedResponse = await ai.embed({
         model: 'googleai/text-embedding-004',
         content: fileContent,
@@ -70,7 +75,7 @@ const indexFileFlow = ai.defineFlow(
       const { embedding } = embedResponse;
 
 
-      // 3. Save the content and its embedding to Firestore using the Admin SDK.
+      // Step 4: Save the content and its embedding to Firestore using the Admin SDK.
       const docRef = await adminDb.collection('file_chunks').add({
         fileName: input.fileName,
         text: fileContent,
@@ -85,7 +90,6 @@ const indexFileFlow = ai.defineFlow(
       };
     } catch (e: any) {
       console.error('Error during indexing flow:', e);
-      // Enhance error message to include Firebase error code if available for better diagnostics.
       const errorMessage = e.code ? `[Code: ${e.code}] ${e.message}` : e.message;
       return {
         success: false,
