@@ -56,10 +56,16 @@ const indexFileFlow = ai.defineFlow(
       const fileContent = await response.text();
 
       // 2. Generate an embedding for the file content.
-      const { embedding } = await ai.embed({
+      const embedResponse = await ai.embed({
         model: 'googleai/text-embedding-004',
         content: fileContent,
       });
+
+      if (!embedResponse?.embedding) {
+        throw new Error('Failed to generate embedding. The embedding API returned an invalid response.');
+      }
+      const { embedding } = embedResponse;
+
 
       // 3. Save the content and its embedding to Firestore.
       const docRef = await addDoc(collection(db, 'file_chunks'), {
