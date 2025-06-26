@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -216,17 +217,23 @@ function FileManager() {
 
 export default function HomePage() {
     const { user, loading, signIn } = useAuth();
-  
+    const [hostname, setHostname] = useState('');
+
+    useEffect(() => {
+        // This runs only on the client-side
+        if (typeof window !== 'undefined') {
+            setHostname(window.location.hostname);
+        }
+    }, []);
+
     if (loading) {
-      // The AuthProvider already shows a global loader, so we can return null
-      // or a minimal loader here to avoid layout shifts.
       return null;
     }
   
     if (!user) {
       return (
         <div className="container mx-auto flex h-[calc(100vh-8rem)] items-center justify-center">
-            <Card className="w-full max-w-sm text-center">
+            <Card className="w-full max-w-md text-center">
                 <CardHeader>
                     <CardTitle>Acesso Restrito</CardTitle>
                     <CardDescription>Você precisa estar autenticado para acessar esta página.</CardDescription>
@@ -237,6 +244,17 @@ export default function HomePage() {
                         Entrar com Google
                     </Button>
                 </CardContent>
+                {hostname && (
+                    <CardFooter className="flex-col gap-2 pt-4">
+                        <p className="text-xs text-muted-foreground">Problemas com o login?</p>
+                        <p className="text-xs text-muted-foreground">
+                            Certifique-se de que o domínio a seguir está autorizado no seu projeto Firebase:
+                        </p>
+                        <div className="mt-2 text-sm font-semibold bg-muted text-muted-foreground rounded-md px-3 py-1">
+                            {hostname}
+                        </div>
+                    </CardFooter>
+                )}
             </Card>
         </div>
       );
