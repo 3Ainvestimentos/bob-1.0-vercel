@@ -130,9 +130,9 @@ const indexFileFlow = ai.defineFlow(
       }
     } catch (e: any) {
       console.error('CRITICAL: Failed during chunk processing (embedding or Firestore write).', e);
-      // Check for permission errors specifically
+      // Check for permission errors specifically, which is the most likely cause.
       if (e.code === 'permission-denied' || e.code === 7) {
-         return { success: false, message: `Failed to write to Firestore: Permission Denied. Please check your service account permissions.` };
+         return { success: false, message: `Failed to write to Firestore: Permission Denied. Please check your service account permissions. If developing locally, you may need to run "gcloud auth application-default login" in your terminal.` };
       }
        // Provide more context in the error message
       const errorMessage = e.message || 'An unknown error occurred';
