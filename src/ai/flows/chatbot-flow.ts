@@ -85,34 +85,54 @@ const ragChatFlow = ai.defineFlow(
       adminDb = admin.firestore();
     } catch (e: any) {
         console.error('CRITICAL: Failed to initialize Firebase Admin SDK for RAG.', e);
-        return { response: "Desculpe, não consegui me conectar ao banco de dados para buscar o contexto. Verifique a configuração do servidor." };
+        const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
+        const errorMessage = isAuthError
+            ? 'Falha na autenticação do servidor. Por favor, execute "gcloud auth application-default login" em seu terminal e reinicie o servidor.'
+            : `Não foi possível inicializar o Admin SDK. Detalhes: ${e.message}`;
+        return { response: `Erro de configuração do servidor: ${errorMessage}` };
     }
 
     if (!adminDb) {
-        return { response: 'Server-side error: Firestore database object is not available after initialization.' };
+        return { response: 'Erro no servidor: O objeto do banco de dados Firestore não está disponível após a inicialização.' };
     }
     
     // Step 2. Generate embedding for the user's prompt
-    const embedResponse = await ai.embed({
-      model: 'googleai/embedding-001',
-      content: input.prompt,
-    });
-    const promptEmbedding = embedResponse?.embedding;
-    if (!promptEmbedding) {
-        return { response: "Desculpe, não consegui processar sua pergunta para buscar o contexto." };
+    let promptEmbedding;
+    try {
+        const embedResponse = await ai.embed({
+          model: 'googleai/embedding-001',
+          content: input.prompt,
+        });
+
+        if (!embedResponse?.embedding) {
+            throw new Error('A resposta da API de embedding não continha um vetor.');
+        }
+        promptEmbedding = embedResponse.embedding;
+    } catch (e: any) {
+        console.error('CRITICAL: Failed to generate prompt embedding.', e);
+        return { response: `Desculpe, não consegui processar sua pergunta para buscar no contexto. Detalhes: ${e.message}` };
     }
 
     // Step 3. Fetch all chunks for the specified file from Firestore
-    const chunksSnapshot = await adminDb
-        .collection('file_chunks')
-        .where('fileName', '==', input.fileName)
-        .get();
+    let allChunks;
+    try {
+        const chunksSnapshot = await adminDb
+            .collection('file_chunks')
+            .where('fileName', '==', input.fileName)
+            .get();
 
-    if (chunksSnapshot.empty) {
-        return { response: `Desculpe, não encontrei nenhum conteúdo indexado para o arquivo "${input.fileName}". Por favor, indexe o arquivo primeiro.` };
+        if (chunksSnapshot.empty) {
+            return { response: `Desculpe, não encontrei nenhum conteúdo indexado para o arquivo "${input.fileName}". Por favor, indexe o arquivo primeiro.` };
+        }
+        allChunks = chunksSnapshot.docs.map(doc => doc.data() as { text: string; embedding: number[] });
+    } catch(e: any) {
+        console.error('CRITICAL: Failed to fetch chunks from Firestore.', e);
+        if (e.code === 'permission-denied' || e.code === 7) {
+             return { response: `Falha ao ler do Firestore: Permissão negada. Verifique as permissões da sua conta de serviço.` };
+        }
+        return { response: `Erro ao buscar dados do arquivo no banco. Detalhes: ${e.message}`};
     }
 
-    const allChunks = chunksSnapshot.docs.map(doc => doc.data() as { text: string; embedding: number[] });
 
     // Step 4. Calculate similarity and find the top N most relevant chunks
     const chunksWithSimilarity = allChunks.map(chunk => ({
@@ -139,7 +159,12 @@ Pergunta do usuário: ${input.prompt}
 Resposta:`;
 
     // Step 6. Call the LLM with the context-rich prompt
-    const llmResponse = await ai.generate({ prompt: finalPrompt });
-    return { response: llmResponse.text };
+    try {
+        const llmResponse = await ai.generate({ prompt: finalPrompt });
+        return { response: llmResponse.text };
+    } catch(e: any) {
+        console.error('CRITICAL: Failed to generate final response from LLM.', e);
+        return { response: `Ocorreu um erro ao gerar a resposta final. Detalhes: ${e.message}` };
+    }
   }
 );
