@@ -9,7 +9,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { adminDb } from '@/lib/firebase-admin';
 
 const IndexFileInputSchema = z.object({
   fileName: z.string().describe('The name of the file being indexed.'),
@@ -39,6 +38,9 @@ const indexFileFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      // Dynamically import the admin SDK only when the flow is running on the server.
+      const { adminDb } = await import('@/lib/firebase-admin');
+      
       // 1. Download the file content from the URL.
       const response = await fetch(input.fileUrl);
       if (!response.ok) {
