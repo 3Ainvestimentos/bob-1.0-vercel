@@ -1,0 +1,79 @@
+
+'use server';
+/**
+ * @fileOverview A flow for indexing file content.
+ *
+ * - indexFile - A function that takes file content, generates embeddings, and stores them.
+ * - IndexFileInput - The input type for the indexFile function.
+ * - IndexFileOutput - The return type for the indexFile function.
+ */
+
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import {
+  getFirestore,
+  collection,
+  addDoc,
+} from 'firebase/firestore';
+import { app } from '@/lib/firebase';
+
+const db = getFirestore(app);
+
+const IndexFileInputSchema = z.object({
+  fileName: z.string().describe('The name of the file being indexed.'),
+  fileContent: z
+    .string()
+    .describe('The full text content of the file.'),
+});
+export type IndexFileInput = z.infer<typeof IndexFileInputSchema>;
+
+const IndexFileOutputSchema = z.object({
+  success: z.boolean().describe('Whether the indexing was successful.'),
+  message: z.string().describe('A message indicating the result.'),
+});
+export type IndexFileOutput = z.infer<typeof IndexFileOutputSchema>;
+
+export async function indexFile(
+  input: IndexFileInput
+): Promise<IndexFileOutput> {
+  return indexFileFlow(input);
+}
+
+// For now, we treat the entire file content as a single "chunk".
+// For larger files, this should be split into smaller, overlapping chunks.
+const indexFileFlow = ai.defineFlow(
+  {
+    name: 'indexFileFlow',
+    inputSchema: IndexFileInputSchema,
+    outputSchema: IndexFileOutputSchema,
+  },
+  async (input) => {
+    try {
+      // 1. Generate an embedding for the file content.
+      const { embedding } = await ai.embed({
+        model: 'googleai/text-embedding-004',
+        content: input.fileContent,
+      });
+
+      // 2. Save the content and its embedding to Firestore.
+      const docRef = await addDoc(collection(db, 'file_chunks'), {
+        fileName: input.fileName,
+        text: input.fileContent,
+        embedding: embedding,
+      });
+
+      console.log('Document written with ID: ', docRef.id);
+
+      return {
+        success: true,
+        message: `Successfully indexed ${input.fileName}`,
+      };
+    } catch (e: any) {
+      console.error('Error during indexing flow:', e);
+      return {
+        success: false,
+        message: `Failed to index: ${e.message}`,
+      };
+    }
+  }
+);

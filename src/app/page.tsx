@@ -2,15 +2,17 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getStorage, ref, listAll, uploadBytes, getDownloadURL, deleteObject, type StorageReference } from 'firebase/storage';
+import { getStorage, ref, listAll, uploadBytes, getDownloadURL, deleteObject, getBlob, type StorageReference } from 'firebase/storage';
 import { app } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Trash2, Download, Copy, Loader2, LogIn } from 'lucide-react';
+import { Upload, FileText, Trash2, Download, Copy, Loader2, LogIn, BookOpen } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/context/auth-context';
+import { indexFile } from '@/ai/flows/indexer-flow';
+
 
 interface StoredFile {
   ref: StorageReference;
@@ -22,6 +24,7 @@ function FileManager() {
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isIndexing, setIsIndexing] = useState<Record<string, boolean>>({});
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -32,8 +35,6 @@ function FileManager() {
     setIsLoading(true);
     try {
       const storage = getStorage(app);
-      // Optional: You can create user-specific folders
-      // const listRef = ref(storage, `users/${user.uid}/`);
       const listRef = ref(storage, '/');
       const res = await listAll(listRef);
       const filePromises = res.items.map(async (itemRef) => {
@@ -68,8 +69,6 @@ function FileManager() {
     if (!fileToUpload || !user) return;
     setIsUploading(true);
     const storage = getStorage(app);
-    // Optional: You can create user-specific folders
-    // const fileRef = ref(storage, `users/${user.uid}/${fileToUpload.name}`);
     const fileRef = ref(storage, `/${fileToUpload.name}`);
     try {
       await uploadBytes(fileRef, fileToUpload);
@@ -119,6 +118,35 @@ function FileManager() {
       description: 'O link para o arquivo foi copiado para a área de transferência.',
     });
   };
+
+  const handleIndexFile = async (file: StoredFile) => {
+    setIsIndexing(prev => ({...prev, [file.name]: true}));
+    try {
+      const blob = await getBlob(file.ref);
+      // This works for text-based files. For PDFs, DOCX, etc., a more complex parser would be needed.
+      const text = await blob.text();
+      
+      const result = await indexFile({ fileName: file.name, fileContent: text });
+
+      if (result.success) {
+        toast({
+          title: 'Indexação Concluída',
+          description: `O arquivo "${file.name}" foi processado e adicionado à memória do chatbot.`,
+        });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      console.error("Error indexing file:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao Indexar',
+        description: error.message || `Não foi possível indexar o arquivo "${file.name}".`,
+      });
+    } finally {
+      setIsIndexing(prev => ({...prev, [file.name]: false}));
+    }
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
@@ -173,35 +201,42 @@ function FileManager() {
                   </CardTitle>
                 </CardHeader>
                 <CardFooter className="flex justify-between gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => copyToClipboard(file.url)}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <a href={file.url} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="icon">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </a>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="icon">
-                        <Trash2 className="h-4 w-4" />
+                  <div className="flex gap-1">
+                     <Button variant="ghost" size="icon" onClick={() => copyToClipboard(file.url)}>
+                        <Copy className="h-4 w-4" />
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta ação não pode ser desfeita. Isso excluirá permanentemente o arquivo "{file.name}" do seu bucket.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(file.ref)}>
-                          Sim, excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                      <a href={file.url} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" size="icon">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </a>
+                  </div>
+                  <div className="flex gap-1">
+                     <Button variant="outline" size="icon" onClick={() => handleIndexFile(file)} disabled={isIndexing[file.name]}>
+                        {isIndexing[file.name] ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação não pode ser desfeita. Isso excluirá permanentemente o arquivo "{file.name}" do seu bucket.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(file.ref)}>
+                              Sim, excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                  </div>
                 </CardFooter>
               </Card>
             ))}
@@ -227,7 +262,11 @@ export default function HomePage() {
     }, []);
 
     if (loading) {
-      return null;
+      return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
     }
   
     if (!user) {
@@ -248,7 +287,7 @@ export default function HomePage() {
                     <CardFooter className="flex-col gap-2 pt-4">
                         <p className="text-xs text-muted-foreground">Problemas com o login?</p>
                         <p className="text-xs text-muted-foreground">
-                            Certifique-se de que o domínio a seguir está autorizado no seu projeto Firebase:
+                            Adicione o seguinte domínio aos seus domínios autorizados do Firebase Authentication:
                         </p>
                         <div className="mt-2 text-sm font-semibold bg-muted text-muted-foreground rounded-md px-3 py-1">
                             {hostname}
