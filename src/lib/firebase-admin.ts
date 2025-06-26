@@ -6,21 +6,20 @@
  */
 import * as admin from 'firebase-admin';
 
-// Ensure the app is only initialized once
+// Ensure the app is only initialized once.
+// The `try...catch` block which previously suppressed errors has been removed.
+// If this initialization fails, it's critical that the error is not suppressed.
+//
+// The most common cause of failure is missing Application Default Credentials.
+// For local development, you MUST authenticate by running the following command in your terminal:
+//
+// gcloud auth application-default login
+//
 if (!admin.apps.length) {
-  try {
-    // Using applicationDefault() is the standard way for server-side code.
-    // It automatically finds credentials in a GCloud environment.
-    // For local dev, you must be authenticated via `gcloud auth application-default login`.
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-    });
-    console.log('Firebase Admin SDK initialized.');
-  } catch (e) {
-    console.error('Firebase Admin SDK initialization error. ' +
-      'Make sure you are in a Google Cloud environment or have authenticated ' +
-      'with `gcloud auth application-default login`', e);
-  }
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+  });
+  console.log('Firebase Admin SDK initialized.');
 }
 
 // Export the initialized services
