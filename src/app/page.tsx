@@ -44,17 +44,17 @@ export default function DataVisorPage() {
   const memoizedMeetingsData = useMemo(() => meetingsData, [meetingsData]);
 
   return (
-    <div className="flex flex-col min-h-screen p-4 md:p-6 lg:p-8 space-y-8 bg-background">
+    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
       <header className="text-center md:text-left">
-        <h1 className="text-4xl font-headline font-bold text-primary">DataVisor</h1>
+        <h1 className="text-4xl font-headline font-bold text-primary">Dashboard de Reuniões</h1>
         <p className="text-lg text-muted-foreground mt-1">
-          Interactive dashboard for visualizing your meeting data.
+          Visão interativa dos dados de suas reuniões.
         </p>
       </header>
 
       <section aria-labelledby="dashboard-title">
         <h2 id="dashboard-title" className="text-2xl font-headline font-semibold mb-4 sr-only">
-          Dashboard Metrics
+          Métricas do Dashboard
         </h2>
         <DashboardMetrics data={memoizedMeetingsData} selectedRows={selectedRows} />
       </section>
@@ -63,7 +63,7 @@ export default function DataVisorPage() {
 
       <section aria-labelledby="data-table-title" className="flex-grow flex flex-col">
         <h2 id="data-table-title" className="text-2xl font-headline font-semibold mb-4">
-          Meetings Overview
+          Visão Geral das Reuniões
         </h2>
         <div className="flex-grow">
            <DataTable
