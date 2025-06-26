@@ -2,7 +2,7 @@
 /**
  * @fileOverview A flow for indexing file content.
  *
- * - indexFile - A function that takes a file URL, downloads it, generates embeddings, and stores them.
+ * - indexFile - A function that takes a file URL, downloads it, chunks it, generates embeddings, and stores them.
  * - IndexFileInput - The input type for the indexFile function.
  * - IndexFileOutput - The return type for the indexFile function.
  */
@@ -27,6 +27,23 @@ export async function indexFile(
 ): Promise<IndexFileOutput> {
   return indexFileFlow(input);
 }
+
+// Simple text chunker
+function chunkText(text: string, chunkSize: number, overlap: number): string[] {
+  if (text.length <= chunkSize) {
+    return [text];
+  }
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const end = Math.min(i + chunkSize, text.length);
+    chunks.push(text.substring(i, end));
+    i += chunkSize - overlap;
+    if (i >= text.length) break;
+  }
+  return chunks;
+}
+
 
 const indexFileFlow = ai.defineFlow(
   {
@@ -74,47 +91,53 @@ const indexFileFlow = ai.defineFlow(
         throw new Error(`Download failed with status: ${response.status} ${response.statusText}`);
       }
       fileContent = await response.text();
+      if (!fileContent) {
+        return { success: true, message: `File "${input.fileName}" is empty. Nothing to index.` };
+      }
     } catch (e: any) {
        console.error('CRITICAL: Failed to download file.', e);
        return { success: false, message: `Failed to download file from URL. Details: ${e.message}` };
     }
 
-    // Step 4: Generate embedding
-    let embedding;
-    try {
-      const embedResponse = await ai.embed({
-        model: 'googleai/text-embedding-004',
-        content: fileContent,
-      });
+    // Step 4: Chunk the text
+    const chunks = chunkText(fileContent, 1500, 150);
+    let chunksProcessed = 0;
 
-      if (!embedResponse?.embedding) {
-        throw new Error('Embedding API returned an invalid or empty response.');
+    // Step 5: Generate embeddings and save to Firestore for each chunk
+    try {
+      for (const chunk of chunks) {
+        const embedResponse = await ai.embed({
+          model: 'googleai/text-embedding-004',
+          content: chunk,
+        });
+
+        const embedding = embedResponse?.embedding;
+
+        if (!embedding) {
+          throw new Error('Embedding API returned an invalid or empty response for a chunk.');
+        }
+        
+        await adminDb.collection('file_chunks').add({
+          fileName: input.fileName,
+          text: chunk,
+          embedding: embedding,
+        });
+        chunksProcessed++;
       }
-      embedding = embedResponse.embedding;
     } catch (e: any) {
-      console.error('CRITICAL: Failed to generate embedding.', e);
-      return { success: false, message: `Failed to generate embedding. Details: ${e.message}` };
-    }
-
-    // Step 5: Save to Firestore
-    try {
-      await adminDb.collection('file_chunks').add({
-        fileName: input.fileName,
-        text: fileContent,
-        embedding: embedding,
-      });
-    } catch (e: any) {
-      console.error('CRITICAL: Failed to save to Firestore.', e);
+      console.error('CRITICAL: Failed during chunk processing (embedding or Firestore write).', e);
       // Check for permission errors specifically
       if (e.code === 'permission-denied' || e.code === 7) {
          return { success: false, message: `Failed to write to Firestore: Permission Denied. Please check your service account permissions.` };
       }
-      return { success: false, message: `Failed to write to Firestore. Details: ${e.message}` };
+       // Provide more context in the error message
+      const errorMessage = e.message || 'An unknown error occurred';
+      return { success: false, message: `Failed to process chunks for "${input.fileName}" after ${chunksProcessed} chunks. Details: ${errorMessage}` };
     }
 
     return {
       success: true,
-      message: `Successfully indexed ${input.fileName}`,
+      message: `Successfully indexed ${chunks.length} chunks from ${input.fileName}`,
     };
   }
 );
