@@ -28,8 +28,6 @@ export async function indexFile(
   return indexFileFlow(input);
 }
 
-// For now, we treat the entire file content as a single "chunk".
-// For larger files, this should be split into smaller, overlapping chunks.
 const indexFileFlow = ai.defineFlow(
   {
     name: 'indexFileFlow',
@@ -38,28 +36,30 @@ const indexFileFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      // Step 1: Initialize Firebase Admin SDK. This is in its own try/catch
-      // to isolate initialization errors, which have been the source of issues.
+      // Step 1: Initialize Firebase Admin SDK
+      const admin = await import('firebase-admin');
+      if (!admin) {
+        throw new Error('Critical: Failed to import firebase-admin module.');
+      }
+
       let adminDb;
-      try {
-        const admin = await import('firebase-admin');
-        if (admin.apps.length === 0) {
-          admin.initializeApp({
-            credential: admin.credential.applicationDefault(),
-          });
-          console.log('Firebase Admin SDK initialized inside flow.');
+      if (admin.apps.length === 0) {
+        // This block runs only if the app is not already initialized.
+        const credential = admin.credential.applicationDefault();
+        if (!credential) {
+          throw new Error('Critical: admin.credential.applicationDefault() returned null. Ensure server environment has credentials (run "gcloud auth application-default login").');
         }
-        adminDb = admin.firestore();
-      } catch (e: any) {
-        console.error('CRITICAL: Firebase Admin SDK initialization failed.', e);
-        // This is a critical failure. We provide a more specific error message.
-        throw new Error(`Firebase Admin init failed: ${e.message}. Ensure your server environment has credentials.`);
+        admin.initializeApp({ credential });
+      }
+      adminDb = admin.firestore();
+      if (!adminDb) {
+        throw new Error('Critical: admin.firestore() returned null or undefined.');
       }
 
       // Step 2: Download the file content from the URL.
       const response = await fetch(input.fileUrl);
       if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.statusText}`);
+        throw new Error(`Failed to download file from URL. Status: ${response.statusText}`);
       }
       const fileContent = await response.text();
 
@@ -70,30 +70,27 @@ const indexFileFlow = ai.defineFlow(
       });
 
       if (!embedResponse?.embedding) {
-        throw new Error('Failed to generate embedding. The embedding API returned an invalid response.');
+        throw new Error('Failed to generate embedding. The embedding API returned an invalid or empty response.');
       }
       const { embedding } = embedResponse;
 
-
-      // Step 4: Save the content and its embedding to Firestore using the Admin SDK.
-      const docRef = await adminDb.collection('file_chunks').add({
+      // Step 4: Save the content and its embedding to Firestore.
+      await adminDb.collection('file_chunks').add({
         fileName: input.fileName,
         text: fileContent,
         embedding: embedding,
       });
-
-      console.log('Document written with ID: ', docRef.id);
 
       return {
         success: true,
         message: `Successfully indexed ${input.fileName}`,
       };
     } catch (e: any) {
-      console.error('Error during indexing flow:', e);
-      const errorMessage = e.code ? `[Code: ${e.code}] ${e.message}` : e.message;
+      console.error('CRITICAL ERROR in indexFileFlow:', e);
+      // Return a clear error message to the client.
       return {
         success: false,
-        message: `Failed to index: ${errorMessage}`,
+        message: `Failed to index: ${e.message}`,
       };
     }
   }
