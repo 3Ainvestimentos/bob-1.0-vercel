@@ -35,63 +35,86 @@ const indexFileFlow = ai.defineFlow(
     outputSchema: IndexFileOutputSchema,
   },
   async (input) => {
+    // Step 1: Dynamic import of firebase-admin
+    let admin;
     try {
-      // Step 1: Initialize Firebase Admin SDK
-      const admin = await import('firebase-admin');
-      if (!admin) {
-        throw new Error('Critical: Failed to import firebase-admin module.');
-      }
+      admin = await import('firebase-admin');
+    } catch (e: any) {
+      console.error('CRITICAL: Failed to import firebase-admin module.', e);
+      return { success: false, message: `Server-side error: Failed to load Firebase Admin module. Details: ${e.message}` };
+    }
 
-      let adminDb;
+    // Step 2: Initialize Firebase Admin SDK
+    let adminDb;
+    try {
       if (admin.apps.length === 0) {
-        // This block runs only if the app is not already initialized.
         const credential = admin.credential.applicationDefault();
-        if (!credential) {
-          throw new Error('Critical: admin.credential.applicationDefault() returned null. Ensure server environment has credentials (run "gcloud auth application-default login").');
-        }
         admin.initializeApp({ credential });
+        console.log('Firebase Admin SDK initialized.');
       }
       adminDb = admin.firestore();
-      if (!adminDb) {
-        throw new Error('Critical: admin.firestore() returned null or undefined.');
-      }
+    } catch (e: any) {
+      console.error('CRITICAL: Failed to initialize Firebase Admin SDK.', e);
+      const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
+      const errorMessage = isAuthError
+        ? 'Firebase Admin credentials not found. Please run "gcloud auth application-default login" in your terminal and restart the server.'
+        : `Failed to initialize Firebase Admin. Details: ${e.message}`;
+      return { success: false, message: errorMessage };
+    }
 
-      // Step 2: Download the file content from the URL.
+    if (!adminDb) {
+      return { success: false, message: 'Server-side error: Firestore database object is not available after initialization.' };
+    }
+
+    // Step 3: Download file
+    let fileContent;
+    try {
       const response = await fetch(input.fileUrl);
       if (!response.ok) {
-        throw new Error(`Failed to download file from URL. Status: ${response.statusText}`);
+        throw new Error(`Download failed with status: ${response.status} ${response.statusText}`);
       }
-      const fileContent = await response.text();
+      fileContent = await response.text();
+    } catch (e: any) {
+       console.error('CRITICAL: Failed to download file.', e);
+       return { success: false, message: `Failed to download file from URL. Details: ${e.message}` };
+    }
 
-      // Step 3: Generate an embedding for the file content.
+    // Step 4: Generate embedding
+    let embedding;
+    try {
       const embedResponse = await ai.embed({
         model: 'googleai/text-embedding-004',
         content: fileContent,
       });
 
       if (!embedResponse?.embedding) {
-        throw new Error('Failed to generate embedding. The embedding API returned an invalid or empty response.');
+        throw new Error('Embedding API returned an invalid or empty response.');
       }
-      const { embedding } = embedResponse;
+      embedding = embedResponse.embedding;
+    } catch (e: any) {
+      console.error('CRITICAL: Failed to generate embedding.', e);
+      return { success: false, message: `Failed to generate embedding. Details: ${e.message}` };
+    }
 
-      // Step 4: Save the content and its embedding to Firestore.
+    // Step 5: Save to Firestore
+    try {
       await adminDb.collection('file_chunks').add({
         fileName: input.fileName,
         text: fileContent,
         embedding: embedding,
       });
-
-      return {
-        success: true,
-        message: `Successfully indexed ${input.fileName}`,
-      };
     } catch (e: any) {
-      console.error('CRITICAL ERROR in indexFileFlow:', e);
-      // Return a clear error message to the client.
-      return {
-        success: false,
-        message: `Failed to index: ${e.message}`,
-      };
+      console.error('CRITICAL: Failed to save to Firestore.', e);
+      // Check for permission errors specifically
+      if (e.code === 'permission-denied' || e.code === 7) {
+         return { success: false, message: `Failed to write to Firestore: Permission Denied. Please check your service account permissions.` };
+      }
+      return { success: false, message: `Failed to write to Firestore. Details: ${e.message}` };
     }
+
+    return {
+      success: true,
+      message: `Successfully indexed ${input.fileName}`,
+    };
   }
 );
