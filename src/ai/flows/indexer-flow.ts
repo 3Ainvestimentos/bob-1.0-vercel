@@ -107,7 +107,7 @@ const indexFileFlow = ai.defineFlow(
     try {
       for (const chunk of chunks) {
         const embedResponse = await ai.embed({
-          model: 'googleai/text-embedding-004',
+          model: 'googleai/embedding-001',
           content: chunk,
         });
 
