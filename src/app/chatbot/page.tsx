@@ -1,9 +1,11 @@
+
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Bot, Loader2, Send, User } from 'lucide-react';
@@ -15,12 +17,14 @@ interface Message {
   text: string;
 }
 
-export default function ChatbotPage() {
+function ChatbotComponent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const fileName = searchParams.get('file');
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -41,7 +45,7 @@ export default function ChatbotPage() {
     setIsLoading(true);
 
     try {
-      const result = await askChatbot({ prompt: input });
+      const result = await askChatbot({ prompt: input, fileName: fileName || undefined });
       const modelMessage: Message = { role: 'model', text: result.response };
       setMessages((prev) => [...prev, modelMessage]);
     } catch (error) {
@@ -80,6 +84,11 @@ export default function ChatbotPage() {
             <Bot />
             Chatbot Assistente
           </CardTitle>
+           {fileName && (
+            <CardDescription className="pt-2">
+              Fazendo perguntas sobre: <span className="font-medium text-primary">{decodeURIComponent(fileName)}</span>
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="flex-grow overflow-hidden">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
@@ -131,7 +140,7 @@ export default function ChatbotPage() {
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Digite sua mensagem..."
+              placeholder={fileName ? `Perguntar sobre ${decodeURIComponent(fileName)}...` : "Digite sua mensagem..."}
               disabled={isLoading}
             />
             <Button type="submit" disabled={isLoading || !input.trim()}>
@@ -143,4 +152,17 @@ export default function ChatbotPage() {
       </Card>
     </div>
   );
+}
+
+
+export default function ChatbotPage() {
+    return (
+        <Suspense fallback={
+          <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        }>
+            <ChatbotComponent />
+        </Suspense>
+    )
 }

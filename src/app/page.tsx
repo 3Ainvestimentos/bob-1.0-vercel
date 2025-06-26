@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Trash2, Download, Copy, Loader2, LogIn, BookOpen } from 'lucide-react';
+import { Upload, FileText, Trash2, Download, Copy, Loader2, LogIn, BookOpen, MessageSquare } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/context/auth-context';
 import { indexFile } from '@/ai/flows/indexer-flow';
+import Link from 'next/link';
 
 
 interface StoredFile {
@@ -200,22 +201,27 @@ function FileManager() {
                 </CardHeader>
                 <CardFooter className="flex justify-between gap-2">
                   <div className="flex gap-1">
-                     <Button variant="ghost" size="icon" onClick={() => copyToClipboard(file.url)}>
+                     <Button variant="ghost" size="icon" onClick={() => copyToClipboard(file.url)} title="Copiar URL">
                         <Copy className="h-4 w-4" />
                       </Button>
                       <a href={file.url} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="icon">
+                        <Button variant="outline" size="icon" title="Baixar arquivo">
                           <Download className="h-4 w-4" />
                         </Button>
                       </a>
                   </div>
                   <div className="flex gap-1">
-                     <Button variant="outline" size="icon" onClick={() => handleIndexFile(file)} disabled={isIndexing[file.name]}>
+                      <Link href={`/chatbot?file=${encodeURIComponent(file.name)}`} passHref>
+                        <Button variant="outline" size="icon" title="Perguntar ao Chatbot">
+                            <MessageSquare className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button variant="outline" size="icon" onClick={() => handleIndexFile(file)} disabled={isIndexing[file.name]} title="Indexar no Chatbot">
                         {isIndexing[file.name] ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon">
+                          <Button variant="destructive" size="icon" title="Excluir arquivo">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
