@@ -20,13 +20,22 @@ const ChatbotOutputSchema = z.object({
 });
 export type ChatbotOutput = z.infer<typeof ChatbotOutputSchema>;
 
-// The URL for your Gradio application deployed on Cloud Run
-const GRADIO_API_URL = "https://genai-app-locatingandassessingola-1-1751046095728-629342546806.us-central1.run.app/";
+// The base URL for your Gradio application deployed on Cloud Run
+const GRADIO_API_URL = "https://genai-app-locatingandassessingola-1-1751046095728-629342546806.us-central1.run.app";
+const GRADIO_API_KEY = process.env.GRADIO_API_KEY;
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotOutput> {
+  if (!GRADIO_API_KEY || GRADIO_API_KEY === 'YOUR_SECRET_KEY_HERE') {
+    const errorMessage = 'A chave secreta da API do Gradio (GRADIO_API_KEY) não foi configurada no ambiente. Por favor, adicione-a ao seu arquivo .env e substitua o valor do placeholder.';
+    console.error(errorMessage);
+    return { response: errorMessage };
+  }
+
+  const fullApiUrl = `${GRADIO_API_URL}?key=${GRADIO_API_KEY}`;
+
   try {
     // Connect to the Gradio API client
-    const client = await Client.connect(GRADIO_API_URL);
+    const client = await Client.connect(fullApiUrl);
     
     // Send the prompt to the /chat endpoint
     // We send an empty array for `files` as the current UI only supports text.
