@@ -43,8 +43,18 @@ function ChatbotComponent() {
 
     try {
       const result = await askChatbot({ prompt: input });
-      const modelMessage: Message = { role: 'model', text: result.response };
-      setMessages((prev) => [...prev, modelMessage]);
+      
+      if (result && typeof result.response === 'string') {
+        const modelMessage: Message = { role: 'model', text: result.response };
+        setMessages((prev) => [...prev, modelMessage]);
+      } else {
+        console.error('Invalid response from chatbot flow:', result);
+        const errorMessage: Message = {
+          role: 'model',
+          text: 'Recebi uma resposta inválida do assistente. Por favor, tente novamente.',
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      }
     } catch (error) {
       console.error('Error calling chatbot flow:', error);
       const errorMessage: Message = {

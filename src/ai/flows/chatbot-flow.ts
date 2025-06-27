@@ -34,6 +34,25 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotOutput> {
   return ragChatFlow(input);
 }
 
+// Helper to safely stringify objects, including those with circular references
+function safeStringify(obj: any, indent = 2) {
+    const cache = new Set();
+    return JSON.stringify(
+        obj,
+        (key, value) => {
+            if (typeof value === 'object' && value !== null) {
+                if (cache.has(value)) {
+                    return '[Circular Reference]';
+                }
+                cache.add(value);
+            }
+            return value;
+        },
+        indent
+    );
+}
+
+
 const ragChatFlow = ai.defineFlow(
   {
     name: 'ragChatFlow',
@@ -68,40 +87,42 @@ Pergunta do usuário: "${input.prompt}"`;
         const responseText = llmResponse?.text;
 
         if (!responseText) {
-          console.warn("Model did not return text. Full response:", JSON.stringify(llmResponse));
+          console.warn("Model did not return text. Full response:", safeStringify(llmResponse));
           return { response: "Não encontrei uma resposta para essa pergunta nos documentos." };
         }
 
         return { response: responseText };
-    } catch (e: any) {
+    } catch (e) {
         console.error('--- DETAILED ERROR START ---');
         console.error('An unrecoverable error occurred in ragChatFlow.');
         console.error('Timestamp:', new Date().toISOString());
-        console.error('Error Name:', e.name);
-        console.error('Error Message:', e.message);
-        console.error('Error Cause:', e.cause);
-        // Use a safe stringify for circular references
-        console.error('Full Error Object:', JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
-        console.error('--- DETAILED ERROR END ---');
 
-        // Construct a detailed message for the user interface
         let detailedMessage = 'Ocorreu um erro crítico ao processar sua solicitação.\n\n';
-        detailedMessage += `Tipo de Erro: ${e.name || 'Desconhecido'}\n`;
-        detailedMessage += `Mensagem: ${e.message || 'Nenhuma mensagem de erro específica disponível.'}\n\n`;
 
-        if (e.cause) {
-            try {
-                detailedMessage += `Causa Raiz Provável: ${JSON.stringify(e.cause)}\n\n`;
-            } catch {
-                detailedMessage += `Causa Raiz Provável: (Não foi possível serializar o objeto 'cause')\n\n`;
+        if (e instanceof Error) {
+            console.error('Error Name:', e.name);
+            console.error('Error Message:', e.message);
+            console.error('Stack Trace:', e.stack);
+            if (e.cause) console.error('Error Cause:', safeStringify(e.cause));
+
+            detailedMessage += `Tipo de Erro: ${e.name}\n`;
+            detailedMessage += `Mensagem: ${e.message}\n`;
+            if (e.cause) {
+                detailedMessage += `Causa Raiz: ${safeStringify(e.cause)}\n`;
             }
+        } else {
+            console.error('Caught a non-Error value:', e);
+            const errorStr = safeStringify(e);
+            detailedMessage += `Detalhes do Erro: ${errorStr}\n`;
         }
-
-        detailedMessage += 'Verifique os logs do servidor (console do `genkit:dev` ou logs do Firebase App Hosting) para ver o objeto de erro completo e o stack trace. Isso nos ajudará a diagnosticar o problema, que pode ser:\n';
+        
+        detailedMessage += '\nVerifique os logs do servidor para mais detalhes. O problema pode ser:\n';
         detailedMessage += '- Conexão: Problemas de rede ou firewall.\n';
         detailedMessage += '- Permissões da API: A conta de serviço não tem o papel `Vertex AI User` ou `Vertex AI Service Agent`.\n';
         detailedMessage += '- Configuração do Corpus: O ID do corpus está incorreto ou a região está errada.\n';
         detailedMessage += '- API do Google: A API pode estar temporariamente indisponível ou rejeitando a chamada por motivos de segurança ou cota.';
+
+        console.error('--- DETAILED ERROR END ---');
 
         return { response: detailedMessage };
     }
