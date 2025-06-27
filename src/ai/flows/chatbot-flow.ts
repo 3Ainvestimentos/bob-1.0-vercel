@@ -104,10 +104,10 @@ const ragChatFlow = ai.defineFlow(
           content: input.prompt,
         });
 
-        if (!embedResponse?.embedding) {
+        if (!embedResponse?.[0]?.embedding) {
             throw new Error('A resposta da API de embedding não continha um vetor.');
         }
-        promptEmbedding = embedResponse.embedding;
+        promptEmbedding = embedResponse[0].embedding;
     } catch (e: any) {
         console.error('CRITICAL: Failed to generate prompt embedding.', e);
         return { response: `Desculpe, não consegui processar sua pergunta para buscar no contexto. Detalhes: ${e.message}` };
