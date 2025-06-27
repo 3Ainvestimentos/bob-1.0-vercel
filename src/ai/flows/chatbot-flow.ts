@@ -112,7 +112,12 @@ const ragChatFlow = ai.defineFlow(
         promptEmbedding = embedResponse[0].embedding;
     } catch (e: any) {
         console.error('CRITICAL: Failed to generate embedding for prompt.', e);
-        const message = `Falha ao gerar embedding para a pergunta com a Vertex AI API. Verifique as permissões de "Vertex AI User" para a conta '${serviceAccount}'. Detalhes: ${e.message}`;
+        const message = `Falha ao comunicar com a Vertex AI API para gerar o embedding. Verifique os seguintes pontos no seu projeto Google Cloud:
+1.  **Faturamento Ativado**: A Vertex AI API requer que o faturamento esteja habilitado no projeto.
+2.  **API Ativada**: Confirme que a "Vertex AI API" está ativada.
+3.  **Permissões**: Certifique-se de que a conta de serviço '${serviceAccount}' possui o papel de "Usuário da Vertex AI" (Vertex AI User).
+
+Detalhes do erro original: ${e.message}`;
         return { response: message };
     }
 

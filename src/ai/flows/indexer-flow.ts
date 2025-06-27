@@ -119,7 +119,12 @@ const indexFileFlow = ai.defineFlow(
         embedding = embedResponse[0].embedding;
       } catch (e: any) {
         console.error('CRITICAL: Failed to generate embedding for a chunk.', e);
-        const message = `Falha ao gerar embedding para um pedaço do texto com a Vertex AI API. Verifique as permissões de "Vertex AI User" para a conta '${serviceAccount}'. Detalhes: ${e.message}`;
+        const message = `Falha ao comunicar com a Vertex AI API para gerar o embedding. Verifique os seguintes pontos no seu projeto Google Cloud:
+1.  **Faturamento Ativado**: A Vertex AI API requer que o faturamento esteja habilitado no projeto.
+2.  **API Ativada**: Confirme que a "Vertex AI API" está ativada.
+3.  **Permissões**: Certifique-se de que a conta de serviço '${serviceAccount}' possui o papel de "Usuário da Vertex AI" (Vertex AI User).
+
+Detalhes do erro original: ${e.message}`;
         return { success: false, message: message };
       }
       
