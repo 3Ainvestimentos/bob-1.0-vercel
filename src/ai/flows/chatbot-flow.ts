@@ -9,13 +9,12 @@
  */
 
 import { ai } from '@/ai/genkit';
-import * as googleAI from '@genkit-ai/googleai';
+import { googleAIRetriever } from '@genkit-ai/googleai/retriever';
 import { z } from 'genkit';
 
 // Define the retriever tool that connects to your specific RAG Corpus
-const corpusRetrieverTool = googleAI.retriever({
+const corpusRetrieverTool = googleAIRetriever({
   name: 'corpusRetriever',
-  type: 'googleAI/ragCorpus',
   corpus: 'projects/datavisor-44i5m/locations/us-central1/ragCorpora/6917529027641081856',
 });
 
