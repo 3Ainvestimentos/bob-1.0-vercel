@@ -135,11 +135,20 @@ const indexFileFlow = ai.defineFlow(
       }
     } catch (e: any) {
       console.error('CRITICAL: Failed during chunk processing (embedding or Firestore write).', e);
-      // Check for permission errors specifically, which is the most likely cause.
-      if (e.code === 'permission-denied' || e.code === 7) {
-         return { success: false, message: `Failed to write to Firestore: Permission Denied. Please check your service account permissions. If developing locally, you may need to run "gcloud auth application-default login" in your terminal.` };
+      
+      const isGenericTypeError = e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object');
+
+      // If we get the generic TypeError during embedding, it's almost certainly an auth issue.
+      if (isGenericTypeError) {
+          return { success: false, message: `Falha na autenticação do servidor. A causa mais provável é a falta de credenciais. Por favor, execute "gcloud auth application-default login" em seu terminal e reinicie o servidor.` };
       }
-       // Provide more context in the error message
+
+      // Check for Firestore permission errors specifically
+      if (e.code === 'permission-denied' || e.code === 7) {
+         return { success: false, message: `Falha ao escrever no Firestore: Permissão negada. Verifique as permissões da sua conta de serviço.` };
+      }
+      
+      // Fallback for other errors
       const errorMessage = e.message || 'An unknown error occurred';
       return { success: false, message: `Failed to process chunks for "${input.fileName}" after ${chunksProcessed} chunks. Details: ${errorMessage}` };
     }
