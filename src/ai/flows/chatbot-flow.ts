@@ -80,14 +80,14 @@ const ragChatFlow = ai.defineFlow(
     try {
       const admin = await import('firebase-admin');
       if (admin.apps.length === 0) {
-        admin.initializeApp({ credential: admin.credential.applicationDefault() });
+        admin.initializeApp();
       }
       adminDb = admin.firestore();
     } catch (e: any) {
         console.error('CRITICAL: Failed to initialize Firebase Admin SDK for RAG.', e);
         const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
         const errorMessage = isAuthError
-            ? 'Falha na autenticação do servidor. Por favor, execute "gcloud auth application-default login" em seu terminal e reinicie o servidor.'
+            ? 'Falha na autenticação do servidor. Verifique as permissões da conta de serviço do ambiente de hospedagem.'
             : `Não foi possível inicializar o Admin SDK. Detalhes: ${e.message}`;
         return { response: `Erro de configuração do servidor: ${errorMessage}` };
     }
@@ -110,7 +110,7 @@ const ragChatFlow = ai.defineFlow(
     } catch (e: any) {
         console.error('CRITICAL: Failed to generate prompt embedding.', e);
         if (e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object')) {
-          return { response: `Desculpe, não consegui processar sua pergunta. Pode ser um problema de autenticação do servidor. Se você for o desenvolvedor, execute "gcloud auth application-default login" e reinicie.` };
+          return { response: `Desculpe, não consegui processar sua pergunta. Pode ser um problema de autenticação do servidor. Verifique se a "Vertex AI API" está ativada e se a conta de serviço possui a permissão "Vertex AI User".` };
         }
         return { response: `Desculpe, não consegui processar sua pergunta para buscar no contexto. Detalhes: ${e.message}` };
     }
@@ -130,7 +130,7 @@ const ragChatFlow = ai.defineFlow(
     } catch(e: any) {
         console.error('CRITICAL: Failed to fetch chunks from Firestore.', e);
         if (e.code === 'permission-denied' || e.code === 7) {
-             return { response: `Falha ao ler do Firestore: Permissão negada. Verifique as permissões da sua conta de serviço.` };
+             return { response: `Falha ao ler do Firestore: Permissão negada. Verifique se a conta de serviço do ambiente de hospedagem possui a permissão "Cloud Datastore User".` };
         }
         return { response: `Erro ao buscar dados do arquivo no banco. Detalhes: ${e.message}`};
     }

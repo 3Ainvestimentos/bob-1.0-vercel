@@ -67,8 +67,8 @@ const indexFileFlow = ai.defineFlow(
     let adminDb;
     try {
       if (admin.apps.length === 0) {
-        const credential = admin.credential.applicationDefault();
-        admin.initializeApp({ credential });
+        // In a managed environment (like App Hosting), application default credentials should be available.
+        admin.initializeApp();
         console.log('Firebase Admin SDK initialized.');
       }
       adminDb = admin.firestore();
@@ -76,7 +76,7 @@ const indexFileFlow = ai.defineFlow(
       console.error('CRITICAL: Failed to initialize Firebase Admin SDK.', e);
       const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
       const errorMessage = isAuthError
-        ? 'Credenciais do Firebase Admin não encontradas. Por favor, execute "gcloud auth application-default login" em seu terminal e reinicie o servidor.'
+        ? 'Credenciais do Firebase Admin não encontradas no servidor. Verifique se a conta de serviço do ambiente de hospedagem tem as permissões corretas.'
         : `Falha ao inicializar o Firebase Admin. Detalhes: ${e.message}`;
       return { success: false, message: errorMessage };
     }
@@ -116,16 +116,24 @@ const indexFileFlow = ai.defineFlow(
     // Step 5: Generate embeddings and save to Firestore for each chunk
     try {
       for (const chunk of chunks) {
-        const embedResponse = await ai.embed({
-          content: chunk,
-        });
+        let embedding;
+        try {
+          const embedResponse = await ai.embed({
+            content: chunk,
+          });
 
-        if (!embedResponse?.[0]?.embedding) {
-          throw new Error('A API de embedding retornou uma resposta sem a propriedade embedding.');
+          if (!embedResponse?.[0]?.embedding) {
+            throw new Error('A resposta da API de embedding não continha um vetor de embedding.');
+          }
+          embedding = embedResponse[0].embedding;
+        } catch(e: any) {
+            console.error('CRITICAL: Failed to generate embedding vector.', e);
+            if (e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object')) {
+                return { success: false, message: 'Falha na autenticação do servidor ao contatar a API de IA. Verifique se a "Vertex AI API" está ativada no seu projeto Google Cloud e se a conta de serviço possui as permissões necessárias (ex: "Vertex AI User").' };
+            }
+            throw e; // Re-throw other errors to be caught by the outer block
         }
         
-        const embedding = embedResponse[0].embedding;
-
         await adminDb.collection('file_chunks').add({
           fileName: input.fileName,
           text: chunk,
@@ -136,16 +144,9 @@ const indexFileFlow = ai.defineFlow(
     } catch (e: any) {
       console.error('CRITICAL: Failed during chunk processing (embedding or Firestore write).', e);
       
-      const isGenericTypeError = e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object');
-
-      // If we get the generic TypeError during embedding, it's almost certainly an auth issue.
-      if (isGenericTypeError) {
-          return { success: false, message: `Falha na autenticação do servidor. A causa mais provável é a falta de credenciais. Por favor, execute "gcloud auth application-default login" em seu terminal e reinicie o servidor.` };
-      }
-
       // Check for Firestore permission errors specifically
       if (e.code === 'permission-denied' || e.code === 7) {
-         return { success: false, message: `Falha ao escrever no Firestore: Permissão negada. Verifique as permissões da sua conta de serviço.` };
+         return { success: false, message: `Falha ao escrever no Firestore: Permissão negada. Verifique se a conta de serviço do ambiente de hospedagem possui a permissão "Cloud Datastore User".` };
       }
       
       // Fallback for other errors
