@@ -100,7 +100,6 @@ const ragChatFlow = ai.defineFlow(
     let promptEmbedding;
     try {
         const embedResponse = await ai.embed({
-          model: 'googleai/embedding-001',
           content: input.prompt,
         });
 
