@@ -25,8 +25,8 @@ const GRADIO_API_URL = "https://genai-app-locatingandassessingola-1-175104609572
 const GRADIO_API_KEY = process.env.GRADIO_API_KEY;
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotOutput> {
-  if (!GRADIO_API_KEY || GRADIO_API_KEY === 'YOUR_SECRET_KEY_HERE') {
-    const errorMessage = 'A chave secreta da API do Gradio (GRADIO_API_KEY) não foi configurada no ambiente. Por favor, adicione-a ao seu arquivo .env e substitua o valor do placeholder.';
+  if (!GRADIO_API_KEY || GRADIO_API_KEY.includes('YOUR_SECRET_KEY')) {
+    const errorMessage = 'ERRO DE CONFIGURAÇÃO: A chave da API do Gradio (GRADIO_API_KEY) não foi encontrada no arquivo .env. Por favor, obtenha a chave no Vertex AI Studio e adicione-a ao seu arquivo .env.';
     console.error(errorMessage);
     return { response: errorMessage };
   }
