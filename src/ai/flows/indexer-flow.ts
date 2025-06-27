@@ -54,97 +54,67 @@ const indexFileFlow = ai.defineFlow(
     outputSchema: IndexFileOutputSchema,
   },
   async (input) => {
-    const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '[SEU-ID-DE-PROJETO]';
-    const serviceAccount = `firebase-adminsdk-fbsvc@${projectId}.iam.gserviceaccount.com`;
-    let adminDb;
-    let chunksProcessed = 0;
-
-    // Step 1: Initialize Firebase Admin
     try {
-      const admin = await import('firebase-admin');
-      if (admin.apps.length === 0) {
-        admin.initializeApp();
-        console.log('Firebase Admin SDK initialized.');
-      }
-      adminDb = admin.firestore();
-    } catch (e: any) {
-      console.error('CRITICAL: Failed to initialize Firebase Admin SDK.', e);
-      const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
-      const errorMessage = isAuthError
-        ? `Falha na autenticação do servidor ao inicializar o Admin SDK. Verifique as permissões da conta de serviço '${serviceAccount}'.`
-        : `Falha ao inicializar o Firebase Admin. Detalhes: ${e.message}`;
-      return { success: false, message: errorMessage };
-    }
-
-    if (!adminDb) {
-      return { success: false, message: 'Erro de servidor: O objeto do banco de dados Firestore não está disponível após a inicialização.' };
-    }
-    
-    // Step 2: Get content to index (from URL or direct text)
-    let contentToIndex;
-    try {
-      if (input.textContent) {
-          contentToIndex = input.textContent;
-      } else if (input.fileUrl) {
-          const response = await fetch(input.fileUrl);
-          if (!response.ok) {
-              throw new Error(`Download do arquivo falhou com o status: ${response.status} ${response.statusText}`);
-          }
-          contentToIndex = await response.text();
-      } else {
-          return { success: false, message: 'Nenhuma URL de arquivo ou conteúdo de texto foi fornecido para indexar.' };
-      }
-    } catch (e: any) {
-        return { success: false, message: `Erro ao obter conteúdo para "${input.fileName}". Detalhes: ${e.message}`};
-    }
-
-
-    if (!contentToIndex) {
-        return { success: true, message: `O conteúdo de "${input.fileName}" está vazio. Nada a indexar.` };
-    }
-
-    // Step 3: Chunk the text
-    const chunks = chunkText(contentToIndex, 1500, 150);
-
-    // Step 4: Generate embeddings and save to Firestore for each chunk
-    for (const chunk of chunks) {
-      let embedding;
-      try {
-        const embedResponse = await ai.embed({
-          content: chunk,
-        });
-        if (!embedResponse?.[0]?.embedding) {
-          throw new Error('A resposta da API de embedding não continha um vetor de embedding.');
+        // Step 1: Initialize Firebase Admin
+        const admin = await import('firebase-admin');
+        if (admin.apps.length === 0) {
+            admin.initializeApp();
         }
-        embedding = embedResponse[0].embedding;
-      } catch (e: any) {
-        console.error('CRITICAL: Failed to generate embedding for a chunk.', e);
-        const message = `Falha ao comunicar com a Vertex AI API para gerar o embedding. Verifique os seguintes pontos no seu projeto Google Cloud:
-1.  **Faturamento Ativado**: A Vertex AI API requer que o faturamento esteja habilitado no projeto.
-2.  **API Ativada**: Confirme que a "Vertex AI API" está ativada.
-3.  **Permissões**: Certifique-se de que a conta de serviço '${serviceAccount}' possui o papel de "Usuário da Vertex AI" (Vertex AI User).
+        const adminDb = admin.firestore();
 
-Detalhes do erro original: ${e.message}`;
-        return { success: false, message: message };
-      }
-      
-      try {
-        await adminDb.collection('file_chunks').add({
-          fileName: input.fileName,
-          text: chunk,
-          embedding: embedding,
-        });
-        chunksProcessed++;
-      } catch (e: any) {
-          console.error('CRITICAL: Failed to save chunk to Firestore.', e);
-          const message = `Falha ao salvar um pedaço do texto no Firestore. Verifique as permissões de "Cloud Datastore User" para a conta '${serviceAccount}'. Detalhes: ${e.message}`;
-          return { success: false, message: message };
-      }
+        // Step 2: Get content
+        let contentToIndex;
+        if (input.textContent) {
+            contentToIndex = input.textContent;
+        } else if (input.fileUrl) {
+            const response = await fetch(input.fileUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to download file: ${response.statusText}`);
+            }
+            contentToIndex = await response.text();
+        } else {
+            return { success: false, message: 'No file URL or text content was provided.' };
+        }
+
+        if (!contentToIndex) {
+            return { success: true, message: `Content for "${input.fileName}" is empty. Nothing to index.` };
+        }
+        
+        // Step 3: Chunk the text
+        const chunks = chunkText(contentToIndex, 1500, 150);
+
+        // Step 4: Generate embeddings and save in a batch
+        const batch = adminDb.batch();
+        for (const chunk of chunks) {
+            const embedResponse = await ai.embed({ content: chunk });
+            const embedding = embedResponse?.[0]?.embedding;
+            
+            if (!embedding) {
+                throw new Error('Failed to generate embedding for a chunk. The API returned no embedding vector.');
+            }
+            
+            const docRef = adminDb.collection('file_chunks').doc();
+            batch.set(docRef, {
+                fileName: input.fileName,
+                text: chunk,
+                embedding: embedding,
+            });
+        }
+        
+        await batch.commit();
+
+        return {
+            success: true,
+            message: `Successfully indexed ${chunks.length} chunks for ${input.fileName}`,
+        };
+    } catch (e: any) {
+        console.error('CRITICAL: An unrecoverable error occurred in indexFileFlow.', e);
+        
+        // Provide a more direct error message to the client
+        const message = e.message || 'An unknown server error occurred.';
+        const finalMessage = `Indexing failed. Details: ${message}`;
+        
+        return { success: false, message: finalMessage };
     }
-
-    return {
-      success: true,
-      message: `Indexado com sucesso ${chunks.length} pedaços para ${input.fileName}`,
-    };
   }
 );
