@@ -48,20 +48,35 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotOutput> {
   } catch (error) {
     console.error('--- ERROR CONNECTING TO GRADIO API ---');
     console.error('Timestamp:', new Date().toISOString());
-    
-    let errorMessage = 'Ocorreu um erro ao se conectar com o serviço de chatbot.';
+    console.error('Raw error object for debugging:', error); // Log the raw object for server-side debugging
+
+    const baseMessage = 'Ocorreu um erro ao se conectar com o serviço de chatbot.';
+    let technicalDetails = 'Não foi possível determinar a causa específica.';
 
     if (error instanceof Error) {
-        console.error('Error Name:', error.name);
-        console.error('Error Message:', error.message);
-        console.error('Stack Trace:', error.stack);
-        errorMessage += `\n\nDetalhes Técnicos: ${error.message}`;
+      // Standard Error object
+      technicalDetails = error.message;
+      console.error('Error Name:', error.name);
+      console.error('Error Message:', technicalDetails);
+      console.error('Stack Trace:', error.stack);
+    } else if (error && typeof error === 'object') {
+      // Non-standard error object, try to stringify it
+      try {
+        technicalDetails = JSON.stringify(error, null, 2); // Pretty print for readability
+      } catch (stringifyError) {
+        // Fallback if stringify fails (e.g., circular structure)
+        technicalDetails = 'Não foi possível serializar o objeto de erro. Verifique os logs do servidor.';
+      }
+      console.error('Caught a non-standard error object:', error);
     } else {
-        console.error('Caught a non-Error value:', error);
-        errorMessage += `\n\nDetalhes Técnicos: ${String(error)}`;
+      // Primitives like strings or numbers
+      technicalDetails = String(error);
+      console.error('Caught a primitive error value:', error);
     }
+
+    const fullErrorMessage = `${baseMessage}\n\nDetalhes Técnicos: ${technicalDetails}`;
     
     console.error('--- GRADIO ERROR END ---');
-    return { response: errorMessage };
+    return { response: fullErrorMessage };
   }
 }
