@@ -88,7 +88,7 @@ const ragChatFlow = ai.defineFlow(
             console.error('CRITICAL: Failed to initialize Firebase Admin SDK for RAG.', e);
             const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
             const errorMessage = isAuthError
-                ? 'Falha na autenticação do servidor. Verifique as permissões da conta de serviço do ambiente de hospedagem.'
+                ? 'Falha na autenticação do servidor. Verifique as permissões da conta de serviço do ambiente de hospedagem (geralmente SEU-ID-DE-PROJETO@appspot.gserviceaccount.com).'
                 : `Não foi possível inicializar o Admin SDK. Detalhes: ${e.message}`;
             throw new Error(errorMessage); // Throw to be caught by the main catch block
         }

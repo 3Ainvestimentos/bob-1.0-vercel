@@ -70,7 +70,7 @@ const indexFileFlow = ai.defineFlow(
         console.error('CRITICAL: Failed to initialize Firebase Admin SDK.', e);
         const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
         const errorMessage = isAuthError
-          ? 'Credenciais do Firebase Admin não encontradas no servidor. Verifique se a conta de serviço do ambiente de hospedagem tem as permissões corretas.'
+          ? 'Credenciais do Firebase Admin não encontradas no servidor. Verifique se a conta de serviço do ambiente de hospedagem (geralmente SEU-ID-DE-PROJETO@appspot.gserviceaccount.com) tem as permissões corretas.'
           : `Falha ao inicializar o Firebase Admin. Detalhes: ${e.message}`;
         throw new Error(errorMessage);
       }
