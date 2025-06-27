@@ -1,24 +1,14 @@
-
 'use server';
 /**
- * @fileOverview A chatbot flow that answers questions based on a Vertex AI RAG Corpus.
+ * @fileOverview A chatbot flow that answers questions by connecting to a Gradio API.
  *
  * - askChatbot - A function that handles the chatbot interaction.
  * - ChatbotInput - The input type for the askChatbot function.
  * - ChatbotOutput - The return type for the askChatbot function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-
-// Define the retriever tool that connects to your specific RAG Corpus
-const corpusRetrieverTool = ai.defineRetriever(
-  {
-    name: 'corpusRetriever',
-    type: 'googleAI/ragCorpus',
-    corpus: 'projects/datavisor-44i5m/locations/us-central1/ragCorpora/6917529027641081856',
-  }
-);
+import { Client } from "@gradio/client";
+import { z } from 'zod';
 
 const ChatbotInputSchema = z.object({
   prompt: z.string().describe('The user prompt for the chatbot.'),
@@ -30,101 +20,48 @@ const ChatbotOutputSchema = z.object({
 });
 export type ChatbotOutput = z.infer<typeof ChatbotOutputSchema>;
 
+// The URL for your Gradio application deployed on Cloud Run
+const GRADIO_API_URL = "https://genai-app-locatingandassessingola-1-1751046095728-629342546806.us-central1.run.app/";
+
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotOutput> {
-  return ragChatFlow(input);
-}
+  try {
+    // Connect to the Gradio API client
+    const client = await Client.connect(GRADIO_API_URL);
+    
+    // Send the prompt to the /chat endpoint
+    // We send an empty array for `files` as the current UI only supports text.
+    const result = await client.predict("/chat", {
+      message: { text: input.prompt, files: [] }, 
+    });
 
-// Helper to safely stringify objects, including those with circular references
-function safeStringify(obj: any, indent = 2) {
-    const cache = new Set();
-    return JSON.stringify(
-        obj,
-        (key, value) => {
-            if (typeof value === 'object' && value !== null) {
-                if (cache.has(value)) {
-                    return '[Circular Reference]';
-                }
-                cache.add(value);
-            }
-            return value;
-        },
-        indent
-    );
-}
+    // Gradio client typically returns results in `result.data`. For many chatbots, 
+    // this is an array where the first element is the text response.
+    if (result && Array.isArray(result.data) && typeof result.data[0] === 'string') {
+      return { response: result.data[0] };
+    } 
+    
+    // Handle cases where the prediction might return an unexpected data structure
+    console.warn("Received an unexpected data structure from Gradio. Full result:", result);
+    const responseText = result?.data ? JSON.stringify(result.data) : "No data received.";
+    return { response: `A resposta do assistente não estava no formato esperado. Dados recebidos: ${responseText}` };
 
+  } catch (error) {
+    console.error('--- ERROR CONNECTING TO GRADIO API ---');
+    console.error('Timestamp:', new Date().toISOString());
+    
+    let errorMessage = 'Ocorreu um erro ao se conectar com o serviço de chatbot.';
 
-const ragChatFlow = ai.defineFlow(
-  {
-    name: 'ragChatFlow',
-    inputSchema: ChatbotInputSchema,
-    outputSchema: ChatbotOutputSchema,
-  },
-  async (input) => {
-    try {
-        const fullPrompt = `Você é um assistente especialista. Sua tarefa é responder perguntas usando APENAS as informações encontradas nos documentos fornecidos pela ferramenta de busca.
-Se a resposta estiver nos documentos, forneça-a de forma clara e concisa.
-Se a resposta não estiver nos documentos, responda EXATAMENTE com a frase: "Não encontrei uma resposta para essa pergunta nos documentos."
-Não use nenhum conhecimento externo.
-
-Pergunta do usuário: "${input.prompt}"`;
-
-        const llmResponse = await ai.generate({
-          model: 'googleai/gemini-1.5-flash-latest',
-          prompt: fullPrompt,
-          tools: [corpusRetrieverTool],
-          config: {
-            temperature: 1,
-            topP: 1,
-            safetySettings: [
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-            ]
-          }
-        });
-
-        const responseText = llmResponse?.text;
-
-        if (!responseText) {
-          console.warn("Model did not return text. Full response:", safeStringify(llmResponse));
-          return { response: "Não encontrei uma resposta para essa pergunta nos documentos." };
-        }
-
-        return { response: responseText };
-    } catch (e) {
-        console.error('--- DETAILED ERROR START ---');
-        console.error('An unrecoverable error occurred in ragChatFlow.');
-        console.error('Timestamp:', new Date().toISOString());
-
-        let detailedMessage = 'Ocorreu um erro crítico ao processar sua solicitação.\n\n';
-
-        if (e instanceof Error) {
-            console.error('Error Name:', e.name);
-            console.error('Error Message:', e.message);
-            console.error('Stack Trace:', e.stack);
-            if (e.cause) console.error('Error Cause:', safeStringify(e.cause));
-
-            detailedMessage += `Tipo de Erro: ${e.name}\n`;
-            detailedMessage += `Mensagem: ${e.message}\n`;
-            if (e.cause) {
-                detailedMessage += `Causa Raiz: ${safeStringify(e.cause)}\n`;
-            }
-        } else {
-            console.error('Caught a non-Error value:', e);
-            const errorStr = safeStringify(e);
-            detailedMessage += `Detalhes do Erro: ${errorStr}\n`;
-        }
-        
-        detailedMessage += '\nVerifique os logs do servidor para mais detalhes. O problema pode ser:\n';
-        detailedMessage += '- Conexão: Problemas de rede ou firewall.\n';
-        detailedMessage += '- Permissões da API: A conta de serviço não tem o papel `Vertex AI User` ou `Vertex AI Service Agent`.\n';
-        detailedMessage += '- Configuração do Corpus: O ID do corpus está incorreto ou a região está errada.\n';
-        detailedMessage += '- API do Google: A API pode estar temporariamente indisponível ou rejeitando a chamada por motivos de segurança ou cota.';
-
-        console.error('--- DETAILED ERROR END ---');
-
-        return { response: detailedMessage };
+    if (error instanceof Error) {
+        console.error('Error Name:', error.name);
+        console.error('Error Message:', error.message);
+        console.error('Stack Trace:', error.stack);
+        errorMessage += `\n\nDetalhes Técnicos: ${error.message}`;
+    } else {
+        console.error('Caught a non-Error value:', error);
+        errorMessage += `\n\nDetalhes Técnicos: ${String(error)}`;
     }
+    
+    console.error('--- GRADIO ERROR END ---');
+    return { response: errorMessage };
   }
-);
+}
