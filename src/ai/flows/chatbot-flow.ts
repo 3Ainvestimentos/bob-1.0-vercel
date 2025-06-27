@@ -43,23 +43,29 @@ const ragChatFlow = ai.defineFlow(
   async (input) => {
     try {
         const llmResponse = await ai.generate({
+          model: 'googleai/gemini-1.5-flash-latest',
           prompt: input.prompt,
           tools: [corpusRetrieverTool],
           system: `Você é um assistente especialista. Sua tarefa é responder perguntas usando APENAS as informações encontradas nos documentos fornecidos pela ferramenta de busca.
 Se a resposta estiver nos documentos, forneça-a de forma clara e concisa.
 Se a resposta não estiver nos documentos, responda EXATAMENTE com a frase: "Não encontrei uma resposta para essa pergunta nos documentos."
-Não use nenhum conhecimento externo.`
+Não use nenhum conhecimento externo.`,
+          config: {
+            temperature: 1,
+            topP: 1,
+            safetySettings: [
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+            ]
+          }
         });
 
-        // The error "Cannot convert undefined or null to object" is likely being thrown
-        // because the llmResponse object is null or undefined, or it does not contain
-        // a 'text' property, which then causes an error when we try to access it.
-        // We'll add a check to handle this gracefully.
         const responseText = llmResponse?.text;
 
         if (!responseText) {
           console.warn("Model did not return text. Full response:", JSON.stringify(llmResponse));
-          // We return the default "not found" message as per the system prompt's instructions.
           return { response: "Não encontrei uma resposta para essa pergunta nos documentos." };
         }
 
