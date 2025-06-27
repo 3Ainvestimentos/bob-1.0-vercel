@@ -54,85 +54,62 @@ const indexFileFlow = ai.defineFlow(
     outputSchema: IndexFileOutputSchema,
   },
   async (input) => {
-    // Step 1: Dynamic import of firebase-admin
-    let admin;
-    try {
-      admin = await import('firebase-admin');
-    } catch (e: any) {
-      console.error('CRITICAL: Failed to import firebase-admin module.', e);
-      return { success: false, message: `Erro de servidor: Falha ao carregar o módulo Firebase Admin. Detalhes: ${e.message}` };
-    }
-
-    // Step 2: Initialize Firebase Admin SDK
     let adminDb;
-    try {
-      if (admin.apps.length === 0) {
-        // In a managed environment (like App Hosting), application default credentials should be available.
-        admin.initializeApp();
-        console.log('Firebase Admin SDK initialized.');
-      }
-      adminDb = admin.firestore();
-    } catch (e: any) {
-      console.error('CRITICAL: Failed to initialize Firebase Admin SDK.', e);
-      const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
-      const errorMessage = isAuthError
-        ? 'Credenciais do Firebase Admin não encontradas no servidor. Verifique se a conta de serviço do ambiente de hospedagem tem as permissões corretas.'
-        : `Falha ao inicializar o Firebase Admin. Detalhes: ${e.message}`;
-      return { success: false, message: errorMessage };
-    }
-
-    if (!adminDb) {
-      return { success: false, message: 'Erro de servidor: O objeto do banco de dados Firestore não está disponível após a inicialização.' };
-    }
-    
-    // Step 3: Get content to index (from URL or direct text)
-    let contentToIndex;
-    if (input.textContent) {
-        contentToIndex = input.textContent;
-    } else if (input.fileUrl) {
-        try {
-            const response = await fetch(input.fileUrl);
-            if (!response.ok) {
-                throw new Error(`Download falhou com o status: ${response.status} ${response.statusText}`);
-            }
-            contentToIndex = await response.text();
-        } catch (e: any) {
-           console.error('CRITICAL: Failed to download file.', e);
-           return { success: false, message: `Falha ao baixar arquivo da URL. Detalhes: ${e.message}` };
-        }
-    } else {
-        return { success: false, message: 'Nenhuma URL de arquivo ou conteúdo de texto foi fornecido para indexar.' };
-    }
-
-    if (!contentToIndex) {
-        return { success: true, message: `O conteúdo de "${input.fileName}" está vazio. Nada a indexar.` };
-    }
-
-
-    // Step 4: Chunk the text
-    const chunks = chunkText(contentToIndex, 1500, 150);
     let chunksProcessed = 0;
 
-    // Step 5: Generate embeddings and save to Firestore for each chunk
     try {
-      for (const chunk of chunks) {
-        let embedding;
-        try {
-          const embedResponse = await ai.embed({
-            content: chunk,
-          });
-
-          if (!embedResponse?.[0]?.embedding) {
-            throw new Error('A resposta da API de embedding não continha um vetor de embedding.');
-          }
-          embedding = embedResponse[0].embedding;
-        } catch(e: any) {
-            console.error('CRITICAL: Failed to generate embedding vector.', e);
-            if (e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object')) {
-                return { success: false, message: 'Falha na autenticação do servidor ao contatar a API de IA. Verifique se a "Vertex AI API" está ativada no seu projeto Google Cloud e se a conta de serviço possui as permissões necessárias (ex: "Vertex AI User").' };
-            }
-            throw e; // Re-throw other errors to be caught by the outer block
+      // Step 1 & 2: Dynamic import and initialization of Firebase Admin
+      try {
+        const admin = await import('firebase-admin');
+        if (admin.apps.length === 0) {
+          admin.initializeApp();
+          console.log('Firebase Admin SDK initialized.');
         }
+        adminDb = admin.firestore();
+      } catch (e: any) {
+        console.error('CRITICAL: Failed to initialize Firebase Admin SDK.', e);
+        const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
+        const errorMessage = isAuthError
+          ? 'Credenciais do Firebase Admin não encontradas no servidor. Verifique se a conta de serviço do ambiente de hospedagem tem as permissões corretas.'
+          : `Falha ao inicializar o Firebase Admin. Detalhes: ${e.message}`;
+        throw new Error(errorMessage);
+      }
+
+      if (!adminDb) {
+        throw new Error('Erro de servidor: O objeto do banco de dados Firestore não está disponível após a inicialização.');
+      }
+      
+      // Step 3: Get content to index (from URL or direct text)
+      let contentToIndex;
+      if (input.textContent) {
+          contentToIndex = input.textContent;
+      } else if (input.fileUrl) {
+          const response = await fetch(input.fileUrl);
+          if (!response.ok) {
+              throw new Error(`Download falhou com o status: ${response.status} ${response.statusText}`);
+          }
+          contentToIndex = await response.text();
+      } else {
+          return { success: false, message: 'Nenhuma URL de arquivo ou conteúdo de texto foi fornecido para indexar.' };
+      }
+
+      if (!contentToIndex) {
+          return { success: true, message: `O conteúdo de "${input.fileName}" está vazio. Nada a indexar.` };
+      }
+
+      // Step 4: Chunk the text
+      const chunks = chunkText(contentToIndex, 1500, 150);
+
+      // Step 5: Generate embeddings and save to Firestore for each chunk
+      for (const chunk of chunks) {
+        const embedResponse = await ai.embed({
+          content: chunk,
+        });
+
+        if (!embedResponse?.[0]?.embedding) {
+          throw new Error('A resposta da API de embedding não continha um vetor de embedding.');
+        }
+        const embedding = embedResponse[0].embedding;
         
         await adminDb.collection('file_chunks').add({
           fileName: input.fileName,
@@ -141,22 +118,25 @@ const indexFileFlow = ai.defineFlow(
         });
         chunksProcessed++;
       }
+
+      return {
+        success: true,
+        message: `Indexado com sucesso ${chunks.length} pedaços para ${input.fileName}`,
+      };
+
     } catch (e: any) {
-      console.error('CRITICAL: Failed during chunk processing (embedding or Firestore write).', e);
+      console.error('CRITICAL: Failed during indexing process.', e);
       
-      // Check for Firestore permission errors specifically
+      // Intelligent error diagnosis
+      if (e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object')) {
+        return { success: false, message: 'Falha na autenticação do servidor ao contatar a API de IA. Verifique se a "Vertex AI API" está ativada no seu projeto Google Cloud e se a conta de serviço possui as permissões necessárias (ex: "Vertex AI User").' };
+      }
       if (e.code === 'permission-denied' || e.code === 7) {
          return { success: false, message: `Falha ao escrever no Firestore: Permissão negada. Verifique se a conta de serviço do ambiente de hospedagem possui a permissão "Cloud Datastore User".` };
       }
       
-      // Fallback for other errors
       const errorMessage = e.message || 'Ocorreu um erro desconhecido';
       return { success: false, message: `Falha ao processar os pedaços para "${input.fileName}" após ${chunksProcessed} pedaços. Detalhes: ${errorMessage}` };
     }
-
-    return {
-      success: true,
-      message: `Indexado com sucesso ${chunks.length} pedaços para ${input.fileName}`,
-    };
   }
 );
