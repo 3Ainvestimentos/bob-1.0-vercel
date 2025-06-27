@@ -42,14 +42,17 @@ const ragChatFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-        const llmResponse = await ai.generate({
-          model: 'googleai/gemini-1.5-flash-latest',
-          prompt: input.prompt,
-          tools: [corpusRetrieverTool],
-          system: `Você é um assistente especialista. Sua tarefa é responder perguntas usando APENAS as informações encontradas nos documentos fornecidos pela ferramenta de busca.
+        const fullPrompt = `Você é um assistente especialista. Sua tarefa é responder perguntas usando APENAS as informações encontradas nos documentos fornecidos pela ferramenta de busca.
 Se a resposta estiver nos documentos, forneça-a de forma clara e concisa.
 Se a resposta não estiver nos documentos, responda EXATAMENTE com a frase: "Não encontrei uma resposta para essa pergunta nos documentos."
-Não use nenhum conhecimento externo.`,
+Não use nenhum conhecimento externo.
+
+Pergunta do usuário: "${input.prompt}"`;
+
+        const llmResponse = await ai.generate({
+          model: 'googleai/gemini-1.5-flash-latest',
+          prompt: fullPrompt,
+          tools: [corpusRetrieverTool],
           config: {
             temperature: 1,
             topP: 1,
