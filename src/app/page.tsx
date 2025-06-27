@@ -1,148 +1,50 @@
-
 'use client';
 
-import React, { useState, useRef, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bot, Loader2, Send, User, LogIn } from 'lucide-react';
-import { askChatbot } from '@/ai/flows/chatbot-flow';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
-interface Message {
-  role: 'user' | 'model';
-  text: string;
-}
+function GradioEmbed() {
+  // NOTE: This key is now publicly visible in the browser source.
+  // This is required for iframe embedding of a private Gradio app.
+  const gradioUrl = `https://genai-app-locatingandassessingola-1-1751046095728-629342546806.us-central1.run.app/?key=${process.env.NEXT_PUBLIC_GRADIO_API_KEY}`;
 
-function ChatbotComponent() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuth();
-
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
-  }, [messages]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = { role: 'user', text: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      const result = await askChatbot({ prompt: input });
-      
-      if (result && typeof result.response === 'string') {
-        const modelMessage: Message = { role: 'model', text: result.response };
-        setMessages((prev) => [...prev, modelMessage]);
-      } else {
-        console.error('Invalid response from chatbot flow:', result);
-        const errorMessage: Message = {
-          role: 'model',
-          text: 'Recebi uma resposta inválida do assistente. Por favor, tente novamente.',
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-      }
-    } catch (error) {
-      console.error('Error calling chatbot flow:', error);
-      const errorMessage: Message = {
-        role: 'model',
-        text: 'Desculpe, ocorreu um erro ao processar sua solicitação.',
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  if (!process.env.NEXT_PUBLIC_GRADIO_API_KEY || process.env.NEXT_PUBLIC_GRADIO_API_KEY.includes('YOUR_SECRET_KEY')) {
+    return (
+      <div className="flex h-full w-full items-center justify-center p-8">
+        <Card className="w-full max-w-xl border-destructive">
+            <CardHeader>
+                <CardTitle className="text-center text-2xl text-destructive">Erro de Configuração do Gradio</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+                <p className="text-muted-foreground">
+                    A chave da API para a aplicação Gradio não foi encontrada.
+                </p>
+                <div className="text-left">
+                    <p className="font-semibold">Por favor, verifique os seguintes passos:</p>
+                    <ul className="mt-2 list-inside list-decimal space-y-1 text-sm text-muted-foreground">
+                        <li>Abra o arquivo <code>.env</code> na raiz do seu projeto.</li>
+                        <li>Certifique-se de que a variável <code>NEXT_PUBLIC_GRADIO_API_KEY</code> está definida com a chave correta.</li>
+                        <li>Após salvar as alterações, **reinicie o servidor de desenvolvimento**.</li>
+                    </ul>
+                </div>
+            </CardContent>
+        </Card>
+    </div>
+    )
+  }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8 flex justify-center">
-      <Card className="w-full max-w-2xl h-[calc(100vh-12rem)] flex flex-col">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot />
-            Chatbot Assistente
-          </CardTitle>
-          <CardDescription className="pt-2">
-            Faça perguntas com base nos documentos do nosso Corpus de conhecimento.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex-grow overflow-hidden">
-          <ScrollArea className="h-full" ref={scrollAreaRef}>
-            <div className="space-y-4 pr-4">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex items-start gap-3 ${
-                    message.role === 'user' ? 'justify-end' : ''
-                  }`}
-                >
-                  {message.role === 'model' && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback><Bot size={20}/></AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div
-                    className={`rounded-lg px-4 py-2 max-w-[80%] whitespace-pre-wrap ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    {message.text}
-                  </div>
-                   {message.role === 'user' && user && (
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User'} />
-                        <AvatarFallback><User size={20}/></AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              ))}
-              {isLoading && (
-                 <div className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8">
-                        <AvatarFallback><Bot size={20}/></AvatarFallback>
-                    </Avatar>
-                    <div className="rounded-lg px-4 py-2 bg-muted flex items-center">
-                        <Loader2 className="h-5 w-5 animate-spin"/>
-                    </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-        <CardFooter>
-          <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Digite sua mensagem..."
-              disabled={isLoading}
-            />
-            <Button type="submit" disabled={isLoading || !input.trim()}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              <span className="sr-only">Enviar</span>
-            </Button>
-          </form>
-        </CardFooter>
-      </Card>
-    </div>
+      <iframe
+        src={gradioUrl}
+        frameBorder="0"
+        className="w-full h-full"
+        title="Gradio App"
+      ></iframe>
   );
 }
-
 
 export default function HomePage() {
     const { user, loading, signIn } = useAuth();
@@ -156,7 +58,7 @@ export default function HomePage() {
 
     if (loading) {
       return (
-        <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex h-[calc(100vh-4rem)] w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       );
@@ -168,7 +70,7 @@ export default function HomePage() {
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
                     <CardTitle>Acesso Restrito</CardTitle>
-                    <CardDescription>Você precisa estar autenticado para acessar o chatbot.</CardDescription>
+                    <CardDescription>Você precisa estar autenticado para acessar a aplicação.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Button onClick={signIn}>
@@ -193,12 +95,14 @@ export default function HomePage() {
     }
   
     return (
+      <div className="w-full h-[calc(100vh-4rem)]">
         <Suspense fallback={
-          <div className="flex h-screen w-full items-center justify-center">
+          <div className="flex h-full w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         }>
-            <ChatbotComponent />
+            <GradioEmbed />
         </Suspense>
+      </div>
     );
 }

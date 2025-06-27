@@ -24,11 +24,11 @@ export type ChatbotOutput = z.infer<typeof ChatbotOutputSchema>;
 
 // The base URL for your Gradio application deployed on Cloud Run
 const GRADIO_API_URL = "https://genai-app-locatingandassessingola-1-1751046095728-629342546806.us-central1.run.app";
-const GRADIO_API_KEY = process.env.GRADIO_API_KEY;
+const GRADIO_API_KEY = process.env.NEXT_PUBLIC_GRADIO_API_KEY;
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotOutput> {
   if (!GRADIO_API_KEY || GRADIO_API_KEY.includes('YOUR_SECRET_KEY')) {
-    const errorMessage = 'ERRO DE CONFIGURAÇÃO: A chave da API do Gradio (GRADIO_API_KEY) não foi encontrada ou não foi carregada corretamente. Por favor, verifique seu arquivo .env e reinicie o servidor.';
+    const errorMessage = 'ERRO DE CONFIGURAÇÃO: A chave da API do Gradio (NEXT_PUBLIC_GRADIO_API_KEY) não foi encontrada ou não foi carregada corretamente. Por favor, verifique seu arquivo .env e reinicie o servidor.';
     console.error(errorMessage);
     return { response: errorMessage };
   }
