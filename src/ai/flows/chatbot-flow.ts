@@ -147,16 +147,16 @@ const ragChatFlow = ai.defineFlow(
     const context = relevantChunks.join('\n---\n');
 
     // Step 5. Construct the final prompt for the LLM
-    const finalPrompt = `Você é um assistente especialista no documento fornecido. Sua tarefa é responder à pergunta do usuário estritamente com base no contexto abaixo. Seja conciso e direto. Se a resposta não estiver no contexto, diga "Com base no documento fornecido, não encontrei a resposta para esta pergunta.". Não use nenhum conhecimento prévio.
+    const finalPrompt = `Você é um assistente especialista. Sua tarefa é responder à pergunta do usuário usando APENAS as informações do CONTEXTO DO DOCUMENTO abaixo. Não use nenhum conhecimento externo. Se a resposta não estiver no contexto, responda exatamente: "Não encontrei a resposta para esta pergunta no documento."
 
-Contexto do documento:
+CONTEXTO DO DOCUMENTO:
 ---
 ${context}
 ---
 
-Pergunta do usuário: ${input.prompt}
+PERGUNTA DO USUÁRIO: ${input.prompt}
 
-Resposta:`;
+RESPOSTA:`;
 
     // Step 6. Call the LLM with the context-rich prompt
     try {
