@@ -86,9 +86,11 @@ const ragChatFlow = ai.defineFlow(
             adminDb = admin.firestore();
         } catch (e: any) {
             console.error('CRITICAL: Failed to initialize Firebase Admin SDK for RAG.', e);
+            const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || '[SEU-ID-DE-PROJETO]';
+            const serviceAccount = `${projectId}@appspot.gserviceaccount.com`;
             const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
             const errorMessage = isAuthError
-                ? 'Falha na autenticação do servidor. Verifique as permissões da conta de serviço do ambiente de hospedagem (geralmente SEU-ID-DE-PROJETO@appspot.gserviceaccount.com).'
+                ? `Falha na autenticação do servidor. Verifique se a conta de serviço '${serviceAccount}' possui as permissões necessárias.`
                 : `Não foi possível inicializar o Admin SDK. Detalhes: ${e.message}`;
             throw new Error(errorMessage); // Throw to be caught by the main catch block
         }
@@ -148,13 +150,15 @@ Resposta:`;
 
     } catch (e: any) {
         console.error('CRITICAL: Error in RAG Chat Flow.', e);
+        const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || '[SEU-ID-DE-PROJETO]';
+        const serviceAccount = `${projectId}@appspot.gserviceaccount.com`;
         
         // Intelligent error diagnosis
         if (e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object')) {
-             return { response: `Desculpe, não consegui processar sua pergunta. Pode ser um problema de autenticação do servidor. Verifique se a "Vertex AI API" está ativada e se a conta de serviço possui a permissão "Vertex AI User".` };
+             return { response: `Desculpe, não consegui processar sua pergunta. Pode ser um problema de autenticação do servidor. Verifique se a "Vertex AI API" está ativada e se a conta de serviço '${serviceAccount}' possui a permissão "Vertex AI User".` };
         }
         if (e.code === 'permission-denied' || e.code === 7) {
-             return { response: `Falha ao ler do Firestore: Permissão negada. Verifique se a conta de serviço do ambiente de hospedagem possui a permissão "Cloud Datastore User".` };
+             return { response: `Falha ao ler do Firestore: Permissão negada. Verifique se a conta de serviço '${serviceAccount}' possui a permissão "Cloud Datastore User".` };
         }
 
         return { response: `Ocorreu um erro ao processar sua solicitação. Detalhes: ${e.message}` };

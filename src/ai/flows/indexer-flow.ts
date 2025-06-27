@@ -68,9 +68,11 @@ const indexFileFlow = ai.defineFlow(
         adminDb = admin.firestore();
       } catch (e: any) {
         console.error('CRITICAL: Failed to initialize Firebase Admin SDK.', e);
+        const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || '[SEU-ID-DE-PROJETO]';
+        const serviceAccount = `${projectId}@appspot.gserviceaccount.com`;
         const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
         const errorMessage = isAuthError
-          ? 'Credenciais do Firebase Admin não encontradas no servidor. Verifique se a conta de serviço do ambiente de hospedagem (geralmente SEU-ID-DE-PROJETO@appspot.gserviceaccount.com) tem as permissões corretas.'
+          ? `Falha na autenticação do servidor. A conta de serviço '${serviceAccount}' provavelmente não tem as permissões necessárias. Verifique suas configurações no IAM do Google Cloud.`
           : `Falha ao inicializar o Firebase Admin. Detalhes: ${e.message}`;
         throw new Error(errorMessage);
       }
@@ -126,13 +128,15 @@ const indexFileFlow = ai.defineFlow(
 
     } catch (e: any) {
       console.error('CRITICAL: Failed during indexing process.', e);
+      const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || '[SEU-ID-DE-PROJETO]';
+      const serviceAccount = `${projectId}@appspot.gserviceaccount.com`;
       
       // Intelligent error diagnosis
       if (e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object')) {
-        return { success: false, message: 'Falha na autenticação do servidor ao contatar a API de IA. Verifique se a "Vertex AI API" está ativada no seu projeto Google Cloud e se a conta de serviço possui as permissões necessárias (ex: "Vertex AI User").' };
+        return { success: false, message: `Falha na autenticação do servidor ao contatar a API de IA. Verifique se a "Vertex AI API" está ativada e se a conta de serviço '${serviceAccount}' possui a permissão "Vertex AI User".` };
       }
       if (e.code === 'permission-denied' || e.code === 7) {
-         return { success: false, message: `Falha ao escrever no Firestore: Permissão negada. Verifique se a conta de serviço do ambiente de hospedagem possui a permissão "Cloud Datastore User".` };
+         return { success: false, message: `Falha ao escrever no Firestore: Permissão negada. Verifique se a conta de serviço '${serviceAccount}' possui a permissão "Cloud Datastore User".` };
       }
       
       const errorMessage = e.message || 'Ocorreu um erro desconhecido';
