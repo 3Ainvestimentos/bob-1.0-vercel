@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
 function GradioEmbed() {
-  // NOTE: This key is now publicly visible in the browser source.
-  // This is required for iframe embedding of a private Gradio app.
   const gradioUrl = `https://genai-app-locatingandassessingola-1-1751046095728-629342546806.us-central1.run.app/?key=${process.env.NEXT_PUBLIC_GRADIO_API_KEY}`;
 
   if (!process.env.NEXT_PUBLIC_GRADIO_API_KEY || process.env.NEXT_PUBLIC_GRADIO_API_KEY.includes('YOUR_SECRET_KEY')) {
@@ -40,33 +38,18 @@ function GradioEmbed() {
       <iframe
         src={gradioUrl}
         frameBorder="0"
-        className="w-full h-full"
+        className="h-full w-full"
         title="Gradio App"
       ></iframe>
   );
 }
 
 export default function HomePage() {
-    const { user, loading, signIn } = useAuth();
-    const [hostname, setHostname] = useState('');
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setHostname(window.location.hostname);
-        }
-    }, []);
-
-    if (loading) {
-      return (
-        <div className="flex h-[calc(100vh-4rem)] w-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      );
-    }
+    const { user, signIn } = useAuth();
   
     if (!user) {
       return (
-        <div className="container mx-auto flex h-[calc(100vh-8rem)] items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center bg-background">
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
                     <CardTitle>Acesso Restrito</CardTitle>
@@ -78,24 +61,13 @@ export default function HomePage() {
                         Entrar com Google
                     </Button>
                 </CardContent>
-                {hostname && (
-                    <CardFooter className="flex-col gap-2 pt-4">
-                        <p className="text-xs text-muted-foreground">Problemas com o login?</p>
-                        <p className="text-xs text-muted-foreground">
-                            Adicione o seguinte domínio aos seus domínios autorizados do Firebase Authentication:
-                        </p>
-                        <div className="mt-2 text-sm font-semibold bg-muted text-muted-foreground rounded-md px-3 py-1">
-                            {hostname}
-                        </div>
-                    </CardFooter>
-                )}
             </Card>
         </div>
       );
     }
   
     return (
-      <div className="w-full h-[calc(100vh-4rem)]">
+      <div className="h-full w-full">
         <Suspense fallback={
           <div className="flex h-full w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
