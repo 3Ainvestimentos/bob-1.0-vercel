@@ -87,7 +87,7 @@ const ragChatFlow = ai.defineFlow(
         } catch (e: any) {
             console.error('CRITICAL: Failed to initialize Firebase Admin SDK for RAG.', e);
             const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '[SEU-ID-DE-PROJETO]';
-            const serviceAccount = `${projectId}@appspot.gserviceaccount.com`;
+            const serviceAccount = `firebase-adminsdk-fbsvc@${projectId}.iam.gserviceaccount.com`;
             const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
             const errorMessage = isAuthError
                 ? `Falha na autenticação do servidor. Verifique se a conta de serviço '${serviceAccount}' possui as permissões necessárias.`
@@ -151,7 +151,7 @@ Resposta:`;
     } catch (e: any) {
         console.error('CRITICAL: Error in RAG Chat Flow.', e);
         const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '[SEU-ID-DE-PROJETO]';
-        const serviceAccount = `${projectId}@appspot.gserviceaccount.com`;
+        const serviceAccount = `firebase-adminsdk-fbsvc@${projectId}.iam.gserviceaccount.com`;
         
         // Intelligent error diagnosis
         if (e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object')) {
