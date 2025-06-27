@@ -1,9 +1,9 @@
 
 'use server';
 /**
- * @fileOverview A flow for indexing file content.
+ * @fileOverview A flow for indexing file or text content.
  *
- * - indexFile - A function that takes a file URL, downloads it, chunks it, generates embeddings, and stores them.
+ * - indexFile - A function that takes file URL or raw text, chunks it, generates embeddings, and stores them.
  * - IndexFileInput - The input type for the indexFile function.
  * - IndexFileOutput - The return type for the indexFile function.
  */
@@ -12,8 +12,9 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const IndexFileInputSchema = z.object({
-  fileName: z.string().describe('The name of the file being indexed.'),
-  fileUrl: z.string().url().describe('The public download URL of the file.'),
+  fileName: z.string().describe('The identifier for the content being indexed (e.g., file name or "Manual Text").'),
+  fileUrl: z.string().url().optional().describe('The public download URL of the file.'),
+  textContent: z.string().optional().describe('The raw text content to index directly.'),
 });
 export type IndexFileInput = z.infer<typeof IndexFileInputSchema>;
 
@@ -83,25 +84,33 @@ const indexFileFlow = ai.defineFlow(
     if (!adminDb) {
       return { success: false, message: 'Server-side error: Firestore database object is not available after initialization.' };
     }
-
-    // Step 3: Download file
-    let fileContent;
-    try {
-      const response = await fetch(input.fileUrl);
-      if (!response.ok) {
-        throw new Error(`Download failed with status: ${response.status} ${response.statusText}`);
-      }
-      fileContent = await response.text();
-      if (!fileContent) {
-        return { success: true, message: `File "${input.fileName}" is empty. Nothing to index.` };
-      }
-    } catch (e: any) {
-       console.error('CRITICAL: Failed to download file.', e);
-       return { success: false, message: `Failed to download file from URL. Details: ${e.message}` };
+    
+    // Step 3: Get content to index (from URL or direct text)
+    let contentToIndex;
+    if (input.textContent) {
+        contentToIndex = input.textContent;
+    } else if (input.fileUrl) {
+        try {
+            const response = await fetch(input.fileUrl);
+            if (!response.ok) {
+                throw new Error(`Download failed with status: ${response.status} ${response.statusText}`);
+            }
+            contentToIndex = await response.text();
+        } catch (e: any) {
+           console.error('CRITICAL: Failed to download file.', e);
+           return { success: false, message: `Failed to download file from URL. Details: ${e.message}` };
+        }
+    } else {
+        return { success: false, message: 'No file URL or text content was provided to index.' };
     }
 
+    if (!contentToIndex) {
+        return { success: true, message: `Content for "${input.fileName}" is empty. Nothing to index.` };
+    }
+
+
     // Step 4: Chunk the text
-    const chunks = chunkText(fileContent, 1500, 150);
+    const chunks = chunkText(contentToIndex, 1500, 150);
     let chunksProcessed = 0;
 
     // Step 5: Generate embeddings and save to Firestore for each chunk
@@ -137,7 +146,7 @@ const indexFileFlow = ai.defineFlow(
 
     return {
       success: true,
-      message: `Successfully indexed ${chunks.length} chunks from ${input.fileName}`,
+      message: `Successfully indexed ${chunks.length} chunks for ${input.fileName}`,
     };
   }
 );

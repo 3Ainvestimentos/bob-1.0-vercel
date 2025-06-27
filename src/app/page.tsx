@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useAuth } from '@/context/auth-context';
 import { indexFile } from '@/ai/flows/indexer-flow';
 import Link from 'next/link';
+import { Textarea } from '@/components/ui/textarea';
 
 
 interface StoredFile {
@@ -30,6 +31,12 @@ function FileManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  const [textToUpload, setTextToUpload] = useState<string>('');
+  const [isIndexingText, setIsIndexingText] = useState<boolean>(false);
+  const [manualTextIndexed, setManualTextIndexed] = useState<boolean>(false);
+  const MANUAL_TEXT_FILENAME = 'Texto Manual';
+
 
   const fetchFiles = useCallback(async () => {
     if (!user) return; // Don't fetch if no user
@@ -128,10 +135,9 @@ function FileManager() {
       if (result && result.success) {
         toast({
           title: 'Indexação Concluída',
-          description: `O arquivo "${file.name}" foi processado e adicionado à memória do chatbot.`,
+          description: result.message,
         });
       } else {
-        // If result is falsy or doesn't have a message, provide a generic one.
         const errorMessage = result?.message || 'Ocorreu um erro desconhecido durante a indexação.';
         throw new Error(errorMessage);
       }
@@ -147,19 +153,85 @@ function FileManager() {
     }
   }
 
+  const handleIndexText = async () => {
+    if (!textToUpload.trim()) return;
+    setIsIndexingText(true);
+    setManualTextIndexed(false);
+    try {
+        const result = await indexFile({
+            fileName: MANUAL_TEXT_FILENAME,
+            textContent: textToUpload,
+        });
+
+        if (result?.success) {
+            toast({
+                title: 'Indexação Concluída',
+                description: result.message,
+            });
+            setTextToUpload(''); // Clear textarea
+            setManualTextIndexed(true); // Show link to chat
+        } else {
+            const errorMessage = result?.message || 'Ocorreu um erro desconhecido durante a indexação do texto.';
+            throw new Error(errorMessage);
+        }
+    } catch (error: any) {
+        console.error("Error indexing text:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Erro ao Indexar Texto',
+            description: error.message,
+        });
+    } finally {
+        setIsIndexingText(false);
+    }
+  };
+
+
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <header className="mb-8">
-        <h1 className="text-4xl font-headline font-bold text-primary">Gerenciador de Arquivos</h1>
+        <h1 className="text-4xl font-headline font-bold text-primary">Gerenciador de Conteúdo</h1>
         <p className="text-lg text-muted-foreground mt-1">
-          Faça upload, visualize e gerencie seus arquivos no Firebase Storage.
+          Envie arquivos ou cole textos para interagir com o chatbot.
         </p>
       </header>
+      
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Indexar por Texto</CardTitle>
+          <CardDescription>Cole um texto abaixo para indexar e fazer perguntas sobre ele ao chatbot.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Cole seu texto aqui..."
+            value={textToUpload}
+            onChange={(e) => setTextToUpload(e.target.value)}
+            rows={6}
+            disabled={isIndexingText}
+            className="text-sm"
+          />
+        </CardContent>
+        <CardFooter className="flex justify-between items-center">
+            {manualTextIndexed ? (
+                <Link href={`/chatbot?file=${encodeURIComponent(MANUAL_TEXT_FILENAME)}`} passHref>
+                    <Button variant="outline">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Conversar sobre o texto
+                    </Button>
+                </Link>
+            ) : <div />}
+            <Button onClick={handleIndexText} disabled={!textToUpload.trim() || isIndexingText}>
+                {isIndexingText ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookOpen className="mr-2 h-4 w-4" />}
+                {isIndexingText ? 'Indexando...' : 'Indexar Texto'}
+            </Button>
+        </CardFooter>
+      </Card>
+
 
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Novo Upload</CardTitle>
-          <CardDescription>Selecione um arquivo para enviar para o bucket.</CardDescription>
+          <CardTitle>Indexar por Arquivo</CardTitle>
+          <CardDescription>Selecione um arquivo para enviar para o bucket e depois indexar.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
