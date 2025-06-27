@@ -24,6 +24,12 @@ export type ChatbotOutput = z.infer<typeof ChatbotOutputSchema>;
 const GRADIO_API_URL = "https://genai-app-locatingandassessingola-1-1751046095728-629342546806.us-central1.run.app";
 const GRADIO_API_KEY = process.env.GRADIO_API_KEY;
 
+// DEBUG: Log the key to the server console to verify it's being loaded.
+console.log('--- DEBUGGING GRADIO KEY ---');
+console.log('Attempting to use GRADIO_API_KEY:', GRADIO_API_KEY ? `"${GRADIO_API_KEY}"` : '<<<< UNDEFINED >>>>');
+console.log('----------------------------');
+
+
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotOutput> {
   if (!GRADIO_API_KEY || GRADIO_API_KEY.includes('YOUR_SECRET_KEY')) {
     const errorMessage = 'ERRO DE CONFIGURAÇÃO: A chave da API do Gradio (GRADIO_API_KEY) não foi encontrada no arquivo .env. Por favor, obtenha a chave no Vertex AI Studio e adicione-a ao seu arquivo .env.';
