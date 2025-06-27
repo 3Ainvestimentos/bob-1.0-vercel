@@ -74,10 +74,36 @@ Pergunta do usuário: "${input.prompt}"`;
 
         return { response: responseText };
     } catch (e: any) {
-        console.error('CRITICAL: An unrecoverable error occurred in ragChatFlow.', e);
-        const message = e?.message || 'An unknown server error occurred.';
-        const finalMessage = `Error processing your request. Details: ${message}`;
-        return { response: finalMessage };
+        console.error('--- DETAILED ERROR START ---');
+        console.error('An unrecoverable error occurred in ragChatFlow.');
+        console.error('Timestamp:', new Date().toISOString());
+        console.error('Error Name:', e.name);
+        console.error('Error Message:', e.message);
+        console.error('Error Cause:', e.cause);
+        // Use a safe stringify for circular references
+        console.error('Full Error Object:', JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
+        console.error('--- DETAILED ERROR END ---');
+
+        // Construct a detailed message for the user interface
+        let detailedMessage = 'Ocorreu um erro crítico ao processar sua solicitação.\n\n';
+        detailedMessage += `Tipo de Erro: ${e.name || 'Desconhecido'}\n`;
+        detailedMessage += `Mensagem: ${e.message || 'Nenhuma mensagem de erro específica disponível.'}\n\n`;
+
+        if (e.cause) {
+            try {
+                detailedMessage += `Causa Raiz Provável: ${JSON.stringify(e.cause)}\n\n`;
+            } catch {
+                detailedMessage += `Causa Raiz Provável: (Não foi possível serializar o objeto 'cause')\n\n`;
+            }
+        }
+
+        detailedMessage += 'Verifique os logs do servidor (console do `genkit:dev` ou logs do Firebase App Hosting) para ver o objeto de erro completo e o stack trace. Isso nos ajudará a diagnosticar o problema, que pode ser:\n';
+        detailedMessage += '- Conexão: Problemas de rede ou firewall.\n';
+        detailedMessage += '- Permissões da API: A conta de serviço não tem o papel `Vertex AI User` ou `Vertex AI Service Agent`.\n';
+        detailedMessage += '- Configuração do Corpus: O ID do corpus está incorreto ou a região está errada.\n';
+        detailedMessage += '- API do Google: A API pode estar temporariamente indisponível ou rejeitando a chamada por motivos de segurança ou cota.';
+
+        return { response: detailedMessage };
     }
   }
 );
