@@ -9,14 +9,16 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { googleAIRetriever } from '@genkit-ai/googleai/retriever';
 import { z } from 'genkit';
 
 // Define the retriever tool that connects to your specific RAG Corpus
-const corpusRetrieverTool = googleAIRetriever({
-  name: 'corpusRetriever',
-  corpus: 'projects/datavisor-44i5m/locations/us-central1/ragCorpora/6917529027641081856',
-});
+const corpusRetrieverTool = ai.defineRetriever(
+  {
+    name: 'corpusRetriever',
+    type: 'googleAI/ragCorpus',
+    corpus: 'projects/datavisor-44i5m/locations/us-central1/ragCorpora/6917529027641081856',
+  }
+);
 
 const ChatbotInputSchema = z.object({
   prompt: z.string().describe('The user prompt for the chatbot.'),
