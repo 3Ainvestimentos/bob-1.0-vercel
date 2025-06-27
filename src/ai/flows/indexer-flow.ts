@@ -60,7 +60,7 @@ const indexFileFlow = ai.defineFlow(
       admin = await import('firebase-admin');
     } catch (e: any) {
       console.error('CRITICAL: Failed to import firebase-admin module.', e);
-      return { success: false, message: `Server-side error: Failed to load Firebase Admin module. Details: ${e.message}` };
+      return { success: false, message: `Erro de servidor: Falha ao carregar o módulo Firebase Admin. Detalhes: ${e.message}` };
     }
 
     // Step 2: Initialize Firebase Admin SDK
@@ -76,13 +76,13 @@ const indexFileFlow = ai.defineFlow(
       console.error('CRITICAL: Failed to initialize Firebase Admin SDK.', e);
       const isAuthError = e.message?.includes('Could not find Application Default Credentials') || e.code?.includes('auth');
       const errorMessage = isAuthError
-        ? 'Firebase Admin credentials not found. Please run "gcloud auth application-default login" in your terminal and restart the server.'
-        : `Failed to initialize Firebase Admin. Details: ${e.message}`;
+        ? 'Credenciais do Firebase Admin não encontradas. Por favor, execute "gcloud auth application-default login" em seu terminal e reinicie o servidor.'
+        : `Falha ao inicializar o Firebase Admin. Detalhes: ${e.message}`;
       return { success: false, message: errorMessage };
     }
 
     if (!adminDb) {
-      return { success: false, message: 'Server-side error: Firestore database object is not available after initialization.' };
+      return { success: false, message: 'Erro de servidor: O objeto do banco de dados Firestore não está disponível após a inicialização.' };
     }
     
     // Step 3: Get content to index (from URL or direct text)
@@ -93,19 +93,19 @@ const indexFileFlow = ai.defineFlow(
         try {
             const response = await fetch(input.fileUrl);
             if (!response.ok) {
-                throw new Error(`Download failed with status: ${response.status} ${response.statusText}`);
+                throw new Error(`Download falhou com o status: ${response.status} ${response.statusText}`);
             }
             contentToIndex = await response.text();
         } catch (e: any) {
            console.error('CRITICAL: Failed to download file.', e);
-           return { success: false, message: `Failed to download file from URL. Details: ${e.message}` };
+           return { success: false, message: `Falha ao baixar arquivo da URL. Detalhes: ${e.message}` };
         }
     } else {
-        return { success: false, message: 'No file URL or text content was provided to index.' };
+        return { success: false, message: 'Nenhuma URL de arquivo ou conteúdo de texto foi fornecido para indexar.' };
     }
 
     if (!contentToIndex) {
-        return { success: true, message: `Content for "${input.fileName}" is empty. Nothing to index.` };
+        return { success: true, message: `O conteúdo de "${input.fileName}" está vazio. Nada a indexar.` };
     }
 
 
@@ -121,7 +121,7 @@ const indexFileFlow = ai.defineFlow(
         });
 
         if (!embedResponse?.[0]?.embedding) {
-          throw new Error('Embedding API returned a response without an embedding property.');
+          throw new Error('A API de embedding retornou uma resposta sem a propriedade embedding.');
         }
         
         const embedding = embedResponse[0].embedding;
@@ -149,13 +149,13 @@ const indexFileFlow = ai.defineFlow(
       }
       
       // Fallback for other errors
-      const errorMessage = e.message || 'An unknown error occurred';
-      return { success: false, message: `Failed to process chunks for "${input.fileName}" after ${chunksProcessed} chunks. Details: ${errorMessage}` };
+      const errorMessage = e.message || 'Ocorreu um erro desconhecido';
+      return { success: false, message: `Falha ao processar os pedaços para "${input.fileName}" após ${chunksProcessed} pedaços. Detalhes: ${errorMessage}` };
     }
 
     return {
       success: true,
-      message: `Successfully indexed ${chunks.length} chunks for ${input.fileName}`,
+      message: `Indexado com sucesso ${chunks.length} pedaços para ${input.fileName}`,
     };
   }
 );

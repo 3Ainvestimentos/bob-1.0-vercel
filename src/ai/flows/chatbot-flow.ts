@@ -109,6 +109,9 @@ const ragChatFlow = ai.defineFlow(
         promptEmbedding = embedResponse[0].embedding;
     } catch (e: any) {
         console.error('CRITICAL: Failed to generate prompt embedding.', e);
+        if (e instanceof TypeError && e.message.includes('Cannot convert undefined or null to object')) {
+          return { response: `Desculpe, não consegui processar sua pergunta. Pode ser um problema de autenticação do servidor. Se você for o desenvolvedor, execute "gcloud auth application-default login" e reinicie.` };
+        }
         return { response: `Desculpe, não consegui processar sua pergunta para buscar no contexto. Detalhes: ${e.message}` };
     }
 
