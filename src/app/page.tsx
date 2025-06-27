@@ -1,326 +1,134 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getStorage, ref, listAll, uploadBytes, getDownloadURL, deleteObject, type StorageReference } from 'firebase/storage';
-import { app } from '@/lib/firebase';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Trash2, Download, Copy, Loader2, LogIn, BookOpen, MessageSquare } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Bot, Loader2, Send, User, LogIn } from 'lucide-react';
+import { askChatbot } from '@/ai/flows/chatbot-flow';
 import { useAuth } from '@/context/auth-context';
-import { indexFile } from '@/ai/flows/indexer-flow';
-import Link from 'next/link';
-import { Textarea } from '@/components/ui/textarea';
 
-
-interface StoredFile {
-  ref: StorageReference;
-  name: string;
-  url: string;
+interface Message {
+  role: 'user' | 'model';
+  text: string;
 }
 
-function FileManager() {
-  const [files, setFiles] = useState<StoredFile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isIndexing, setIsIndexing] = useState<Record<string, boolean>>({});
-  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
+function ChatbotComponent() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
-  
-  const [textToUpload, setTextToUpload] = useState<string>('');
-  const [isIndexingText, setIsIndexingText] = useState<boolean>(false);
-  const [manualTextIndexed, setManualTextIndexed] = useState<boolean>(false);
-  const MANUAL_TEXT_FILENAME = 'Texto Manual';
 
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [messages]);
 
-  const fetchFiles = useCallback(async () => {
-    if (!user) return; // Don't fetch if no user
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = { role: 'user', text: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
     setIsLoading(true);
+
     try {
-      const storage = getStorage(app);
-      const listRef = ref(storage, '/');
-      const res = await listAll(listRef);
-      const filePromises = res.items.map(async (itemRef) => {
-        const url = await getDownloadURL(itemRef);
-        return { ref: itemRef, name: itemRef.name, url };
-      });
-      const fetchedFiles = await Promise.all(filePromises);
-      setFiles(fetchedFiles);
-    } catch (error: any) {
-      console.error("Error fetching files:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao carregar arquivos',
-        description: error.message || 'Não foi possível listar os arquivos. Verifique as regras de segurança do Storage.',
-      });
+      const result = await askChatbot({ prompt: input });
+      const modelMessage: Message = { role: 'model', text: result.response };
+      setMessages((prev) => [...prev, modelMessage]);
+    } catch (error) {
+      console.error('Error calling chatbot flow:', error);
+      const errorMessage: Message = {
+        role: 'model',
+        text: 'Desculpe, ocorreu um erro ao processar sua solicitação.',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [toast, user]);
-
-  useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setFileToUpload(event.target.files[0]);
-    }
   };
-
-  const handleUpload = async () => {
-    if (!fileToUpload || !user) return;
-    setIsUploading(true);
-    const storage = getStorage(app);
-    const fileRef = ref(storage, `/${fileToUpload.name}`);
-    try {
-      await uploadBytes(fileRef, fileToUpload);
-      toast({
-        title: 'Upload concluído',
-        description: `O arquivo "${fileToUpload.name}" foi enviado com sucesso.`,
-      });
-      setFileToUpload(null);
-      if(fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      fetchFiles(); // Refresh file list
-    } catch (error: any) {
-      console.error("Error uploading file:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro no upload',
-        description: error.message || `Não foi possível enviar o arquivo "${fileToUpload.name}".`,
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleDelete = async (fileRef: StorageReference) => {
-    try {
-      await deleteObject(fileRef);
-      toast({
-        title: 'Arquivo excluído',
-        description: `O arquivo "${fileRef.name}" foi excluído com sucesso.`,
-      });
-      fetchFiles(); // Refresh file list
-    } catch (error: any) {
-      console.error("Error deleting file:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao excluir',
-        description: error.message || `Não foi possível excluir o arquivo "${fileRef.name}".`,
-      });
-    }
-  };
-
-  const copyToClipboard = (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast({
-      title: 'URL Copiada!',
-      description: 'O link para o arquivo foi copiado para a área de transferência.',
-    });
-  };
-
-  const handleIndexFile = async (file: StoredFile) => {
-    setIsIndexing(prev => ({ ...prev, [file.name]: true }));
-    try {
-      const result = await indexFile({ fileName: file.name, fileUrl: file.url });
-
-      if (result && result.success) {
-        toast({
-          title: 'Indexação Concluída',
-          description: result.message,
-        });
-      } else {
-        const errorMessage = result?.message || 'Ocorreu um erro desconhecido durante a indexação.';
-        throw new Error(errorMessage);
-      }
-    } catch (error: any) {
-      console.error("Error indexing file:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao Indexar',
-        description: error.message || `Não foi possível indexar o arquivo "${file.name}".`,
-      });
-    } finally {
-      setIsIndexing(prev => ({ ...prev, [file.name]: false }));
-    }
-  }
-
-  const handleIndexText = async () => {
-    if (!textToUpload.trim()) return;
-    setIsIndexingText(true);
-    setManualTextIndexed(false);
-    try {
-        const result = await indexFile({
-            fileName: MANUAL_TEXT_FILENAME,
-            textContent: textToUpload,
-        });
-
-        if (result?.success) {
-            toast({
-                title: 'Indexação Concluída',
-                description: result.message,
-            });
-            setTextToUpload(''); // Clear textarea
-            setManualTextIndexed(true); // Show link to chat
-        } else {
-            const errorMessage = result?.message || 'Ocorreu um erro desconhecido durante a indexação do texto.';
-            throw new Error(errorMessage);
-        }
-    } catch (error: any) {
-        console.error("Error indexing text:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Erro ao Indexar Texto',
-            description: error.message,
-        });
-    } finally {
-        setIsIndexingText(false);
-    }
-  };
-
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
-      <header className="mb-8">
-        <h1 className="text-4xl font-headline font-bold text-primary">Gerenciador de Conteúdo</h1>
-        <p className="text-lg text-muted-foreground mt-1">
-          Envie arquivos ou cole textos para interagir com o chatbot.
-        </p>
-      </header>
-      
-      <Card className="mb-8">
+    <div className="container mx-auto p-4 md:p-6 lg:p-8 flex justify-center">
+      <Card className="w-full max-w-2xl h-[calc(100vh-12rem)] flex flex-col">
         <CardHeader>
-          <CardTitle>Indexar por Texto</CardTitle>
-          <CardDescription>Cole um texto abaixo para indexar e fazer perguntas sobre ele ao chatbot.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Bot />
+            Chatbot Assistente
+          </CardTitle>
+          <CardDescription className="pt-2">
+            Faça perguntas com base nos documentos do nosso Corpus de conhecimento.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Textarea
-            placeholder="Cole seu texto aqui..."
-            value={textToUpload}
-            onChange={(e) => setTextToUpload(e.target.value)}
-            rows={6}
-            disabled={isIndexingText}
-            className="text-sm"
-          />
+        <CardContent className="flex-grow overflow-hidden">
+          <ScrollArea className="h-full" ref={scrollAreaRef}>
+            <div className="space-y-4 pr-4">
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex items-start gap-3 ${
+                    message.role === 'user' ? 'justify-end' : ''
+                  }`}
+                >
+                  {message.role === 'model' && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback><Bot size={20}/></AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div
+                    className={`rounded-lg px-4 py-2 max-w-[80%] whitespace-pre-wrap ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    {message.text}
+                  </div>
+                   {message.role === 'user' && user && (
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User'} />
+                        <AvatarFallback><User size={20}/></AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              ))}
+              {isLoading && (
+                 <div className="flex items-start gap-3">
+                    <Avatar className="h-8 w-8">
+                        <AvatarFallback><Bot size={20}/></AvatarFallback>
+                    </Avatar>
+                    <div className="rounded-lg px-4 py-2 bg-muted flex items-center">
+                        <Loader2 className="h-5 w-5 animate-spin"/>
+                    </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
-        <CardFooter className="flex justify-between items-center">
-            {manualTextIndexed ? (
-                <Link href={`/chatbot?file=${encodeURIComponent(MANUAL_TEXT_FILENAME)}`} passHref>
-                    <Button variant="outline">
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        Conversar sobre o texto
-                    </Button>
-                </Link>
-            ) : <div />}
-            <Button onClick={handleIndexText} disabled={!textToUpload.trim() || isIndexingText}>
-                {isIndexingText ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookOpen className="mr-2 h-4 w-4" />}
-                {isIndexingText ? 'Indexando...' : 'Indexar Texto'}
+        <CardFooter>
+          <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Digite sua mensagem..."
+              disabled={isLoading}
+            />
+            <Button type="submit" disabled={isLoading || !input.trim()}>
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              <span className="sr-only">Enviar</span>
             </Button>
+          </form>
         </CardFooter>
       </Card>
-
-
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Indexar por Arquivo</CardTitle>
-          <CardDescription>Selecione um arquivo para enviar para o bucket e depois indexar.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Input
-              type="file"
-              onChange={handleFileSelect}
-              ref={fileInputRef}
-              className="flex-grow"
-              disabled={isUploading}
-            />
-            <Button onClick={handleUpload} disabled={!fileToUpload || isUploading}>
-              {isUploading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-4 w-4" />
-              )}
-              {isUploading ? 'Enviando...' : 'Enviar Arquivo'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <section>
-        <h2 className="text-2xl font-headline font-semibold mb-4">Arquivos no Bucket</h2>
-        {isLoading ? (
-          <div className="flex justify-center items-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-4 text-muted-foreground">Carregando arquivos...</p>
-          </div>
-        ) : files.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {files.map((file) => (
-              <Card key={file.name}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 truncate">
-                    <FileText className="h-5 w-5 flex-shrink-0" />
-                    <span className="truncate">{file.name}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardFooter className="flex justify-between gap-2">
-                  <div className="flex gap-1">
-                     <Button variant="ghost" size="icon" onClick={() => copyToClipboard(file.url)} title="Copiar URL">
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <a href={file.url} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="icon" title="Baixar arquivo">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </a>
-                  </div>
-                  <div className="flex gap-1">
-                      <Link href={`/chatbot?file=${encodeURIComponent(file.name)}`} passHref>
-                        <Button variant="outline" size="icon" title="Perguntar ao Chatbot">
-                            <MessageSquare className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <Button variant="outline" size="icon" onClick={() => handleIndexFile(file)} disabled={isIndexing[file.name]} title="Indexar no Chatbot">
-                        {isIndexing[file.name] ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon" title="Excluir arquivo">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação não pode ser desfeita. Isso excluirá permanentemente o arquivo "{file.name}" do seu bucket.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(file.ref)}>
-                              Sim, excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-10">Nenhum arquivo encontrado no bucket.</p>
-        )}
-      </section>
     </div>
   );
 }
@@ -331,7 +139,6 @@ export default function HomePage() {
     const [hostname, setHostname] = useState('');
 
     useEffect(() => {
-        // This runs only on the client-side
         if (typeof window !== 'undefined') {
             setHostname(window.location.hostname);
         }
@@ -351,7 +158,7 @@ export default function HomePage() {
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
                     <CardTitle>Acesso Restrito</CardTitle>
-                    <CardDescription>Você precisa estar autenticado para acessar esta página.</CardDescription>
+                    <CardDescription>Você precisa estar autenticado para acessar o chatbot.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Button onClick={signIn}>
@@ -375,5 +182,13 @@ export default function HomePage() {
       );
     }
   
-    return <FileManager />;
+    return (
+        <Suspense fallback={
+          <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        }>
+            <ChatbotComponent />
+        </Suspense>
+    );
 }
