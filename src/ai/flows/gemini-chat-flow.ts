@@ -40,7 +40,8 @@ export async function askGemini(input: GeminiChatInput): Promise<GeminiChatOutpu
     model: 'googleai/gemini-1.5-flash-latest',
     prompt: input.prompt,
     config: {
-      temperature: 0.5,
+      temperature: 1,
+      topP: 1,
       maxOutputTokens: 8192,
       safetySettings: [
         { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -48,8 +49,10 @@ export async function askGemini(input: GeminiChatInput): Promise<GeminiChatOutpu
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
       ],
+      // The RAG configuration is passed within the config object
+      // to be sent directly to the underlying Google AI API.
+      tools: [ragTool],
     },
-    tools: [ragTool as any], // Cast as 'any' to match the expected Tool type
   });
   
   return { response: result.text };
