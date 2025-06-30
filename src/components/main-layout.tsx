@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/context/auth-context';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Sidebar,
@@ -18,7 +17,6 @@ import {
   Bot,
   HelpCircle,
   LogOut,
-  MessageSquare,
   Settings,
   User as UserIcon,
 } from 'lucide-react';
