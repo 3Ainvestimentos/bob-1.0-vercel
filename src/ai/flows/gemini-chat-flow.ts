@@ -23,22 +23,21 @@ type GeminiChatOutput = z.infer<typeof GeminiChatOutputSchema>;
 
 
 /**
- * IMPORTANT: Please replace this placeholder with your actual RAG Corpus ID from Vertex AI Studio.
- * It should look like: projects/<your-project-id>/locations/<your-location>/ragCorpora/<corpus-id>
+ * The actual RAG Corpus ID from Vertex AI Studio.
  */
-const RAG_CORPUS_ID = 'YOUR_RAG_CORPUS_ID_HERE';
+const RAG_CORPUS_ID = 'projects/datavisor-44i5m/locations/us-central1/ragCorpora/6917529027641081856';
 
-// Define a prompt that is aware of the RAG tool.
+// Define a prompt that is aware of the RAG retriever.
 const ragPrompt = ai.definePrompt({
     name: 'ragPrompt',
     input: { schema: GeminiChatInputSchema },
     output: { schema: GeminiChatOutputSchema },
     
-    // System instructions guide the model on how to behave and use the tools.
-    system: 'Você é um assistente prestativo. Responda à pergunta do usuário com base nas informações encontradas pela ferramenta de busca de documentos. Se a ferramenta não fornecer uma resposta relevante, diga que não conseguiu encontrar a informação nos documentos. Sempre responda em português.',
+    // System instructions guide the model on how to behave.
+    system: 'Você é um assistente prestativo. Responda à pergunta do usuário com base nas informações dos documentos fornecidos. Se a informação não estiver disponível, diga que não conseguiu encontrar a resposta nos documentos. Sempre responda em português.',
 
-    // Provide the RAG retriever as a tool for the model to use.
-    tools: [
+    // Provide the RAG retriever for the model to use for context.
+    retrievers: [
         vertexAIRAGRetriever({
             ragCorpus: RAG_CORPUS_ID,
         }),
@@ -50,9 +49,9 @@ const ragPrompt = ai.definePrompt({
 
 
 export async function askGemini(input: GeminiChatInput): Promise<GeminiChatOutput> {
-    if (!RAG_CORPUS_ID || RAG_CORPUS_ID === 'YOUR_RAG_CORPUS_ID_HERE') {
+    if (!RAG_CORPUS_ID || RAG_CORPUS_ID.includes('YOUR_RAG_CORPUS_ID')) {
         return { 
-            response: "ERRO DE CONFIGURAÇÃO: A ID do Corpus RAG não foi definida. Por favor, edite o arquivo `src/ai/flows/gemini-chat-flow.ts` e substitua o placeholder `YOUR_RAG_CORPUS_ID_HERE` pela sua ID real do Vertex AI." 
+            response: "ERRO DE CONFIGURAÇÃO: A ID do Corpus RAG não foi definida corretamente. Por favor, verifique o arquivo `src/ai/flows/gemini-chat-flow.ts`." 
         };
     }
 
