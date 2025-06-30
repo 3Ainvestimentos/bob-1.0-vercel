@@ -1,15 +1,15 @@
 'use server';
 /**
- * @fileOverview A Gemini chat flow that uses a Vertex AI RAG corpus.
- * This flow connects to a specified RAG corpus to answer user questions
- * based on provided documents.
+ * @fileOverview A standard Gemini chat flow.
+ * This flow provides a direct, general-purpose chat with the Gemini model.
+ * The RAG-enabled chat is available via the Gradio interface on the main page.
  *
- * - askGemini - A function that handles the chat interaction with RAG.
+ * - askGemini - A function that handles the chat interaction.
  * - GeminiChatInput - The input type for the askGemini function.
  * - GeminiChatOutput - The return type for the askGemini function.
  */
 
-import { ai, corpusRetriever } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const GeminiChatInputSchema = z.object({
@@ -25,8 +25,7 @@ export type GeminiChatOutput = z.infer<typeof GeminiChatOutputSchema>;
 export async function askGemini(input: GeminiChatInput): Promise<GeminiChatOutput> {
   const result = await ai.generate({
     prompt: input.prompt,
-    system: 'Você é um assistente prestativo. Responda à pergunta do usuário com base nas informações encontradas nos documentos. Se os documentos não fornecerem uma resposta relevante, diga que não conseguiu encontrar a informação nos documentos fornecidos.',
-    retrievers: [corpusRetriever],
+    system: 'Você é um assistente prestativo. Responda diretamente à pergunta do usuário.',
   });
   
   return { response: result.text };
