@@ -22,7 +22,7 @@ export default function SearchPage() {
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-center text-muted-foreground">
-              Digite sua pesquisa abaixo para interagir com a busca inteligente.
+              Clique no campo abaixo para iniciar a busca inteligente.
             </p>
             <Input
               placeholder="Pesquise aqui"
