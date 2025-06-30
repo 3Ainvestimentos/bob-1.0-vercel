@@ -21,6 +21,7 @@ const session = 'projects/629342546806/locations/global/collections/default_coll
 // The library will automatically handle authentication using Application Default Credentials.
 const searchClient = new SearchServiceClient({
     apiEndpoint: 'global-discoveryengine.googleapis.com',
+    projectId: '629342546806', // Explicitly set the project ID
 });
 
 export async function searchDiscoveryEngine(query: SearchInput): Promise<SearchOutput> {
@@ -36,6 +37,7 @@ export async function searchDiscoveryEngine(query: SearchInput): Promise<SearchO
       spellCorrectionSpec: {
         mode: 'AUTO',
       },
+      languageCode: 'pt-BR', // Add language code to match the curl example
       contentSearchSpec: {
         summarySpec: {
           summaryResultCount: 3,
@@ -49,7 +51,6 @@ export async function searchDiscoveryEngine(query: SearchInput): Promise<SearchO
       userInfo: {
           timeZone: 'America/Sao_Paulo'
       }
-      // Note: languageCode 'pt-BR' from the curl example is usually inferred by the service.
     });
 
     if (response.summary?.summaryText) {
