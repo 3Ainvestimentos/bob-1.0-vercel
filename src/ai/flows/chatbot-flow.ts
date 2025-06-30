@@ -67,6 +67,7 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
+      cache: 'no-store',
     });
 
     const data = await response.json();
