@@ -19,11 +19,7 @@ export interface ChatbotInput {
   query: string;
 }
 
-const PROJECT_ID = '629342546806';
-const ENGINE_ID = 'datavisorvscoderagtest_1751310702302';
-const LOCATION = 'global';
-
-const API_ENDPOINT = `https://discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/${LOCATION}/collections/default_collection/engines/${ENGINE_ID}/servingConfigs/default_search:search`;
+const API_ENDPOINT = `https://discoveryengine.googleapis.com/v1alpha/projects/629342546806/locations/global/collections/default_collection/engines/datavisorvscoderagtest_1751310702302/servingConfigs/default_search:search`;
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> {
   try {
