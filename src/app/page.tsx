@@ -1,54 +1,139 @@
 'use client';
 
-import Script from 'next/script';
+import { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { askChatbot, type ChatMessage } from '@/ai/flows/chatbot-flow';
 
-// Define o tipo para o elemento customizado do widget para que o TypeScript não reclame.
-// Usamos kebab-case para os atributos, pois é o padrão HTML para elementos customizados.
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'gen-search-widget': React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement> & {
-          'config-id': string;
-          'trigger-id': string;
-        },
-        HTMLElement
-      >;
+export default function ChatPage() {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      text: input,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await askChatbot({ query: input });
+      setMessages((prev) => [...prev, response.message]);
+    } catch (error) {
+      console.error('Failed to get response from chatbot:', error);
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        text: 'Desculpe, não consegui obter uma resposta. Por favor, tente novamente.',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
-  }
-}
+  };
 
-export default function SearchPage() {
+  useEffect(() => {
+    // Scroll to the bottom when new messages are added
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [messages]);
+
   return (
-    <>
-      {/* Carrega o script do widget do Google Cloud */}
-      <Script
-        src="https://cloud.google.com/ai/gen-app-builder/client?hl=pt_BR"
-        strategy="afterInteractive"
-      />
-      <div className="flex h-[calc(100vh-4rem)] w-full flex-col items-center justify-center p-4">
-        <div className="w-full max-w-2xl text-center">
-          <h1 className="text-2xl font-bold">Pesquisa Inteligente</h1>
-          <p className="mt-2 text-muted-foreground">
-            Clique no campo abaixo para abrir a interface de busca.
-          </p>
-
-          <div className="mt-6">
-            {/* O input que aciona o widget. O ID aqui deve corresponder ao trigger-id do widget. */}
-            <input
-              id="searchWidgetTrigger"
-              placeholder="Pesquise aqui"
-              className="flex h-12 w-full rounded-md border border-input bg-background px-4 py-2 text-lg ring-offset-background placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            />
-          </div>
-
-          {/* O elemento do widget em si. Ele é invisível por padrão e é ativado pelo trigger. */}
-          <gen-search-widget
-            config-id="05715c26-4df8-4676-84b9-475cec8e1191"
-            trigger-id="searchWidgetTrigger"
-          ></gen-search-widget>
+    <div className="flex h-[calc(100vh-4rem)] flex-col">
+      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+        <div className="mx-auto max-w-3xl space-y-6">
+          {messages.length === 0 && !isLoading && (
+            <div className="flex flex-col items-center justify-center pt-20 text-center">
+              <Bot className="mb-4 h-16 w-16 text-primary" />
+              <h2 className="text-2xl font-bold">Assistente Inteligente</h2>
+              <p className="text-muted-foreground">
+                Faça uma pergunta para começar.
+              </p>
+            </div>
+          )}
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={cn(
+                'flex items-start gap-4',
+                message.role === 'user' ? 'justify-end' : 'justify-start'
+              )}
+            >
+              {message.role === 'assistant' && (
+                <Avatar className="h-9 w-9 border">
+                  <AvatarFallback>
+                    <Bot className="h-5 w-5" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <div
+                className={cn(
+                  'max-w-[75%] whitespace-pre-wrap rounded-lg p-3 text-sm',
+                  message.role === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted'
+                )}
+              >
+                {message.text}
+              </div>
+              {message.role === 'user' && (
+                <Avatar className="h-9 w-9 border">
+                  <AvatarFallback>
+                    <User className="h-5 w-5" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
+          ))}
+          {isLoading && (
+             <div className="flex items-start gap-4 justify-start">
+               <Avatar className="h-9 w-9 border">
+                  <AvatarFallback>
+                    <Bot className="h-5 w-5" />
+                  </AvatarFallback>
+                </Avatar>
+               <div className="bg-muted rounded-lg p-3 flex items-center space-x-2">
+                 <Loader2 className="h-4 w-4 animate-spin" />
+                 <span>Pensando...</span>
+               </div>
+             </div>
+          )}
         </div>
+      </ScrollArea>
+      <div className="border-t bg-background p-4">
+        <form
+          onSubmit={handleSendMessage}
+          className="mx-auto flex max-w-3xl items-center gap-2"
+        >
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Digite sua pergunta..."
+            autoComplete="off"
+            disabled={isLoading}
+          />
+          <Button type="submit" size="icon" disabled={isLoading}>
+            <Send className="h-4 w-4" />
+            <span className="sr-only">Enviar</span>
+          </Button>
+        </form>
       </div>
-    </>
+    </div>
   );
 }
