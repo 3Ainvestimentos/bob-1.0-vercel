@@ -32,13 +32,13 @@ export async function searchDiscoveryEngine(query: SearchInput): Promise<SearchO
     spellCorrectionSpec: { mode: "AUTO" },
     languageCode: "pt-BR",
     contentSearchSpec: {
-      extractiveContentSpec: {
-        maxExtractiveAnswerCount: 1
-      },
       summarySpec: {
         summaryResultCount: 3,
         ignoreAdversarialQuery: true,
         useSemanticChunks: true,
+      },
+      extractiveContentSpec: {
+        maxExtractiveAnswerCount: 1
       }
     },
     // For conversational context, a unique session ID should be managed per user conversation.
