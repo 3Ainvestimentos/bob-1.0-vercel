@@ -1,8 +1,3 @@
-'use server';
-/**
- * @fileOverview This flow is deprecated and no longer in use.
- * The application now uses a direct connection via @google-cloud/vertexai.
- * The core logic is now in `chatbot-flow.ts`.
- */
-
-// This file is intentionally left empty.
+// This file is no longer used.
+// The primary logic has been moved to src/ai/flows/chatbot-flow.ts
+// which uses the Vertex AI SDK directly.

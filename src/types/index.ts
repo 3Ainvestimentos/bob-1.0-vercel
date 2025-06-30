@@ -1,12 +1,3 @@
-// Adding type definition for Vertex AI Search Widget custom element.
-declare namespace JSX {
-  interface IntrinsicElements {
-    'gen-search-widget': React.DetailedHTMLProps<
-      React.HTMLAttributes<HTMLElement> & {
-        'config-id': string;
-        'trigger-id': string;
-      },
-      HTMLElement
-    >;
-  }
-}
+// This file can be used for custom type definitions.
+// The previous widget types have been removed as they are no longer in use.
+export {};

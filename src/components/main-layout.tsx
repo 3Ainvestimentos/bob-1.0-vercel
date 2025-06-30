@@ -60,7 +60,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   <SidebarMenuButton asChild isActive={pathname === '/'}>
                     <Link href="/">
                       <Bot />
-                      <span className="truncate">Pesquisa AI</span>
+                      <span className="truncate">Assistente</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
