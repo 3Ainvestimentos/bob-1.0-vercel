@@ -34,7 +34,9 @@ const generativeModel = vertex_ai.getGenerativeModel({
         { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
     ],
     generationConfig: {
-      temperature: 0.1,
+      temperature: 1,
+      topP: 1,
+      maxOutputTokens: 8192,
     },
 });
 
@@ -73,6 +75,12 @@ export async function askChatbot(input: ChatbotInput): Promise<string> {
     });
 
     const result = await chat.sendMessage(input.prompt);
+
+    if (!result.response || !result.response.candidates || result.response.candidates.length === 0) {
+        console.error("Invalid response structure from AI:", result);
+        throw new Error("Received an invalid response structure from the AI model.");
+    }
+
     const response = result.response;
     const text = response.text();
 
