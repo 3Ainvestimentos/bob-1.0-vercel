@@ -23,13 +23,13 @@ export type GeminiChatOutput = z.infer<typeof GeminiChatOutputSchema>;
 
 export async function askGemini(input: GeminiChatInput): Promise<GeminiChatOutput> {
   // This tool structure is derived from the Python SDK's `types.Tool` definition
-  // and enables Vertex AI RAG retrieval.
+  // and enables Vertex AI RAG retrieval. We use snake_case to match the Python SDK.
   const ragTool = {
     retrieval: {
-      vertexRagStore: {
-        ragResources: [
+      vertex_rag_store: {
+        rag_resources: [
           {
-            ragCorpus: "projects/datavisor-44i5m/locations/us-central1/ragCorpora/6917529027641081856"
+            rag_corpus: "projects/datavisor-44i5m/locations/us-central1/ragCorpora/6917529027641081856"
           }
         ],
       }
