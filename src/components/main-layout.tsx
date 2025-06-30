@@ -62,15 +62,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   <SidebarMenuButton asChild isActive={pathname === '/'}>
                     <Link href="/">
                       <Bot />
-                      <span className="truncate">Gradio RAG Chat</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/gemini'}>
-                    <Link href="/gemini">
-                      <MessageSquare />
-                      <span className="truncate">Gemini Chat</span>
+                      <span className="truncate">Assistente RAG</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
