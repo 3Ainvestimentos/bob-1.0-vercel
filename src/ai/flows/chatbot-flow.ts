@@ -21,7 +21,7 @@ export type ChatbotInput = z.infer<typeof ChatbotInputSchema>;
 // It will automatically use Application Default Credentials on Firebase/GCP.
 const vertex_ai = new VertexAI({
     project: 'datavisor-44i5m',
-    location: 'us-central1'
+    location: 'global'
 });
 const model = 'gemini-1.5-flash-latest';
 
