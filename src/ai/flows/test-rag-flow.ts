@@ -1,7 +1,8 @@
 'use server';
 /**
- * @fileOverview This flow was used for testing the RAG connection.
- * The logic has been successfully migrated to `chatbot-flow.ts` and this file is no longer in use.
+ * @fileOverview This flow is deprecated and no longer in use.
+ * The application now uses a direct connection via @google-cloud/vertexai.
+ * The core logic is now in `chatbot-flow.ts`.
  */
 
 // This file is intentionally left empty.

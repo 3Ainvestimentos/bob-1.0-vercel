@@ -1,23 +1,10 @@
 'use server';
 /**
  * @fileOverview A RAG-enabled chatbot flow that answers questions based on a Vertex AI RAG corpus.
+ * This implementation uses the @google-cloud/vertexai library directly.
  */
-import { ai } from '@/ai/genkit';
+import { VertexAI, HarmCategory, HarmBlockThreshold } from "@google-cloud/vertexai";
 import { z } from 'zod';
-
-// This is the critical part: defining the RAG tool as a plain JavaScript object,
-// using snake_case to match the underlying Google API.
-const ragTool = {
-  retrieval: {
-    vertex_rag_store: {
-      rag_resources: [
-        {
-          rag_corpus: "projects/datavisor-44i5m/locations/us-central1/ragCorpora/6917529027641081856"
-        }
-      ],
-    }
-  }
-};
 
 const ChatbotInputSchema = z.object({
   history: z.array(z.object({
@@ -30,25 +17,70 @@ const ChatbotInputSchema = z.object({
 });
 export type ChatbotInput = z.infer<typeof ChatbotInputSchema>;
 
+// Initialize the Vertex AI client.
+// It will automatically use Application Default Credentials on Firebase/GCP.
+const vertex_ai = new VertexAI({
+    project: 'datavisor-44i5m',
+    location: 'us-central1'
+});
+const model = 'gemini-1.5-flash-latest';
+
+const generativeModel = vertex_ai.getGenerativeModel({
+    model: model,
+    safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+    },
+});
 
 /**
  * Executes a query against the Gemini model using the RAG tool.
+ * This uses the @google-cloud/vertexai SDK directly.
  * @param input The user's prompt and the conversation history.
  * @returns The text response from the model.
  */
 export async function askChatbot(input: ChatbotInput): Promise<string> {
-  console.log('Querying RAG chatbot with prompt:', input.prompt);
-  
-  const result = await ai.generate({
-    model: 'googleai/gemini-1.5-flash-latest',
-    history: input.history,
-    prompt: input.prompt,
-    tools: [ragTool as any], // Using 'as any' to bypass Genkit's strict tool type checking.
-    config: {
-      temperature: 0.1, // Low temperature for more deterministic, fact-based answers
-    },
-  });
+  console.log('Querying RAG chatbot with prompt (using @google-cloud/vertexai):', input.prompt);
 
-  console.log('RAG chatbot successful. Response received.');
-  return result.text;
+  try {
+    // This is the native tool structure, mirroring the Python SDK.
+    const ragTool = {
+      retrieval: {
+        vertex_rag_store: {
+            rag_resources: [
+                {
+                    rag_corpus: "projects/datavisor-44i5m/locations/us-central1/ragCorpora/6917529027641081856"
+                }
+            ],
+        }
+      }
+    };
+    
+    // The SDK expects a specific format for history
+    const typedHistory = input.history.map(h => ({
+        role: h.role,
+        parts: h.parts.map(p => ({text: p.text}))
+    }));
+
+    const chat = generativeModel.startChat({
+        history: typedHistory,
+        tools: [ragTool]
+    });
+
+    const result = await chat.sendMessage(input.prompt);
+    const response = result.response;
+    const text = response.text();
+
+    console.log('RAG chatbot successful. Response received.');
+    return text;
+
+  } catch (error) {
+    console.error("Error calling Google Vertex AI SDK:", error);
+    throw new Error('Failed to get a response from the AI model.');
+  }
 }

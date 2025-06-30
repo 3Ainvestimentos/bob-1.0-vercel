@@ -1,5 +1,1 @@
-import * as dotenv from 'dotenv';
-dotenv.config();
-
-// Flows will be imported for their side effects in this file.
-import './flows/chatbot-flow';
+// This file is no longer used. The application now uses @google-cloud/vertexai directly.
