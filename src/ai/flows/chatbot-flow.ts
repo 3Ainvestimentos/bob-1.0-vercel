@@ -51,6 +51,9 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       spellCorrectionSpec: { mode: 'AUTO' },
       languageCode: 'pt-BR',
       contentSearchSpec: {
+        summarySpec: {
+            summaryResultCount: 1,
+        },
         extractiveContentSpec: {
           maxExtractiveAnswerCount: 1,
         },
@@ -83,19 +86,26 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
     let responseText =
       'Não consegui encontrar uma resposta para sua pergunta.';
 
-    // Procure por respostas extrativas na resposta
+    const firstResult = data.results && data.results[0];
+
+    // Prioridade 1: Resposta extrativa direta
     if (
-      data.results &&
-      data.results[0] &&
-      data.results[0].document?.derivedStructData?.extractive_answers &&
-      data.results[0].document.derivedStructData.extractive_answers[0]?.content
+      firstResult?.document?.derivedStructData?.extractive_answers?.[0]?.content
     ) {
       responseText =
-        data.results[0].document.derivedStructData.extractive_answers[0].content;
-    } else if (data.summary?.summaryText) {
-      // Use o resumo como fallback se existir
+        firstResult.document.derivedStructData.extractive_answers[0].content;
+    }
+    // Prioridade 2: Resumo gerado pela IA
+    else if (data.summary?.summaryText) {
       responseText = data.summary.summaryText;
     }
+    // Prioridade 3: Trechos (snippets) do documento
+    else if (firstResult?.document?.derivedStructData?.snippets?.[0]?.snippet) {
+        // Limpa tags HTML que podem vir nos snippets
+        const snippet = firstResult.document.derivedStructData.snippets[0].snippet.replace(/<[^>]*>/g, '');
+        responseText = `Não encontrei uma resposta direta, mas aqui está um trecho relevante do documento:\n\n"${snippet}"`;
+    }
+
 
     return {
       message: {
