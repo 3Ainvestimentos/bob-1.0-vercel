@@ -26,14 +26,26 @@ const LOCATION = 'global';
 const API_ENDPOINT = `https://discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/${LOCATION}/collections/default_collection/engines/${ENGINE_ID}/servingConfigs/default_search:search`;
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> {
-  const auth = new GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-  });
-
   try {
+    if (!process.env.SERVICE_ACCOUNT_KEY) {
+      throw new Error(
+        'A variável de ambiente SERVICE_ACCOUNT_KEY não está definida. Por favor, verifique o arquivo .env.'
+      );
+    }
+
+    const serviceAccountKey = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
+
+    const auth = new GoogleAuth({
+      credentials: {
+        client_email: serviceAccountKey.client_email,
+        private_key: serviceAccountKey.private_key,
+      },
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    });
+
     const accessToken = await auth.getAccessToken();
     if (!accessToken) {
-      throw new Error('Não foi possível obter o token de acesso.');
+      throw new Error('Não foi possível obter o token de acesso usando a chave de conta de serviço.');
     }
 
     const requestBody = {
@@ -48,7 +60,7 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
         },
       },
       userInfo: {
-        timeZone: 'America/Sao_Paulo'
+        timeZone: 'America/Sao_Paulo',
       },
       session: `projects/${PROJECT_ID}/locations/${LOCATION}/collections/default_collection/engines/${ENGINE_ID}/sessions/${Date.now()}`,
     };
@@ -66,11 +78,14 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
 
     if (!response.ok) {
       console.error('Erro na API do Discovery Engine:', response.status, data);
-      const errorMessage = data.error?.message || `A requisição à API falhou com o status ${response.status}`;
+      const errorMessage =
+        data.error?.message ||
+        `A requisição à API falhou com o status ${response.status}`;
       throw new Error(errorMessage);
     }
 
-    let responseText = "Não consegui encontrar uma resposta para sua pergunta.";
+    let responseText =
+      'Não consegui encontrar uma resposta para sua pergunta.';
 
     // Procure por respostas extrativas na resposta
     if (
@@ -79,7 +94,8 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       data.results[0].document?.derivedStructData?.extractive_answers &&
       data.results[0].document.derivedStructData.extractive_answers[0]?.content
     ) {
-      responseText = data.results[0].document.derivedStructData.extractive_answers[0].content;
+      responseText =
+        data.results[0].document.derivedStructData.extractive_answers[0].content;
     } else if (data.summary?.summaryText) {
       // Use o resumo como fallback se existir
       responseText = data.summary.summaryText;
