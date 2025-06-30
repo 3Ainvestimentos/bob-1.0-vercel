@@ -62,7 +62,7 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       userInfo: {
         timeZone: 'America/Sao_Paulo',
       },
-      session: `projects/${PROJECT_ID}/locations/${LOCATION}/collections/default_collection/engines/${ENGINE_ID}/sessions/${Date.now()}`,
+      session: `projects/${PROJECT_ID}/locations/${LOCATION}/collections/default_collection/engines/${ENGINE_ID}/sessions/-`,
     };
 
     const response = await fetch(API_ENDPOINT, {
