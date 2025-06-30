@@ -31,8 +31,8 @@ export default function SearchPage() {
             />
             {/* The widget element. In JSX, custom elements must be lowercase. */}
             <gen-search-widget
-              configId="05715c26-4df8-4676-84b9-475cec8e1191"
-              triggerId="searchWidgetTrigger"
+              config-id="05715c26-4df8-4676-84b9-475cec8e1191"
+              trigger-id="searchWidgetTrigger"
             ></gen-search-widget>
           </CardContent>
         </Card>

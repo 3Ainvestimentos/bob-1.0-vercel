@@ -3,8 +3,8 @@ declare namespace JSX {
   interface IntrinsicElements {
     'gen-search-widget': React.DetailedHTMLProps<
       React.HTMLAttributes<HTMLElement> & {
-        configId: string;
-        triggerId: string;
+        'config-id': string;
+        'trigger-id': string;
       },
       HTMLElement
     >;
