@@ -1,52 +1,142 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
-import { testRagConnection } from '@/ai/flows/test-rag-flow';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, User, Bot } from 'lucide-react';
+import { askChatbot, ChatbotInput } from '@/ai/flows/chatbot-flow';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-export default function HomePage() {
+interface Message {
+  role: 'user' | 'model';
+  text: string;
+}
+
+export default function ChatPage() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const handleTestClick = async () => {
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [messages]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = { role: 'user', text: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
     setIsLoading(true);
-    setTestResult(null);
+
     try {
-      const result = await testRagConnection();
-      setTestResult(`Sucesso: A IA respondeu:\n\n${result}`);
-    } catch (error: any) {
-      console.error('Erro no teste de conexão RAG:', error);
-      setTestResult(`Falha na Conexão:\n\n${error.message}`);
+      const history = messages.map(msg => ({
+        role: msg.role,
+        parts: [{ text: msg.text }],
+      }));
+      
+      const chatbotInput: ChatbotInput = {
+          history: history,
+          prompt: input,
+      };
+
+      const responseText = await askChatbot(chatbotInput);
+      const botMessage: Message = { role: 'model', text: responseText };
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error communicating with AI:', error);
+      const errorMessage: Message = {
+        role: 'model',
+        text: 'Desculpe, ocorreu um erro ao me comunicar com a IA. Por favor, tente novamente.',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex h-full w-full items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
+    <div className="flex h-[calc(100vh-4rem)] w-full items-center justify-center p-4">
+      <Card className="w-full max-w-3xl h-full flex flex-col">
         <CardHeader>
-          <CardTitle>Teste de Conexão RAG</CardTitle>
-          <CardDescription>
-            Este botão executa uma única chamada à API do Gemini, tentando usar o corpus RAG configurado.
-          </CardDescription>
+          <CardTitle className="text-center text-2xl">Assistente RAG</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Button onClick={handleTestClick} disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isLoading ? 'Testando...' : 'Testar Conexão com o Vertex/Corpus'}
-          </Button>
-          {testResult && (
-            <div className="mt-4 rounded-md border bg-muted p-4">
-              <h3 className="font-semibold">Resultado do Teste:</h3>
-              <pre className="mt-2 whitespace-pre-wrap break-all text-sm text-muted-foreground">
-                {testResult}
-              </pre>
+        <CardContent className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full pr-4" ref={scrollAreaRef}>
+            <div className="space-y-4">
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`flex items-start gap-3 ${
+                    msg.role === 'user' ? 'justify-end' : ''
+                  }`}
+                >
+                  {msg.role === 'model' && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback><Bot size={20}/></AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div
+                    className={`max-w-[75%] rounded-lg p-3 text-sm ${
+                      msg.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                   {msg.role === 'user' && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback><User size={20}/></AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex items-start gap-3">
+                   <Avatar className="h-8 w-8">
+                      <AvatarFallback><Bot size={20}/></AvatarFallback>
+                    </Avatar>
+                  <div className="bg-muted rounded-lg p-3 flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Pensando...</span>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </ScrollArea>
         </CardContent>
+        <CardFooter className="border-t pt-6">
+          <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
+            <Input
+              type="text"
+              placeholder="Pergunte algo ao seu corpus..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Enviar'
+              )}
+            </Button>
+          </form>
+        </CardFooter>
       </Card>
     </div>
   );
