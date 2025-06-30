@@ -50,7 +50,7 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
 
     const requestBody = {
       query: input.query,
-      pageSize: 5,
+      pageSize: 10,
       queryExpansionSpec: { condition: 'AUTO' },
       spellCorrectionSpec: { mode: 'AUTO' },
       languageCode: 'pt-BR',
@@ -62,7 +62,6 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       userInfo: {
         timeZone: 'America/Sao_Paulo',
       },
-      session: `projects/${PROJECT_ID}/locations/${LOCATION}/collections/default_collection/engines/${ENGINE_ID}/sessions/-`,
     };
 
     const response = await fetch(API_ENDPOINT, {
