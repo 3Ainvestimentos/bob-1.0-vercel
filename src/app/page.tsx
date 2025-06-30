@@ -3,6 +3,7 @@
 import Script from 'next/script';
 
 // Define o tipo para o elemento customizado do widget para que o TypeScript não reclame.
+// Usamos kebab-case para os atributos, pois é o padrão HTML para elementos customizados.
 declare global {
   namespace JSX {
     interface IntrinsicElements {
