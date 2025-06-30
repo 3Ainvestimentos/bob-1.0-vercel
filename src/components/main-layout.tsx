@@ -13,19 +13,21 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarTrigger,
-  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import {
-  FolderPlus,
-  FilePenLine,
+  Bot,
   HelpCircle,
-  Settings,
   LogOut,
+  MessageSquare,
+  Settings,
   User as UserIcon,
 } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
+  const pathname = usePathname();
 
   const getInitials = (name?: string | null) => {
     if (!name) return <UserIcon className="h-4 w-4" />;
@@ -55,18 +57,24 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             </SidebarHeader>
 
             <SidebarContent className="flex flex-col p-2">
-              <div className="space-y-2">
-                <div>
-                  <Button variant="secondary" className="h-10 w-full justify-start gap-2">
-                    <FolderPlus />
-                    <span className="truncate">Novo Projeto</span>
-                  </Button>
-                  <p className="p-2 text-xs text-muted-foreground">Nenhum projeto criado.</p>
-                </div>
-              </div>
-              <div className="flex flex-1 items-center justify-center">
-                  <p className="p-4 text-center text-xs text-muted-foreground">Nenhum projeto criado ainda.<br />Crie um novo projeto!</p>
-              </div>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/'}>
+                    <Link href="/">
+                      <Bot />
+                      <span className="truncate">Gradio RAG Chat</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/gemini'}>
+                    <Link href="/gemini">
+                      <MessageSquare />
+                      <span className="truncate">Gemini Chat</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
             </SidebarContent>
 
             <SidebarFooter>
