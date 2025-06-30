@@ -39,6 +39,7 @@ export async function askGemini(input: GeminiChatInput): Promise<GeminiChatOutpu
   const result = await ai.generate({
     model: 'googleai/gemini-1.5-flash-latest',
     prompt: input.prompt,
+    tools: [ragTool],
     config: {
       temperature: 1,
       topP: 1,
@@ -49,9 +50,6 @@ export async function askGemini(input: GeminiChatInput): Promise<GeminiChatOutpu
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
       ],
-      // The RAG configuration is passed within the config object
-      // to be sent directly to the underlying Google AI API.
-      tools: [ragTool],
     },
   });
   
