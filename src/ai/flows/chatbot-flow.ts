@@ -1,9 +1,8 @@
 'use server';
 /**
- * @fileOverview A flow for interacting with the Google Discovery Engine API.
+ * @fileOverview A flow for interacting with the Google Discovery Engine API using the official Node.js client library.
  */
-
-import { GoogleAuth } from 'google-auth-library';
+import { SearchServiceClient } from '@google-cloud/discoveryengine';
 import { z } from 'zod';
 
 const SearchInputSchema = z.string();
@@ -12,66 +11,57 @@ export type SearchInput = z.infer<typeof SearchInputSchema>;
 const SearchOutputSchema = z.string();
 export type SearchOutput = z.infer<typeof SearchOutputSchema>;
 
+// The full resource name of the search engine serving config.
+const servingConfig = 'projects/629342546806/locations/global/collections/default_collection/engines/datavisorvscoderagtest_1751310702302/servingConfigs/default_search';
+
+// The session resource name. Using a static session for this example.
+const session = 'projects/629342546806/locations/global/collections/default_collection/engines/datavisorvscoderagtest_1751310702302/sessions/-';
+
+// Initialize the Discovery Engine client.
+// The library will automatically handle authentication using Application Default Credentials.
+const searchClient = new SearchServiceClient({
+    apiEndpoint: 'global-discoveryengine.googleapis.com',
+});
+
 export async function searchDiscoveryEngine(query: SearchInput): Promise<SearchOutput> {
-  const auth = new GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-  });
-
-  const accessToken = await auth.getAccessToken();
-
-  if (!accessToken) {
-    throw new Error('Could not obtain access token.');
-  }
-
-  const url = "https://discoveryengine.googleapis.com/v1alpha/projects/629342546806/locations/global/collections/default_collection/engines/datavisorvscoderagtest_1751310702302/servingConfigs/default_search:search";
-  
-  const requestBody = {
-    query: query,
-    pageSize: 10,
-    queryExpansionSpec: { condition: "AUTO" },
-    spellCorrectionSpec: { mode: "AUTO" },
-    languageCode: "pt-BR",
-    contentSearchSpec: {
-      summarySpec: {
-        summaryResultCount: 3,
-        ignoreAdversarialQuery: true,
-        useSemanticChunks: true,
-      },
-      extractiveContentSpec: {
-        maxExtractiveAnswerCount: 1
-      }
-    },
-    // For conversational context, a unique session ID should be managed per user conversation.
-    // For this example, we use a static session that resets with each query.
-    session: "projects/629342546806/locations/global/collections/default_collection/engines/datavisorvscoderagtest_1751310702302/sessions/-"
-  };
-
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+    const [response] = await searchClient.search({
+      servingConfig: servingConfig,
+      session: session,
+      query: query,
+      pageSize: 10,
+      queryExpansionSpec: {
+        condition: 'AUTO',
       },
-      body: JSON.stringify(requestBody),
+      spellCorrectionSpec: {
+        mode: 'AUTO',
+      },
+      contentSearchSpec: {
+        summarySpec: {
+          summaryResultCount: 3,
+          ignoreAdversarialQuery: true,
+          useSemanticChunks: true,
+        },
+        extractiveContentSpec: {
+          maxExtractiveAnswerCount: 1,
+        },
+      },
+      userInfo: {
+          timeZone: 'America/Sao_Paulo'
+      }
+      // Note: languageCode 'pt-BR' from the curl example is usually inferred by the service.
     });
 
-    if (!response.ok) {
-        const errorBody = await response.text();
-        console.error("Discovery Engine API Error:", errorBody);
-        throw new Error(`API request failed with status ${response.status}`);
+    if (response.summary?.summaryText) {
+      return response.summary.summaryText;
     }
 
-    const data = await response.json();
-    
-    if (data.summary && data.summary.summaryText) {
-      return data.summary.summaryText;
-    }
-
+    // Fallback message if no summary is found.
     return "Não encontrei um resumo para a sua pergunta, mas a busca retornou alguns resultados.";
 
   } catch (error) {
-    console.error('Error calling Discovery Engine API:', error);
-    throw new Error('Failed to get a response from the Discovery Engine.');
+    console.error('Error calling Discovery Engine API with Node.js client:', error);
+    // Propagate a more informative error message to the client.
+    throw new Error('Failed to get a response from the Discovery Engine. The connection failed.');
   }
 }
