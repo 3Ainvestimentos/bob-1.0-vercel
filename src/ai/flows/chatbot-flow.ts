@@ -1,6 +1,8 @@
 'use server';
 /**
  * @fileOverview A chatbot flow that answers questions by connecting to a Gradio API.
+ * This flow is currently not used in the main UI but is kept for potential future
+ * use of programmatic access to the Gradio app.
  *
  * - askChatbot - A function that handles the chatbot interaction.
  * - ChatbotInput - The input type for the askChatbot function.

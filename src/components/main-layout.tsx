@@ -63,19 +63,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   </Button>
                   <p className="p-2 text-xs text-muted-foreground">Nenhum projeto criado.</p>
                 </div>
-                
-                <SidebarSeparator />
-
-                <div>
-                  <Button variant="secondary" className="h-10 w-full justify-start gap-2">
-                    <FilePenLine />
-                    <span className="truncate">Nova conversa</span>
-                  </Button>
-                  <p className="p-2 text-xs text-muted-foreground">Nenhuma conversa recente.</p>
-                </div>
               </div>
               <div className="flex flex-1 items-center justify-center">
-                  <p className="p-4 text-center text-xs text-muted-foreground">Nenhuma conversa ou projeto ainda.<br />Crie um novo projeto ou uma nova conversa!</p>
+                  <p className="p-4 text-center text-xs text-muted-foreground">Nenhum projeto criado ainda.<br />Crie um novo projeto!</p>
               </div>
             </SidebarContent>
 
