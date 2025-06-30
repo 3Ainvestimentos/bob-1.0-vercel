@@ -41,8 +41,8 @@ function GeminiChatbot() {
             const modelMessage = { role: 'model' as const, content: result.response };
             setMessages((prev) => [...prev, modelMessage]);
         } catch (error) {
-            console.error("Error calling Gemini proxy:", error);
-            const errorMessage = { role: 'model' as const, content: "Desculpe, ocorreu um erro ao me conectar com o serviço de chat. Por favor, tente novamente." };
+            console.error("Error calling Gemini:", error);
+            const errorMessage = { role: 'model' as const, content: "Sorry, I encountered an error. Please try again." };
             setMessages((prev) => [...prev, errorMessage]);
         } finally {
             setIsLoading(false);
@@ -61,8 +61,8 @@ function GeminiChatbot() {
     return (
         <Card className="flex h-full flex-col">
             <CardHeader>
-                <CardTitle>Assistente RAG</CardTitle>
-                <CardDescription>Converse com seus documentos usando o Gradio e o Vertex AI RAG.</CardDescription>
+                <CardTitle>Assistente Gemini</CardTitle>
+                <CardDescription>Converse com o modelo padrão do Gemini.</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4" ref={scrollViewportRef}>
                 <div className="space-y-4">
@@ -70,7 +70,7 @@ function GeminiChatbot() {
                         <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
                             <Bot className="mb-2 h-10 w-10" />
                             <p className="text-lg font-medium">Comece a conversar</p>
-                            <p className="text-sm">Faça uma pergunta sobre seus documentos.</p>
+                            <p className="text-sm">Faça uma pergunta ao Gemini.</p>
                         </div>
                     )}
                     {messages.map((message, index) => (
