@@ -12,9 +12,15 @@ export async function askAssistant(query: string): Promise<string> {
   let serviceAccountCredentials;
   try {
     serviceAccountCredentials = JSON.parse(serviceAccountKeyJson);
-  } catch (e) {
-    console.error("Falha ao analisar SERVICE_ACCOUNT_KEY:", e);
-    throw new Error("Falha ao analisar a chave da conta de serviço. Verifique o formato do JSON no seu arquivo .env.");
+    // Correção para o erro "DECODER routines::unsupported"
+    // Chaves privadas em JSON dentro de variáveis de ambiente podem ter seus newlines escapados (como \\n).
+    // O google-auth-library espera newlines reais (\n). Esta linha corrige isso.
+    if (serviceAccountCredentials.private_key) {
+      serviceAccountCredentials.private_key = serviceAccountCredentials.private_key.replace(/\\n/g, '\n');
+    }
+  } catch (e: any) {
+    console.error("Falha ao analisar SERVICE_ACCOUNT_KEY. Verifique o formato do JSON no seu arquivo .env. Erro:", e.message);
+    throw new Error(`Falha ao analisar a chave da conta de serviço. Verifique o formato do JSON no seu arquivo .env. Detalhe: ${e.message}`);
   }
 
   const projectId = serviceAccountCredentials.project_id;
