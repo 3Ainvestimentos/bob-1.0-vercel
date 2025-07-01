@@ -46,13 +46,8 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
 
     const client = new SearchServiceClient({ auth });
 
-    const servingConfig = client.servingConfigPath(
-      projectId,
-      location,
-      collectionId,
-      engineId,
-      servingConfigId
-    );
+    // Manually construct the serving config path, as shown in the Python example
+    const servingConfig = `projects/${projectId}/locations/${location}/collections/${collectionId}/engines/${engineId}/servingConfigs/${servingConfigId}`;
 
     const request: protos.google.cloud.discoveryengine.v1.ISearchRequest = {
       servingConfig: servingConfig,
