@@ -7,9 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  ChevronDown,
   FileText,
-  Gem,
   HelpCircle,
   Lightbulb,
   LogOut,
@@ -18,11 +16,13 @@ import {
   Mic,
   Newspaper,
   PanelLeft,
-  Paperclip,
+  Plus,
   PlusSquare,
+  RectangleEllipsis,
   RefreshCw,
-  Send,
+  Search,
   Settings,
+  Shield,
 } from 'lucide-react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 
@@ -233,40 +233,42 @@ export default function DashboardPage() {
         </div>
         
         <form onSubmit={handleSubmit} className="sticky bottom-0 w-full bg-background/95 p-4 backdrop-blur-sm">
-            <div className="relative mx-auto max-w-3xl">
-              <Textarea
-                placeholder="Insira aqui um comando ou pergunta"
-                className="min-h-[48px] resize-none rounded-2xl border bg-card py-4 pl-24 pr-16 shadow-sm"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    handleSubmit(e);
-                  }
-                }}
-                disabled={isLoading}
-              />
-              <div className="absolute bottom-3 left-4 flex gap-2">
-                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary">
-                    <Paperclip className="h-4 w-4" />
-                 </Button>
-                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary">
-                    <Mic className="h-4 w-4" />
-                 </Button>
+            <div className="relative mx-auto flex max-w-3xl flex-col rounded-2xl bg-muted p-3">
+              <div className="flex items-center">
+                <Shield className="mr-2 h-5 w-5 shrink-0 text-muted-foreground" />
+                <Textarea
+                  placeholder="Insira um comando para o Gemini"
+                  className="flex-1 resize-none self-end border-0 bg-transparent p-0 text-base focus-visible:ring-0"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      handleSubmit(e);
+                    }
+                  }}
+                  disabled={isLoading}
+                />
               </div>
-              <Button type="submit" size="icon" className="absolute bottom-3 right-3 h-8 w-8 rounded-full" disabled={isLoading}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="mx-auto mt-2 flex max-w-3xl items-center justify-between text-xs">
-                <p className="flex-1 text-muted-foreground">
-                    Sujeito aos Termos de uso 3A RIVA e à Política de Privacidade da 3A RIVA. O modelo Bob 1.0 pode cometer erros. Por isso, é bom checar as respostas.
-                </p>
-                <Button variant="ghost" size="sm" className="ml-4 text-muted-foreground">
-                    <Gem className="mr-2 h-3 w-3" />
-                    Gemini 1.5 Pro
-                    <ChevronDown className="ml-2 h-3 w-3" />
-                </Button>
+              <div className="mt-2 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                    <Search className="mr-2 h-4 w-4" />
+                    Deep Research
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                    <RectangleEllipsis className="mr-2 h-4 w-4" />
+                    Canvas
+                  </Button>
+                </div>
+                <div className="flex items-center">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary" disabled={isLoading}>
+                    <Mic className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
         </form>
       </main>
