@@ -51,9 +51,6 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       spellCorrectionSpec: { mode: 'AUTO' },
       languageCode: 'pt-BR',
       contentSearchSpec: {
-        summarySpec: {
-            summaryResultCount: 1,
-        },
         extractiveContentSpec: {
           maxExtractiveAnswerCount: 1,
         },
@@ -95,11 +92,7 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       responseText =
         firstResult.document.derivedStructData.extractive_answers[0].content;
     }
-    // Prioridade 2: Resumo gerado pela IA
-    else if (data.summary?.summaryText) {
-      responseText = data.summary.summaryText;
-    }
-    // Prioridade 3: Trechos (snippets) do documento
+    // Prioridade 2: Trechos (snippets) do documento
     else if (firstResult?.document?.derivedStructData?.snippets?.[0]?.snippet) {
         // Limpa tags HTML que podem vir nos snippets
         const snippet = firstResult.document.derivedStructData.snippets[0].snippet.replace(/<[^>]*>/g, '');
