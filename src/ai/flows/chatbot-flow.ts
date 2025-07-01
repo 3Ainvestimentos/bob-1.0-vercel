@@ -59,14 +59,10 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
         extractiveContentSpec: {
           maxExtractiveAnswerCount: 1,
         },
-        snippetSpec: {
-          returnSnippet: true,
-        },
       },
       userInfo: {
         timeZone: 'America/Sao_Paulo',
       },
-      session: `projects/${projectId}/locations/${location}/collections/default_collection/engines/${engineId}/sessions/-`,
     };
 
     const response = await fetch(endpoint, {
@@ -91,22 +87,13 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
 
     const firstResult = data.results && data.results[0];
 
-    // Check for a direct extractive answer first
+    // Check for a direct extractive answer, which is what the working curl command asks for.
     const extractiveAnswer =
       firstResult?.document?.derivedStructData?.fields?.extractive_answers
         ?.listValue?.values?.[0]?.structValue?.fields?.content?.stringValue;
 
     if (extractiveAnswer) {
       responseText = extractiveAnswer;
-    } else {
-        // As a fallback, use the snippet
-        const snippetContent =
-          firstResult?.document?.derivedStructData?.fields?.snippets?.listValue
-            ?.values?.[0]?.structValue?.fields?.snippet?.stringValue;
-        if (snippetContent) {
-          const snippet = snippetContent.replace(/<[^>]*>/g, ''); // Clean HTML tags
-          responseText = `Não encontrei uma resposta direta, mas aqui está um trecho relevante do documento:\n\n"${snippet}"`;
-        }
     }
 
 
