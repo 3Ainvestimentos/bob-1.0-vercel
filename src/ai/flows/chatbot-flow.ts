@@ -20,6 +20,7 @@ export interface ChatbotInput {
 }
 
 const API_ENDPOINT = `https://discoveryengine.googleapis.com/v1alpha/projects/629342546806/locations/global/collections/default_collection/engines/datavisorvscoderagtest_1751310702302/servingConfigs/default_search:search`;
+const SESSION_ID = `projects/629342546806/locations/global/collections/default_collection/engines/datavisorvscoderagtest_1751310702302/sessions/-`;
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> {
   try {
@@ -58,6 +59,7 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       userInfo: {
         timeZone: 'America/Sao_Paulo',
       },
+      session: SESSION_ID,
     };
 
     const response = await fetch(API_ENDPOINT, {
