@@ -1,163 +1,57 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Bot, User, Loader2, LogIn, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { askChatbot, type ChatMessage } from '@/ai/flows/chatbot-flow';
-import { useAuth } from '@/context/auth-context';
-import type { User as FirebaseUser } from 'firebase/auth';
+import { Loader2, LogIn, Bot, AlertTriangle } from 'lucide-react';
+import Script from 'next/script';
 
-function ChatInterface({ user }: { user: FirebaseUser }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  const sendMessage = async (query: string) => {
-    if (!query.trim() || isLoading) return;
-
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      text: query,
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      // Pass the user's UID to the backend flow
-      const response = await askChatbot({ query }, { uid: user.uid });
-      setMessages((prev) => [...prev, response.message]);
-    } catch (error) {
-      console.error('Failed to get response from chatbot:', error);
-      const errorMessage: ChatMessage = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        text: 'Desculpe, não consegui obter uma resposta. Por favor, tente novamente.',
+// Declare the custom element for TypeScript
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'gen-search-widget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        configId: string;
+        triggerId: string;
       };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }
+}
 
-  const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    sendMessage(input);
-  };
-
-  const handleSuggestionClick = (suggestion: string) => {
-    sendMessage(suggestion);
-  };
-
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
-  }, [messages]);
-  
+// The new component that renders the Google Search Widget
+function SearchWidget() {
   return (
-     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-        <div className="mx-auto max-w-3xl space-y-6">
-          {messages.length === 0 && !isLoading && (
-            <div className="flex flex-col items-center justify-center pt-20 text-center">
-              <Bot className="mb-4 h-16 w-16 text-primary" />
-              <h2 className="text-2xl font-bold">Assistente Inteligente</h2>
-              <p className="text-muted-foreground">
-                Faça uma pergunta para começar ou experimente uma das sugestões abaixo.
-              </p>
-              <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row">
-                <Button variant="outline" onClick={() => handleSuggestionClick('Olá')}>
-                  Olá
-                </Button>
-                <Button variant="outline" onClick={() => handleSuggestionClick('Quem é Gabriela Rocha?')}>
-                  Quem é Gabriela Rocha?
-                </Button>
-              </div>
-            </div>
-          )}
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                'flex items-start gap-4',
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              )}
-            >
-              {message.role === 'assistant' && (
-                <Avatar className="h-9 w-9 border">
-                  <AvatarFallback>
-                    <Bot className="h-5 w-5" />
-                  </AvatarFallback>
-                </Avatar>
-              )}
-              <div
-                className={cn(
-                  'max-w-[75%] whitespace-pre-wrap rounded-lg p-3 text-sm',
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                )}
-              >
-                {message.text}
-              </div>
-              {message.role === 'user' && (
-                <Avatar className="h-9 w-9 border">
-                  <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User'} />
-                  <AvatarFallback>
-                    <User className="h-5 w-5" />
-                  </AvatarFallback>
-                </Avatar>
-              )}
-            </div>
-          ))}
-          {isLoading && (
-             <div className="flex items-start gap-4 justify-start">
-               <Avatar className="h-9 w-9 border">
-                  <AvatarFallback>
-                    <Bot className="h-5 w-5" />
-                  </AvatarFallback>
-                </Avatar>
-               <div className="bg-muted rounded-lg p-3 flex items-center space-x-2">
-                 <Loader2 className="h-4 w-4 animate-spin" />
-                 <span>Pensando...</span>
-               </div>
-             </div>
-          )}
+    <>
+      {/* Load the widget's JavaScript bundle */}
+      <Script src="https://cloud.google.com/ai/gen-app-builder/client?hl=pt_BR" strategy="afterInteractive" />
+      
+      {/* The widget element, hidden by default */}
+      <gen-search-widget
+        configId="05715c26-4df8-4676-84b9-475cec8e1191"
+        triggerId="searchWidgetTrigger"
+      >
+      </gen-search-widget>
+
+      {/* The trigger element that opens the widget */}
+      <div className="flex flex-1 flex-col items-center justify-center p-4">
+        <div className="flex w-full max-w-lg flex-col items-center text-center">
+            <Bot className="mb-4 h-16 w-16 text-primary" />
+            <h2 className="text-2xl font-bold">Assistente de Pesquisa</h2>
+            <p className="mb-6 text-muted-foreground">
+              Use a barra de pesquisa abaixo para interagir com o assistente.
+            </p>
+            <Input
+                id="searchWidgetTrigger"
+                placeholder="Pesquise aqui"
+                className="w-full"
+            />
         </div>
-      </ScrollArea>
-      <div className="border-t bg-background p-4">
-        <form
-          onSubmit={handleSendMessage}
-          className="mx-auto flex max-w-3xl items-center gap-2"
-        >
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Digite sua pergunta..."
-            autoComplete="off"
-            disabled={isLoading}
-          />
-          <Button type="submit" size="icon" disabled={isLoading}>
-            <Send className="h-4 w-4" />
-            <span className="sr-only">Enviar</span>
-          </Button>
-        </form>
       </div>
-    </div>
+    </>
   );
 }
 
-export default function ChatPage() {
+export default function SearchPage() {
   const { user, loading, signIn, isFirebaseConfigured } = useAuth();
 
   if (loading) {
@@ -173,7 +67,7 @@ export default function ChatPage() {
       <div className="flex h-[calc(100vh-4rem)] w-full flex-col items-center justify-center gap-6 p-4">
          <div className="text-center">
             <h1 className="text-3xl font-bold">Bem-vindo ao DataVisor</h1>
-            <p className="mt-2 text-muted-foreground">Faça login para começar a conversar com o assistente.</p>
+            <p className="mt-2 text-muted-foreground">Faça login para usar o assistente de pesquisa.</p>
         </div>
         <Button size="lg" onClick={signIn}>
             <LogIn className="mr-2" />
@@ -191,6 +85,11 @@ export default function ChatPage() {
       </div>
     );
   }
-
-  return <ChatInterface user={user} />;
+  
+  // Render the widget in a flex container to keep it centered
+  return (
+      <div className="flex h-[calc(100vh-4rem)] w-full flex-col">
+          <SearchWidget />
+      </div>
+  );
 }
