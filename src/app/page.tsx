@@ -3,53 +3,64 @@
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, LogIn, Bot, AlertTriangle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2, LogIn, Bot, AlertTriangle, Search } from 'lucide-react';
 import Script from 'next/script';
 
-// Declare the custom element for TypeScript
+// Declare the custom element for TypeScript for inline search
 declare global {
   namespace JSX {
     interface IntrinsicElements {
       'gen-search-widget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
         configId: string;
-        triggerId: string;
+        triggerId?: string;
+        'search-box-id'?: string;
+        'results-container-id'?: string;
       };
     }
   }
 }
 
-// The new component that renders the Google Search Widget
-function SearchWidget() {
+// A new component for the inline search experience
+function InlineSearchWidget() {
   return (
-    <>
+    <div className="flex h-full w-full flex-col p-4 md:p-6">
       {/* Load the widget's JavaScript bundle */}
       <Script src="https://cloud.google.com/ai/gen-app-builder/client?hl=pt_BR" strategy="afterInteractive" />
-      
-      {/* The widget element, hidden by default */}
+
+      {/* The widget element is not visible, it just orchestrates */}
       <gen-search-widget
         configId="05715c26-4df8-4676-84b9-475cec8e1191"
-        triggerId="searchWidgetTrigger"
-      >
-      </gen-search-widget>
+        search-box-id="searchBox"
+        results-container-id="resultsContainer"
+      />
 
-      {/* The trigger element that opens the widget */}
-      <div className="flex flex-1 flex-col items-center justify-center p-4">
-        <div className="flex w-full max-w-lg flex-col items-center text-center">
-            <Bot className="mb-4 h-16 w-16 text-primary" />
-            <h2 className="text-2xl font-bold">Assistente de Pesquisa</h2>
-            <p className="mb-6 text-muted-foreground">
-              Use a barra de pesquisa abaixo para interagir com o assistente.
-            </p>
-            <Input
-                id="searchWidgetTrigger"
-                placeholder="Pesquise aqui"
-                className="w-full"
-            />
-        </div>
-      </div>
-    </>
+      <Card className="flex flex-1 flex-col overflow-hidden">
+        <CardHeader className="flex flex-row items-center gap-4 border-b">
+          <Bot className="h-8 w-8 text-primary" />
+          <div>
+            <CardTitle>Assistente de Pesquisa</CardTitle>
+            <CardDescription>
+              Faça sua pergunta e veja os resultados abaixo.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <Input id="searchBox" placeholder="Quem é Gabriela Rocha?" className="pl-10" />
+          </div>
+          <div id="resultsContainer" className="flex-1 overflow-auto rounded-lg border">
+             <div className="flex h-full items-center justify-center text-center text-muted-foreground">
+                <p>Os resultados da sua pesquisa aparecerão aqui.</p>
+             </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
+
 
 export default function SearchPage() {
   const { user, loading, signIn, isFirebaseConfigured } = useAuth();
@@ -86,10 +97,9 @@ export default function SearchPage() {
     );
   }
   
-  // Render the widget in a flex container to keep it centered
   return (
-      <div className="flex h-[calc(100vh-4rem)] w-full flex-col">
-          <SearchWidget />
-      </div>
+    <div className="h-[calc(100vh-4rem)] w-full">
+      <InlineSearchWidget />
+    </div>
   );
 }
