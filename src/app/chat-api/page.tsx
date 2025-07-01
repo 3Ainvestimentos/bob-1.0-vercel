@@ -23,6 +23,7 @@ export default function ChatApiPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -39,6 +40,11 @@ export default function ChatApiPage() {
       });
     }
   }, [messages]);
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion);
+    inputRef.current?.focus();
+  };
   
   const formatAssistantResponse = (response: DiscoveryEngineOutput) => {
     return (
@@ -156,9 +162,20 @@ export default function ChatApiPage() {
             </div>
           </ScrollArea>
         </CardContent>
-        <CardFooter className="border-t p-4">
-          <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
+        <CardFooter className="flex flex-col items-start gap-2 border-t p-4">
+           <p className="text-sm font-medium text-muted-foreground">Sugestão:</p>
+           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSuggestionClick('Quem é gabriela Rocha?')}
+            >
+              Quem é Gabriela Rocha?
+            </Button>
+           </div>
+          <form onSubmit={handleSubmit} className="flex w-full items-center gap-2 pt-2">
             <Input
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Digite sua pergunta aqui..."
