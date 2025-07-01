@@ -55,11 +55,20 @@ export async function askAssistant(
   query: string,
   options: { useWebSearch?: boolean } = {}
 ): Promise<{ summary: string; searchFailed: boolean }> {
-  const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY;
   const { useWebSearch = false } = options;
 
+  // Decide which service account key to use, with a fallback for the external key.
+  const internalKey = process.env.SERVICE_ACCOUNT_KEY;
+  const externalKey = process.env.SERVICE_ACCOUNT_KEY_EXTERNAL;
+  const serviceAccountKeyJson = useWebSearch ? (externalKey || internalKey) : internalKey;
+  
+  // Determine the name of the key being used for clearer error messages.
+  const keyNameForErrors = useWebSearch 
+    ? (externalKey ? 'SERVICE_ACCOUNT_KEY_EXTERNAL' : 'SERVICE_ACCOUNT_KEY como fallback') 
+    : 'SERVICE_ACCOUNT_KEY';
+
   if (!serviceAccountKeyJson) {
-    throw new Error('A variável de ambiente SERVICE_ACCOUNT_KEY não está definida no arquivo .env.');
+    throw new Error(`A variável de ambiente necessária (${keyNameForErrors}) não está definida no arquivo .env.`);
   }
 
   let serviceAccountCredentials;
@@ -69,8 +78,8 @@ export async function askAssistant(
       serviceAccountCredentials.private_key = serviceAccountCredentials.private_key.replace(/\\n/g, '\n');
     }
   } catch (e: any) {
-    console.error("Falha ao analisar SERVICE_ACCOUNT_KEY. Verifique o formato do JSON no seu arquivo .env. Erro:", e.message);
-    throw new Error(`Falha ao analisar a chave da conta de serviço. Verifique o formato do JSON no seu arquivo .env. Detalhe: ${e.message}`);
+    console.error(`Falha ao analisar ${keyNameForErrors}. Verifique o formato do JSON no seu arquivo .env. Erro:`, e.message);
+    throw new Error(`Falha ao analisar a chave da conta de serviço (${keyNameForErrors}). Verifique o formato do JSON no seu arquivo .env. Detalhe: ${e.message}`);
   }
 
   const projectId = serviceAccountCredentials.project_id;
@@ -92,7 +101,7 @@ export async function askAssistant(
     const accessToken = accessTokenResponse.token;
 
     if (!accessToken) {
-      throw new Error('Falha ao obter o token de acesso usando a conta de serviço fornecida.');
+      throw new Error(`Falha ao obter o token de acesso usando a conta de serviço (${keyNameForErrors}).`);
     }
 
     const contentSearchSpec: any = {
@@ -161,7 +170,7 @@ export async function askAssistant(
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
     if (error.message.includes('Could not refresh access token') || error.message.includes('permission')) {
-       throw new Error('Erro de permissão. Verifique no IAM se a conta de serviço fornecida no arquivo .env tem o papel "Usuário do Discovery Engine".');
+       throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço (${keyNameForErrors}) tem o papel "Usuário do Discovery Engine".`);
     }
     throw new Error(`Ocorreu um erro ao se comunicar com o assistente: ${error.message}`);
   }
