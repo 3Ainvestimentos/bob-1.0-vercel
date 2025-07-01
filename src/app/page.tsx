@@ -25,6 +25,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 // Define the shape of a message
 interface Message {
@@ -197,7 +198,11 @@ export default function DashboardPage() {
                       </Avatar>
                     )}
                     <div className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                      <p className="text-sm">{msg.content}</p>
+                      {msg.role === 'assistant' ? (
+                        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">{msg.content}</ReactMarkdown>
+                      ) : (
+                        <p className="text-sm">{msg.content}</p>
+                      )}
                     </div>
                      {msg.role === 'user' && (
                       <Avatar>
