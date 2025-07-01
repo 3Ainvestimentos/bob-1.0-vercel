@@ -117,8 +117,9 @@ export async function askAssistant(
     };
     
     if (useWebSearch) {
-        requestBody.dataStores = ["global-data-store"];
-        requestBody.searchAddOns = ["SEARCH_ADD_ON_LLM"];
+        requestBody.dataStoreSpecs = [
+            { dataStore: "global-data-store" }
+        ];
     }
 
 
