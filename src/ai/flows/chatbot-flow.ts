@@ -24,19 +24,19 @@ interface AuthUser {
     uid: string;
 }
 
-const projectId = 'datavisor-44i5m';
+// These constants now exactly match the user's working curl command.
+const projectNumber = '629342546806';
 const location = 'global';
 const engineId = 'datavisorvscoderagtest_1751310702302';
 
-const endpoint = `https://discoveryengine.googleapis.com/v1alpha/projects/${projectId}/locations/${location}/collections/default_collection/engines/${engineId}/servingConfigs/default_search:search`;
+// The endpoint is now built using the project number to match the working curl command.
+const endpoint = `https://discoveryengine.googleapis.com/v1alpha/projects/${projectNumber}/locations/${location}/collections/default_collection/engines/${engineId}/servingConfigs/default_search:search`;
 
 export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<ChatbotResponse> {
   try {
-    // You are correct, the API call must be authenticated via OAuth, not a static service account key.
-    // This code uses Application Default Credentials (ADC).
-    // - Locally: ADC uses the credentials you configured with `gcloud auth application-default login`. This is how it mimics your working `curl` command.
-    // - In Production (App Hosting): ADC automatically uses the attached service account.
-    // This approach ensures it uses your user credentials for local development and a secure service account in production.
+    // This uses Application Default Credentials (ADC).
+    // - Locally: ADC uses credentials from `gcloud auth application-default login`.
+    // - In Production (App Hosting): ADC uses the attached service account.
     const auth = new GoogleAuth({
       scopes: 'https://www.googleapis.com/auth/cloud-platform',
     });
@@ -79,9 +79,7 @@ export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<C
     if (!response.ok) {
         const errorBody = await response.json();
         console.error('API Error:', errorBody);
-        // The error is likely that the authenticated user (you locally, or the service account in prod)
-        // is missing the "Discovery Engine User" IAM role.
-        throw new Error(`A API retornou um erro: ${response.status} ${response.statusText}. Detalhes: ${JSON.stringify(errorBody.error.message)}`);
+        throw new Error(`A API retornou um erro: ${response.status} ${response.statusText}. Verifique se a conta autenticada possui a permissão "Discovery Engine User". Detalhes: ${JSON.stringify(errorBody.error?.message)}`);
     }
 
     const data = await response.json();
@@ -119,15 +117,16 @@ export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<C
       },
     };
   } catch (error: any) {
-    console.error('Erro no fluxo askChatbot:', error);
+    console.error('Erro detalhado no fluxo askChatbot:', error);
 
-    // The previous error message was misleading. This returns the actual error from the API call.
-    // A common cause for this error is the authenticated account lacking the necessary IAM permissions (e.g., "Discovery Engine User").
+    // Provide a more actionable error message to the user.
+    const errorMessage = `A autenticação com o Google falhou. Se estiver desenvolvendo localmente, tente executar 'gcloud auth application-default login' em seu terminal. Detalhe do erro: ${error.message}`;
+
     return {
       message: {
         id: `assistant-error-${Date.now()}`,
         role: 'assistant',
-        text: `Ocorreu um erro ao conectar ao assistente: ${error.message}`,
+        text: errorMessage,
       },
     };
   }
