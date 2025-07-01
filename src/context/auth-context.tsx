@@ -1,12 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
-import type { User } from 'firebase/auth';
-
-// This is a mock AuthProvider to prevent the app from crashing due to missing
-// Firebase client-side configuration. It provides a fake user so the UI
-// renders correctly. To enable real Firebase Authentication, you need to add
-// your NEXT_PUBLIC_FIREBASE_* variables to the .env file.
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getAuth, onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider, type User } from 'firebase/auth';
+import { app } from '@/lib/firebase'; // Ensure firebase is initialized
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -17,21 +14,58 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// A mock user object that satisfies the 'User' type from 'firebase/auth'.
-// We cast to 'any' then 'User' to bypass strict type checking for the mock.
-const mockUser = {
-  uid: 'mock-user-123',
-  email: 'user@example.com',
-  displayName: 'Test User',
-  photoURL: null,
-} as any as User;
+const auth = getAuth(app);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
+  const signIn = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error("Authentication Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro de Autenticação",
+        description: error.message || "Não foi possível fazer o login. Tente novamente.",
+      });
+      setLoading(false); // Reset loading on error
+    }
+  };
+
+  const signOutUser = async () => {
+    try {
+      await signOut(auth);
+    } catch (error: any) {
+       console.error("Sign Out Error:", error);
+       toast({
+        variant: "destructive",
+        title: "Erro ao Sair",
+        description: "Não foi possível fazer o logout.",
+      });
+    }
+  };
+
+
   const value = {
-    user: mockUser,
-    loading: false,
-    signIn: async () => { console.warn("Firebase Auth not configured. Sign-in is disabled.") },
-    signOut: async () => { console.warn("Firebase Auth not configured. Sign-out is disabled.") },
+    user,
+    loading,
+    signIn,
+    signOut: signOutUser,
   };
 
   return (

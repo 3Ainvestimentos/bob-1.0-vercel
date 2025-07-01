@@ -19,13 +19,18 @@ export interface ChatbotInput {
   query: string;
 }
 
+// A simple interface for the user object passed from the client
+interface AuthUser {
+    uid: string;
+}
+
 const projectId = 'datavisor-44i5m';
 const location = 'global';
 const engineId = 'datavisorvscoderagtest_1751310702302';
 
 const endpoint = `https://discoveryengine.googleapis.com/v1alpha/projects/${projectId}/locations/${location}/collections/default_collection/engines/${engineId}/servingConfigs/default_search:search`;
 
-export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> {
+export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<ChatbotResponse> {
   try {
     // Use Application Default Credentials.
     // In a local environment, this will use your gcloud credentials if you have run `gcloud auth application-default login`.
@@ -54,6 +59,8 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       },
       userInfo: {
         timeZone: 'America/Sao_Paulo',
+        // Pass the logged-in user's ID for potential personalization
+        userId: user.uid,
       },
     };
 
@@ -109,11 +116,17 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
     };
   } catch (error: any) {
     console.error('Erro no fluxo askChatbot:', error);
+
+    let errorMessage = `Ocorreu um erro ao conectar ao assistente: ${error.message}`;
+    if (error.message?.includes('Could not refresh access token')) {
+        errorMessage = 'Ocorreu um erro ao conectar ao assistente: Falha na autenticação. Verifique se as permissões da conta de serviço estão configuradas corretamente no Google Cloud.';
+    }
+
     return {
       message: {
         id: `assistant-error-${Date.now()}`,
         role: 'assistant',
-        text: `Ocorreu um erro ao conectar ao assistente: ${error.message}`,
+        text: errorMessage,
       },
     };
   }

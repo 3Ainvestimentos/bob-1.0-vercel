@@ -4,12 +4,14 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Send, Bot, User, Loader2, LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { askChatbot, type ChatMessage } from '@/ai/flows/chatbot-flow';
+import { useAuth } from '@/context/auth-context';
+import type { User as FirebaseUser } from 'firebase/auth';
 
-export default function ChatPage() {
+function ChatInterface({ user }: { user: FirebaseUser }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +30,8 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const response = await askChatbot({ query });
+      // Pass the user's UID to the backend flow
+      const response = await askChatbot({ query }, { uid: user.uid });
       setMessages((prev) => [...prev, response.message]);
     } catch (error) {
       console.error('Failed to get response from chatbot:', error);
@@ -52,9 +55,7 @@ export default function ChatPage() {
     sendMessage(suggestion);
   };
 
-
   useEffect(() => {
-    // Scroll to the bottom when new messages are added
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({
         top: scrollAreaRef.current.scrollHeight,
@@ -62,9 +63,9 @@ export default function ChatPage() {
       });
     }
   }, [messages]);
-
+  
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+     <div className="flex h-[calc(100vh-4rem)] flex-col">
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="mx-auto max-w-3xl space-y-6">
           {messages.length === 0 && !isLoading && (
@@ -111,6 +112,7 @@ export default function ChatPage() {
               </div>
               {message.role === 'user' && (
                 <Avatar className="h-9 w-9 border">
+                  <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User'} />
                   <AvatarFallback>
                     <User className="h-5 w-5" />
                   </AvatarFallback>
@@ -153,4 +155,33 @@ export default function ChatPage() {
       </div>
     </div>
   );
+}
+
+export default function ChatPage() {
+  const { user, loading, signIn } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] w-full flex-col items-center justify-center gap-6 p-4">
+         <div className="text-center">
+            <h1 className="text-3xl font-bold">Bem-vindo ao DataVisor</h1>
+            <p className="mt-2 text-muted-foreground">Faça login para começar a conversar com o assistente.</p>
+        </div>
+        <Button size="lg" onClick={signIn}>
+            <LogIn className="mr-2" />
+            Entrar com Google
+        </Button>
+      </div>
+    );
+  }
+
+  return <ChatInterface user={user} />;
 }
