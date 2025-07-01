@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getAuth, onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider, type User } from 'firebase/auth';
-import { app } from '@/lib/firebase'; // Ensure firebase is initialized
+import { app, isFirebaseConfigured } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -10,11 +10,12 @@ interface AuthContextType {
   loading: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  isFirebaseConfigured: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const auth = getAuth(app);
+const auth = app ? getAuth(app) : null;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -22,16 +23,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
   const signIn = async () => {
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "Firebase não configurado",
+        description: "Por favor, adicione suas credenciais do Firebase ao arquivo .env para habilitar a autenticação.",
+      });
+      return;
+    }
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
@@ -43,11 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Erro de Autenticação",
         description: error.message || "Não foi possível fazer o login. Tente novamente.",
       });
-      setLoading(false); // Reset loading on error
+      setLoading(false);
     }
   };
 
   const signOutUser = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
     } catch (error: any) {
@@ -60,12 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-
   const value = {
     user,
     loading,
     signIn,
     signOut: signOutUser,
+    isFirebaseConfigured,
   };
 
   return (

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Bot, User, Loader2, LogIn } from 'lucide-react';
+import { Send, Bot, User, Loader2, LogIn, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { askChatbot, type ChatMessage } from '@/ai/flows/chatbot-flow';
 import { useAuth } from '@/context/auth-context';
@@ -158,7 +158,19 @@ function ChatInterface({ user }: { user: FirebaseUser }) {
 }
 
 export default function ChatPage() {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, isFirebaseConfigured } = useAuth();
+
+  if (!isFirebaseConfigured) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] w-full flex-col items-center justify-center gap-4 p-4 text-center">
+        <AlertTriangle className="h-12 w-12 text-destructive" />
+        <h1 className="text-2xl font-bold">Configuração do Firebase Incompleta</h1>
+        <p className="max-w-md text-muted-foreground">
+          As credenciais do seu projeto Firebase não foram encontradas. Por favor, preencha o arquivo <code>.env</code> na raiz do projeto com as chaves corretas do seu console Firebase para habilitar o chat.
+        </p>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

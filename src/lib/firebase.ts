@@ -1,6 +1,6 @@
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,20 +11,30 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-// To avoid re-initializing on hot reloads in dev, we check if an app is already initialized
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
-const storage = getStorage(app);
+let app: FirebaseApp | null = null;
+let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
+let isFirebaseConfigured = false;
 
-// A simple check to warn the developer if the config is not set.
-if (
-  !firebaseConfig.projectId ||
-  firebaseConfig.projectId === 'YOUR_PROJECT_ID'
-) {
-  console.warn(
-    'Firebase config is not set or is using placeholder values. Please update your .env file.'
-  );
+if (firebaseConfig.apiKey && firebaseConfig.apiKey !== 'YOUR_API_KEY') {
+  try {
+    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    db = getFirestore(app);
+    storage = getStorage(app);
+    isFirebaseConfigured = true;
+  } catch (e) {
+    console.error(
+      'Failed to initialize Firebase. Please check your credentials in the .env file.',
+      e
+    );
+  }
+} else {
+    // Only log this warning on the client-side, as it can be noisy during server-side rendering.
+    if (typeof window !== 'undefined') {
+        console.warn(
+          'Firebase configuration is missing or uses placeholder values. Please update your .env file. Auth and other features will be disabled.'
+        );
+    }
 }
 
-export { app, db, storage };
+export { app, db, storage, isFirebaseConfigured };
