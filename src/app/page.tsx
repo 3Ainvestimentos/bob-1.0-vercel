@@ -124,7 +124,7 @@ export default function DashboardPage() {
   };
   
   return (
-    <div className="flex min-h-screen w-full bg-card text-card-foreground">
+    <div className="flex h-screen w-full bg-card text-card-foreground">
       <aside className="hidden w-[280px] flex-col border-r bg-card p-4 md:flex">
         <div className="flex items-center gap-3">
           <Avatar>
