@@ -59,7 +59,6 @@ const discoveryEngineFlow = ai.defineFlow(
 
     const url = `https://discoveryengine.googleapis.com/v1alpha/projects/${projectId}/locations/${location}/collections/${collectionId}/engines/${engineId}/servingConfigs/${servingConfigId}:search`;
 
-    // Construct the request payload based on the curl command.
     const payload = {
       query: input.query,
       userPseudoId: input.userPseudoId,
@@ -72,29 +71,41 @@ const discoveryEngineFlow = ai.defineFlow(
           maxExtractiveAnswerCount: 1,
         },
       },
-      // Create a new session for each query.
       session: `projects/${projectId}/locations/${location}/collections/${collectionId}/engines/${engineId}/sessions/-`,
     };
 
-    // Authenticate using Application Default Credentials (ADC).
-    // This will automatically use the credentials from `gcloud auth application-default login`
-    // when running locally, or the attached service account when deployed.
     const auth = new GoogleAuth({
       scopes: 'https://www.googleapis.com/auth/cloud-platform',
     });
 
     try {
+      // Step 1: Explicitly get the access token. The original error happened here.
       const client = await auth.getClient();
-      const response = await client.request({
-        url,
+      const accessTokenResponse = await client.getAccessToken();
+      const accessToken = accessTokenResponse.token;
+
+      if (!accessToken) {
+        throw new Error('Falha ao obter o token de acesso da conta de serviço.');
+      }
+
+      // Step 2: Make the API call using the token and the global fetch API.
+      const apiResponse = await fetch(url, {
         method: 'POST',
-        data: payload,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
 
-      // The actual data is in the `data` property of the response.
-      const data = response.data as any;
+      const data = await apiResponse.json();
 
-      // Map the raw API response to our clean output schema.
+      if (!apiResponse.ok) {
+        const errorDetail = data?.error?.message || `Status: ${apiResponse.status}`;
+        console.error('Discovery Engine API returned an error:', errorDetail);
+        throw new Error(`A API do Discovery Engine retornou um erro: ${errorDetail}`);
+      }
+
       const results: z.infer<typeof SearchResultSchema>[] =
         data.results?.map((res: any) => ({
           id: res.document.id,
@@ -109,10 +120,11 @@ const discoveryEngineFlow = ai.defineFlow(
         summary,
         results,
       };
+
     } catch (error: any) {
-      console.error("Error calling Discovery Engine API:", error.response?.data || error.message);
+      console.error("Error in discoveryEngineFlow:", error.message);
       // Provide a more helpful error message to the frontend.
-      const detail = error.response?.data?.error?.message || error.message || 'Unknown error.';
+      const detail = error.message || 'Erro desconhecido.';
       throw new Error(`A autenticação com a API do Google falhou. Verifique as permissões e a configuração. Detalhe: ${detail}`);
     }
   }
