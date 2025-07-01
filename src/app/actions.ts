@@ -62,6 +62,9 @@ export async function askAssistant(query: string): Promise<string> {
              summaryResultCount: 5,
              ignoreAdversarialQuery: true,
              useSemanticChunks: true,
+             modelPromptSpec: {
+                preamble: "Você é um assistente especialista e factual. Responda a pergunta do usuário baseando-se estritamente e exclusivamente nas informações encontradas nos trechos de contexto fornecidos. Se a resposta não estiver contida no contexto, afirme claramente que você não encontrou a informação nos documentos disponíveis. Não utilize nenhum conhecimento externo."
+             }
            }
         },
         userPseudoId: 'unique-user-id-for-testing',
