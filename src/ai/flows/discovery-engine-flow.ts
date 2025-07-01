@@ -15,9 +15,10 @@ import {z} from 'zod';
 import {GoogleAuth} from 'google-auth-library';
 import {ai} from '@/ai/genkit';
 
-// Input schema for the flow, expecting a user's query.
+// Input schema for the flow, expecting a user's query and a unique ID.
 const DiscoveryEngineInputSchema = z.object({
   query: z.string().describe('The search query from the user.'),
+  userPseudoId: z.string().describe('A unique identifier for the end user.'),
 });
 export type DiscoveryEngineInput = z.infer<typeof DiscoveryEngineInputSchema>;
 
@@ -48,7 +49,7 @@ const discoveryEngineFlow = ai.defineFlow(
     inputSchema: DiscoveryEngineInputSchema,
     outputSchema: DiscoveryEngineOutputSchema,
   },
-  async ({query}) => {
+  async (input) => {
     // These values are from the user's provided curl command.
     const projectId = '629342546806';
     const engineId = 'datavisorvscoderagtest_1751310702302';
@@ -60,7 +61,8 @@ const discoveryEngineFlow = ai.defineFlow(
 
     // Construct the request payload based on the curl command.
     const payload = {
-      query: query,
+      query: input.query,
+      userPseudoId: input.userPseudoId,
       pageSize: 5,
       queryExpansionSpec: {condition: 'AUTO'},
       spellCorrectionSpec: {mode: 'AUTO'},

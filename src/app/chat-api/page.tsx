@@ -70,7 +70,7 @@ export default function ChatApiPage() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !user) return;
 
     const userMessage: Message = {role: 'user', content: input};
     setMessages((prev) => [...prev, userMessage]);
@@ -78,7 +78,7 @@ export default function ChatApiPage() {
     setIsLoading(true);
 
     try {
-      const response = await searchDiscoveryEngine({query: input});
+      const response = await searchDiscoveryEngine({query: input, userPseudoId: user.uid});
       const assistantMessage: Message = {
         role: 'assistant',
         content: formatAssistantResponse(response),
