@@ -160,18 +160,6 @@ function ChatInterface({ user }: { user: FirebaseUser }) {
 export default function ChatPage() {
   const { user, loading, signIn, isFirebaseConfigured } = useAuth();
 
-  if (!isFirebaseConfigured) {
-    return (
-      <div className="flex h-[calc(100vh-4rem)] w-full flex-col items-center justify-center gap-4 p-4 text-center">
-        <AlertTriangle className="h-12 w-12 text-destructive" />
-        <h1 className="text-2xl font-bold">Configuração do Firebase Incompleta</h1>
-        <p className="max-w-md text-muted-foreground">
-          As credenciais do seu projeto Firebase não foram encontradas. Por favor, preencha o arquivo <code>.env</code> na raiz do projeto com as chaves corretas do seu console Firebase para habilitar o chat.
-        </p>
-      </div>
-    )
-  }
-
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-4rem)] w-full items-center justify-center">
@@ -191,6 +179,15 @@ export default function ChatPage() {
             <LogIn className="mr-2" />
             Entrar com Google
         </Button>
+         {!isFirebaseConfigured && (
+          <div className="mt-4 flex max-w-md items-center gap-4 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+            <AlertTriangle className="h-6 w-6 flex-shrink-0" />
+            <div className="text-left">
+                <p className="font-bold">Ação Necessária</p>
+                <p className="text-sm">A configuração do Firebase está incompleta. Por favor, preencha o arquivo <code>.env</code> e reinicie o servidor para habilitar o login.</p>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
