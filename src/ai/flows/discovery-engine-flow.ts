@@ -79,10 +79,12 @@ const discoveryEngineFlow = ai.defineFlow(
     });
 
     try {
-      // Step 1: Explicitly get the access token. The original error happened here.
+      // Step 1: Explicitly get the access token.
       const client = await auth.getClient();
       const accessTokenResponse = await client.getAccessToken();
       const accessToken = accessTokenResponse.token;
+      
+      console.log('Access Token obtido:', accessToken ? 'SUCESSO' : 'FALHA'); // Não logue o token completo em produção!
 
       if (!accessToken) {
         throw new Error('Falha ao obter o token de acesso da conta de serviço.');
@@ -98,13 +100,22 @@ const discoveryEngineFlow = ai.defineFlow(
         body: JSON.stringify(payload),
       });
 
-      const data = await apiResponse.json();
+      console.log('API Response Status:', apiResponse.status);
+      const responseText = await apiResponse.text();
 
       if (!apiResponse.ok) {
-        const errorDetail = data?.error?.message || `Status: ${apiResponse.status}`;
-        console.error('Discovery Engine API returned an error:', errorDetail);
+        console.error('Erro RAW da API:', responseText);
+        let errorDetail;
+        try {
+          const errorJson = JSON.parse(responseText);
+          errorDetail = errorJson?.error?.message || responseText;
+        } catch (e) {
+            errorDetail = responseText || `Status: ${apiResponse.status}`;
+        }
         throw new Error(`A API do Discovery Engine retornou um erro: ${errorDetail}`);
       }
+      
+      const data = JSON.parse(responseText);
 
       const results: z.infer<typeof SearchResultSchema>[] =
         data.results?.map((res: any) => ({
