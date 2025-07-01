@@ -106,10 +106,6 @@ export async function askAssistant(
       }
     };
     
-    if (useWebSearch) {
-        contentSearchSpec.dataStores = ["global-data-store"];
-    }
-
     const requestBody: any = {
       query: query,
       pageSize: 5,
@@ -121,7 +117,8 @@ export async function askAssistant(
     };
     
     if (useWebSearch) {
-        requestBody.search_add_ons = ["SEARCH_ADD_ON_LLM"];
+        requestBody.dataStores = ["global-data-store"];
+        requestBody.searchAddOns = ["SEARCH_ADD_ON_LLM"];
     }
 
 
