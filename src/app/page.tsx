@@ -15,21 +15,20 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (query: string) => {
+    if (!query.trim() || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      text: input,
+      text: query,
     };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
     try {
-      const response = await askChatbot({ query: input });
+      const response = await askChatbot({ query });
       setMessages((prev) => [...prev, response.message]);
     } catch (error) {
       console.error('Failed to get response from chatbot:', error);
@@ -43,6 +42,16 @@ export default function ChatPage() {
       setIsLoading(false);
     }
   };
+
+  const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    sendMessage(suggestion);
+  };
+
 
   useEffect(() => {
     // Scroll to the bottom when new messages are added
@@ -63,8 +72,16 @@ export default function ChatPage() {
               <Bot className="mb-4 h-16 w-16 text-primary" />
               <h2 className="text-2xl font-bold">Assistente Inteligente</h2>
               <p className="text-muted-foreground">
-                Faça uma pergunta para começar.
+                Faça uma pergunta para começar ou experimente uma das sugestões abaixo.
               </p>
+              <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row">
+                <Button variant="outline" onClick={() => handleSuggestionClick('Olá')}>
+                  Olá
+                </Button>
+                <Button variant="outline" onClick={() => handleSuggestionClick('Quem é Gabriela Rocha?')}>
+                  Quem é Gabriela Rocha?
+                </Button>
+              </div>
             </div>
           )}
           {messages.map((message) => (
