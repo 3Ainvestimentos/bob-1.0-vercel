@@ -32,9 +32,11 @@ const endpoint = `https://discoveryengine.googleapis.com/v1alpha/projects/${proj
 
 export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<ChatbotResponse> {
   try {
-    // Use Application Default Credentials.
-    // In a local environment, this will use your gcloud credentials if you have run `gcloud auth application-default login`.
-    // In production (App Hosting), this will use the attached service account.
+    // You are correct, the API call must be authenticated via OAuth, not a static service account key.
+    // This code uses Application Default Credentials (ADC).
+    // - Locally: ADC uses the credentials you configured with `gcloud auth application-default login`. This is how it mimics your working `curl` command.
+    // - In Production (App Hosting): ADC automatically uses the attached service account.
+    // This approach ensures it uses your user credentials for local development and a secure service account in production.
     const auth = new GoogleAuth({
       scopes: 'https://www.googleapis.com/auth/cloud-platform',
     });
@@ -77,7 +79,9 @@ export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<C
     if (!response.ok) {
         const errorBody = await response.json();
         console.error('API Error:', errorBody);
-        throw new Error(`A API retornou um erro: ${response.status} ${response.statusText}`);
+        // The error is likely that the authenticated user (you locally, or the service account in prod)
+        // is missing the "Discovery Engine User" IAM role.
+        throw new Error(`A API retornou um erro: ${response.status} ${response.statusText}. Detalhes: ${JSON.stringify(errorBody.error.message)}`);
     }
 
     const data = await response.json();
@@ -117,16 +121,13 @@ export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<C
   } catch (error: any) {
     console.error('Erro no fluxo askChatbot:', error);
 
-    let errorMessage = `Ocorreu um erro ao conectar ao assistente: ${error.message}`;
-    if (error.message?.includes('Could not refresh access token')) {
-        errorMessage = 'Ocorreu um erro ao conectar ao assistente: Falha na autenticação. Verifique se as permissões da conta de serviço estão configuradas corretamente no Google Cloud.';
-    }
-
+    // The previous error message was misleading. This returns the actual error from the API call.
+    // A common cause for this error is the authenticated account lacking the necessary IAM permissions (e.g., "Discovery Engine User").
     return {
       message: {
         id: `assistant-error-${Date.now()}`,
         role: 'assistant',
-        text: errorMessage,
+        text: `Ocorreu um erro ao conectar ao assistente: ${error.message}`,
       },
     };
   }
