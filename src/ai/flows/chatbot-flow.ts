@@ -41,9 +41,8 @@ export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<C
       scopes: 'https://www.googleapis.com/auth/cloud-platform',
     });
 
-    const accessToken = await auth.getAccessToken();
+    const client = await auth.getClient();
 
-    // This request body mirrors the exact structure of the working curl command.
     const requestBody = {
       query: input.query,
       pageSize: 10,
@@ -66,23 +65,15 @@ export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<C
       },
     };
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-      cache: 'no-store',
+    // Use the authenticated client to make the request.
+    // This is more robust than manually fetching an access token and using fetch().
+    const response = await client.request({
+        url: endpoint,
+        method: 'POST',
+        data: requestBody,
     });
 
-    if (!response.ok) {
-        const errorBody = await response.json();
-        console.error('API Error:', errorBody);
-        throw new Error(`A API retornou um erro: ${response.status} ${response.statusText}. Verifique se a conta autenticada possui a permissão "Discovery Engine User". Detalhes: ${JSON.stringify(errorBody.error?.message)}`);
-    }
-
-    const data = await response.json();
+    const data = response.data as any;
 
     let responseText = 'Não consegui encontrar uma resposta para sua pergunta.';
 
@@ -119,8 +110,11 @@ export async function askChatbot(input: ChatbotInput, user: AuthUser): Promise<C
   } catch (error: any) {
     console.error('Erro detalhado no fluxo askChatbot:', error);
 
+    // The error from `client.request` might contain useful details in `error.response`.
+    const errorDetails = error.response?.data?.error?.message || error.message;
+
     // Provide a more actionable error message to the user.
-    const errorMessage = `A autenticação com o Google falhou. Se estiver desenvolvendo localmente, tente executar 'gcloud auth application-default login' em seu terminal. Detalhe do erro: ${error.message}`;
+    const errorMessage = `A autenticação com o Google falhou. Se estiver desenvolvendo localmente, tente executar 'gcloud auth application-default login' em seu terminal. Detalhe do erro: ${errorDetails}`;
 
     return {
       message: {
