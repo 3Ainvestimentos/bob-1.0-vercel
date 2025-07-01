@@ -76,7 +76,7 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
-      cache: 'no-store', // This is crucial to prevent Next.js from caching responses
+      cache: 'no-store',
     });
 
     if (!response.ok) {
