@@ -1,7 +1,5 @@
 'use server';
 
-import { SearchServiceClient } from '@google-cloud/discoveryengine';
-import type { protos } from '@google-cloud/discoveryengine';
 import { GoogleAuth } from 'google-auth-library';
 
 // Define the structure for a single message in the chat
@@ -23,9 +21,9 @@ export interface ChatbotInput {
 
 const projectId = 'datavisor-44i5m';
 const location = 'global';
-const collectionId = 'default_collection';
 const engineId = 'datavisorvscoderagtest_1751310702302';
-const servingConfigId = 'default_search';
+
+const endpoint = `https://discoveryengine.googleapis.com/v1alpha/projects/${projectId}/locations/${location}/collections/default_collection/engines/${engineId}/servingConfigs/default_search:search`;
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> {
   try {
@@ -44,13 +42,10 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       scopes: 'https://www.googleapis.com/auth/cloud-platform',
     });
 
-    const client = new SearchServiceClient({ auth });
+    const accessToken = await auth.getAccessToken();
 
-    // Manually construct the serving config path, as shown in the Python example
-    const servingConfig = `projects/${projectId}/locations/${location}/collections/${collectionId}/engines/${engineId}/servingConfigs/${servingConfigId}`;
-
-    const request: protos.google.cloud.discoveryengine.v1.ISearchRequest = {
-      servingConfig: servingConfig,
+    // This request body mirrors the exact structure of the working curl command.
+    const requestBody = {
       query: input.query,
       pageSize: 10,
       queryExpansionSpec: {
@@ -59,6 +54,7 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       spellCorrectionSpec: {
         mode: 'AUTO',
       },
+      languageCode: 'pt-BR',
       contentSearchSpec: {
         extractiveContentSpec: {
           maxExtractiveAnswerCount: 1,
@@ -67,13 +63,35 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
           returnSnippet: true,
         },
       },
+      userInfo: {
+        timeZone: 'America/Sao_Paulo',
+      },
+      session: `projects/${projectId}/locations/${location}/collections/default_collection/engines/${engineId}/sessions/-`,
     };
 
-    const [response] = await client.search(request);
-    const firstResult = response.results && response.results[0];
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+      cache: 'no-store', // This is crucial to prevent Next.js from caching responses
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.json();
+        console.error('API Error:', errorBody);
+        throw new Error(`A API retornou um erro: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
 
     let responseText = 'Não consegui encontrar uma resposta para sua pergunta.';
 
+    const firstResult = data.results && data.results[0];
+
+    // Check for a direct extractive answer first
     const extractiveAnswer =
       firstResult?.document?.derivedStructData?.fields?.extractive_answers
         ?.listValue?.values?.[0]?.structValue?.fields?.content?.stringValue;
@@ -81,14 +99,16 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
     if (extractiveAnswer) {
       responseText = extractiveAnswer;
     } else {
-      const snippetContent =
-        firstResult?.document?.derivedStructData?.fields?.snippets?.listValue
-          ?.values?.[0]?.structValue?.fields?.snippet?.stringValue;
-      if (snippetContent) {
-        const snippet = snippetContent.replace(/<[^>]*>/g, '');
-        responseText = `Não encontrei uma resposta direta, mas aqui está um trecho relevante do documento:\n\n"${snippet}"`;
-      }
+        // As a fallback, use the snippet
+        const snippetContent =
+          firstResult?.document?.derivedStructData?.fields?.snippets?.listValue
+            ?.values?.[0]?.structValue?.fields?.snippet?.stringValue;
+        if (snippetContent) {
+          const snippet = snippetContent.replace(/<[^>]*>/g, ''); // Clean HTML tags
+          responseText = `Não encontrei uma resposta direta, mas aqui está um trecho relevante do documento:\n\n"${snippet}"`;
+        }
     }
+
 
     return {
       message: {
