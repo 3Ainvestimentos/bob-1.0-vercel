@@ -1,3 +1,4 @@
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -165,7 +166,11 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     
-    const result = await model.generateContent(query);
+    const prompt = `Você é um assistente de pesquisa prestativo. Responda à seguinte pergunta do usuário da forma mais completa e precisa possível com base em seu conhecimento geral.
+
+Pergunta: "${query}"`;
+    
+    const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
@@ -173,6 +178,9 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
 
   } catch (error: any) {
     console.error("Error calling Gemini API:", error);
+    if (error.message.includes('API key not valid')) {
+      throw new Error(`A chave da API do Gemini (GEMINI_API_KEY) parece ser inválida. Verifique a chave no seu arquivo .env e no Google AI Studio.`);
+    }
     throw new Error(`Ocorreu um erro ao se comunicar com o Gemini: ${error.message}`);
   }
 }
@@ -184,9 +192,15 @@ export async function askAssistant(
 ): Promise<{ summary: string; searchFailed: boolean }> {
   const { useWebSearch = false } = options;
 
-  if (useWebSearch) {
-    return await callGemini(query);
-  } else {
-    return await callDiscoveryEngine(query);
+  try {
+    if (useWebSearch) {
+      return await callGemini(query);
+    } else {
+      return await callDiscoveryEngine(query);
+    }
+  } catch (error: any) {
+    console.error("Error in askAssistant:", error.message);
+    // Re-throw a user-friendly error
+    throw new Error(`Ocorreu um erro ao se comunicar com o assistente: ${error.message}`);
   }
 }
