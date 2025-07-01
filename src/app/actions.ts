@@ -127,7 +127,7 @@ export async function askAssistant(
     
     if (useWebSearch) {
         requestBody.dataStoreSpecs = [
-            { dataStore: "global-data-store" }
+            { dataStore: "projects/datavisor-44i5m/locations/global/collections/default_collection/dataStores/global-data-store" }
         ];
     }
 
