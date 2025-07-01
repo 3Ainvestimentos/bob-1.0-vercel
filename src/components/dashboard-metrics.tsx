@@ -1,6 +1,1 @@
-"use client";
-
-// This component is no longer used.
-export function DashboardMetrics() {
-  return null;
-}
+// This file is no longer used.
