@@ -27,18 +27,10 @@ const endpoint = `https://discoveryengine.googleapis.com/v1alpha/projects/${proj
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> {
   try {
-    if (!process.env.SERVICE_ACCOUNT_KEY) {
-      throw new Error(
-        'A variável de ambiente SERVICE_ACCOUNT_KEY não está definida.'
-      );
-    }
-    const serviceAccountKey = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
-
+    // Use Application Default Credentials.
+    // In a local environment, this will use your gcloud credentials if you have run `gcloud auth application-default login`.
+    // In production (App Hosting), this will use the attached service account.
     const auth = new GoogleAuth({
-      credentials: {
-        client_email: serviceAccountKey.client_email,
-        private_key: serviceAccountKey.private_key.replace(/\\n/g, '\n'),
-      },
       scopes: 'https://www.googleapis.com/auth/cloud-platform',
     });
 
