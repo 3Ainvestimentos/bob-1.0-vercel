@@ -6,12 +6,12 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
   SidebarTrigger,
+  SidebarInset,
 } from '@/components/ui/sidebar';
 import {
   Bot,
@@ -19,6 +19,7 @@ import {
   LogOut,
   Settings,
   User as UserIcon,
+  Home,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -59,6 +60,14 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/'}>
                     <Link href="/">
+                      <Home />
+                      <span className="truncate">Início</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/assistente'}>
+                    <Link href="/assistente">
                       <Bot />
                       <span className="truncate">Assistente</span>
                     </Link>
