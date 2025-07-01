@@ -1,6 +1,7 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `## [1. IDENTIDADE E PROPÓSITO]
 Você é o "Assistente Corporativo 3A RIVA", a inteligência artificial de suporte e aceleração de negócios do nosso grupo. Seu nome, Bob, é um acrônimo para 'Bot on Beta', escolhido pela área de Estratégia e IA da 3A RIVA para reforçar nosso compromisso com a melhoria contínua e o aprendizado constante. Seu propósito é ser um parceiro estratégico para **todos os colaboradores**, do estagiário ao CEO. Você deve ser capaz de entender e atender a diferentes tipos de necessidade:
@@ -51,127 +52,141 @@ Nosso grupo é composto por uma Assessoria de Investimentos e um Multi-Family Of
 * **Busca na Web ('performWebSearch'):** Se a pergunta do usuário solicitar informações muito recentes (eventos atuais, notícias de última hora), dados específicos que provavelmente não estão em seu conhecimento de treinamento (por exemplo, "qual o preço atual da ação X?", "qual a previsão do tempo para amanhã em Y?"), ou se você julgar que uma busca na web enriqueceria a resposta, utilize a ferramenta 'performWebSearch'. Formule uma consulta de busca clara e concisa para a ferramenta. Após receber os resultados, resuma-os e cite as fontes (links) fornecidas pela ferramenta.`;
 
 
+async function callDiscoveryEngine(query: string): Promise<{ summary: string; searchFailed: boolean }> {
+    const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
+    if (!serviceAccountKeyJson) {
+      throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida no arquivo .env.`);
+    }
+
+    let serviceAccountCredentials;
+    try {
+      serviceAccountCredentials = JSON.parse(serviceAccountKeyJson);
+      if (serviceAccountCredentials.private_key) {
+        serviceAccountCredentials.private_key = serviceAccountCredentials.private_key.replace(/\\n/g, '\n');
+      }
+    } catch (e: any) {
+      console.error(`Falha ao analisar SERVICE_ACCOUNT_KEY_INTERNAL. Verifique o formato do JSON no seu arquivo .env. Erro:`, e.message);
+      throw new Error(`Falha ao analisar a chave da conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL). Verifique o formato do JSON no seu arquivo .env. Detalhe: ${e.message}`);
+    }
+
+    const projectId = serviceAccountCredentials.project_id;
+    const location = 'global';
+    const engineId = 'datavisorvscoderagtest_1751310702302';
+    const collectionId = 'default_collection';
+    const servingConfigId = 'default_search';
+
+    const url = `https://discoveryengine.googleapis.com/v1alpha/projects/${projectId}/locations/${location}/collections/${collectionId}/engines/${engineId}/servingConfigs/${servingConfigId}:search`;
+    
+    const auth = new GoogleAuth({
+      credentials: serviceAccountCredentials,
+      scopes: 'https://www.googleapis.com/auth/cloud-platform',
+    });
+
+    try {
+      const client = await auth.getClient();
+      const accessTokenResponse = await client.getAccessToken();
+      const accessToken = accessTokenResponse.token;
+
+      if (!accessToken) {
+        throw new Error(`Falha ao obter o token de acesso usando a conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL).`);
+      }
+
+      const requestBody: any = {
+        query: query,
+        pageSize: 5,
+        queryExpansionSpec: { condition: 'AUTO' },
+        spellCorrectionSpec: { mode: 'AUTO' },
+        languageCode: 'pt-BR',
+        contentSearchSpec: {
+            summarySpec: {
+              summaryResultCount: 5,
+              ignoreAdversarialQuery: true,
+              useSemanticChunks: true,
+              modelPromptSpec: {
+                preamble: ASSISTENTE_CORPORATIVO_PREAMBLE
+              }
+            }
+        },
+        userPseudoId: 'unique-user-id-for-testing',
+      };
+
+      const apiResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(`A API retornou um erro: ${apiResponse.status}. Resposta: ${errorText}`);
+      }
+
+      const data = await apiResponse.json();
+      const summary = data.summary?.summaryText || "Não foi possível gerar um resumo.";
+
+      const internalSearchFailureKeywords = [
+          "não encontrei a informação",
+          "não foi possível encontrar",
+          "informações públicas de mercado",
+          "busca na web",
+      ];
+      const searchFailed = internalSearchFailureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
+
+      if (searchFailed) {
+        return { 
+          summary: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?", 
+          searchFailed: true 
+        };
+      }
+
+      return { summary, searchFailed: false };
+
+    } catch (error: any) {
+      console.error("Error in callDiscoveryEngine:", error.message);
+      if (error.message.includes('Could not refresh access token') || error.message.includes('permission')) {
+         throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL) tem o papel "Usuário do Discovery Engine".`);
+      }
+      throw new Error(`Ocorreu um erro ao se comunicar com o Discovery Engine: ${error.message}`);
+    }
+}
+
+
+async function callGemini(query: string): Promise<{ summary: string; searchFailed: boolean }> {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    throw new Error("A variável de ambiente GEMINI_API_KEY não está definida. Por favor, adicione-a ao seu arquivo .env.");
+  }
+  
+  try {
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    
+    const result = await model.generateContent(query);
+    const response = await result.response;
+    const text = response.text();
+
+    return { summary: text, searchFailed: false };
+
+  } catch (error: any) {
+    console.error("Error calling Gemini API:", error);
+    throw new Error(`Ocorreu um erro ao se comunicar com o Gemini: ${error.message}`);
+  }
+}
+
+
 export async function askAssistant(
   query: string,
   options: { useWebSearch?: boolean } = {}
 ): Promise<{ summary: string; searchFailed: boolean }> {
   const { useWebSearch = false } = options;
 
-  // Decide which service account key to use, with a fallback for the external key.
-  const internalKey = process.env.SERVICE_ACCOUNT_KEY;
-  const externalKey = process.env.SERVICE_ACCOUNT_KEY_EXTERNAL;
-  const serviceAccountKeyJson = useWebSearch ? (externalKey || internalKey) : internalKey;
-  
-  // Determine the name of the key being used for clearer error messages.
-  const keyNameForErrors = useWebSearch 
-    ? (externalKey ? 'SERVICE_ACCOUNT_KEY_EXTERNAL' : 'SERVICE_ACCOUNT_KEY como fallback') 
-    : 'SERVICE_ACCOUNT_KEY';
-
-  if (!serviceAccountKeyJson) {
-    throw new Error(`A variável de ambiente necessária (${keyNameForErrors}) não está definida no arquivo .env.`);
-  }
-
-  let serviceAccountCredentials;
-  try {
-    serviceAccountCredentials = JSON.parse(serviceAccountKeyJson);
-    if (serviceAccountCredentials.private_key) {
-      serviceAccountCredentials.private_key = serviceAccountCredentials.private_key.replace(/\\n/g, '\n');
-    }
-  } catch (e: any) {
-    console.error(`Falha ao analisar ${keyNameForErrors}. Verifique o formato do JSON no seu arquivo .env. Erro:`, e.message);
-    throw new Error(`Falha ao analisar a chave da conta de serviço (${keyNameForErrors}). Verifique o formato do JSON no seu arquivo .env. Detalhe: ${e.message}`);
-  }
-
-  const projectId = serviceAccountCredentials.project_id;
-  const location = 'global';
-  const engineId = 'datavisorvscoderagtest_1751310702302';
-  const collectionId = 'default_collection';
-  const servingConfigId = 'default_search';
-
-  const url = `https://discoveryengine.googleapis.com/v1alpha/projects/${projectId}/locations/${location}/collections/${collectionId}/engines/${engineId}/servingConfigs/${servingConfigId}:search`;
-  
-  const auth = new GoogleAuth({
-    credentials: serviceAccountCredentials,
-    scopes: 'https://www.googleapis.com/auth/cloud-platform',
-  });
-
-  try {
-    const client = await auth.getClient();
-    const accessTokenResponse = await client.getAccessToken();
-    const accessToken = accessTokenResponse.token;
-
-    if (!accessToken) {
-      throw new Error(`Falha ao obter o token de acesso usando a conta de serviço (${keyNameForErrors}).`);
-    }
-
-    const contentSearchSpec: any = {
-      summarySpec: {
-        summaryResultCount: 5,
-        ignoreAdversarialQuery: true,
-        useSemanticChunks: true,
-        modelPromptSpec: {
-          preamble: ASSISTENTE_CORPORATIVO_PREAMBLE
-        }
-      }
-    };
-    
-    const requestBody: any = {
-      query: query,
-      pageSize: 5,
-      queryExpansionSpec: { condition: 'AUTO' },
-      spellCorrectionSpec: { mode: 'AUTO' },
-      languageCode: 'pt-BR',
-      contentSearchSpec: contentSearchSpec,
-      userPseudoId: 'unique-user-id-for-testing',
-    };
-    
-    if (useWebSearch) {
-        requestBody.dataStoreSpecs = [
-            { dataStore: "projects/datavisor-44i5m/locations/global/collections/default_collection/dataStores/global-data-store" }
-        ];
-    }
-
-
-    const apiResponse = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text();
-      console.error("API Error Response:", errorText);
-      throw new Error(`A API retornou um erro: ${apiResponse.status}. Resposta: ${errorText}`);
-    }
-
-    const data = await apiResponse.json();
-    const summary = data.summary?.summaryText || "Não foi possível gerar um resumo.";
-
-    const internalSearchFailureKeywords = [
-        "não encontrei a informação",
-        "não foi possível encontrar",
-        "informações públicas de mercado",
-        "busca na web",
-    ];
-    const searchFailed = !useWebSearch && internalSearchFailureKeywords.some(keyword => summary.includes(keyword));
-
-    if (searchFailed) {
-      return { 
-        summary: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?", 
-        searchFailed: true 
-      };
-    }
-
-    return { summary, searchFailed: false };
-
-  } catch (error: any) {
-    console.error("Error in askAssistant:", error.message);
-    if (error.message.includes('Could not refresh access token') || error.message.includes('permission')) {
-       throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço (${keyNameForErrors}) tem o papel "Usuário do Discovery Engine".`);
-    }
-    throw new Error(`Ocorreu um erro ao se comunicar com o assistente: ${error.message}`);
+  if (useWebSearch) {
+    return await callGemini(query);
+  } else {
+    return await callDiscoveryEngine(query);
   }
 }
