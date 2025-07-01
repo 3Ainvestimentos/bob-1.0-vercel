@@ -7,14 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2, LogIn, Bot, AlertTriangle, Search } from 'lucide-react';
 import Script from 'next/script';
 
-// Declare the custom element for TypeScript for inline search
+// Declare the custom element for TypeScript for the overlay widget
 declare global {
   namespace JSX {
     interface IntrinsicElements {
       'gen-search-widget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
         configId: string;
-        'search-box-id'?: string;
-        'results-container-id'?: string;
+        triggerId: string;
       };
     }
   }
@@ -30,8 +29,7 @@ export default function SearchPage() {
       <Script src="https://cloud.google.com/ai/gen-app-builder/client?hl=pt_BR" strategy="afterInteractive" />
       <gen-search-widget
         configId="05715c26-4df8-4676-84b9-475cec8e1191"
-        search-box-id="searchBox"
-        results-container-id="resultsContainer"
+        triggerId="searchWidgetTrigger"
       />
 
       {loading && (
@@ -77,15 +75,17 @@ export default function SearchPage() {
               </div>
               <div className="relative pt-4">
                 <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                {/* The Input that the widget will control */}
-                <Input id="searchBox" placeholder="Quem é Gabriela Rocha?" className="w-full pl-10" />
+                {/* This input will trigger the widget overlay */}
+                <Input id="searchWidgetTrigger" placeholder="Pesquise aqui" className="w-full pl-10" />
               </div>
             </CardHeader>
-            {/* The container where the widget will inject results */}
-            <CardContent id="resultsContainer" className="flex-1 overflow-auto p-4 md:p-6">
+            {/* The content area is now just a placeholder */}
+            <CardContent className="flex-1 overflow-auto p-4 md:p-6">
               <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
                 <Bot className="mb-2 h-10 w-10 text-muted-foreground/50" />
-                <p className="font-medium text-muted-foreground">Os resultados da pesquisa aparecerão aqui.</p>
+                <p className="font-medium text-muted-foreground">
+                  Clique na caixa de pesquisa acima para abrir o assistente.
+                </p>
               </div>
             </CardContent>
           </Card>
