@@ -143,9 +143,22 @@ export async function askAssistant(
     const data = await apiResponse.json();
     const summary = data.summary?.summaryText || "Não foi possível gerar um resumo.";
 
-    const searchFailed = !useWebSearch && (summary.includes("não encontrei a informação") || summary.includes("não foi possível encontrar"));
+    const internalSearchFailureKeywords = [
+        "não encontrei a informação",
+        "não foi possível encontrar",
+        "informações públicas de mercado",
+        "busca na web",
+    ];
+    const searchFailed = !useWebSearch && internalSearchFailureKeywords.some(keyword => summary.includes(keyword));
 
-    return { summary, searchFailed };
+    if (searchFailed) {
+      return { 
+        summary: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?", 
+        searchFailed: true 
+      };
+    }
+
+    return { summary, searchFailed: false };
 
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);

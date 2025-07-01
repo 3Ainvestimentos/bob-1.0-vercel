@@ -85,6 +85,14 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDeclineWebSearch = (messageIdToUpdate: string) => {
+    setMessages((prevMessages) =>
+      prevMessages.map((msg) =>
+        msg.id === messageIdToUpdate ? { ...msg, showWebSearchButton: false } : msg
+      )
+    );
+  };
+
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -250,10 +258,14 @@ export default function DashboardPage() {
                           <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">{msg.content}</ReactMarkdown>
                         </div>
                         {msg.showWebSearchButton && (
-                            <Button variant="outline" size="sm" onClick={() => handleWebSearch(msg.id)} disabled={isLoading}>
-                                <Search className="mr-2 h-4 w-4" />
-                                Pesquisar na Web
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => handleWebSearch(msg.id)} disabled={isLoading}>
+                                    Sim
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => handleDeclineWebSearch(msg.id)} disabled={isLoading}>
+                                    Não
+                                </Button>
+                            </div>
                         )}
                     </div>
                      {msg.role === 'user' && (
