@@ -19,8 +19,13 @@ export interface ChatbotInput {
   query: string;
 }
 
-const API_ENDPOINT = `https://discoveryengine.googleapis.com/v1alpha/projects/629342546806/locations/global/collections/default_collection/engines/datavisorvscoderagtest_1751310702302/servingConfigs/default_search:search`;
-const SESSION_ID = `projects/629342546806/locations/global/collections/default_collection/engines/datavisorvscoderagtest_1751310702302/sessions/-`;
+const projectId = '629342546806';
+const location = 'global';
+const collectionId = 'default_collection';
+const engineId = 'datavisorvscoderagtest_1751310702302';
+const servingConfigId = 'default_search';
+
+const url = `https://discoveryengine.googleapis.com/v1alpha/projects/${projectId}/locations/${location}/collections/${collectionId}/engines/${engineId}/servingConfigs/${servingConfigId}:search`;
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> {
   try {
@@ -29,21 +34,17 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
         'A variável de ambiente SERVICE_ACCOUNT_KEY não está definida. Por favor, verifique o arquivo .env.'
       );
     }
-
     const serviceAccountKey = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
 
     const auth = new GoogleAuth({
       credentials: {
         client_email: serviceAccountKey.client_email,
-        private_key: serviceAccountKey.private_key,
+        private_key: serviceAccountKey.private_key.replace(/\\n/g, '\n'),
       },
-      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+      scopes: 'https://www.googleapis.com/auth/cloud-platform',
     });
 
-    const accessToken = await auth.getAccessToken();
-    if (!accessToken) {
-      throw new Error('Não foi possível obter o token de acesso usando a chave de conta de serviço.');
-    }
+    const token = await auth.getAccessToken();
 
     const requestBody = {
       query: input.query,
@@ -59,48 +60,48 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
       userInfo: {
         timeZone: 'America/Sao_Paulo',
       },
-      session: SESSION_ID,
+      session: `projects/${projectId}/locations/${location}/collections/${collectionId}/engines/${engineId}/sessions/-`,
     };
 
-    const response = await fetch(API_ENDPOINT, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
       cache: 'no-store',
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Erro na API do Discovery Engine:', response.status, data);
-      const errorMessage =
-        data.error?.message ||
-        `A requisição à API falhou com o status ${response.status}`;
-      throw new Error(errorMessage);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`A API retornou um erro: ${res.status} ${res.statusText}`);
     }
+
+    const response = await res.json();
 
     let responseText =
       'Não consegui encontrar uma resposta para sua pergunta.';
 
-    const firstResult = data.results && data.results[0];
+    const firstResult = response.results && response.results[0];
 
-    // Prioridade 1: Resposta extrativa direta
-    if (
-      firstResult?.document?.derivedStructData?.extractive_answers?.[0]?.content
-    ) {
-      responseText =
-        firstResult.document.derivedStructData.extractive_answers[0].content;
+    // Priority 1: Direct extractive answer
+    const extractiveAnswer =
+      firstResult?.document?.derivedStructData?.fields?.extractive_answers?.listValue?.values?.[0]?.structValue?.fields?.content?.stringValue;
+    if (extractiveAnswer) {
+      responseText = extractiveAnswer;
     }
-    // Prioridade 2: Trechos (snippets) do documento
-    else if (firstResult?.document?.derivedStructData?.snippets?.[0]?.snippet) {
-        // Limpa tags HTML que podem vir nos snippets
-        const snippet = firstResult.document.derivedStructData.snippets[0].snippet.replace(/<[^>]*>/g, '');
+    // Priority 2: Document snippets
+    else {
+      const snippetContent =
+        firstResult?.document?.derivedStructData?.fields?.snippets?.listValue?.values?.[0]?.structValue?.fields?.snippet?.stringValue;
+      if (snippetContent) {
+        // Clean HTML tags that might come in snippets
+        const snippet = snippetContent.replace(/<[^>]*>/g, '');
         responseText = `Não encontrei uma resposta direta, mas aqui está um trecho relevante do documento:\n\n"${snippet}"`;
+      }
     }
-
 
     return {
       message: {
@@ -111,7 +112,6 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
     };
   } catch (error: any) {
     console.error('Erro no fluxo askChatbot:', error);
-    // Retorne uma mensagem de erro amigável para o usuário
     return {
       message: {
         id: `assistant-error-${Date.now()}`,
