@@ -16,7 +16,7 @@ import {GoogleAuth} from 'google-auth-library';
 import {ai} from '@/ai/genkit';
 
 // Input schema for the flow, expecting a user's query.
-export const DiscoveryEngineInputSchema = z.object({
+const DiscoveryEngineInputSchema = z.object({
   query: z.string().describe('The search query from the user.'),
 });
 export type DiscoveryEngineInput = z.infer<typeof DiscoveryEngineInputSchema>;
@@ -30,7 +30,7 @@ const SearchResultSchema = z.object({
 });
 
 // Output schema for the flow, containing the summarized answer and a list of results.
-export const DiscoveryEngineOutputSchema = z.object({
+const DiscoveryEngineOutputSchema = z.object({
   summary: z.string().describe('The summarized text answer from the search.'),
   results: z.array(SearchResultSchema).describe('A list of source documents for the summary.'),
 });
