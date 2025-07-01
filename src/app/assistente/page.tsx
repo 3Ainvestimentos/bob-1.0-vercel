@@ -14,8 +14,7 @@ declare global {
     interface IntrinsicElements {
       'gen-search-widget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
         configId: string;
-        resultsContainerId?: string;
-        inputTriggerId?: string;
+        triggerId: string;
       };
     }
   }
@@ -45,8 +44,7 @@ export default function AssistentePage() {
       <Script src="https://cloud.google.com/ai/gen-app-builder/client?hl=pt_BR" strategy="afterInteractive" />
       <gen-search-widget
         configId="05715c26-4df8-4676-84b9-475cec8e1191"
-        inputTriggerId="searchInlineTrigger"
-        resultsContainerId="results-container"
+        triggerId="searchWidgetTrigger"
       />
       
       <div className="flex h-full w-full flex-col p-4 md:p-6">
@@ -57,18 +55,20 @@ export default function AssistentePage() {
               <div className="flex-1">
                 <CardTitle className="text-xl">Assistente de Pesquisa</CardTitle>
                 <CardDescription>
-                  Faça sua pergunta no campo abaixo para pesquisar na nossa base de conhecimento.
+                  Clique na caixa de pesquisa abaixo para abrir o assistente.
                 </CardDescription>
               </div>
             </div>
             <div className="relative pt-4">
               <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              {/* This input will trigger the inline search */}
-              <Input id="searchInlineTrigger" placeholder="Pesquise aqui" className="w-full pl-10" />
+              {/* This input will trigger the overlay search widget */}
+              <Input id="searchWidgetTrigger" placeholder="Pesquise aqui" className="w-full pl-10" />
             </div>
           </CardHeader>
-          <CardContent id="results-container" className="flex-1 overflow-auto p-4 md:p-6">
-            {/* The widget will populate this area with results */}
+          <CardContent className="flex-1 overflow-auto p-4 md:p-6">
+            <div className="flex h-full items-center justify-center text-center text-muted-foreground">
+                <p>Clique na caixa de pesquisa acima para abrir o assistente.</p>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -20,6 +20,7 @@ import {
   Settings,
   User as UserIcon,
   Home,
+  MessageSquarePlus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -69,7 +70,15 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   <SidebarMenuButton asChild isActive={pathname === '/assistente'}>
                     <Link href="/assistente">
                       <Bot />
-                      <span className="truncate">Assistente</span>
+                      <span className="truncate">Assistente (Widget)</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/chat-api'}>
+                    <Link href="/chat-api">
+                      <MessageSquarePlus />
+                      <span className="truncate">Assistente (API)</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
