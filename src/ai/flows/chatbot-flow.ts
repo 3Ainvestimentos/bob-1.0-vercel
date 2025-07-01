@@ -23,7 +23,6 @@ const projectId = 'datavisor-44i5m';
 const location = 'global';
 const engineId = 'datavisorvscoderagtest_1751310702302';
 
-// This endpoint exactly matches the user's working curl command.
 const endpoint = `https://discoveryengine.googleapis.com/v1alpha/projects/${projectId}/locations/${location}/collections/default_collection/engines/${engineId}/servingConfigs/default_search:search`;
 
 export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> {
@@ -73,7 +72,7 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
-      cache: 'no-store', // Important: Prevents Next.js from caching the response
+      cache: 'no-store',
     });
 
     if (!response.ok) {
@@ -86,36 +85,28 @@ export async function askChatbot(input: ChatbotInput): Promise<ChatbotResponse> 
 
     let responseText = 'Não consegui encontrar uma resposta para sua pergunta.';
 
-    // Plan A: Check for the direct summary, which is the most likely candidate for the rich response.
-    const summary = data.summary?.summaryText;
-    if (summary) {
-      responseText = summary;
-    } else {
-      const firstResult = data.results && data.results[0];
-      if (firstResult) {
-        // Plan B: Check for a direct extractive answer.
-        const extractiveAnswer =
-          firstResult.document?.derivedStructData?.fields?.extractive_answers
-            ?.listValue?.values?.[0]?.structValue?.fields?.content?.stringValue;
+    const firstResult = data.results && data.results[0];
+    if (firstResult) {
+      // First, try to get the direct extractive answer. This is likely the best response.
+      const extractiveAnswer =
+        firstResult.document?.derivedStructData?.fields?.extractive_answers
+          ?.listValue?.values?.[0]?.structValue?.fields?.content?.stringValue;
 
-        if (extractiveAnswer) {
-          responseText = extractiveAnswer;
+      if (extractiveAnswer) {
+        responseText = extractiveAnswer;
+      } else {
+        // If there's no direct answer, fall back to a snippet.
+        const snippet = firstResult.document?.derivedStructData?.fields?.snippets?.listValue?.values?.[0]?.structValue?.fields?.snippet?.stringValue;
+        if (snippet) {
+            responseText = snippet.replace(/\n/g, ' ');
         } else {
-          // Plan C: Check for snippets as a last resort.
-          const snippet = firstResult.document?.derivedStructData?.fields?.snippets?.listValue?.values?.[0]?.structValue?.fields?.snippet?.stringValue;
-          if (snippet) {
-              responseText = `Não encontrei uma resposta exata, mas aqui está um trecho relevante: "${snippet.replace(/\n/g, ' ')}"`;
-          } else {
-            // If we reach here, we have a result but no answer. Log it for debugging.
-            console.warn("API returned results but no parsable answer. Full data:", JSON.stringify(data, null, 2));
-          }
+          // If we reach here, we have a result but no answer. Log it for debugging.
+          console.warn("API returned results but no parsable answer. Full data:", JSON.stringify(data, null, 2));
         }
-      } else if (data.results?.length === 0) {
-        // No results at all.
-         console.warn("API returned no results for query:", input.query);
       }
+    } else {
+      console.warn("API returned no results for query:", input.query);
     }
-
 
     return {
       message: {
