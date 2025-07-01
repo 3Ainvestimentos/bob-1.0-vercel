@@ -236,7 +236,7 @@ export default function DashboardPage() {
             <div className="relative mx-auto max-w-3xl">
               <Textarea
                 placeholder="Insira aqui um comando ou pergunta"
-                className="min-h-[48px] resize-none rounded-2xl border bg-card p-4 pr-16 shadow-sm"
+                className="min-h-[48px] resize-none rounded-2xl border bg-card py-4 pl-24 pr-16 shadow-sm"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
