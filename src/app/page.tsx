@@ -36,25 +36,26 @@ function InlineSearchWidget() {
       />
 
       <Card className="flex flex-1 flex-col overflow-hidden">
-        <CardHeader className="flex flex-row items-center gap-4 border-b">
-          <Bot className="h-8 w-8 text-primary" />
-          <div>
-            <CardTitle>Assistente de Pesquisa</CardTitle>
-            <CardDescription>
-              Faça sua pergunta e veja os resultados abaixo.
-            </CardDescription>
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-4">
+            <Bot className="h-8 w-8 flex-shrink-0 text-primary" />
+            <div className="flex-1">
+              <CardTitle className="text-xl">Assistente de Pesquisa</CardTitle>
+              <CardDescription>
+                Faça sua pergunta no campo abaixo para pesquisar na nossa base de conhecimento.
+              </CardDescription>
+            </div>
+          </div>
+          <div className="relative pt-4">
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <Input id="searchBox" placeholder="Quem é Gabriela Rocha?" className="w-full pl-10" />
           </div>
         </CardHeader>
-        <CardContent className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-            <Input id="searchBox" placeholder="Quem é Gabriela Rocha?" className="pl-10" />
-          </div>
-          <div id="resultsContainer" className="flex-1 overflow-auto rounded-lg border">
-             <div className="flex h-full items-center justify-center text-center text-muted-foreground">
-                <p>Os resultados da sua pesquisa aparecerão aqui.</p>
-             </div>
-          </div>
+        <CardContent id="resultsContainer" className="flex-1 overflow-auto p-4 md:p-6">
+           <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
+              <Bot className="mb-2 h-10 w-10 text-muted-foreground/50" />
+              <p className="font-medium text-muted-foreground">Os resultados da pesquisa aparecerão aqui.</p>
+           </div>
         </CardContent>
       </Card>
     </div>
