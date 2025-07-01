@@ -51,8 +51,12 @@ Nosso grupo é composto por uma Assessoria de Investimentos e um Multi-Family Of
 * **Busca na Web ('performWebSearch'):** Se a pergunta do usuário solicitar informações muito recentes (eventos atuais, notícias de última hora), dados específicos que provavelmente não estão em seu conhecimento de treinamento (por exemplo, "qual o preço atual da ação X?", "qual a previsão do tempo para amanhã em Y?"), ou se você julgar que uma busca na web enriqueceria a resposta, utilize a ferramenta 'performWebSearch'. Formule uma consulta de busca clara e concisa para a ferramenta. Após receber os resultados, resuma-os e cite as fontes (links) fornecidas pela ferramenta.`;
 
 
-export async function askAssistant(query: string): Promise<string> {
+export async function askAssistant(
+  query: string,
+  options: { useWebSearch?: boolean } = {}
+): Promise<{ summary: string; searchFailed: boolean }> {
   const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY;
+  const { useWebSearch = false } = options;
 
   if (!serviceAccountKeyJson) {
     throw new Error('A variável de ambiente SERVICE_ACCOUNT_KEY não está definida no arquivo .env.');
@@ -61,9 +65,6 @@ export async function askAssistant(query: string): Promise<string> {
   let serviceAccountCredentials;
   try {
     serviceAccountCredentials = JSON.parse(serviceAccountKeyJson);
-    // Correção para o erro "DECODER routines::unsupported"
-    // Chaves privadas em JSON dentro de variáveis de ambiente podem ter seus newlines escapados (como \\n).
-    // O google-auth-library espera newlines reais (\n). Esta linha corrige isso.
     if (serviceAccountCredentials.private_key) {
       serviceAccountCredentials.private_key = serviceAccountCredentials.private_key.replace(/\\n/g, '\n');
     }
@@ -94,30 +95,43 @@ export async function askAssistant(query: string): Promise<string> {
       throw new Error('Falha ao obter o token de acesso usando a conta de serviço fornecida.');
     }
 
+    const contentSearchSpec: any = {
+      summarySpec: {
+        summaryResultCount: 5,
+        ignoreAdversarialQuery: true,
+        useSemanticChunks: true,
+        modelPromptSpec: {
+          preamble: ASSISTENTE_CORPORATIVO_PREAMBLE
+        }
+      }
+    };
+    
+    if (useWebSearch) {
+        contentSearchSpec.dataStores = ["global-data-store"];
+    }
+
+    const requestBody: any = {
+      query: query,
+      pageSize: 5,
+      queryExpansionSpec: { condition: 'AUTO' },
+      spellCorrectionSpec: { mode: 'AUTO' },
+      languageCode: 'pt-BR',
+      contentSearchSpec: contentSearchSpec,
+      userPseudoId: 'unique-user-id-for-testing',
+    };
+    
+    if (useWebSearch) {
+        requestBody.search_add_ons = ["SEARCH_ADD_ON_LLM"];
+    }
+
+
     const apiResponse = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        query: query,
-        pageSize: 5,
-        queryExpansionSpec: { condition: 'AUTO' },
-        spellCorrectionSpec: { mode: 'AUTO' },
-        languageCode: 'pt-BR',
-        contentSearchSpec: {
-           summarySpec: {
-             summaryResultCount: 5,
-             ignoreAdversarialQuery: true,
-             useSemanticChunks: true,
-             modelPromptSpec: {
-                preamble: ASSISTENTE_CORPORATIVO_PREAMBLE
-             }
-           }
-        },
-        userPseudoId: 'unique-user-id-for-testing',
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!apiResponse.ok) {
@@ -129,7 +143,9 @@ export async function askAssistant(query: string): Promise<string> {
     const data = await apiResponse.json();
     const summary = data.summary?.summaryText || "Não foi possível gerar um resumo.";
 
-    return summary;
+    const searchFailed = !useWebSearch && (summary.includes("não encontrei a informação") || summary.includes("não foi possível encontrar"));
+
+    return { summary, searchFailed };
 
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);

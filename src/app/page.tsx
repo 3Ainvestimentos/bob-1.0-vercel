@@ -29,8 +29,11 @@ import ReactMarkdown from 'react-markdown';
 
 // Define the shape of a message
 interface Message {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
+  showWebSearchButton?: boolean;
+  originalQuery?: string;
 }
 
 export default function DashboardPage() {
@@ -45,20 +48,65 @@ export default function DashboardPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Handle web search button click
+  const handleWebSearch = async (messageIdToUpdate: string) => {
+    const messageToUpdate = messages.find((m) => m.id === messageIdToUpdate);
+    if (!messageToUpdate || !messageToUpdate.originalQuery) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    // Hide the button and show a loading state on the message
+    setMessages((prevMessages) =>
+      prevMessages.map((msg) =>
+        msg.id === messageIdToUpdate
+          ? { ...msg, showWebSearchButton: false, content: `Pesquisando na web por: "${messageToUpdate.originalQuery}"...` }
+          : msg
+      )
+    );
+
+    try {
+      const assistantResponse = await askAssistant(messageToUpdate.originalQuery, { useWebSearch: true });
+      // Update the message with the new response
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === messageIdToUpdate ? { ...msg, content: assistantResponse.summary } : msg
+        )
+      );
+    } catch (err: any) {
+      // Update the message with an error
+       setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === messageIdToUpdate ? { ...msg, content: `Erro ao pesquisar na web: ${err.message}` } : msg
+        )
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: input };
+    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input };
     setMessages((prev) => [...prev, userMessage]);
+    
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
     setError(null);
 
     try {
-      const assistantResponse = await askAssistant(input);
-      const assistantMessage: Message = { role: 'assistant', content: assistantResponse };
+      const assistantResponse = await askAssistant(currentInput, { useWebSearch: false });
+      const assistantMessage: Message = { 
+        id: (Date.now() + 1).toString(), 
+        role: 'assistant', 
+        content: assistantResponse.summary,
+        showWebSearchButton: assistantResponse.searchFailed,
+        originalQuery: assistantResponse.searchFailed ? currentInput : undefined
+      };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
@@ -190,19 +238,23 @@ export default function DashboardPage() {
                 </div>
             ) : (
               <div className="space-y-6">
-                {messages.map((msg, index) => (
-                  <div key={index} className={`flex items-start gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`flex items-start gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                     {msg.role === 'assistant' && (
                       <Avatar>
                         <AvatarFallback>AI</AvatarFallback>
                       </Avatar>
                     )}
-                    <div className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                      {msg.role === 'assistant' ? (
-                        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">{msg.content}</ReactMarkdown>
-                      ) : (
-                        <p className="text-sm">{msg.content}</p>
-                      )}
+                    <div className="flex flex-col items-start gap-2">
+                        <div className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                          <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">{msg.content}</ReactMarkdown>
+                        </div>
+                        {msg.showWebSearchButton && (
+                            <Button variant="outline" size="sm" onClick={() => handleWebSearch(msg.id)} disabled={isLoading}>
+                                <Search className="mr-2 h-4 w-4" />
+                                Pesquisar na Web
+                            </Button>
+                        )}
                     </div>
                      {msg.role === 'user' && (
                       <Avatar>
@@ -211,7 +263,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                 ))}
-                 {isLoading && (
+                 {isLoading && messages.length > 0 && (
                     <div className="flex items-start gap-4">
                         <Avatar>
                             <AvatarFallback>AI</AvatarFallback>
@@ -247,7 +299,7 @@ export default function DashboardPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                       handleSubmit(e);
                     }
                   }}
