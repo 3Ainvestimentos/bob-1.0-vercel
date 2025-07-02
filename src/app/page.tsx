@@ -1,9 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Settings, LogIn, MessageSquare } from 'lucide-react';
+import { LogIn, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { useAuth } from '@/context/AuthProvider';
+import { auth, googleProvider } from '@/lib/firebase';
+import { signInWithPopup } from 'firebase/auth';
 import { useEffect } from 'react';
 
 const BotIcon = () => (
@@ -19,27 +21,31 @@ const BotIcon = () => (
 
 export default function LoginPage() {
     const router = useRouter();
-    const { data: session, status } = useSession();
+    const { user, loading } = useAuth();
 
     useEffect(() => {
-        if (status === 'authenticated') {
+        if (!loading && user) {
             router.push('/chat');
         }
-    }, [status, router]);
+    }, [user, loading, router]);
 
-    if (status === 'loading') {
+    const handleGoogleSignIn = async () => {
+        try {
+            await signInWithPopup(auth, googleProvider);
+            // O useEffect cuidará do redirecionamento
+        } catch (error) {
+            console.error("Erro ao fazer login com o Google:", error);
+            // Opcional: mostrar um toast de erro para o usuário
+        }
+    };
+    
+    if (loading || user) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
                 <p>Carregando...</p>
             </div>
         );
     }
-    
-    // Don't show login page if already authenticated
-    if (status === 'authenticated') {
-        return null;
-    }
-
 
     return (
         <div className="flex h-screen w-full flex-col bg-background text-foreground">
@@ -49,7 +55,7 @@ export default function LoginPage() {
                     <h1 className="text-4xl font-bold tracking-tight">Bem-vindo ao Bob</h1>
                     <p className="mt-2 text-lg text-muted-foreground">Assistente de IA Generativa da 3A RIVA</p>
                     <div className="mt-8 flex flex-col gap-4">
-                         <Button onClick={() => signIn('google', { callbackUrl: '/chat' })}>
+                         <Button onClick={handleGoogleSignIn}>
                             <LogIn className="mr-2 h-4 w-4" />
                             Entrar com conta 3A RIVA
                         </Button>
@@ -64,12 +70,6 @@ export default function LoginPage() {
                 <p>Sujeito aos Termos de uso 3A RIVA e à Política de Privacidade da 3A RIVA. O modelo pode cometer erros. Por isso, é bom checar as respostas.</p>
                 <p className="mt-1">© 2025 Bob 1.0. Todos os direitos reservados.</p>
             </footer>
-            <div className="absolute bottom-4 left-4">
-                <Button variant="ghost" size="sm">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configurações
-                </Button>
-            </div>
         </div>
     );
 }

@@ -5,6 +5,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/context/AuthProvider';
+import { auth } from '@/lib/firebase';
 import {
   FileText,
   HelpCircle,
@@ -27,7 +29,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { useSession, signOut } from 'next-auth/react';
+import { signOut } from 'firebase/auth';
 
 interface Message {
   id: string;
@@ -39,7 +41,8 @@ interface Message {
 
 export default function ChatPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,6 +54,11 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     inputRef.current?.focus();
   }, [messages, isLoading]);
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/');
+  };
 
   const handleWebSearch = async (messageIdToUpdate: string) => {
     const messageToUpdate = messages.find((m) => m.id === messageIdToUpdate);
@@ -147,7 +155,7 @@ export default function ChatPage() {
     }
   };
 
-  if (status === 'loading') {
+  if (authLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <p className="text-lg text-muted-foreground">Carregando...</p>
@@ -155,13 +163,9 @@ export default function ChatPage() {
     );
   }
 
-  const isAuthenticated = status === 'authenticated';
-  const userName = isAuthenticated
-    ? session.user?.name ?? 'Usuário'
-    : 'Usuário de Teste';
-  const userEmail = isAuthenticated
-    ? session.user?.email ?? ''
-    : 'teste@exemplo.com';
+  const isAuthenticated = !!user;
+  const userName = isAuthenticated ? user.displayName ?? 'Usuário' : 'Usuário de Teste';
+  const userEmail = isAuthenticated ? user.email ?? '' : 'teste@exemplo.com';
   const userInitials =
     userName
       ?.split(' ')
@@ -229,7 +233,7 @@ export default function ChatPage() {
           </a>
           {isAuthenticated ? (
             <Button
-              onClick={() => signOut({ callbackUrl: '/' })}
+              onClick={handleSignOut}
               variant="ghost"
               className="justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
             >
