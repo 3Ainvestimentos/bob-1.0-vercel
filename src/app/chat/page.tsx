@@ -612,38 +612,62 @@ export default function ChatPage() {
                     </div>
                 ) : (
                     <>
-                    <Accordion type="multiple" className="w-full" defaultValue={groups.map(g => g.id)}>
-                        {groups.map((group) => (
-                        <AccordionItem value={group.id} key={group.id} className="group/accordion-item border-b-0">
-                            <div className="group/trigger relative flex w-full items-center pr-1">
-                                <AccordionTrigger className="w-full justify-start rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:no-underline group-data-[collapsible=icon]:hidden">
-                                <span className="truncate pr-2">{group.name}</span>
-                                </AccordionTrigger>
-                                <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:opacity-100 group-data-[collapsible=icon]:hidden">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuItem
-                                            onClick={() => handleDeleteRequest(group.id)}
-                                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                        >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            <span>Excluir Projeto</span>
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                    {/* Expanded View */}
+                    <div className="group-data-[collapsible=icon]:hidden">
+                        <Accordion type="multiple" className="w-full" defaultValue={groups.map(g => g.id)}>
+                            {groups.map((group) => (
+                            <AccordionItem value={group.id} key={group.id} className="group/accordion-item border-b-0">
+                                <div className="group/trigger relative flex w-full items-center pr-1">
+                                    <AccordionTrigger className="w-full justify-start rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:no-underline">
+                                    <span className="truncate pr-2">{group.name}</span>
+                                    </AccordionTrigger>
+                                    <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:opacity-100">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuItem
+                                                onClick={() => handleDeleteRequest(group.id)}
+                                                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                <span>Excluir Projeto</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                    </div>
                                 </div>
-                            </div>
-                            <AccordionContent>
-                            <div className="flex flex-col gap-1 pt-1">
-                                {conversations
-                                .filter((c) => c.groupId === group.id)
-                                .map((convo) => (
-                                    <ConversationItem
+                                <AccordionContent>
+                                <div className="flex flex-col gap-1 pt-1">
+                                    {conversations
+                                    .filter((c) => c.groupId === group.id)
+                                    .map((convo) => (
+                                        <ConversationItem
+                                        key={convo.id}
+                                        conversation={convo}
+                                        isActive={activeChatId === convo.id}
+                                        groups={groups}
+                                        onSelect={handleSelectConversation}
+                                        onMove={handleMoveConversation}
+                                        />
+                                    ))}
+                                </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                            ))}
+                        </Accordion>
+
+                        {ungroupedConversations.length > 0 && (
+                            <div className="pt-2">
+                            <p className="px-2 text-xs font-medium text-muted-foreground">
+                                Conversas Recentes
+                            </p>
+                            <div className="flex flex-col gap-1 pt-2">
+                                {ungroupedConversations.map((convo) => (
+                                <ConversationItem
                                     key={convo.id}
                                     conversation={convo}
                                     isActive={activeChatId === convo.id}
@@ -653,18 +677,13 @@ export default function ChatPage() {
                                     />
                                 ))}
                             </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                        ))}
-                    </Accordion>
-
-                    {ungroupedConversations.length > 0 && (
-                        <div className="pt-2">
-                        <p className="px-2 text-xs font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">
-                            Conversas Recentes
-                        </p>
-                        <div className="flex flex-col gap-1 pt-2">
-                            {ungroupedConversations.map((convo) => (
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Collapsed View */}
+                    <div className="hidden group-data-[collapsible=icon]:flex flex-col gap-1">
+                       {conversations.map((convo) => (
                             <ConversationItem
                                 key={convo.id}
                                 conversation={convo}
@@ -674,9 +693,8 @@ export default function ChatPage() {
                                 onMove={handleMoveConversation}
                                 />
                             ))}
-                        </div>
-                        </div>
-                    )}
+                    </div>
+
                     {conversations.length === 0 && !isSidebarLoading && (
                         <p className="px-2 text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">
                             Nenhuma conversa ainda.
