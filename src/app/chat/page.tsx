@@ -1,21 +1,14 @@
 
 'use client';
 
-import {
-  askAssistant,
-  getConversationMessages,
-  getConversations,
-  saveConversation,
-  type Conversation,
-  type Message,
-} from '@/app/actions';
+import { askAssistant } from '@/app/actions';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthProvider';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import {
   FileText,
   HelpCircle,
@@ -35,11 +28,124 @@ import {
   Shield,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  doc,
+  updateDoc,
+  serverTimestamp,
+  getDoc,
+  Timestamp,
+} from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
+
+// ---- Data Types ----
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  messages: Message[];
+}
+
 type ConversationSidebarItem = Omit<Conversation, 'messages'>;
+
+
+// ---- Firestore Functions ----
+async function getConversations(
+  userId: string
+): Promise<Omit<Conversation, 'messages'>[]> {
+  if (!userId) {
+    console.error('getConversations called without userId');
+    return [];
+  }
+  try {
+    const conversationsRef = collection(db, 'users', userId, 'chats');
+    const q = query(
+      conversationsRef,
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const conversations: Omit<Conversation, 'messages'>[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      const firestoreTimestamp = data.createdAt as Timestamp;
+      conversations.push({
+        id: doc.id,
+        title: data.title,
+        createdAt: firestoreTimestamp.toDate().toISOString(),
+      });
+    });
+    return conversations;
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    throw new Error('Não foi possível carregar o histórico de conversas.');
+  }
+}
+
+async function getConversationMessages(
+  userId: string,
+  chatId: string
+): Promise<Message[]> {
+  try {
+    const chatRef = doc(db, 'users', userId, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+
+    if (chatSnap.exists()) {
+      return chatSnap.data().messages as Message[];
+    } else {
+      console.log('No such document!');
+      return [];
+    }
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    throw new Error('Não foi possível carregar as mensagens da conversa.');
+  }
+}
+
+async function saveConversation(
+  userId: string,
+  messages: Message[],
+  chatId?: string | null
+): Promise<string> {
+  if (!userId) throw new Error('User ID is required.');
+  if (!messages || messages.length === 0)
+    throw new Error('Messages are required.');
+
+  const conversationsRef = collection(db, 'users', userId, 'chats');
+
+  if (chatId) {
+    const chatRef = doc(conversationsRef, chatId);
+    await updateDoc(chatRef, { messages });
+    return chatId;
+  } else {
+    const firstUserMessage =
+      messages.find((m) => m.role === 'user')?.content || 'Nova Conversa';
+    const title =
+      firstUserMessage.length > 30
+        ? firstUserMessage.substring(0, 27) + '...'
+        : firstUserMessage;
+
+    const newChatRef = await addDoc(conversationsRef, {
+      title,
+      messages,
+      createdAt: serverTimestamp(),
+    });
+    return newChatRef.id;
+  }
+}
+
 
 export default function ChatPage() {
   const router = useRouter();
@@ -74,7 +180,7 @@ export default function ChatPage() {
       const userConversations = await getConversations(user.uid);
       setConversations(userConversations);
     } catch (err: any) {
-      setError('Erro ao carregar o histórico.');
+      setError(`Erro ao carregar o histórico: ${err.message}`);
     } finally {
       setIsSidebarLoading(false);
     }
@@ -112,7 +218,7 @@ export default function ChatPage() {
       const fetchedMessages = await getConversationMessages(user.uid, chatId);
       setMessages(fetchedMessages);
     } catch (err: any) {
-      setError('Erro ao carregar a conversa.');
+      setError(`Erro ao carregar a conversa: ${err.message}`);
       setMessages([]);
     } finally {
       setIsLoading(false);
@@ -132,7 +238,18 @@ export default function ChatPage() {
     setIsLoading(true);
     setError(null);
 
+    let currentChatId = activeChatId;
+
     try {
+      // If it's a new chat, save it first to get an ID
+      if (!currentChatId) {
+        currentChatId = await saveConversation(user.uid, newMessages, null);
+        setActiveChatId(currentChatId);
+      } else {
+        // Otherwise, update the existing conversation
+        await saveConversation(user.uid, newMessages, currentChatId);
+      }
+
       const assistantResponse = await askAssistant(currentInput, {});
       const assistantMessage: Message = {
         role: 'assistant',
@@ -142,23 +259,22 @@ export default function ChatPage() {
       const finalMessages = [...newMessages, assistantMessage];
       setMessages(finalMessages);
 
-      const savedChatId = await saveConversation(
-        user.uid,
-        finalMessages,
-        activeChatId
-      );
+      // Save the final conversation with the assistant's response
+      await saveConversation(user.uid, finalMessages, currentChatId);
 
+      // Refresh sidebar if it was a new chat
       if (!activeChatId) {
-        setActiveChatId(savedChatId);
-        await fetchConversations(); // Refresh sidebar with new chat
+         await fetchConversations();
       }
+
     } catch (err: any) {
+      const errorMessageContent = `Ocorreu um erro: ${err.message}`;
       const errorMessage: Message = {
         role: 'assistant',
-        content: `Ocorreu um erro: ${err.message}`,
+        content: errorMessageContent,
       };
       setMessages((prev) => [...prev, errorMessage]);
-      setError(err.message);
+      setError(errorMessageContent);
     } finally {
       setIsLoading(false);
     }
@@ -411,7 +527,7 @@ export default function ChatPage() {
                     </div>
                   </div>
                 )}
-                {error && (
+                {error && !isLoading && (
                   <div className="flex items-start gap-4">
                     <Avatar>
                       <AvatarFallback>AI</AvatarFallback>
@@ -503,5 +619,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    
