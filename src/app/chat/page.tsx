@@ -1,9 +1,17 @@
 'use client';
 
-import { askAssistant } from '@/app/actions';
+import {
+  askAssistant,
+  getConversationMessages,
+  getConversations,
+  saveConversation,
+  type Conversation,
+  type Message,
+} from '@/app/actions';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthProvider';
 import { auth } from '@/lib/firebase';
@@ -19,25 +27,18 @@ import {
   Newspaper,
   PanelLeft,
   Plus,
-  PlusSquare,
   RectangleEllipsis,
   RefreshCw,
   Search,
   Settings,
   Shield,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
 import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  showWebSearchButton?: boolean;
-  originalQuery?: string;
-}
+type ConversationSidebarItem = Omit<Conversation, 'messages'>;
 
 export default function ChatPage() {
   const router = useRouter();
@@ -47,109 +48,116 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [conversations, setConversations] = useState<ConversationSidebarItem[]>(
+    []
+  );
+  const [isSidebarLoading, setIsSidebarLoading] = useState(false);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    inputRef.current?.focus();
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [isLoading, activeChatId]);
+
+  const fetchConversations = useCallback(async () => {
+    if (!user) return;
+    setIsSidebarLoading(true);
+    try {
+      const userConversations = await getConversations(user.uid);
+      setConversations(userConversations);
+    } catch (err: any) {
+      setError('Erro ao carregar o histórico.');
+    } finally {
+      setIsSidebarLoading(false);
+    }
+  }, [user]);
+
+  const handleNewChat = () => {
+    setActiveChatId(null);
+    setMessages([]);
+    setInput('');
+    setError(null);
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchConversations();
+    } else {
+      // Clear state when user logs out
+      setConversations([]);
+      handleNewChat();
+    }
+  }, [user, fetchConversations]);
 
   const handleSignOut = async () => {
     await signOut(auth);
     router.push('/');
   };
 
-  const handleWebSearch = async (messageIdToUpdate: string) => {
-    const messageToUpdate = messages.find((m) => m.id === messageIdToUpdate);
-    if (!messageToUpdate || !messageToUpdate.originalQuery) return;
-
+  const handleSelectConversation = async (chatId: string) => {
+    if (isLoading) return;
     setIsLoading(true);
     setError(null);
-
-    setMessages((prevMessages) =>
-      prevMessages.map((msg) =>
-        msg.id === messageIdToUpdate
-          ? {
-              ...msg,
-              showWebSearchButton: false,
-              content: `Pesquisando na web por: "${messageToUpdate.originalQuery}"...`,
-            }
-          : msg
-      )
-    );
-
+    setActiveChatId(chatId);
+    setMessages([]); // Clear previous messages
     try {
-      const assistantResponse = await askAssistant(
-        messageToUpdate.originalQuery,
-        { useWebSearch: true }
-      );
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === messageIdToUpdate
-            ? { ...msg, content: assistantResponse.summary }
-            : msg
-        )
-      );
+      const fetchedMessages = await getConversationMessages(chatId);
+      setMessages(fetchedMessages);
     } catch (err: any) {
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === messageIdToUpdate
-            ? { ...msg, content: `Erro ao pesquisar na web: ${err.message}` }
-            : msg
-        )
-      );
+      setError('Erro ao carregar a conversa.');
+      setMessages([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDeclineWebSearch = (messageIdToUpdate: string) => {
-    setMessages((prevMessages) =>
-      prevMessages.map((msg) =>
-        msg.id === messageIdToUpdate
-          ? {
-              ...msg,
-              showWebSearchButton: false,
-              content: 'Ok, não farei a pesquisa na web.',
-            }
-          : msg
-      )
-    );
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !user) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-    };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMessage: Message = { role: 'user', content: input };
+    const newMessages = [...messages, userMessage];
 
+    setMessages(newMessages);
     const currentInput = input;
     setInput('');
     setIsLoading(true);
     setError(null);
 
     try {
-      const assistantResponse = await askAssistant(currentInput, {
-        useWebSearch: false,
-      });
+      const assistantResponse = await askAssistant(currentInput, {});
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: assistantResponse.summary,
-        showWebSearchButton: assistantResponse.searchFailed,
-        originalQuery: assistantResponse.searchFailed
-          ? currentInput
-          : undefined,
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+
+      const finalMessages = [...newMessages, assistantMessage];
+      setMessages(finalMessages);
+
+      const savedChatId = await saveConversation(
+        user.uid,
+        finalMessages,
+        activeChatId
+      );
+
+      if (!activeChatId) {
+        setActiveChatId(savedChatId);
+        await fetchConversations(); // Refresh sidebar with new chat
+      }
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.');
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: `Ocorreu um erro: ${err.message}`,
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -164,7 +172,9 @@ export default function ChatPage() {
   }
 
   const isAuthenticated = !!user;
-  const userName = isAuthenticated ? user.displayName ?? 'Usuário' : 'Usuário de Teste';
+  const userName = isAuthenticated
+    ? user.displayName ?? 'Usuário'
+    : 'Usuário de Teste';
   const userEmail = isAuthenticated ? user.email ?? '' : 'teste@exemplo.com';
   const userInitials =
     userName
@@ -188,32 +198,44 @@ export default function ChatPage() {
         </div>
 
         <nav className="mt-8 flex flex-col gap-2">
-          <Button variant="ghost" className="justify-start gap-2">
-            <PlusSquare className="h-4 w-4" />
-            Novo Projeto
-          </Button>
-          <Button variant="secondary" className="justify-start gap-2">
-            <MessageSquare className="h-4 w-4" />
+          <Button
+            onClick={handleNewChat}
+            variant={activeChatId === null ? 'secondary' : 'ghost'}
+            className="justify-start gap-2"
+          >
+            <Plus className="h-4 w-4" />
             Nova conversa
           </Button>
         </nav>
 
-        <div className="mt-4 flex-1">
+        <div className="mt-4 flex-1 space-y-2 overflow-y-auto">
           <p className="px-2 text-xs font-medium text-muted-foreground">
-            Nenhum projeto criado.
+            Recentes
           </p>
-        </div>
-
-        <div className="mt-4 border-t border-border pt-4">
-          <p className="px-2 text-xs font-medium text-muted-foreground">
-            Nenhuma conversa recente.
-          </p>
-          <div className="mt-2 p-2 text-center text-sm text-muted-foreground">
-            <p>
-              Nenhuma conversa ou projeto ainda. Crie um novo projeto ou uma
-              nova conversa!
+          {isSidebarLoading ? (
+            <div className="space-y-2 px-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : conversations.length > 0 ? (
+            <div className="flex flex-col gap-1 pr-2">
+              {conversations.map((convo) => (
+                <Button
+                  key={convo.id}
+                  variant={activeChatId === convo.id ? 'secondary' : 'ghost'}
+                  className="h-auto justify-start whitespace-normal py-2 text-left"
+                  onClick={() => handleSelectConversation(convo.id)}
+                >
+                  {convo.title}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <p className="px-2 text-sm text-muted-foreground">
+              Nenhuma conversa.
             </p>
-          </div>
+          )}
         </div>
 
         <nav className="mt-auto flex flex-col gap-1 border-t border-border pt-4">
@@ -266,7 +288,7 @@ export default function ChatPage() {
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="mx-auto flex h-full max-w-3xl flex-col">
-            {messages.length === 0 ? (
+            {messages.length === 0 && !isLoading ? (
               <div className="flex h-full flex-col items-center justify-center">
                 <div>
                   <div className="text-left">
@@ -346,9 +368,9 @@ export default function ChatPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {messages.map((msg) => (
+                {messages.map((msg, index) => (
                   <div
-                    key={msg.id}
+                    key={index}
                     className={`flex items-start gap-4 ${
                       msg.role === 'user' ? 'justify-end' : ''
                     }`}
@@ -358,39 +380,18 @@ export default function ChatPage() {
                         <AvatarFallback>AI</AvatarFallback>
                       </Avatar>
                     )}
-                    <div className="flex flex-col items-start gap-2">
-                      <div
-                        className={`rounded-lg p-3 ${
-                          msg.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
-                      >
-                        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
-                      {msg.showWebSearchButton && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleWebSearch(msg.id)}
-                            disabled={isLoading}
-                          >
-                            Sim
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeclineWebSearch(msg.id)}
-                            disabled={isLoading}
-                          >
-                            Não
-                          </Button>
-                        </div>
-                      )}
+                    <div
+                      className={`max-w-[80%] rounded-lg p-3 ${
+                        msg.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
+                        {msg.content}
+                      </ReactMarkdown>
                     </div>
+
                     {msg.role === 'user' && (
                       <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
@@ -398,13 +399,14 @@ export default function ChatPage() {
                     )}
                   </div>
                 ))}
-                {isLoading && messages.length > 0 && (
+
+                {isLoading && (
                   <div className="flex items-start gap-4">
                     <Avatar>
                       <AvatarFallback>AI</AvatarFallback>
                     </Avatar>
                     <div className="rounded-lg bg-muted p-3">
-                      <p className="text-sm">Pensando...</p>
+                      <p className="animate-pulse text-sm">Pensando...</p>
                     </div>
                   </div>
                 )}
@@ -433,7 +435,7 @@ export default function ChatPage() {
               <Shield className="mr-2 h-5 w-5 shrink-0 text-muted-foreground" />
               <Textarea
                 ref={inputRef}
-                placeholder="Insira um comando para o Gemini"
+                placeholder="Insira um comando para o assistente"
                 className="flex-1 resize-none self-end border-0 bg-transparent p-0 text-base focus-visible:ring-0"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

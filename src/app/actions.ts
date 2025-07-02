@@ -3,6 +3,20 @@
 
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  doc,
+  updateDoc,
+  serverTimestamp,
+  getDoc,
+  Timestamp,
+} from 'firebase/firestore';
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `## [1. IDENTIDADE E PROPÓSITO]
 Você é o "Assistente Corporativo 3A RIVA", a inteligência artificial de suporte e aceleração de negócios do nosso grupo. Seu nome, Bob, é um acrônimo para 'Bot on Beta', escolhido pela área de Estratégia e IA da 3A RIVA para reforçar nosso compromisso com a melhoria contínua e o aprendizado constante. Seu propósito é ser um parceiro estratégico para **todos os colaboradores**, do estagiário ao CEO. Você deve ser capaz de entender e atender a diferentes tipos de necessidade:
@@ -204,5 +218,102 @@ export async function askAssistant(
     console.error("Error in askAssistant:", error.message);
     // Re-throw a user-friendly error
     throw new Error(`Ocorreu um erro ao se comunicar com o assistente: ${error.message}`);
+  }
+}
+
+// ---- Chat History Functions ----
+
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface Conversation {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: Timestamp;
+  messages: Message[];
+}
+
+export async function getConversations(
+  userId: string
+): Promise<Omit<Conversation, 'messages'>[]> {
+  if (!userId) {
+    console.error('getConversations called without userId');
+    return [];
+  }
+  try {
+    const q = query(
+      collection(db, 'chats'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const conversations: Omit<Conversation, 'messages'>[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      conversations.push({
+        id: doc.id,
+        userId: data.userId,
+        title: data.title,
+        createdAt: data.createdAt,
+      } as Omit<Conversation, 'messages'>);
+    });
+    return conversations;
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    throw new Error('Não foi possível carregar o histórico de conversas.');
+  }
+}
+
+export async function getConversationMessages(
+  chatId: string
+): Promise<Message[]> {
+  try {
+    const chatRef = doc(db, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+
+    if (chatSnap.exists()) {
+      return chatSnap.data().messages as Message[];
+    } else {
+      console.log('No such document!');
+      return [];
+    }
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    throw new Error('Não foi possível carregar as mensagens da conversa.');
+  }
+}
+
+export async function saveConversation(
+  userId: string,
+  messages: Message[],
+  chatId?: string | null
+): Promise<string> {
+  if (!userId) throw new Error('User ID is required.');
+  if (!messages || messages.length === 0)
+    throw new Error('Messages are required.');
+
+  if (chatId) {
+    const chatRef = doc(db, 'chats', chatId);
+    await updateDoc(chatRef, { messages });
+    return chatId;
+  } else {
+    const firstUserMessage =
+      messages.find((m) => m.role === 'user')?.content || 'Nova Conversa';
+    const title =
+      firstUserMessage.length > 30
+        ? firstUserMessage.substring(0, 27) + '...'
+        : firstUserMessage;
+
+    const newChatRef = await addDoc(collection(db, 'chats'), {
+      userId,
+      title,
+      messages,
+      createdAt: serverTimestamp(),
+    });
+    return newChatRef.id;
   }
 }
