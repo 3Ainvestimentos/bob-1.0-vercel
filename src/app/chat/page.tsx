@@ -209,8 +209,8 @@ async function getConversationMessages(
       console.log('No such document!');
       return [];
     }
-  } catch (error) {
-    console.error('Error fetching messages:', error);
+  } catch (err: any) {
+    console.error('Error fetching messages:', err);
     throw new Error('Não foi possível carregar as mensagens da conversa.');
   }
 }
@@ -568,8 +568,8 @@ export default function ChatPage() {
         </AlertDialog>
 
         <Sidebar>
-            <SidebarHeader className="border-b border-sidebar-border">
-                <div className="flex items-center gap-3 overflow-hidden">
+            <SidebarHeader className="border-b border-sidebar-border p-3 group-data-[collapsible=icon]:p-2">
+                <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:justify-center">
                     <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
