@@ -134,6 +134,8 @@ async function callDiscoveryEngine(query: string): Promise<{ summary: string; se
           "não foi possível encontrar",
           "informações públicas de mercado",
           "busca na web",
+          "nenhum resultado encontrado",
+          "não foi possível gerar um resumo"
       ];
       const searchFailed = internalSearchFailureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
 
@@ -164,7 +166,7 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
   
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
     
     const prompt = `Você é um assistente de pesquisa prestativo. Responda à seguinte pergunta do usuário da forma mais completa e precisa possível com base em seu conhecimento geral.
 
