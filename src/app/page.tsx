@@ -47,4 +47,6 @@ export default function LoginPage() {
                     Configurações
                 </Button>
             </div>
-        
+        </div>
+    );
+}
