@@ -2,15 +2,39 @@
 'use client';
 
 import { askAssistant } from '@/app/actions';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthProvider';
 import { auth, db } from '@/lib/firebase';
 import {
   FileText,
+  FolderPlus,
   HelpCircle,
   Lightbulb,
   LogIn,
@@ -18,6 +42,7 @@ import {
   Mail,
   MessageSquare,
   Mic,
+  MoreHorizontal,
   Newspaper,
   PanelLeft,
   Plus,
@@ -39,13 +64,18 @@ import {
   serverTimestamp,
   getDoc,
   Timestamp,
+  where,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
-
 // ---- Data Types ----
+export interface Group {
+  id: string;
+  name: string;
+}
+
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -56,28 +86,54 @@ export interface Conversation {
   title: string;
   createdAt: string;
   messages: Message[];
+  groupId?: string | null;
 }
 
 type ConversationSidebarItem = Omit<Conversation, 'messages'>;
 
-
 // ---- Firestore Functions ----
+async function getGroups(userId: string): Promise<Group[]> {
+  if (!userId) return [];
+  const groupsRef = collection(db, 'users', userId, 'groups');
+  const q = query(groupsRef, orderBy('createdAt', 'asc'));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Group[];
+}
+
+async function createGroup(userId: string, name: string): Promise<string> {
+  if (!userId || !name) throw new Error('User ID and group name are required.');
+  const groupsRef = collection(db, 'users', userId, 'groups');
+  const newGroupRef = await addDoc(groupsRef, {
+    name,
+    createdAt: serverTimestamp(),
+  });
+  return newGroupRef.id;
+}
+
+async function updateConversationGroup(
+  userId: string,
+  chatId: string,
+  groupId: string | null
+) {
+  if (!userId || !chatId)
+    throw new Error('User ID and Chat ID are required.');
+  const chatRef = doc(db, 'users', userId, 'chats', chatId);
+  await updateDoc(chatRef, { groupId });
+}
+
 async function getConversations(
   userId: string
-): Promise<Omit<Conversation, 'messages'>[]> {
+): Promise<ConversationSidebarItem[]> {
   if (!userId) {
     console.error('getConversations called without userId');
     return [];
   }
   try {
     const conversationsRef = collection(db, 'users', userId, 'chats');
-    const q = query(
-      conversationsRef,
-      orderBy('createdAt', 'desc')
-    );
+    const q = query(conversationsRef, orderBy('createdAt', 'desc'));
 
     const querySnapshot = await getDocs(q);
-    const conversations: Omit<Conversation, 'messages'>[] = [];
+    const conversations: ConversationSidebarItem[] = [];
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       const firestoreTimestamp = data.createdAt as Timestamp;
@@ -85,6 +141,7 @@ async function getConversations(
         id: doc.id,
         title: data.title,
         createdAt: firestoreTimestamp.toDate().toISOString(),
+        groupId: data.groupId || null,
       });
     });
     return conversations;
@@ -141,11 +198,11 @@ async function saveConversation(
       title,
       messages,
       createdAt: serverTimestamp(),
+      groupId: null, // New chats are ungrouped by default
     });
     return newChatRef.id;
   }
 }
-
 
 export default function ChatPage() {
   const router = useRouter();
@@ -159,12 +216,32 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<ConversationSidebarItem[]>(
     []
   );
+  const [groups, setGroups] = useState<Group[]>([]);
   const [isSidebarLoading, setIsSidebarLoading] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
+  const [isNewGroupDialogOpen, setIsNewGroupDialogOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const fetchSidebarData = useCallback(async () => {
+    if (!user) return;
+    setIsSidebarLoading(true);
+    try {
+      const [userConversations, userGroups] = await Promise.all([
+        getConversations(user.uid),
+        getGroups(user.uid),
+      ]);
+      setConversations(userConversations);
+      setGroups(userGroups);
+    } catch (err: any) {
+      setError(`Erro ao carregar o histórico: ${err.message}`);
+    } finally {
+      setIsSidebarLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -173,19 +250,6 @@ export default function ChatPage() {
   useEffect(() => {
     inputRef.current?.focus();
   }, [isLoading, activeChatId]);
-
-  const fetchConversations = useCallback(async () => {
-    if (!user) return;
-    setIsSidebarLoading(true);
-    try {
-      const userConversations = await getConversations(user.uid);
-      setConversations(userConversations);
-    } catch (err: any) {
-      setError(`Erro ao carregar o histórico: ${err.message}`);
-    } finally {
-      setIsSidebarLoading(false);
-    }
-  }, [user]);
 
   const handleNewChat = () => {
     setActiveChatId(null);
@@ -197,13 +261,14 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (user) {
-      fetchConversations();
+      fetchSidebarData();
     } else {
       // Clear state when user logs out
       setConversations([]);
+      setGroups([]);
       handleNewChat();
     }
-  }, [user, fetchConversations]);
+  }, [user, fetchSidebarData]);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -233,36 +298,39 @@ export default function ChatPage() {
 
     const query = lastFailedQuery;
     const messagesWithUserQuery = messages.slice(0, -1);
-    
+
     setLastFailedQuery(null);
     setIsLoading(true);
     setError(null);
     setMessages(messagesWithUserQuery);
 
     try {
-        const assistantResponse = await askAssistant(query, { useWebSearch: true }, user.uid);
-        const assistantMessage: Message = {
-            role: 'assistant',
-            content: assistantResponse.summary,
-        };
-        
-        const finalMessages = [...messagesWithUserQuery, assistantMessage];
-        setMessages(finalMessages);
-        
-        if (activeChatId) {
-            await saveConversation(user.uid, finalMessages, activeChatId);
-        }
+      const assistantResponse = await askAssistant(
+        query,
+        { useWebSearch: true },
+        user.uid
+      );
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: assistantResponse.summary,
+      };
 
+      const finalMessages = [...messagesWithUserQuery, assistantMessage];
+      setMessages(finalMessages);
+
+      if (activeChatId) {
+        await saveConversation(user.uid, finalMessages, activeChatId);
+      }
     } catch (err: any) {
-        const errorMessageContent = `Ocorreu um erro na busca web: ${err.message}`;
-        const errorMessage: Message = {
-            role: 'assistant',
-            content: errorMessageContent,
-        };
-        setMessages((prev) => [...messagesWithUserQuery, errorMessage]); 
-        setError(errorMessageContent);
+      const errorMessageContent = `Ocorreu um erro na busca web: ${err.message}`;
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: errorMessageContent,
+      };
+      setMessages((prev) => [...messagesWithUserQuery, errorMessage]);
+      setError(errorMessageContent);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -283,12 +351,10 @@ export default function ChatPage() {
     let currentChatId = activeChatId;
 
     try {
-      // If it's a new chat, save it first to get an ID
       if (!currentChatId) {
         currentChatId = await saveConversation(user.uid, newMessages, null);
         setActiveChatId(currentChatId);
       } else {
-        // Otherwise, update the existing conversation
         await saveConversation(user.uid, newMessages, currentChatId);
       }
 
@@ -305,14 +371,11 @@ export default function ChatPage() {
       const finalMessages = [...newMessages, assistantMessage];
       setMessages(finalMessages);
 
-      // Save the final conversation with the assistant's response
       await saveConversation(user.uid, finalMessages, currentChatId);
 
-      // Refresh sidebar if it was a new chat
       if (!activeChatId) {
-         await fetchConversations();
+        await fetchSidebarData(); // Refresh sidebar data
       }
-
     } catch (err: any) {
       const errorMessageContent = `Ocorreu um erro: ${err.message}`;
       const errorMessage: Message = {
@@ -326,6 +389,37 @@ export default function ChatPage() {
     }
   };
 
+  const handleCreateGroup = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim() || !user) return;
+    try {
+      await createGroup(user.uid, newGroupName);
+      setNewGroupName('');
+      setIsNewGroupDialogOpen(false);
+      await fetchSidebarData(); // Refresh groups
+    } catch (err: any) {
+      setError(`Erro ao criar o grupo: ${err.message}`);
+    }
+  };
+
+  const handleMoveConversation = async (
+    chatId: string,
+    groupId: string | null
+  ) => {
+    if (!user) return;
+    try {
+      // Optimistic UI update
+      setConversations((convos) =>
+        convos.map((c) => (c.id === chatId ? { ...c, groupId } : c))
+      );
+      await updateConversationGroup(user.uid, chatId, groupId);
+    } catch (err: any) {
+      setError(`Erro ao mover a conversa: ${err.message}`);
+      // Revert on error
+      fetchSidebarData();
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -335,20 +429,51 @@ export default function ChatPage() {
   }
 
   const isAuthenticated = !!user;
-  const userName = isAuthenticated
-    ? user.displayName ?? 'Usuário'
-    : 'Usuário de Teste';
-  const userEmail = isAuthenticated ? user.email ?? '' : 'teste@exemplo.com';
+  const userName = user?.displayName ?? 'Usuário';
+  const userEmail = user?.email ?? '';
   const userInitials =
     userName
       ?.split(' ')
       .map((n) => n[0])
       .join('')
       .substring(0, 2)
-      .toUpperCase() ?? 'UT';
+      .toUpperCase() ?? 'U';
+
+  const ungroupedConversations = conversations.filter(
+    (c) => !c.groupId
+  );
 
   return (
     <div className="flex h-screen w-full bg-card text-card-foreground">
+      <Dialog
+        open={isNewGroupDialogOpen}
+        onOpenChange={setIsNewGroupDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Grupo</DialogTitle>
+            <DialogDescription>
+              Dê um nome ao seu novo grupo de conversas.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateGroup}>
+            <div className="grid gap-4 py-4">
+              <Input
+                id="name"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="Ex: Projetos Q4"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={!newGroupName.trim() || isLoading}>
+                Criar Grupo
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <aside className="hidden w-[280px] flex-col border-r bg-card p-4 md:flex">
         <div className="flex items-center gap-3">
           <Avatar>
@@ -369,35 +494,76 @@ export default function ChatPage() {
             <Plus className="h-4 w-4" />
             Nova conversa
           </Button>
+          <Button
+            onClick={() => setIsNewGroupDialogOpen(true)}
+            variant="ghost"
+            className="justify-start gap-2"
+          >
+            <FolderPlus className="h-4 w-4" />
+            Novo Grupo
+          </Button>
         </nav>
 
         <div className="mt-4 flex-1 space-y-2 overflow-y-auto">
-          <p className="px-2 text-xs font-medium text-muted-foreground">
-            Recentes
-          </p>
           {isSidebarLoading ? (
             <div className="space-y-2 px-2">
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
             </div>
-          ) : conversations.length > 0 ? (
-            <div className="flex flex-col gap-1 pr-2">
-              {conversations.map((convo) => (
-                <Button
-                  key={convo.id}
-                  variant={activeChatId === convo.id ? 'secondary' : 'ghost'}
-                  className="h-auto justify-start whitespace-normal py-2 text-left"
-                  onClick={() => handleSelectConversation(convo.id)}
-                >
-                  {convo.title}
-                </Button>
-              ))}
-            </div>
           ) : (
-            <p className="px-2 text-sm text-muted-foreground">
-              Nenhuma conversa.
-            </p>
+            <>
+              <Accordion type="multiple" className="w-full" defaultValue={groups.map(g => g.id)}>
+                {groups.map((group) => (
+                  <AccordionItem value={group.id} key={group.id}>
+                    <AccordionTrigger className="px-2 text-xs font-medium text-muted-foreground hover:no-underline">
+                      {group.name}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-col gap-1 pr-2">
+                        {conversations
+                          .filter((c) => c.groupId === group.id)
+                          .map((convo) => (
+                            <ConversationItem
+                              key={convo.id}
+                              conversation={convo}
+                              isActive={activeChatId === convo.id}
+                              groups={groups}
+                              onSelect={handleSelectConversation}
+                              onMove={handleMoveConversation}
+                            />
+                          ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+
+              {ungroupedConversations.length > 0 && (
+                <div className="pt-2">
+                  <p className="px-2 text-xs font-medium text-muted-foreground">
+                    Conversas
+                  </p>
+                  <div className="flex flex-col gap-1 pr-2 pt-2">
+                    {ungroupedConversations.map((convo) => (
+                       <ConversationItem
+                          key={convo.id}
+                          conversation={convo}
+                          isActive={activeChatId === convo.id}
+                          groups={groups}
+                          onSelect={handleSelectConversation}
+                          onMove={handleMoveConversation}
+                        />
+                    ))}
+                  </div>
+                </div>
+              )}
+               {conversations.length === 0 && !isSidebarLoading && (
+                 <p className="px-2 text-sm text-muted-foreground">
+                    Nenhuma conversa ainda.
+                 </p>
+               )}
+            </>
           )}
         </div>
 
@@ -575,10 +741,10 @@ export default function ChatPage() {
                 )}
                 {lastFailedQuery && !isLoading && (
                   <div className="flex justify-center pt-4">
-                      <Button onClick={handleWebSearch} disabled={isLoading}>
-                          <Search className="mr-2 h-4 w-4" />
-                          Pesquisar na Web
-                      </Button>
+                    <Button onClick={handleWebSearch} disabled={isLoading}>
+                      <Search className="mr-2 h-4 w-4" />
+                      Pesquisar na Web
+                    </Button>
                   </div>
                 )}
                 {error && !isLoading && (
@@ -673,3 +839,64 @@ export default function ChatPage() {
     </div>
   );
 }
+
+// ---- Sub-component for Conversation Item ----
+interface ConversationItemProps {
+  conversation: ConversationSidebarItem;
+  isActive: boolean;
+  groups: Group[];
+  onSelect: (id: string) => void;
+  onMove: (chatId: string, groupId: string | null) => void;
+}
+
+function ConversationItem({
+  conversation,
+  isActive,
+  groups,
+  onSelect,
+  onMove,
+}: ConversationItemProps) {
+  return (
+    <div className="group relative flex items-center">
+      <Button
+        variant={isActive ? 'secondary' : 'ghost'}
+        className="h-auto w-full justify-start whitespace-normal py-2 pr-8 text-left"
+        onClick={() => onSelect(conversation.id)}
+      >
+        {conversation.title}
+      </Button>
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>Mover para</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {groups.map((group) => (
+              <DropdownMenuItem
+                key={group.id}
+                disabled={conversation.groupId === group.id}
+                onClick={() => onMove(conversation.id, group.id)}
+              >
+                {group.name}
+              </DropdownMenuItem>
+            ))}
+            {conversation.groupId && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
+                  Remover do grupo
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+    
