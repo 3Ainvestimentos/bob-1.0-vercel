@@ -28,10 +28,11 @@ export default function LoginPage() {
                     <p className="mt-2 text-lg text-muted-foreground">Assistente de IA Generativa da 3A RIVA</p>
                     <div className="mt-8 flex flex-col gap-4">
                         <Button
-                            variant="secondary"
+                            variant="outline"
+                            className="rounded-full"
                             onClick={() => router.push('/chat')}
                         >
-                            <TestTube2 />
+                            <TestTube2 className="mr-2 h-4 w-4" />
                             Testar o chat sem login
                         </Button>
                     </div>
