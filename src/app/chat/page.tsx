@@ -569,17 +569,14 @@ export default function ChatPage() {
 
         <Sidebar>
             <SidebarHeader className="border-b border-sidebar-border">
-                <div className="flex w-full items-center justify-between">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                        <Avatar>
-                            <AvatarFallback>{userInitials}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col overflow-hidden group-data-[collapsible=icon]:hidden">
-                            <p className="truncate font-semibold">{userName}</p>
-                            <p className="truncate text-sm text-muted-foreground">{userEmail}</p>
-                        </div>
+                <div className="flex items-center gap-3 overflow-hidden">
+                    <Avatar>
+                        <AvatarFallback>{userInitials}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col overflow-hidden group-data-[collapsible=icon]:hidden">
+                        <p className="truncate font-semibold">{userName}</p>
+                        <p className="truncate text-sm text-muted-foreground">{userEmail}</p>
                     </div>
-                    <SidebarTrigger />
                 </div>
             </SidebarHeader>
 
@@ -741,11 +738,8 @@ export default function ChatPage() {
         </Sidebar>
 
         <main className="flex flex-1 flex-col bg-background">
-            <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:justify-end lg:px-6 md:hidden">
-            <SidebarTrigger />
-            <Avatar>
-                <AvatarFallback>{userInitials}</AvatarFallback>
-            </Avatar>
+            <header className="flex h-14 items-center border-b bg-background px-4 lg:px-6">
+                <SidebarTrigger />
             </header>
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
