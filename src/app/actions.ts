@@ -232,7 +232,7 @@ export interface Conversation {
   id: string;
   userId: string;
   title: string;
-  createdAt: Timestamp;
+  createdAt: string;
   messages: Message[];
 }
 
@@ -254,12 +254,13 @@ export async function getConversations(
     const conversations: Omit<Conversation, 'messages'>[] = [];
     querySnapshot.forEach((doc) => {
       const data = doc.data();
+      const firestoreTimestamp = data.createdAt as Timestamp;
       conversations.push({
         id: doc.id,
         userId: data.userId,
         title: data.title,
-        createdAt: data.createdAt,
-      } as Omit<Conversation, 'messages'>);
+        createdAt: firestoreTimestamp.toDate().toISOString(),
+      });
     });
     return conversations;
   } catch (error) {
