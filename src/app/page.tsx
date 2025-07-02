@@ -26,21 +26,17 @@ export default function LoginPage() {
     const { toast } = useToast();
 
     useEffect(() => {
-        // Do not run logic until authentication state is resolved
         if (loading) {
             return;
         }
 
-        // If there is a logged-in user, validate their domain
         if (user) {
             const allowedDomains = ['3ainvestimentos.com.br', '3ariva.com.br'];
             const isEmailValid = user.email && allowedDomains.some(domain => user.email!.endsWith(`@${domain}`));
 
             if (isEmailValid) {
-                // If the domain is valid, redirect to the chat page
                 router.push('/chat');
             } else {
-                // If the domain is not valid, sign the user out and show an error toast.
                 signOut(auth);
                 toast({
                     variant: 'destructive',
@@ -49,15 +45,12 @@ export default function LoginPage() {
                 });
             }
         }
-        // If there is no user, do nothing and stay on the login page.
     }, [user, loading, router, toast]);
 
     const handleGoogleSignIn = async () => {
         try {
-            // The useEffect hook will handle logic after a successful popup sign-in
             await signInWithPopup(auth, googleProvider);
         } catch (error) {
-            // Handle specific user-closed-popup errors gracefully
             const errorCode = (error as any).code;
             if (errorCode !== 'auth/popup-closed-by-user' && errorCode !== 'auth/cancelled-popup-request') {
                 console.error("Erro ao fazer login com o Google:", error);
@@ -70,9 +63,7 @@ export default function LoginPage() {
         }
     };
     
-    // Display a loading indicator while the auth state is being checked.
-    // This prevents the login page from flashing for users who should be redirected.
-    if (loading) {
+    if (loading || user) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
                 <p>Carregando...</p>
@@ -91,10 +82,6 @@ export default function LoginPage() {
                          <Button onClick={handleGoogleSignIn}>
                             <LogIn className="mr-2 h-4 w-4" />
                             Entrar com conta 3A RIVA
-                        </Button>
-                        <Button variant="outline" onClick={() => router.push('/chat')}>
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Testar o chat sem login
                         </Button>
                     </div>
                 </div>

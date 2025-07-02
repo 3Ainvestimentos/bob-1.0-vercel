@@ -240,7 +240,7 @@ export default function ChatPage() {
     setMessages(messagesWithUserQuery);
 
     try {
-        const assistantResponse = await askAssistant(query, { useWebSearch: true });
+        const assistantResponse = await askAssistant(query, { useWebSearch: true }, user.uid);
         const assistantMessage: Message = {
             role: 'assistant',
             content: assistantResponse.summary,
@@ -292,7 +292,7 @@ export default function ChatPage() {
         await saveConversation(user.uid, newMessages, currentChatId);
       }
 
-      const assistantResponse = await askAssistant(currentInput, {});
+      const assistantResponse = await askAssistant(currentInput, {}, user.uid);
       const assistantMessage: Message = {
         role: 'assistant',
         content: assistantResponse.summary,

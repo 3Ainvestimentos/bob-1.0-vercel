@@ -53,7 +53,7 @@ Nosso grupo é composto por uma Assessoria de Investimentos e um Multi-Family Of
 * **Busca na Web ('performWebSearch'):** Se a pergunta do usuário solicitar informações muito recentes (eventos atuais, notícias de última hora), dados específicos que provavelmente não estão em seu conhecimento de treinamento (por exemplo, "qual o preço atual da ação X?", "qual a previsão do tempo para amanhã em Y?"), ou se você julgar que uma busca na web enriqueceria a resposta, utilize a ferramenta 'performWebSearch'. Formule uma consulta de busca clara e concisa para a ferramenta. Após receber os resultados, resuma-os e cite as fontes (links) fornecidas pela ferramenta.`;
 
 
-async function callDiscoveryEngine(query: string): Promise<{ summary: string; searchFailed: boolean }> {
+async function callDiscoveryEngine(query: string, userId?: string | null): Promise<{ summary: string; searchFailed: boolean }> {
     const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
     if (!serviceAccountKeyJson) {
       throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida no arquivo .env.`);
@@ -108,7 +108,7 @@ async function callDiscoveryEngine(query: string): Promise<{ summary: string; se
               }
             }
         },
-        userPseudoId: 'unique-user-id-for-testing',
+        userPseudoId: userId || 'anonymous-user',
       };
 
       const apiResponse = await fetch(url, {
@@ -190,7 +190,8 @@ Pergunta: "${query}"`;
 
 export async function askAssistant(
   query: string,
-  options: { useWebSearch?: boolean } = {}
+  options: { useWebSearch?: boolean } = {},
+  userId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean }> {
   const { useWebSearch = false } = options;
 
@@ -198,7 +199,7 @@ export async function askAssistant(
     if (useWebSearch) {
       return await callGemini(query);
     } else {
-      return await callDiscoveryEngine(query);
+      return await callDiscoveryEngine(query, userId);
     }
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
