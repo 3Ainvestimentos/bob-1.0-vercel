@@ -584,7 +584,7 @@ export default function ChatPage() {
             </SidebarHeader>
 
             <SidebarContent>
-                <SidebarMenu>
+                <SidebarMenu className="pt-2">
                     <SidebarMenuItem>
                         <SidebarMenuButton 
                             onClick={handleNewChat}
