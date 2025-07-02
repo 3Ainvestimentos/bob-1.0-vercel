@@ -161,6 +161,7 @@ export default function ChatPage() {
   );
   const [isSidebarLoading, setIsSidebarLoading] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -191,6 +192,7 @@ export default function ChatPage() {
     setMessages([]);
     setInput('');
     setError(null);
+    setLastFailedQuery(null);
   };
 
   useEffect(() => {
@@ -212,6 +214,7 @@ export default function ChatPage() {
     if (isLoading || !user) return;
     setIsLoading(true);
     setError(null);
+    setLastFailedQuery(null);
     setActiveChatId(chatId);
     setMessages([]); // Clear previous messages
     try {
@@ -222,6 +225,44 @@ export default function ChatPage() {
       setMessages([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleWebSearch = async () => {
+    if (!lastFailedQuery || isLoading || !user) return;
+
+    const query = lastFailedQuery;
+    const messagesWithUserQuery = messages.slice(0, -1);
+    
+    setLastFailedQuery(null);
+    setIsLoading(true);
+    setError(null);
+    setMessages(messagesWithUserQuery);
+
+    try {
+        const assistantResponse = await askAssistant(query, { useWebSearch: true });
+        const assistantMessage: Message = {
+            role: 'assistant',
+            content: assistantResponse.summary,
+        };
+        
+        const finalMessages = [...messagesWithUserQuery, assistantMessage];
+        setMessages(finalMessages);
+        
+        if (activeChatId) {
+            await saveConversation(user.uid, finalMessages, activeChatId);
+        }
+
+    } catch (err: any) {
+        const errorMessageContent = `Ocorreu um erro na busca web: ${err.message}`;
+        const errorMessage: Message = {
+            role: 'assistant',
+            content: errorMessageContent,
+        };
+        setMessages((prev) => [...messagesWithUserQuery, errorMessage]); 
+        setError(errorMessageContent);
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -237,6 +278,7 @@ export default function ChatPage() {
     setInput('');
     setIsLoading(true);
     setError(null);
+    setLastFailedQuery(null);
 
     let currentChatId = activeChatId;
 
@@ -255,6 +297,10 @@ export default function ChatPage() {
         role: 'assistant',
         content: assistantResponse.summary,
       };
+
+      if (assistantResponse.searchFailed) {
+        setLastFailedQuery(currentInput);
+      }
 
       const finalMessages = [...newMessages, assistantMessage];
       setMessages(finalMessages);
@@ -525,6 +571,14 @@ export default function ChatPage() {
                     <div className="rounded-lg bg-muted p-3">
                       <p className="animate-pulse text-sm">Pensando...</p>
                     </div>
+                  </div>
+                )}
+                {lastFailedQuery && !isLoading && (
+                  <div className="flex justify-center pt-4">
+                      <Button onClick={handleWebSearch} disabled={isLoading}>
+                          <Search className="mr-2 h-4 w-4" />
+                          Pesquisar na Web
+                      </Button>
                   </div>
                 )}
                 {error && !isLoading && (
