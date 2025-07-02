@@ -34,20 +34,24 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarProvider,
-    SidebarTrigger,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
@@ -134,12 +138,17 @@ async function createGroup(userId: string, name: string): Promise<string> {
   return newGroupRef.id;
 }
 
+async function updateGroup(userId: string, groupId: string, newName: string): Promise<void> {
+  if (!userId || !groupId || !newName) throw new Error('User ID, Group ID, and new name are required.');
+  const groupRef = doc(db, 'users', userId, 'groups', groupId);
+  await updateDoc(groupRef, { name: newName });
+}
+
 async function deleteGroup(userId: string, groupId: string): Promise<void> {
     if (!userId || !groupId) throw new Error('User ID and Group ID are required.');
 
     const batch = writeBatch(db);
 
-    // 1. Find all conversations in the group and ungroup them
     const chatsRef = collection(db, 'users', userId, 'chats');
     const q = query(chatsRef, where('groupId', '==', groupId));
     const querySnapshot = await getDocs(q);
@@ -147,7 +156,6 @@ async function deleteGroup(userId: string, groupId: string): Promise<void> {
         batch.update(doc.ref, { groupId: null });
     });
 
-    // 2. Delete the group document
     const groupRef = doc(db, 'users', userId, 'groups', groupId);
     batch.delete(groupRef);
 
@@ -242,11 +250,24 @@ async function saveConversation(
       title,
       messages,
       createdAt: serverTimestamp(),
-      groupId: null, // New chats are ungrouped by default
+      groupId: null,
     });
     return newChatRef.id;
   }
 }
+
+async function updateConversationTitle(userId: string, chatId: string, newTitle: string): Promise<void> {
+    if (!userId || !chatId || !newTitle) throw new Error('User ID, Chat ID, and new title are required.');
+    const chatRef = doc(db, 'users', userId, 'chats', chatId);
+    await updateDoc(chatRef, { title: newTitle });
+}
+
+async function deleteConversation(userId: string, chatId: string): Promise<void> {
+    if (!userId || !chatId) throw new Error('User ID and Chat ID are required.');
+    const chatRef = doc(db, 'users', userId, 'chats', chatId);
+    await deleteDoc(chatRef);
+}
+
 
 export default function ChatPage() {
   const router = useRouter();
@@ -270,6 +291,14 @@ export default function ChatPage() {
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
+
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [itemToRename, setItemToRename] = useState<{ id: string; type: 'group' | 'conversation'; currentName: string } | null>(null);
+  const [newItemName, setNewItemName] = useState('');
+
+  const [isDeleteConvoDialogOpen, setIsDeleteConvoDialogOpen] = useState(false);
+  const [convoToDelete, setConvoToDelete] = useState<string | null>(null);
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -311,7 +340,6 @@ export default function ChatPage() {
     if (user) {
       fetchSidebarData();
     } else {
-      // Clear state when user logs out
       setConversations([]);
       setGroups([]);
       handleNewChat();
@@ -329,7 +357,7 @@ export default function ChatPage() {
     setError(null);
     setLastFailedQuery(null);
     setActiveChatId(chatId);
-    setMessages([]); // Clear previous messages
+    setMessages([]); 
     try {
       const fetchedMessages = await getConversationMessages(user.uid, chatId);
       setMessages(fetchedMessages);
@@ -421,11 +449,9 @@ export default function ChatPage() {
 
       await saveConversation(user.uid, finalMessages, currentChatId);
 
-      // Refresh sidebar if a new chat was created to show the title
       if (!activeChatId) {
          await fetchSidebarData();
       } else {
-        // If it was an existing chat, we just need to update the title if it's the first message
         const currentConvo = conversations.find(c => c.id === activeChatId);
         if (currentConvo && currentConvo.title === 'Nova Conversa') {
             await fetchSidebarData();
@@ -452,7 +478,7 @@ export default function ChatPage() {
       await createGroup(user.uid, newGroupName);
       setNewGroupName('');
       setIsNewGroupDialogOpen(false);
-      await fetchSidebarData(); // Refresh groups
+      await fetchSidebarData();
     } catch (err: any) {
       setError(`Erro ao criar o grupo: ${err.message}`);
     }
@@ -464,14 +490,12 @@ export default function ChatPage() {
   ) => {
     if (!user) return;
     try {
-      // Optimistic UI update
       setConversations((convos) =>
         convos.map((c) => (c.id === chatId ? { ...c, groupId } : c))
       );
       await updateConversationGroup(user.uid, chatId, groupId);
     } catch (err: any) {
       setError(`Erro ao mover a conversa: ${err.message}`);
-      // Revert on error
       fetchSidebarData();
     }
   };
@@ -485,8 +509,8 @@ export default function ChatPage() {
     if (!groupToDelete || !user) return;
     try {
       await deleteGroup(user.uid, groupToDelete);
-      await fetchSidebarData(); // Refresh sidebar
-    } catch (err: any) {
+      await fetchSidebarData(); 
+    } catch (err: any)      {
       setError(`Erro ao excluir o grupo: ${err.message}`);
     } finally {
       setIsDeleteDialogOpen(false);
@@ -494,6 +518,51 @@ export default function ChatPage() {
     }
   };
 
+  const handleRenameRequest = (id: string, type: 'group' | 'conversation', currentName: string) => {
+    setItemToRename({ id, type, currentName });
+    setNewItemName(currentName);
+    setIsRenameDialogOpen(true);
+  };
+
+  const handleRenameSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newItemName.trim() || !user || !itemToRename) return;
+
+    try {
+        if (itemToRename.type === 'group') {
+            await updateGroup(user.uid, itemToRename.id, newItemName);
+        } else {
+            await updateConversationTitle(user.uid, itemToRename.id, newItemName);
+        }
+        setIsRenameDialogOpen(false);
+        setItemToRename(null);
+        setNewItemName('');
+        await fetchSidebarData();
+    } catch (err: any) {
+        setError(`Erro ao renomear: ${err.message}`);
+    }
+  };
+
+  const handleDeleteConvoRequest = (chatId: string) => {
+    setConvoToDelete(chatId);
+    setIsDeleteConvoDialogOpen(true);
+  };
+
+  const handleDeleteConvoConfirm = async () => {
+    if (!convoToDelete || !user) return;
+    try {
+        await deleteConversation(user.uid, convoToDelete);
+        await fetchSidebarData();
+        if (activeChatId === convoToDelete) {
+            handleNewChat();
+        }
+    } catch (err: any) {
+        setError(`Erro ao excluir a conversa: ${err.message}`);
+    } finally {
+        setIsDeleteConvoDialogOpen(false);
+        setConvoToDelete(null);
+    }
+  };
 
   if (authLoading) {
     return (
@@ -549,6 +618,38 @@ export default function ChatPage() {
             </form>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={isRenameDialogOpen} onOpenChange={(open) => {
+            setIsRenameDialogOpen(open);
+            if (!open) {
+                setItemToRename(null);
+                setNewItemName('');
+            }
+        }}>
+            <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>Renomear {itemToRename?.type === 'group' ? 'Projeto' : 'Conversa'}</DialogTitle>
+                <DialogDescription>
+                Digite o novo nome para "{itemToRename?.currentName}".
+                </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleRenameSubmit}>
+                <div className="grid gap-4 py-4">
+                <Input
+                    id="newName"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    placeholder="Novo nome"
+                />
+                </div>
+                <DialogFooter>
+                <Button type="submit" disabled={!newItemName.trim() || isLoading}>
+                    Salvar
+                </Button>
+                </DialogFooter>
+            </form>
+            </DialogContent>
+        </Dialog>
         
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent>
@@ -566,6 +667,24 @@ export default function ChatPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <AlertDialog open={isDeleteConvoDialogOpen} onOpenChange={setIsDeleteConvoDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. A conversa será excluída permanentemente.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setConvoToDelete(null)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteConvoConfirm} className={buttonVariants({ variant: "destructive" })}>
+                        Excluir
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
 
         <Sidebar>
             <SidebarHeader className="flex h-16 items-center border-b border-sidebar-border px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
@@ -609,7 +728,6 @@ export default function ChatPage() {
                     </div>
                 ) : (
                     <>
-                    {/* Expanded View */}
                     <div className="group-data-[collapsible=icon]:hidden">
                         <Accordion type="multiple" className="w-full" defaultValue={groups.map(g => g.id)}>
                             {groups.map((group) => (
@@ -626,6 +744,10 @@ export default function ChatPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent>
+                                            <DropdownMenuItem onClick={() => handleRenameRequest(group.id, 'group', group.name)}>
+                                                <Pencil className="mr-2 h-4 w-4" />
+                                                <span>Renomear Projeto</span>
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 onClick={() => handleDeleteRequest(group.id)}
                                                 className="text-destructive focus:bg-destructive/10 focus:text-destructive"
@@ -649,6 +771,8 @@ export default function ChatPage() {
                                         groups={groups}
                                         onSelect={handleSelectConversation}
                                         onMove={handleMoveConversation}
+                                        onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
+                                        onDelete={handleDeleteConvoRequest}
                                         />
                                     ))}
                                 </div>
@@ -671,6 +795,8 @@ export default function ChatPage() {
                                     groups={groups}
                                     onSelect={handleSelectConversation}
                                     onMove={handleMoveConversation}
+                                    onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
+                                    onDelete={handleDeleteConvoRequest}
                                     />
                                 ))}
                             </div>
@@ -678,7 +804,6 @@ export default function ChatPage() {
                         )}
                     </div>
                     
-                    {/* Collapsed View */}
                     <div className="hidden group-data-[collapsible=icon]:flex flex-col gap-1">
                        {conversations.map((convo) => (
                             <ConversationItem
@@ -688,6 +813,8 @@ export default function ChatPage() {
                                 groups={groups}
                                 onSelect={handleSelectConversation}
                                 onMove={handleMoveConversation}
+                                onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
+                                onDelete={handleDeleteConvoRequest}
                                 />
                             ))}
                     </div>
@@ -975,6 +1102,8 @@ interface ConversationItemProps {
   groups: Group[];
   onSelect: (id: string) => void;
   onMove: (chatId: string, groupId: string | null) => void;
+  onRename: (id: string, currentName: string) => void;
+  onDelete: (id: string) => void;
 }
 
 function ConversationItem({
@@ -983,6 +1112,8 @@ function ConversationItem({
   groups,
   onSelect,
   onMove,
+  onRename,
+  onDelete,
 }: ConversationItemProps) {
   return (
     <SidebarMenuItem>
@@ -1004,30 +1135,53 @@ function ConversationItem({
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-                <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {groups.map((group) => (
-                <DropdownMenuItem
-                    key={group.id}
-                    disabled={conversation.groupId === group.id}
-                    onClick={() => onMove(conversation.id, group.id)}
-                >
-                    {group.name}
+                 <DropdownMenuItem onClick={() => onRename(conversation.id, conversation.title)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    <span>Renomear</span>
                 </DropdownMenuItem>
-                ))}
-                {conversation.groupId && (
-                <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
-                    Remover do projeto
-                    </DropdownMenuItem>
-                </>
-                )}
+                <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                        <FolderPlus className="mr-2 h-4 w-4" />
+                        <span>Mover para...</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                        <DropdownMenuSubContent>
+                            {groups.map((group) => (
+                                <DropdownMenuItem
+                                    key={group.id}
+                                    disabled={conversation.groupId === group.id}
+                                    onClick={() => onMove(conversation.id, group.id)}
+                                >
+                                    {group.name}
+                                </DropdownMenuItem>
+                            ))}
+                            {conversation.groupId && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
+                                Remover do projeto
+                                </DropdownMenuItem>
+                            </>
+                            )}
+                            {groups.length === 0 && !conversation.groupId && (
+                                <DropdownMenuItem disabled>Nenhum projeto criado</DropdownMenuItem>
+                            )}
+                        </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                </DropdownMenuSub>
+
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuItem
+                    onClick={() => onDelete(conversation.id)}
+                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    <span>Excluir</span>
+                </DropdownMenuItem>
             </DropdownMenuContent>
             </DropdownMenu>
       </div>
     </SidebarMenuItem>
   );
 }
-
-    
