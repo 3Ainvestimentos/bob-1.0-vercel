@@ -33,8 +33,8 @@ export default function LoginPage() {
 
         // If there is a logged-in user, validate their domain
         if (user) {
-            const allowedDomain = '3ainvestimentos.com.br';
-            const isEmailValid = user.email && user.email.endsWith(`@${allowedDomain}`);
+            const allowedDomains = ['3ainvestimentos.com.br', '3ariva.com.br'];
+            const isEmailValid = user.email && allowedDomains.some(domain => user.email!.endsWith(`@${domain}`));
 
             if (isEmailValid) {
                 // If the domain is valid, redirect to the chat page
@@ -45,7 +45,7 @@ export default function LoginPage() {
                 toast({
                     variant: 'destructive',
                     title: 'Acesso Negado',
-                    description: `O acesso é restrito a usuários com o domínio @${allowedDomain}.`,
+                    description: `O acesso é restrito a usuários com os domínios @${allowedDomains.join(' ou @')}.`,
                 });
             }
         }
