@@ -23,7 +23,6 @@ import {
   Settings,
   Shield,
 } from 'lucide-react';
-import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -38,7 +37,6 @@ interface Message {
 }
 
 export default function ChatPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -128,19 +126,9 @@ export default function ChatPage() {
     }
   };
   
-  if (status === 'loading') {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <p>Carregando...</p>
-      </div>
-    );
-  }
-
-  const user = session?.user;
-  const isTestUser = !user;
-  const userName = user?.name || 'Usuário de Teste';
-  const userEmail = user?.email || 'teste@example.com';
-  const userInitials = userName?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'UT';
+  const userName = 'Usuário de Teste';
+  const userEmail = 'teste@example.com';
+  const userInitials = 'UT';
 
   return (
     <div className="flex h-screen w-full bg-card text-card-foreground">
@@ -187,12 +175,12 @@ export default function ChatPage() {
             Configurações
           </a>
           <Button 
-            onClick={() => isTestUser ? router.push('/') : signOut({ callbackUrl: '/' })} 
+            onClick={() => router.push('/')} 
             variant="ghost" 
             className="justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
           >
             <LogOut className="h-4 w-4" />
-            {isTestUser ? 'Voltar' : 'Sair'}
+            Voltar
           </Button>
         </nav>
       </aside>
@@ -360,11 +348,4 @@ export default function ChatPage() {
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary" disabled={isLoading}>
                     <Mic className="h-4 w-4" />
                   </Button>
-                </div>
-              </div>
-            </div>
-        </form>
-      </main>
-    </div>
-  );
-}
+                
