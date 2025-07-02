@@ -67,7 +67,7 @@ async function callDiscoveryEngine(query: string): Promise<{ summary: string; se
       }
     } catch (e: any) {
       console.error(`Falha ao analisar SERVICE_ACCOUNT_KEY_INTERNAL. Verifique o formato do JSON no seu arquivo .env. Erro:`, e.message);
-      throw new Error(`Falha ao analisar a chave da conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL). Verifique o formato do JSON no seu arquivo .env. Detalhe: ${e.message}`);
+      throw new Error(`Falha ao analisar a chave da conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL). Verifique se a variável de ambiente está definida e se o valor é um JSON válido e formatado corretamente em uma única linha no arquivo .env.`);
     }
 
     const projectId = serviceAccountCredentials.project_id;
