@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Settings, TestTube2 } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -62,10 +62,10 @@ export default function LoginPage() {
                         </Button>
                         <Button
                             variant="secondary"
-                            onClick={() => signIn('google', { callbackUrl: '/chat' })}
+                            onClick={() => router.push('/chat')}
                         >
-                            <GoogleIcon />
-                            Testar com conta inválida
+                            <TestTube2 />
+                            Testar o chat sem login
                         </Button>
                     </div>
                 </div>

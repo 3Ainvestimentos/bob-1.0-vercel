@@ -47,13 +47,6 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/');
-    }
-  }, [status, router]);
-
   // Auto-scroll to the latest message and focus input
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -135,7 +128,7 @@ export default function ChatPage() {
     }
   };
   
-  if (status === 'loading' || !session) {
+  if (status === 'loading') {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <p>Carregando...</p>
@@ -143,10 +136,11 @@ export default function ChatPage() {
     );
   }
 
-  const user = session.user;
-  const userName = user?.name || 'Usuário';
-  const userEmail = user?.email || '';
-  const userInitials = userName?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
+  const user = session?.user;
+  const isTestUser = !user;
+  const userName = user?.name || 'Usuário de Teste';
+  const userEmail = user?.email || 'teste@example.com';
+  const userInitials = userName?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'UT';
 
   return (
     <div className="flex h-screen w-full bg-card text-card-foreground">
@@ -192,9 +186,13 @@ export default function ChatPage() {
             <Settings className="h-4 w-4" />
             Configurações
           </a>
-          <Button onClick={() => signOut({ callbackUrl: '/' })} variant="ghost" className="justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+          <Button 
+            onClick={() => isTestUser ? router.push('/') : signOut({ callbackUrl: '/' })} 
+            variant="ghost" 
+            className="justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+          >
             <LogOut className="h-4 w-4" />
-            Sair
+            {isTestUser ? 'Voltar' : 'Sair'}
           </Button>
         </nav>
       </aside>
