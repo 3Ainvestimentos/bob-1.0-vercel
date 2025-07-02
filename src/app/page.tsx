@@ -25,6 +25,7 @@ export default function LoginPage() {
     const { user, loading } = useAuth();
     const { toast } = useToast();
 
+    // This hook handles redirecting users who are ALREADY logged in when they visit the page.
     useEffect(() => {
         if (!loading && user) {
             router.push('/chat');
@@ -34,10 +35,15 @@ export default function LoginPage() {
     const handleGoogleSignIn = async () => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
-            const user = result.user;
+            const loggedInUser = result.user;
             const allowedDomain = '3ainvestimentos.com.br';
 
-            if (user.email && !user.email.endsWith(`@${allowedDomain}`)) {
+            // Immediately check the domain after login.
+            if (loggedInUser.email && loggedInUser.email.endsWith(`@${allowedDomain}`)) {
+                // If valid, redirect to chat.
+                router.push('/chat');
+            } else {
+                // If invalid, sign out immediately and show an error. Do not redirect.
                 await signOut(auth);
                 toast({
                     variant: 'destructive',
@@ -45,8 +51,6 @@ export default function LoginPage() {
                     description: `O acesso é restrito a usuários com o domínio @${allowedDomain}.`,
                 });
             }
-            // Se o login for bem-sucedido e o domínio for válido,
-            // o useEffect cuidará do redirecionamento.
         } catch (error) {
             console.error("Erro ao fazer login com o Google:", error);
             toast({
@@ -57,6 +61,8 @@ export default function LoginPage() {
         }
     };
     
+    // This prevents the login page from flashing while we check auth status
+    // or for a logged-in user before they are redirected by the useEffect.
     if (loading || user) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
