@@ -302,7 +302,7 @@ export default function DashboardPage() {
         </div>
         
         <form onSubmit={handleSubmit} className="sticky bottom-0 w-full bg-background/95 p-4 backdrop-blur-sm">
-            <div className="relative mx-auto flex max-w-3xl flex-col rounded-2xl bg-muted p-3">
+            <div className="relative mx-auto flex max-w-3xl flex-col rounded-2xl bg-secondary p-3">
               <div className="flex items-center">
                 <Shield className="mr-2 h-5 w-5 shrink-0 text-muted-foreground" />
                 <Textarea
@@ -328,7 +328,7 @@ export default function DashboardPage() {
                     Deep Research
                   </Button>
                   <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-                    <RectangleEllipsis className="mr-2 h-4 w-4" />
+                    <RectangleEllipsis className="mr-2 h-4" />
                     Canvas
                   </Button>
                 </div>
