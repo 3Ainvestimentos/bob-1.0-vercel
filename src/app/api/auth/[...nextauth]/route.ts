@@ -9,6 +9,10 @@ if (!process.env.GOOGLE_CLIENT_SECRET) {
   throw new Error('Missing GOOGLE_CLIENT_SECRET in .env file');
 }
 
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error('Missing NEXTAUTH_SECRET in .env file. Please provide a secret value for session encryption.');
+}
+
 const ALLOWED_DOMAIN = "@3ainvestimentos.com.br";
 
 export const authOptions: AuthOptions = {
