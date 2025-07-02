@@ -57,9 +57,10 @@ export default function LoginPage() {
             // The useEffect hook will handle logic after a successful popup sign-in
             await signInWithPopup(auth, googleProvider);
         } catch (error) {
-            console.error("Erro ao fazer login com o Google:", error);
-            // Handle specific user-closed-popup error gracefully
-            if ((error as any).code !== 'auth/popup-closed-by-user') {
+            // Handle specific user-closed-popup errors gracefully
+            const errorCode = (error as any).code;
+            if (errorCode !== 'auth/popup-closed-by-user' && errorCode !== 'auth/cancelled-popup-request') {
+                console.error("Erro ao fazer login com o Google:", error);
                 toast({
                     variant: "destructive",
                     title: "Erro de Login",
