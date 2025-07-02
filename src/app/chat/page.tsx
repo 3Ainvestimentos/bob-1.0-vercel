@@ -568,7 +568,7 @@ export default function ChatPage() {
         </AlertDialog>
 
         <Sidebar>
-            <SidebarHeader className="flex items-center border-b border-sidebar-border p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
+            <SidebarHeader className="flex h-14 items-center border-b border-sidebar-border px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
                  <div className="flex w-full items-center gap-3">
                     <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
@@ -1029,3 +1029,5 @@ function ConversationItem({
     </SidebarMenuItem>
   );
 }
+
+    
