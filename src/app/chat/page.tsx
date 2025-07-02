@@ -8,8 +8,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   Dialog,
@@ -51,6 +61,7 @@ import {
   Search,
   Settings,
   Shield,
+  Trash2,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import {
@@ -65,6 +76,8 @@ import {
   getDoc,
   Timestamp,
   where,
+  deleteDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
@@ -108,6 +121,26 @@ async function createGroup(userId: string, name: string): Promise<string> {
     createdAt: serverTimestamp(),
   });
   return newGroupRef.id;
+}
+
+async function deleteGroup(userId: string, groupId: string): Promise<void> {
+    if (!userId || !groupId) throw new Error('User ID and Group ID are required.');
+
+    const batch = writeBatch(db);
+
+    // 1. Find all conversations in the group and ungroup them
+    const chatsRef = collection(db, 'users', userId, 'chats');
+    const q = query(chatsRef, where('groupId', '==', groupId));
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+        batch.update(doc.ref, { groupId: null });
+    });
+
+    // 2. Delete the group document
+    const groupRef = doc(db, 'users', userId, 'groups', groupId);
+    batch.delete(groupRef);
+
+    await batch.commit();
 }
 
 async function updateConversationGroup(
@@ -220,8 +253,12 @@ export default function ChatPage() {
   const [isSidebarLoading, setIsSidebarLoading] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
+
   const [isNewGroupDialogOpen, setIsNewGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -373,9 +410,17 @@ export default function ChatPage() {
 
       await saveConversation(user.uid, finalMessages, currentChatId);
 
+      // Refresh sidebar if a new chat was created to show the title
       if (!activeChatId) {
-        await fetchSidebarData(); // Refresh sidebar data
+         await fetchSidebarData();
+      } else {
+        // If it was an existing chat, we just need to update the title if it's the first message
+        const currentConvo = conversations.find(c => c.id === activeChatId);
+        if (currentConvo && currentConvo.title === 'Nova Conversa') {
+            await fetchSidebarData();
+        }
       }
+
     } catch (err: any) {
       const errorMessageContent = `Ocorreu um erro: ${err.message}`;
       const errorMessage: Message = {
@@ -419,6 +464,25 @@ export default function ChatPage() {
       fetchSidebarData();
     }
   };
+  
+  const handleDeleteRequest = (groupId: string) => {
+    setGroupToDelete(groupId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteGroupConfirm = async () => {
+    if (!groupToDelete || !user) return;
+    try {
+      await deleteGroup(user.uid, groupToDelete);
+      await fetchSidebarData(); // Refresh sidebar
+    } catch (err: any) {
+      setError(`Erro ao excluir o grupo: ${err.message}`);
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setGroupToDelete(null);
+    }
+  };
+
 
   if (authLoading) {
     return (
@@ -473,6 +537,24 @@ export default function ChatPage() {
           </form>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. O grupo será excluído e todas as conversas dentro dele serão movidas para fora do grupo.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setGroupToDelete(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteGroupConfirm} className={buttonVariants({ variant: "destructive" })}>
+                    Excluir
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <aside className="hidden w-[280px] flex-col border-r bg-card p-4 md:flex">
         <div className="flex items-center gap-3">
@@ -515,12 +597,32 @@ export default function ChatPage() {
             <>
               <Accordion type="multiple" className="w-full" defaultValue={groups.map(g => g.id)}>
                 {groups.map((group) => (
-                  <AccordionItem value={group.id} key={group.id}>
-                    <AccordionTrigger className="px-2 text-xs font-medium text-muted-foreground hover:no-underline">
-                      {group.name}
-                    </AccordionTrigger>
+                  <AccordionItem value={group.id} key={group.id} className="group/accordion-item border-b-0">
+                     <div className="group/trigger relative flex w-full items-center pr-1">
+                        <AccordionTrigger className="w-full justify-start rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:no-underline">
+                           <span className="truncate pr-2">{group.name}</span>
+                        </AccordionTrigger>
+                        <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:opacity-100">
+                           <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                 <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                 </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                 <DropdownMenuItem
+                                    onClick={() => handleDeleteRequest(group.id)}
+                                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                 >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Excluir Grupo</span>
+                                 </DropdownMenuItem>
+                              </DropdownMenuContent>
+                           </DropdownMenu>
+                        </div>
+                     </div>
                     <AccordionContent>
-                      <div className="flex flex-col gap-1 pr-2">
+                      <div className="flex flex-col gap-1 pr-2 pt-1">
                         {conversations
                           .filter((c) => c.groupId === group.id)
                           .map((convo) => (
@@ -898,5 +1000,3 @@ function ConversationItem({
     </div>
   );
 }
-
-    
