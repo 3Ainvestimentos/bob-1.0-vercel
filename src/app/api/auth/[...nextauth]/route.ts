@@ -1,3 +1,4 @@
+'use server';
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 
@@ -26,25 +27,6 @@ export const {
   pages: {
     signIn: '/',
     error: '/unauthorized',
-  },
-  callbacks: {
-    async signIn({ account, profile }) {
-      if (account?.provider === 'google') {
-        // This is a simplified check. In a real app, you might want to check against a database of users.
-        if (
-          profile?.email &&
-          (profile.email.endsWith('@3ainvestimentos.com.br') ||
-            profile.email.endsWith('@3ariva.com.br'))
-        ) {
-          return true;
-        } else {
-          // Redirect to unauthorized page
-          return '/unauthorized';
-        }
-      }
-      // Deny other providers
-      return false;
-    },
   },
   secret: process.env.NEXTAUTH_SECRET,
 });
