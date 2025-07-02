@@ -1,9 +1,15 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 
-if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+if (!process.env.GOOGLE_CLIENT_ID) {
+  throw new Error('Missing GOOGLE_CLIENT_ID in .env file');
+}
+if (!process.env.GOOGLE_CLIENT_SECRET) {
+  throw new Error('Missing GOOGLE_CLIENT_SECRET in .env file');
+}
+if (!process.env.NEXTAUTH_SECRET) {
   throw new Error(
-    'Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET in .env file'
+    'Missing NEXTAUTH_SECRET in .env file. Please provide a secret value for session encryption.'
   );
 }
 
@@ -32,9 +38,11 @@ export const {
         ) {
           return true;
         } else {
-          return false;
+          // Redirect to unauthorized page
+          return '/unauthorized';
         }
       }
+      // Deny other providers
       return false;
     },
   },

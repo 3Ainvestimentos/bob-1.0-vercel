@@ -19,7 +19,7 @@ const BotIcon = () => (
 
 export default function LoginPage() {
     const router = useRouter();
-    const { status } = useSession();
+    const { data: session, status } = useSession();
 
     useEffect(() => {
         if (status === 'authenticated') {
@@ -27,13 +27,19 @@ export default function LoginPage() {
         }
     }, [status, router]);
 
-    if (status === 'loading' || status === 'authenticated') {
+    if (status === 'loading') {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
                 <p>Carregando...</p>
             </div>
         );
     }
+    
+    // Don't show login page if already authenticated
+    if (status === 'authenticated') {
+        return null;
+    }
+
 
     return (
         <div className="flex h-screen w-full flex-col bg-background text-foreground">
