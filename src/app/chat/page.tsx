@@ -348,4 +348,14 @@ export default function ChatPage() {
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary" disabled={isLoading}>
                     <Mic className="h-4 w-4" />
                   </Button>
-                
+                  <Button type="submit" size="sm" className="ml-2" disabled={isLoading || !input.trim()}>
+                    Enviar
+                  </Button>
+                </div>
+              </div>
+            </div>
+        </form>
+      </main>
+    </div>
+  );
+}
