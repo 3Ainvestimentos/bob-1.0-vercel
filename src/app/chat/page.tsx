@@ -568,8 +568,8 @@ export default function ChatPage() {
         </AlertDialog>
 
         <Sidebar>
-            <SidebarHeader className="border-b border-sidebar-border p-3 group-data-[collapsible=icon]:p-2">
-                <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:justify-center">
+            <SidebarHeader className="flex h-14 items-center border-b border-sidebar-border p-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
+                <div className="flex items-center gap-3 overflow-hidden">
                     <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
