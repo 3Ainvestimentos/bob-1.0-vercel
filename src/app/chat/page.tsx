@@ -327,7 +327,7 @@ export default function ChatPage() {
         </div>
         
         <form onSubmit={handleSubmit} className="sticky bottom-0 w-full bg-background/95 p-4 backdrop-blur-sm">
-            <div className="relative mx-auto flex max-w-3xl flex-col rounded-2xl bg-muted p-3">
+            <div className="relative mx-auto flex max-w-3xl flex-col rounded-2xl bg-muted/70 p-3">
               <div className="flex items-center">
                 <Shield className="mr-2 h-5 w-5 shrink-0 text-muted-foreground" />
                 <Textarea
