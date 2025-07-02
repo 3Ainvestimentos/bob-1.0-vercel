@@ -1,8 +1,10 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Settings, TestTube2 } from 'lucide-react';
+import { Settings, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { signIn, useSession } from 'next-auth/react';
+import { useEffect } from 'react';
 
 const BotIcon = () => (
     <svg
@@ -15,9 +17,23 @@ const BotIcon = () => (
     </svg>
 );
 
-
 export default function LoginPage() {
     const router = useRouter();
+    const { status } = useSession();
+
+    useEffect(() => {
+        if (status === 'authenticated') {
+            router.push('/chat');
+        }
+    }, [status, router]);
+
+    if (status === 'loading' || status === 'authenticated') {
+        return (
+            <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
+                <p>Carregando...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex h-screen w-full flex-col bg-background text-foreground">
@@ -27,13 +43,9 @@ export default function LoginPage() {
                     <h1 className="text-4xl font-bold tracking-tight">Bem-vindo ao Bob</h1>
                     <p className="mt-2 text-lg text-muted-foreground">Assistente de IA Generativa da 3A RIVA</p>
                     <div className="mt-8 flex flex-col gap-4">
-                        <Button
-                            variant="outline"
-                            className="rounded-full"
-                            onClick={() => router.push('/chat')}
-                        >
-                            <TestTube2 className="mr-2 h-4 w-4" />
-                            Testar o chat sem login
+                         <Button onClick={() => signIn('google', { callbackUrl: '/chat' })}>
+                            <LogIn className="mr-2 h-4 w-4" />
+                            Entrar com conta 3A RIVA
                         </Button>
                     </div>
                 </div>
