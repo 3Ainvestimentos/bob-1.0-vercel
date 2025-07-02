@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -102,13 +103,13 @@ export default function ChatPage() {
   };
 
   const handleSelectConversation = async (chatId: string) => {
-    if (isLoading) return;
+    if (isLoading || !user) return;
     setIsLoading(true);
     setError(null);
     setActiveChatId(chatId);
     setMessages([]); // Clear previous messages
     try {
-      const fetchedMessages = await getConversationMessages(chatId);
+      const fetchedMessages = await getConversationMessages(user.uid, chatId);
       setMessages(fetchedMessages);
     } catch (err: any) {
       setError('Erro ao carregar a conversa.');
@@ -502,3 +503,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    

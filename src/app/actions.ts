@@ -9,7 +9,6 @@ import {
   addDoc,
   getDocs,
   query,
-  where,
   orderBy,
   doc,
   updateDoc,
@@ -230,7 +229,6 @@ export interface Message {
 
 export interface Conversation {
   id: string;
-  userId: string;
   title: string;
   createdAt: string;
   messages: Message[];
@@ -244,9 +242,9 @@ export async function getConversations(
     return [];
   }
   try {
+    const conversationsRef = collection(db, 'users', userId, 'chats');
     const q = query(
-      collection(db, 'chats'),
-      where('userId', '==', userId),
+      conversationsRef,
       orderBy('createdAt', 'desc')
     );
 
@@ -257,7 +255,6 @@ export async function getConversations(
       const firestoreTimestamp = data.createdAt as Timestamp;
       conversations.push({
         id: doc.id,
-        userId: data.userId,
         title: data.title,
         createdAt: firestoreTimestamp.toDate().toISOString(),
       });
@@ -270,10 +267,11 @@ export async function getConversations(
 }
 
 export async function getConversationMessages(
+  userId: string,
   chatId: string
 ): Promise<Message[]> {
   try {
-    const chatRef = doc(db, 'chats', chatId);
+    const chatRef = doc(db, 'users', userId, 'chats', chatId);
     const chatSnap = await getDoc(chatRef);
 
     if (chatSnap.exists()) {
@@ -297,8 +295,10 @@ export async function saveConversation(
   if (!messages || messages.length === 0)
     throw new Error('Messages are required.');
 
+  const conversationsRef = collection(db, 'users', userId, 'chats');
+
   if (chatId) {
-    const chatRef = doc(db, 'chats', chatId);
+    const chatRef = doc(conversationsRef, chatId);
     await updateDoc(chatRef, { messages });
     return chatId;
   } else {
@@ -309,8 +309,7 @@ export async function saveConversation(
         ? firstUserMessage.substring(0, 27) + '...'
         : firstUserMessage;
 
-    const newChatRef = await addDoc(collection(db, 'chats'), {
-      userId,
+    const newChatRef = await addDoc(conversationsRef, {
       title,
       messages,
       createdAt: serverTimestamp(),
@@ -318,3 +317,5 @@ export async function saveConversation(
     return newChatRef.id;
   }
 }
+
+    
