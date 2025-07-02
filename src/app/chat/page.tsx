@@ -9,6 +9,7 @@ import {
   FileText,
   HelpCircle,
   Lightbulb,
+  LogIn,
   LogOut,
   Mail,
   MessageSquare,
@@ -38,12 +39,7 @@ interface Message {
 
 export default function ChatPage() {
   const router = useRouter();
-  const { data: session, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      router.push('/');
-    },
-  });
+  const { data: session, status } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -154,20 +150,25 @@ export default function ChatPage() {
   if (status === 'loading') {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <p className="text-lg text-muted-foreground">Carregando sessão...</p>
+        <p className="text-lg text-muted-foreground">Carregando...</p>
       </div>
     );
   }
 
-  const userName = session?.user?.name ?? 'Usuário';
-  const userEmail = session?.user?.email ?? 'carregando...';
+  const isAuthenticated = status === 'authenticated';
+  const userName = isAuthenticated
+    ? session.user?.name ?? 'Usuário'
+    : 'Usuário de Teste';
+  const userEmail = isAuthenticated
+    ? session.user?.email ?? ''
+    : 'teste@exemplo.com';
   const userInitials =
     userName
       ?.split(' ')
       .map((n) => n[0])
       .join('')
       .substring(0, 2)
-      .toUpperCase() ?? '..';
+      .toUpperCase() ?? 'UT';
 
   return (
     <div className="flex h-screen w-full bg-card text-card-foreground">
@@ -226,14 +227,25 @@ export default function ChatPage() {
             <Settings className="h-4 w-4" />
             Configurações
           </a>
-          <Button
-            onClick={() => signOut({ callbackUrl: '/' })}
-            variant="ghost"
-            className="justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-          >
-            <LogOut className="h-4 w-4" />
-            Sair
-          </Button>
+          {isAuthenticated ? (
+            <Button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              variant="ghost"
+              className="justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </Button>
+          ) : (
+            <Button
+              onClick={() => router.push('/')}
+              variant="ghost"
+              className="justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <LogIn className="h-4 w-4" />
+              Ir para Login
+            </Button>
+          )}
         </nav>
       </aside>
 

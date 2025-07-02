@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Settings, LogIn } from 'lucide-react';
+import { Settings, LogIn, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { useEffect } from 'react';
@@ -46,6 +46,10 @@ export default function LoginPage() {
                          <Button onClick={() => signIn('google', { callbackUrl: '/chat' })}>
                             <LogIn className="mr-2 h-4 w-4" />
                             Entrar com conta 3A RIVA
+                        </Button>
+                        <Button variant="outline" onClick={() => router.push('/chat')}>
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Testar o chat sem login
                         </Button>
                     </div>
                 </div>
