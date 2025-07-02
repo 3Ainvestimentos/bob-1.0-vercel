@@ -5,8 +5,9 @@ import { LogIn, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
 import { auth, googleProvider } from '@/lib/firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signOut } from 'firebase/auth';
 import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const BotIcon = () => (
     <svg
@@ -22,6 +23,7 @@ const BotIcon = () => (
 export default function LoginPage() {
     const router = useRouter();
     const { user, loading } = useAuth();
+    const { toast } = useToast();
 
     useEffect(() => {
         if (!loading && user) {
@@ -31,11 +33,27 @@ export default function LoginPage() {
 
     const handleGoogleSignIn = async () => {
         try {
-            await signInWithPopup(auth, googleProvider);
-            // O useEffect cuidará do redirecionamento
+            const result = await signInWithPopup(auth, googleProvider);
+            const user = result.user;
+            const allowedDomain = '3ainvestimentos.com.br';
+
+            if (user.email && !user.email.endsWith(`@${allowedDomain}`)) {
+                await signOut(auth);
+                toast({
+                    variant: 'destructive',
+                    title: 'Acesso Negado',
+                    description: `O acesso é restrito a usuários com o domínio @${allowedDomain}.`,
+                });
+            }
+            // Se o login for bem-sucedido e o domínio for válido,
+            // o useEffect cuidará do redirecionamento.
         } catch (error) {
             console.error("Erro ao fazer login com o Google:", error);
-            // Opcional: mostrar um toast de erro para o usuário
+            toast({
+                variant: "destructive",
+                title: "Erro de Login",
+                description: "Ocorreu um erro ao tentar fazer login. Tente novamente.",
+            });
         }
     };
     
