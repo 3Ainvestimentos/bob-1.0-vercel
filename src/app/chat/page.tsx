@@ -568,7 +568,7 @@ export default function ChatPage() {
         </AlertDialog>
 
         <Sidebar>
-            <SidebarHeader className="flex h-14 items-center border-b border-sidebar-border px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+            <SidebarHeader className="flex h-16 items-center border-b border-sidebar-border px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
                  <div className="flex w-full items-center gap-3">
                     <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
@@ -738,7 +738,7 @@ export default function ChatPage() {
         </Sidebar>
 
         <main className="flex flex-1 flex-col bg-background">
-            <header className="flex h-14 items-center border-b bg-background px-4 lg:px-6">
+            <header className="flex h-16 items-center border-b bg-background px-4 lg:px-6">
                 <SidebarTrigger />
             </header>
 
