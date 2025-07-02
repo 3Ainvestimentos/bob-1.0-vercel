@@ -25,45 +25,53 @@ export default function LoginPage() {
     const { user, loading } = useAuth();
     const { toast } = useToast();
 
-    // This hook handles redirecting users who are ALREADY logged in when they visit the page.
     useEffect(() => {
-        if (!loading && user) {
-            router.push('/chat');
+        // Do not run logic until authentication state is resolved
+        if (loading) {
+            return;
         }
-    }, [user, loading, router]);
 
-    const handleGoogleSignIn = async () => {
-        try {
-            const result = await signInWithPopup(auth, googleProvider);
-            const loggedInUser = result.user;
+        // If there is a logged-in user, validate their domain
+        if (user) {
             const allowedDomain = '3ainvestimentos.com.br';
+            const isEmailValid = user.email && user.email.endsWith(`@${allowedDomain}`);
 
-            // Immediately check the domain after login.
-            if (loggedInUser.email && loggedInUser.email.endsWith(`@${allowedDomain}`)) {
-                // If valid, redirect to chat.
+            if (isEmailValid) {
+                // If the domain is valid, redirect to the chat page
                 router.push('/chat');
             } else {
-                // If invalid, sign out immediately and show an error. Do not redirect.
-                await signOut(auth);
+                // If the domain is not valid, sign the user out and show an error toast.
+                signOut(auth);
                 toast({
                     variant: 'destructive',
                     title: 'Acesso Negado',
                     description: `O acesso é restrito a usuários com o domínio @${allowedDomain}.`,
                 });
             }
+        }
+        // If there is no user, do nothing and stay on the login page.
+    }, [user, loading, router, toast]);
+
+    const handleGoogleSignIn = async () => {
+        try {
+            // The useEffect hook will handle logic after a successful popup sign-in
+            await signInWithPopup(auth, googleProvider);
         } catch (error) {
             console.error("Erro ao fazer login com o Google:", error);
-            toast({
-                variant: "destructive",
-                title: "Erro de Login",
-                description: "Ocorreu um erro ao tentar fazer login. Tente novamente.",
-            });
+            // Handle specific user-closed-popup error gracefully
+            if ((error as any).code !== 'auth/popup-closed-by-user') {
+                toast({
+                    variant: "destructive",
+                    title: "Erro de Login",
+                    description: "Ocorreu um erro ao tentar fazer login. Tente novamente.",
+                });
+            }
         }
     };
     
-    // This prevents the login page from flashing while we check auth status
-    // or for a logged-in user before they are redirected by the useEffect.
-    if (loading || user) {
+    // Display a loading indicator while the auth state is being checked.
+    // This prevents the login page from flashing for users who should be redirected.
+    if (loading) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
                 <p>Carregando...</p>
