@@ -52,14 +52,22 @@ export default function LoginPage() {
                     <BotIcon />
                     <h1 className="text-4xl font-bold tracking-tight">Bem-vindo ao Bob</h1>
                     <p className="mt-2 text-lg text-muted-foreground">Assistente de IA Generativa da 3A RIVA</p>
-                    <Button
-                        variant="outline"
-                        className="mt-8"
-                        onClick={() => signIn('google', { callbackUrl: '/chat' })}
-                    >
-                        <GoogleIcon />
-                        Entrar com Google
-                    </Button>
+                    <div className="mt-8 flex flex-col gap-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => signIn('google', { callbackUrl: '/chat' })}
+                        >
+                            <GoogleIcon />
+                            Entrar com conta 3A RIVA
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => signIn('google', { callbackUrl: '/chat' })}
+                        >
+                            <GoogleIcon />
+                            Testar com conta inválida
+                        </Button>
+                    </div>
                 </div>
             </main>
             <footer className="w-full p-6 text-center text-xs text-muted-foreground">
