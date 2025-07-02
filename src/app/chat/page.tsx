@@ -569,11 +569,11 @@ export default function ChatPage() {
 
         <Sidebar>
             <SidebarHeader className="flex h-14 items-center border-b border-sidebar-border p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-                <div className="flex items-center gap-3">
+                 <div className="flex items-center gap-3 overflow-hidden">
                     <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
-                    <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
+                    <div className="grid min-w-0 group-data-[collapsible=icon]:hidden">
                         <p className="truncate font-semibold">{userName}</p>
                         <p className="truncate text-sm text-muted-foreground">{userEmail}</p>
                     </div>
