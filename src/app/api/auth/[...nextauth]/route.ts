@@ -14,7 +14,7 @@ if (!process.env.NEXTAUTH_SECRET) {
   );
 }
 
-export const {
+const {
   handlers: { GET, POST },
   auth,
 } = NextAuth({
@@ -28,5 +28,6 @@ export const {
     signIn: '/',
     error: '/unauthorized',
   },
-  secret: process.env.NEXTAUTH_SECRET,
 });
+
+export { GET, POST, auth };
