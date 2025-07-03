@@ -33,6 +33,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuSub,
@@ -67,6 +68,7 @@ import {
   Mail,
   MessageSquare,
   Mic,
+  Moon,
   MoreHorizontal,
   Newspaper,
   Pencil,
@@ -76,6 +78,7 @@ import {
   Search,
   Settings,
   Shield,
+  Sun,
   Trash2,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
@@ -97,6 +100,7 @@ import {
 import { useRouter } from 'next/navigation';
 import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useTheme } from 'next-themes';
 
 // ---- Data Types ----
 export interface Group {
@@ -272,6 +276,7 @@ async function deleteConversation(userId: string, chatId: string): Promise<void>
 export default function ChatPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { setTheme } = useTheme();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -688,7 +693,7 @@ export default function ChatPage() {
 
         <Sidebar>
             <SidebarHeader className="flex h-16 items-center border-b border-sidebar-border p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-                 <div className="flex w-full items-center gap-3">
+                 <div className="flex w-full min-w-0 items-center gap-3">
                     <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
@@ -865,12 +870,30 @@ export default function ChatPage() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                        <SidebarMenuButton asChild tooltip="Configurações">
-                            <a href="#">
-                                <Settings />
-                                <span>Configurações</span>
-                            </a>
-                        </SidebarMenuButton>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <SidebarMenuButton tooltip="Configurações">
+                                    <Settings />
+                                    <span>Configurações</span>
+                                </SidebarMenuButton>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="top" align="start">
+                                <DropdownMenuLabel>Tema</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setTheme('light')}>
+                                    <Sun className="mr-2 h-4 w-4" />
+                                    <span>Claro</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setTheme('dark')}>
+                                    <Moon className="mr-2 h-4 w-4" />
+                                    <span>Escuro</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setTheme('system')}>
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    <span>Sistema</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </SidebarMenuItem>
                      <SidebarMenuItem>
                        {isAuthenticated ? (
@@ -921,7 +944,7 @@ export default function ChatPage() {
                         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                         <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
                             <div className="flex items-start gap-4">
-                            <Newspaper className="h-6 w-6 text-yellow-400/80" />
+                            <Newspaper className="h-6 w-6 text-chart-1" />
                             <div>
                                 <p className="font-semibold">
                                 Buscar notícias sobre IA
@@ -934,7 +957,7 @@ export default function ChatPage() {
                         </Card>
                         <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
                             <div className="flex items-start gap-4">
-                            <Mail className="h-6 w-6 text-yellow-400/80" />
+                            <Mail className="h-6 w-6 text-chart-1" />
                             <div>
                                 <p className="font-semibold">
                                 Criar campanha de e-mail
@@ -947,7 +970,7 @@ export default function ChatPage() {
                         </Card>
                         <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
                             <div className="flex items-start gap-4">
-                            <Lightbulb className="h-6 w-6 text-yellow-400/80" />
+                            <Lightbulb className="h-6 w-6 text-chart-1" />
                             <div>
                                 <p className="font-semibold">Preparar tópicos</p>
                                 <p className="text-sm text-muted-foreground">
@@ -958,7 +981,7 @@ export default function ChatPage() {
                         </Card>
                         <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
                             <div className="flex items-start gap-4">
-                            <FileText className="h-6 w-6 text-yellow-400/80" />
+                            <FileText className="h-6 w-6 text-chart-1" />
                             <div>
                                 <p className="font-semibold">
                                 Analisar um novo artigo
