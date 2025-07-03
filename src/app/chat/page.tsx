@@ -84,6 +84,8 @@ import {
   SendHorizontal,
   Settings,
   Sun,
+  ThumbsDown,
+  ThumbsUp,
   Trash2,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
@@ -101,6 +103,7 @@ import {
   where,
   deleteDoc,
   writeBatch,
+  setDoc,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import React, {
@@ -120,6 +123,7 @@ export interface Group {
 }
 
 export interface Message {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
 }
@@ -135,6 +139,42 @@ export interface Conversation {
 type ConversationSidebarItem = Omit<Conversation, 'messages'>;
 
 // ---- Firestore Functions ----
+
+async function getFeedbacksForConversation(userId: string, chatId: string): Promise<Record<string, 'positive' | 'negative'>> {
+    if (!userId || !chatId) return {};
+    const feedbackRef = collection(db, 'users', userId, 'chats', chatId, 'feedback');
+    const querySnapshot = await getDocs(feedbackRef);
+    const feedbacks: Record<string, 'positive' | 'negative'> = {};
+    querySnapshot.forEach((doc) => {
+        feedbacks[doc.id] = doc.data().rating;
+    });
+    return feedbacks;
+}
+
+async function setFeedback(
+  userId: string,
+  chatId: string,
+  messageId: string,
+  rating: 'positive' | 'negative' | null,
+  userQuery: string,
+  assistantResponse: string
+) {
+  if (!userId || !chatId || !messageId) throw new Error('User ID, Chat ID, and Message ID are required for feedback.');
+  
+  const feedbackRef = doc(db, 'users', userId, 'chats', chatId, 'feedback', messageId);
+
+  if (rating === null) {
+    await deleteDoc(feedbackRef);
+  } else {
+    await setDoc(feedbackRef, {
+      rating,
+      userQuery,
+      assistantResponse,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  }
+}
+
 async function getGroups(userId: string): Promise<Group[]> {
   if (!userId) return [];
   const groupsRef = collection(db, 'users', userId, 'groups');
@@ -227,7 +267,11 @@ async function getConversationMessages(
     const chatSnap = await getDoc(chatRef);
 
     if (chatSnap.exists()) {
-      return chatSnap.data().messages as Message[];
+      const messagesWithIds = (chatSnap.data().messages || []).map((m: any) => ({
+          ...m,
+          id: m.id || crypto.randomUUID(),
+      }));
+      return messagesWithIds as Message[];
     } else {
       console.log('No such document!');
       return [];
@@ -316,6 +360,7 @@ function ChatPageContent() {
   const [isDeleteConvoDialogOpen, setIsDeleteConvoDialogOpen] = useState(false);
   const [convoToDelete, setConvoToDelete] = useState<string | null>(null);
 
+  const [feedbacks, setFeedbacks] = useState<Record<string, 'positive' | 'negative'>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -351,6 +396,7 @@ function ChatPageContent() {
     setInput('');
     setError(null);
     setLastFailedQuery(null);
+    setFeedbacks({});
   };
 
   useEffect(() => {
@@ -375,9 +421,14 @@ function ChatPageContent() {
     setLastFailedQuery(null);
     setActiveChatId(chatId);
     setMessages([]); 
+    setFeedbacks({});
     try {
-      const fetchedMessages = await getConversationMessages(user.uid, chatId);
-      setMessages(fetchedMessages);
+        const [fetchedMessages, fetchedFeedbacks] = await Promise.all([
+            getConversationMessages(user.uid, chatId),
+            getFeedbacksForConversation(user.uid, chatId)
+        ]);
+        setMessages(fetchedMessages);
+        setFeedbacks(fetchedFeedbacks);
     } catch (err: any) {
       setError(`Erro ao carregar a conversa: ${err.message}`);
       setMessages([]);
@@ -404,6 +455,7 @@ function ChatPageContent() {
         user.uid
       );
       const assistantMessage: Message = {
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: assistantResponse.summary,
       };
@@ -417,6 +469,7 @@ function ChatPageContent() {
     } catch (err: any) {
       const errorMessageContent = `Ocorreu um erro na busca web: ${err.message}`;
       const errorMessage: Message = {
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: errorMessageContent,
       };
@@ -431,7 +484,7 @@ function ChatPageContent() {
     e.preventDefault();
     if (!input.trim() || isLoading || !user) return;
 
-    const userMessage: Message = { role: 'user', content: input };
+    const userMessage: Message = { id: crypto.randomUUID(), role: 'user', content: input };
     const newMessages = [...messages, userMessage];
 
     setMessages(newMessages);
@@ -453,6 +506,7 @@ function ChatPageContent() {
 
       const assistantResponse = await askAssistant(currentInput, {}, user.uid);
       const assistantMessage: Message = {
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: assistantResponse.summary,
       };
@@ -478,6 +532,7 @@ function ChatPageContent() {
     } catch (err: any) {
       const errorMessageContent = `Ocorreu um erro: ${err.message}`;
       const errorMessage: Message = {
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: errorMessageContent,
       };
@@ -579,6 +634,48 @@ function ChatPageContent() {
         setIsDeleteConvoDialogOpen(false);
         setConvoToDelete(null);
     }
+  };
+
+  const handleFeedback = async (message: Message, newRating: 'positive' | 'negative') => {
+      if (!user || !activeChatId) return;
+
+      const messageIndex = messages.findIndex(m => m.id === message.id);
+      if (messageIndex < 1 || messages[messageIndex - 1].role !== 'user') {
+        setError("O feedback só pode ser dado a uma resposta que segue diretamente uma pergunta do usuário.");
+        return;
+      }
+      
+      const userQuery = messages[messageIndex - 1].content;
+      const assistantResponse = message.content;
+
+      const currentRating = feedbacks[message.id];
+      const finalRating = currentRating === newRating ? null : newRating;
+
+      setFeedbacks(prev => {
+          const newFeedbacks = { ...prev };
+          if (finalRating) {
+              newFeedbacks[message.id] = finalRating;
+          } else {
+              delete newFeedbacks[message.id];
+          }
+          return newFeedbacks;
+      });
+
+      try {
+          await setFeedback(user.uid, activeChatId, message.id, finalRating, userQuery, assistantResponse);
+      } catch (err: any) {
+          console.error("Error saving feedback:", err);
+          setError(`Erro ao salvar o feedback: ${err.message}`);
+          setFeedbacks(prev => {
+              const revertedFeedbacks = { ...prev };
+              if (currentRating) {
+                  revertedFeedbacks[message.id] = currentRating;
+              } else {
+                  delete revertedFeedbacks[message.id];
+              }
+              return revertedFeedbacks;
+          });
+      }
   };
 
   if (authLoading) {
@@ -716,7 +813,7 @@ function ChatPageContent() {
             </SidebarHeader>
 
             <SidebarContent>
-                <SidebarMenu className="pt-2">
+                <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton 
                             onClick={handleNewChat}
@@ -821,31 +918,25 @@ function ChatPageContent() {
                     </div>
                     
                     <div className="hidden flex-col gap-1 pt-2 group-data-[collapsible=icon]:flex">
-                      {groups.map((group) => {
-                        const groupConversations = conversations.filter(
-                          (c) => c.groupId === group.id
-                        );
-                        if (groupConversations.length === 0) {
-                          return null;
-                        }
-                        return (
+                      {groups.map((group) => (
                           <React.Fragment key={group.id}>
-                            {groupConversations.map((convo) => (
-                              <ConversationItem
-                                key={convo.id}
-                                conversation={convo}
-                                isActive={activeChatId === convo.id}
-                                groups={groups}
-                                onSelect={handleSelectConversation}
-                                onMove={handleMoveConversation}
-                                onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
-                                onDelete={handleDeleteConvoRequest}
-                              />
-                            ))}
+                            {conversations
+                              .filter((c) => c.groupId === group.id)
+                              .map((convo) => (
+                                <ConversationItem
+                                  key={convo.id}
+                                  conversation={convo}
+                                  isActive={activeChatId === convo.id}
+                                  groups={groups}
+                                  onSelect={handleSelectConversation}
+                                  onMove={handleMoveConversation}
+                                  onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
+                                  onDelete={handleDeleteConvoRequest}
+                                />
+                              ))}
                             <Separator className="my-1" />
                           </React.Fragment>
-                        );
-                      })}
+                        ))}
                       {ungroupedConversations.map((convo) => (
                         <ConversationItem
                           key={convo.id}
@@ -1023,32 +1114,43 @@ function ChatPageContent() {
                 <div className="space-y-6">
                     {messages.map((msg, index) => (
                     <div
-                        key={index}
+                        key={msg.id}
                         className={`flex items-start gap-4 ${
                         msg.role === 'user' ? 'justify-end' : ''
                         }`}
                     >
                         {msg.role === 'assistant' && (
-                        <Avatar>
-                            <AvatarFallback>AI</AvatarFallback>
-                        </Avatar>
+                          <Avatar>
+                              <AvatarFallback>AI</AvatarFallback>
+                          </Avatar>
                         )}
-                        <div
-                        className={`max-w-[80%] rounded-lg p-3 ${
-                            msg.role === 'user'
-                            ? 'bg-user-bubble text-user-bubble-foreground'
-                            : 'bg-muted'
-                        }`}
-                        >
-                        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
-                            {msg.content}
-                        </ReactMarkdown>
+                        <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                          <div
+                            className={`max-w-[80%] rounded-lg p-3 ${
+                                msg.role === 'user'
+                                ? 'bg-user-bubble text-user-bubble-foreground'
+                                : 'bg-muted'
+                            }`}
+                          >
+                            <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
+                                {msg.content}
+                            </ReactMarkdown>
+                          </div>
+                          {msg.role === 'assistant' && activeChatId && (
+                            <div className="mt-2 flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className={`h-7 w-7 text-muted-foreground hover:text-primary ${feedbacks[msg.id] === 'positive' ? 'bg-primary/10 text-primary' : ''}`} onClick={() => handleFeedback(msg, 'positive')}>
+                                    <ThumbsUp className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className={`h-7 w-7 text-muted-foreground hover:text-destructive ${feedbacks[msg.id] === 'negative' ? 'bg-destructive/10 text-destructive' : ''}`} onClick={() => handleFeedback(msg, 'negative')}>
+                                    <ThumbsDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                          )}
                         </div>
-
                         {msg.role === 'user' && (
-                        <Avatar>
-                            <AvatarFallback>{userInitials}</AvatarFallback>
-                        </Avatar>
+                          <Avatar>
+                              <AvatarFallback>{userInitials}</AvatarFallback>
+                          </Avatar>
                         )}
                     </div>
                     ))}
