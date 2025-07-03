@@ -41,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import {
   Sidebar,
   SidebarContent,
@@ -94,7 +95,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 // ---- Data Types ----
@@ -731,11 +732,11 @@ export default function ChatPage() {
                         <Accordion type="multiple" className="w-full" defaultValue={groups.map(g => g.id)}>
                             {groups.map((group) => (
                             <AccordionItem value={group.id} key={group.id} className="group/accordion-item border-b-0">
-                                <div className="group/trigger relative flex w-full items-center pr-1">
-                                    <AccordionTrigger className="w-full justify-start rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:no-underline">
+                                <div className="group/trigger relative flex w-full items-center">
+                                    <AccordionTrigger className="w-full justify-start rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:no-underline">
                                     <span className="truncate pr-2">{group.name}</span>
                                     </AccordionTrigger>
-                                    <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
+                                    <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -803,9 +804,18 @@ export default function ChatPage() {
                         )}
                     </div>
                     
-                    <div className="hidden group-data-[collapsible=icon]:flex flex-col gap-1">
-                       {conversations.map((convo) => (
-                            <ConversationItem
+                    <div className="hidden group-data-[collapsible=icon]:flex flex-col gap-1 pt-2">
+                      {groups.map((group) => {
+                        const groupConversations = conversations.filter(
+                          (c) => c.groupId === group.id
+                        );
+                        if (groupConversations.length === 0) {
+                          return null;
+                        }
+                        return (
+                          <React.Fragment key={group.id}>
+                            {groupConversations.map((convo) => (
+                              <ConversationItem
                                 key={convo.id}
                                 conversation={convo}
                                 isActive={activeChatId === convo.id}
@@ -814,8 +824,24 @@ export default function ChatPage() {
                                 onMove={handleMoveConversation}
                                 onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
                                 onDelete={handleDeleteConvoRequest}
-                                />
+                              />
                             ))}
+                            <Separator className="my-1" />
+                          </React.Fragment>
+                        );
+                      })}
+                      {ungroupedConversations.map((convo) => (
+                        <ConversationItem
+                          key={convo.id}
+                          conversation={convo}
+                          isActive={activeChatId === convo.id}
+                          groups={groups}
+                          onSelect={handleSelectConversation}
+                          onMove={handleMoveConversation}
+                          onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
+                          onDelete={handleDeleteConvoRequest}
+                        />
+                      ))}
                     </div>
 
                     {conversations.length === 0 && !isSidebarLoading && (
@@ -1115,71 +1141,73 @@ function ConversationItem({
   onDelete,
 }: ConversationItemProps) {
   return (
-    <SidebarMenuItem className="group/menu-item relative flex min-w-0 items-center">
-      <SidebarMenuButton
-        onClick={() => onSelect(conversation.id)}
-        isActive={isActive}
-        className="h-auto flex-1 justify-start whitespace-normal py-2"
-        tooltip={conversation.title}
-      >
-        <MessageSquare />
-        <span className="truncate">{conversation.title}</span>
-      </SidebarMenuButton>
+    <SidebarMenuItem className="group/menu-item relative">
+      <div className="flex min-w-0 items-center">
+        <SidebarMenuButton
+            onClick={() => onSelect(conversation.id)}
+            isActive={isActive}
+            className="h-auto flex-1 justify-start whitespace-normal py-2"
+            tooltip={conversation.title}
+        >
+            <MessageSquare />
+            <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
+        </SidebarMenuButton>
 
-      <div className="flex-shrink-0 group-data-[collapsible=icon]:hidden opacity-0 group-hover/menu-item:opacity-100">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => onRename(conversation.id, conversation.title)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              <span>Renomear</span>
-            </DropdownMenuItem>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <FolderPlus className="mr-2 h-4 w-4" />
-                <span>Mover para...</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  {groups.map((group) => (
-                    <DropdownMenuItem
-                      key={group.id}
-                      disabled={conversation.groupId === group.id}
-                      onClick={() => onMove(conversation.id, group.id)}
-                    >
-                      {group.name}
-                    </DropdownMenuItem>
-                  ))}
-                  {conversation.groupId && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
-                        Remover do projeto
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  {groups.length === 0 && !conversation.groupId && (
-                    <DropdownMenuItem disabled>Nenhum projeto criado</DropdownMenuItem>
-                  )}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
+        <div className="flex-shrink-0 group-data-[collapsible=icon]:hidden opacity-0 transition-opacity group-hover/menu-item:opacity-100">
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => onRename(conversation.id, conversation.title)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Renomear</span>
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                    <FolderPlus className="mr-2 h-4 w-4" />
+                    <span>Mover para...</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                    {groups.map((group) => (
+                        <DropdownMenuItem
+                        key={group.id}
+                        disabled={conversation.groupId === group.id}
+                        onClick={() => onMove(conversation.id, group.id)}
+                        >
+                        {group.name}
+                        </DropdownMenuItem>
+                    ))}
+                    {conversation.groupId && (
+                        <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
+                            Remover do projeto
+                        </DropdownMenuItem>
+                        </>
+                    )}
+                    {groups.length === 0 && !conversation.groupId && (
+                        <DropdownMenuItem disabled>Nenhum projeto criado</DropdownMenuItem>
+                    )}
+                    </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+                </DropdownMenuSub>
 
-            <DropdownMenuSeparator />
+                <DropdownMenuSeparator />
 
-            <DropdownMenuItem
-              onClick={() => onDelete(conversation.id)}
-              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Excluir</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <DropdownMenuItem
+                onClick={() => onDelete(conversation.id)}
+                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Excluir</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
       </div>
     </SidebarMenuItem>
   );
