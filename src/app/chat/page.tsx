@@ -752,7 +752,7 @@ function ChatPageContent() {
                                     <AccordionTrigger className="w-full justify-start rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:no-underline">
                                     <span className="truncate pr-2">{group.name}</span>
                                     </AccordionTrigger>
-                                    <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
+                                    <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -871,7 +871,7 @@ function ChatPageContent() {
             </SidebarContent>
 
             <SidebarFooter>
-                <SidebarMenu className="group-data-[collapsible=icon]:items-center">
+                <SidebarMenu className="items-center group-data-[collapsible=expanded]:items-start">
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild tooltip="Guias e FAQ">
                             <a href="#">
@@ -1036,7 +1036,7 @@ function ChatPageContent() {
                         <div
                         className={`max-w-[80%] rounded-lg p-3 ${
                             msg.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
+                            ? 'bg-user-bubble text-user-bubble-foreground'
                             : 'bg-muted'
                         }`}
                         >
@@ -1183,7 +1183,7 @@ function ConversationItem({
   onDelete,
 }: ConversationItemProps) {
   return (
-    <SidebarMenuItem className="group/menu-item relative">
+    <SidebarMenuItem className="group/menu-item relative list-none">
       <div className="flex min-w-0 items-center">
         <SidebarMenuButton
             onClick={() => onSelect(conversation.id)}
@@ -1195,7 +1195,7 @@ function ConversationItem({
             <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
         </SidebarMenuButton>
 
-        <div className="pointer-events-none flex-shrink-0 opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
+        <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 flex-shrink-0 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7">
