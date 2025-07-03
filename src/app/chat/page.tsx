@@ -78,12 +78,11 @@ import {
   MoreHorizontal,
   Newspaper,
   Pencil,
-  Plus,
-  RectangleEllipsis,
+  Paperclip,
   RefreshCw,
   Search,
+  SendHorizontal,
   Settings,
-  Shield,
   Sun,
   Trash2,
 } from 'lucide-react';
@@ -725,13 +724,13 @@ function ChatPageContent() {
                             tooltip="Nova Conversa"
                         >
                             <Pencil />
-                            <span>Nova conversa</span>
+                            <span className="min-w-0 flex-1">Nova conversa</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                          <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto">
                             <FolderPlus />
-                            <span>Novo Projeto</span>
+                            <span className="min-w-0 flex-1">Novo Projeto</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
@@ -753,7 +752,7 @@ function ChatPageContent() {
                                     <AccordionTrigger className="w-full justify-start rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:no-underline">
                                     <span className="truncate pr-2">{group.name}</span>
                                     </AccordionTrigger>
-                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
+                                    <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -821,7 +820,7 @@ function ChatPageContent() {
                         )}
                     </div>
                     
-                    <div className="hidden group-data-[collapsible=icon]:flex flex-col gap-1 pt-2">
+                    <div className="hidden flex-col gap-1 pt-2 group-data-[collapsible=icon]:flex">
                       {groups.map((group) => {
                         const groupConversations = conversations.filter(
                           (c) => c.groupId === group.id
@@ -877,7 +876,7 @@ function ChatPageContent() {
                         <SidebarMenuButton asChild tooltip="Guias e FAQ">
                             <a href="#">
                                 <HelpCircle />
-                                <span>Guias e FAQ</span>
+                                <span className="min-w-0 flex-1">Guias e FAQ</span>
                             </a>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -888,7 +887,7 @@ function ChatPageContent() {
                             <DropdownMenuTrigger asChild>
                               <SidebarMenuButton>
                                 <Settings />
-                                <span>Configurações</span>
+                                <span className="min-w-0 flex-1">Configurações</span>
                               </SidebarMenuButton>
                             </DropdownMenuTrigger>
                           </TooltipTrigger>
@@ -922,12 +921,12 @@ function ChatPageContent() {
                        {isAuthenticated ? (
                         <SidebarMenuButton onClick={handleSignOut} tooltip="Sair">
                             <LogOut />
-                            <span>Sair</span>
+                            <span className="min-w-0 flex-1">Sair</span>
                         </SidebarMenuButton>
                         ) : (
                         <SidebarMenuButton onClick={() => router.push('/')} tooltip="Ir para Login">
                             <LogIn />
-                            <span>Ir para Login</span>
+                            <span className="min-w-0 flex-1">Ir para Login</span>
                         </SidebarMenuButton>
                         )}
                     </SidebarMenuItem>
@@ -1088,78 +1087,68 @@ function ChatPageContent() {
             </div>
             </div>
 
-            <form
-            onSubmit={handleSubmit}
-            className="sticky bottom-0 w-full bg-background/95 p-4 backdrop-blur-sm"
-            >
-            <div className="relative mx-auto flex max-w-3xl flex-col rounded-2xl bg-muted/70 p-3">
-                <div className="flex items-center">
-                <Shield className="mr-2 h-5 w-5 shrink-0 text-muted-foreground" />
-                <Textarea
-                    ref={inputRef}
-                    placeholder="Insira um comando para o assistente"
-                    className="flex-1 resize-none self-end border-0 bg-transparent p-0 text-base focus-visible:ring-0"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                    if (
-                        e.key === 'Enter' &&
-                        !e.shiftKey &&
-                        !e.nativeEvent.isComposing
-                    ) {
-                        handleSubmit(e);
-                    }
-                    }}
-                    disabled={isLoading}
-                />
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                    <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary"
-                    >
-                    <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-primary"
-                    >
-                    <Search className="mr-2 h-4 w-4" />
-                    Deep Research
-                    </Button>
-                    <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-primary"
-                    >
-                    <RectangleEllipsis className="mr-2 h-4" />
-                    Canvas
-                    </Button>
-                </div>
-                <div className="flex items-center">
-                    <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary"
-                    disabled={isLoading}
-                    >
-                    <Mic className="h-4 w-4" />
-                    </Button>
-                    <Button
-                    type="submit"
-                    size="sm"
-                    className="ml-2"
-                    disabled={isLoading || !input.trim()}
-                    >
-                    Enviar
-                    </Button>
-                </div>
-                </div>
+            <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
+                <form
+                    onSubmit={handleSubmit}
+                    className="mx-auto max-w-3xl px-4 pb-4 pt-2"
+                >
+                    <div className="rounded-lg border bg-background shadow-sm">
+                        <div className="relative flex min-h-[60px] items-start">
+                            <Textarea
+                                ref={inputRef}
+                                placeholder="Insira aqui um comando ou pergunta"
+                                className="min-h-[inherit] flex-1 resize-none border-0 bg-transparent p-4 pr-12 text-base focus-visible:ring-0"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                if (
+                                    e.key === 'Enter' &&
+                                    !e.shiftKey &&
+                                    !e.nativeEvent.isComposing
+                                ) {
+                                    handleSubmit(e);
+                                }
+                                }}
+                                disabled={isLoading}
+                                rows={1}
+                            />
+                            <Button
+                                type="submit"
+                                size="icon"
+                                variant="ghost"
+                                className="absolute right-3 top-3 h-8 w-8 rounded-full text-muted-foreground"
+                                disabled={isLoading || !input.trim()}
+                            >
+                                <SendHorizontal className="h-5 w-5" />
+                            </Button>
+                        </div>
+                        <Separator />
+                        <div className="flex items-center p-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground"
+                                disabled={isLoading}
+                            >
+                                <Paperclip className="h-5 w-5" />
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground"
+                                disabled={isLoading}
+                            >
+                                <Mic className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    </div>
+                    <p className="pt-2 text-center text-xs text-muted-foreground">
+                        Sujeito aos Termos de uso 3A RIVA e à Política de Privacidade da 3A RIVA. O modelo Bob 1.0 pode cometer erros. Por isso, é bom checar as respostas.
+                    </p>
+                </form>
             </div>
-            </form>
         </main>
         </div>
   );
@@ -1206,7 +1195,7 @@ function ConversationItem({
             <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
         </SidebarMenuButton>
 
-        <div className="flex-shrink-0 group-data-[collapsible=icon]:hidden opacity-0 transition-opacity group-hover/menu-item:opacity-100">
+        <div className="pointer-events-none flex-shrink-0 opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7">
