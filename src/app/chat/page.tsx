@@ -64,6 +64,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useAuth } from '@/context/AuthProvider';
 import { auth, db } from '@/lib/firebase';
+import { useToast } from "@/hooks/use-toast";
 import {
   FileText,
   FolderPlus,
@@ -139,6 +140,13 @@ export interface Conversation {
 
 type ConversationSidebarItem = Omit<Conversation, 'messages'>;
 
+interface FeedbackDetails {
+    messageId: string;
+    userQuery: string;
+    assistantResponse: string;
+}
+
+
 // ---- Firestore Functions ----
 
 async function getFeedbacksForConversation(userId: string, chatId: string): Promise<Record<string, 'positive' | 'negative'>> {
@@ -178,6 +186,9 @@ async function setFeedback(
   if (rating === null) {
     await deleteDoc(feedbackRef);
   } else {
+    // Overwrite the document completely. This ensures that if we switch from
+    // negative to positive, any existing comment is removed.
+    // The comment will be added separately if the user provides one.
     await setDoc(feedbackRef, {
       userId,
       chatId,
@@ -186,7 +197,7 @@ async function setFeedback(
       userQuery,
       assistantResponse,
       updatedAt: serverTimestamp(),
-    }, { merge: true });
+    });
   }
 }
 
@@ -349,6 +360,8 @@ function ChatPageContent() {
   const { user, loading: authLoading } = useAuth();
   const { setTheme } = useTheme();
   const { state: sidebarState, isMobile } = useSidebar();
+  const { toast } = useToast();
+
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -377,6 +390,10 @@ function ChatPageContent() {
   const [convoToDelete, setConvoToDelete] = useState<string | null>(null);
 
   const [feedbacks, setFeedbacks] = useState<Record<string, 'positive' | 'negative'>>({});
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
+  const [feedbackDetails, setFeedbackDetails] = useState<FeedbackDetails | null>(null);
+  const [feedbackComment, setFeedbackComment] = useState('');
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -694,6 +711,46 @@ function ChatPageContent() {
       }
   };
 
+  const handleOpenFeedbackDialog = (message: Message) => {
+    const messageIndex = messages.findIndex(m => m.id === message.id);
+     if (messageIndex < 1) return;
+    const userQuery = messages[messageIndex - 1].content;
+    
+    setFeedbackDetails({
+        messageId: message.id,
+        userQuery: userQuery,
+        assistantResponse: message.content,
+    });
+    setFeedbackComment('');
+    setIsFeedbackDialogOpen(true);
+  };
+  
+  const handleSaveFeedbackComment = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!feedbackDetails || !user || !activeChatId) return;
+
+    try {
+        const feedbackRef = doc(db, 'users', user.uid, 'feedbacks', feedbackDetails.messageId);
+        await updateDoc(feedbackRef, {
+            comment: feedbackComment
+        });
+
+        toast({
+            title: "Feedback enviado!",
+            description: "Obrigado por nos ajudar a melhorar.",
+        });
+
+    } catch (err: any) {
+        console.error("Error saving feedback comment:", err);
+        setError(`Erro ao salvar o comentário de feedback: ${err.message}`);
+    } finally {
+        setIsFeedbackDialogOpen(false);
+        setFeedbackDetails(null);
+        setFeedbackComment('');
+    }
+  };
+
+
   if (authLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -814,10 +871,39 @@ function ChatPageContent() {
             </AlertDialogContent>
         </AlertDialog>
 
+        <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleSaveFeedbackComment}>
+                    <DialogHeader>
+                        <DialogTitle>Fornecer Feedback</DialogTitle>
+                        <DialogDescription>
+                            Sua opinião é importante. Por favor, descreva por que a resposta não foi útil.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Textarea
+                            placeholder="Escreva seu comentário aqui..."
+                            value={feedbackComment}
+                            onChange={(e) => setFeedbackComment(e.target.value)}
+                            rows={4}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setIsFeedbackDialogOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button type="submit" disabled={!feedbackComment.trim()}>
+                            Enviar Feedback
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
 
         <Sidebar>
             <SidebarHeader className="flex h-16 items-center border-b border-sidebar-border p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-                 <div className="flex w-full min-w-0 items-center gap-3 group-data-[collapsible=icon]:w-auto">
+                 <div className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:w-auto">
                     <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
@@ -829,7 +915,7 @@ function ChatPageContent() {
             </SidebarHeader>
 
             <SidebarContent>
-                <SidebarMenu>
+                <SidebarMenu className="items-start">
                     <SidebarMenuItem>
                         <SidebarMenuButton 
                             onClick={handleNewChat}
@@ -837,13 +923,13 @@ function ChatPageContent() {
                             tooltip="Nova Conversa"
                         >
                             <Pencil />
-                            <span className="min-w-0 flex-1">Nova conversa</span>
+                            <span className="min-w-0 flex-1 transition-all duration-200 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">Nova conversa</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                          <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto">
                             <FolderPlus />
-                            <span className="min-w-0 flex-1">Novo Projeto</span>
+                            <span className="min-w-0 flex-1 transition-all duration-200 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">Novo Projeto</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
@@ -1160,6 +1246,11 @@ function ChatPageContent() {
                                 <Button variant="ghost" size="icon" className={`h-7 w-7 text-muted-foreground hover:text-destructive ${feedbacks[msg.id] === 'negative' ? 'bg-destructive/10 text-destructive' : ''}`} onClick={() => handleFeedback(msg, 'negative')}>
                                     <ThumbsDown className="h-4 w-4" />
                                 </Button>
+                                {feedbacks[msg.id] === 'negative' && (
+                                    <Button variant="link" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => handleOpenFeedbackDialog(msg)}>
+                                        Adicionar feedback
+                                    </Button>
+                                )}
                             </div>
                           )}
                         </div>
