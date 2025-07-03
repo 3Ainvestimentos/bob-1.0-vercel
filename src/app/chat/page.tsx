@@ -114,6 +114,7 @@ import React, {
   useState,
 } from 'react';
 import ReactMarkdown from 'react-markdown';
+import TextareaAutosize from 'react-textarea-autosize';
 import { useTheme } from 'next-themes';
 
 // ---- Data Types ----
@@ -1211,7 +1212,7 @@ function ChatPageContent() {
                 >
                     <div className="rounded-lg border bg-background shadow-sm">
                         <div className="relative flex min-h-[60px] items-start">
-                            <Textarea
+                            <TextareaAutosize
                                 ref={inputRef}
                                 placeholder="Insira aqui um comando ou pergunta"
                                 className="min-h-[inherit] flex-1 resize-none border-0 bg-transparent p-4 pr-12 text-base focus-visible:ring-0"
@@ -1223,11 +1224,15 @@ function ChatPageContent() {
                                     !e.shiftKey &&
                                     !e.nativeEvent.isComposing
                                 ) {
-                                    handleSubmit(e);
+                                    e.preventDefault();
+                                    if (e.currentTarget.form) {
+                                      e.currentTarget.form.requestSubmit();
+                                    }
                                 }
                                 }}
                                 disabled={isLoading}
                                 rows={1}
+                                maxRows={8}
                             />
                             <Button
                                 type="submit"
