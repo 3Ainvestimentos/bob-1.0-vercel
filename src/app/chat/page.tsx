@@ -142,11 +142,16 @@ type ConversationSidebarItem = Omit<Conversation, 'messages'>;
 
 async function getFeedbacksForConversation(userId: string, chatId: string): Promise<Record<string, 'positive' | 'negative'>> {
     if (!userId || !chatId) return {};
-    const feedbackRef = collection(db, 'users', userId, 'chats', chatId, 'feedback');
-    const querySnapshot = await getDocs(feedbackRef);
+    const feedbackRef = collection(db, 'feedbacks');
+    const q = query(feedbackRef, where('userId', '==', userId), where('chatId', '==', chatId));
+    const querySnapshot = await getDocs(q);
+    
     const feedbacks: Record<string, 'positive' | 'negative'> = {};
     querySnapshot.forEach((doc) => {
-        feedbacks[doc.id] = doc.data().rating;
+        const data = doc.data();
+        if (data.messageId) {
+            feedbacks[data.messageId] = data.rating;
+        }
     });
     return feedbacks;
 }
@@ -161,12 +166,16 @@ async function setFeedback(
 ) {
   if (!userId || !chatId || !messageId) throw new Error('User ID, Chat ID, and Message ID are required for feedback.');
   
-  const feedbackRef = doc(db, 'users', userId, 'chats', chatId, 'feedback', messageId);
+  const feedbackId = `${userId}_${messageId}`;
+  const feedbackRef = doc(db, 'feedbacks', feedbackId);
 
   if (rating === null) {
     await deleteDoc(feedbackRef);
   } else {
     await setDoc(feedbackRef, {
+      userId,
+      chatId,
+      messageId,
       rating,
       userQuery,
       assistantResponse,
@@ -174,6 +183,7 @@ async function setFeedback(
     }, { merge: true });
   }
 }
+
 
 async function getGroups(userId: string): Promise<Group[]> {
   if (!userId) return [];
