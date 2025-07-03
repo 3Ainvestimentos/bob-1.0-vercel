@@ -110,7 +110,8 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
               useSemanticChunks: true,
               modelPromptSpec: {
                 preamble: ASSISTENTE_CORPORATIVO_PREAMBLE
-              }
+              },
+              temperature: 0.2
             }
         },
         userPseudoId: userId || 'anonymous-user',
@@ -183,7 +184,12 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
   
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-pro-latest",
+      generationConfig: {
+        temperature: 0.2
+      } 
+    });
     
     const prompt = `Você é um assistente de pesquisa prestativo. Responda à seguinte pergunta do usuário da forma mais completa e precisa possível com base em seu conhecimento geral.
 
@@ -246,6 +252,7 @@ export async function generateSuggestedQuestions(
       model: "gemini-1.5-pro-latest",
       generationConfig: {
         responseMimeType: "application/json",
+        temperature: 0.2
       },
     });
 
