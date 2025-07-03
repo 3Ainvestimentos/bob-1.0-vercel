@@ -224,3 +224,43 @@ export async function askAssistant(
     throw new Error(`Ocorreu um erro ao se comunicar com o assistente: ${error.message}`);
   }
 }
+
+export async function generateSuggestedQuestions(
+  query: string,
+  answer: string
+): Promise<string[]> {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    console.error("A variável de ambiente GEMINI_API_KEY não está definida. Não é possível gerar sugestões.");
+    return [];
+  }
+
+  const prompt = `Baseado na pergunta do usuário e na resposta do assistente, gere 3 perguntas de acompanhamento curtas e relevantes que o usuário poderia fazer a seguir. Retorne APENAS um array JSON de strings, sem nenhum outro texto ou formatação. As perguntas devem ser concisas e em português.
+
+  Pergunta do Usuário: "${query}"
+  Resposta do Assistente: "${answer}"`;
+
+  try {
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-pro-latest",
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const suggestions = JSON.parse(response.text());
+
+    if (Array.isArray(suggestions) && suggestions.every(s => typeof s === 'string')) {
+      return suggestions;
+    }
+
+    console.warn("A resposta da IA para sugestões não era um array de strings:", suggestions);
+    return [];
+  } catch (error: any) {
+    console.error("Erro ao gerar sugestões:", error.message);
+    return []; 
+  }
+}

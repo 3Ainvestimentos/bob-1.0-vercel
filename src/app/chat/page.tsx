@@ -1,7 +1,7 @@
 
 'use client';
 
-import { askAssistant } from '@/app/actions';
+import { askAssistant, generateSuggestedQuestions } from '@/app/actions';
 import {
   Accordion,
   AccordionContent,
@@ -394,6 +394,9 @@ function ChatPageContent() {
   const [feedbackDetails, setFeedbackDetails] = useState<FeedbackDetails | null>(null);
   const [feedbackComment, setFeedbackComment] = useState('');
 
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -430,6 +433,8 @@ function ChatPageContent() {
     setError(null);
     setLastFailedQuery(null);
     setFeedbacks({});
+    setSuggestions([]);
+    setIsSuggestionsLoading(false);
   };
 
   useEffect(() => {
@@ -455,6 +460,8 @@ function ChatPageContent() {
     setActiveChatId(chatId);
     setMessages([]); 
     setFeedbacks({});
+    setSuggestions([]);
+    setIsSuggestionsLoading(false);
     try {
         const [fetchedMessages, fetchedFeedbacks] = await Promise.all([
             getConversationMessages(user.uid, chatId),
@@ -470,6 +477,93 @@ function ChatPageContent() {
     }
   };
 
+  const submitQuery = async (query: string) => {
+    if (!query.trim() || isLoading || !user) return;
+
+    const userMessage: Message = { id: crypto.randomUUID(), role: 'user', content: query };
+    const newMessages = [...messages, userMessage];
+
+    setMessages(newMessages);
+    setInput('');
+    setIsLoading(true);
+    setError(null);
+    setLastFailedQuery(null);
+    setSuggestions([]);
+    setIsSuggestionsLoading(false);
+
+    let currentChatId = activeChatId;
+
+    try {
+      if (!currentChatId) {
+        const newId = await saveConversation(user.uid, newMessages, null);
+        setActiveChatId(newId);
+        currentChatId = newId;
+      } else {
+        await saveConversation(user.uid, newMessages, currentChatId);
+      }
+
+      const assistantResponse = await askAssistant(query, {}, user.uid);
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: assistantResponse.summary,
+      };
+
+      if (assistantResponse.searchFailed) {
+        setLastFailedQuery(query);
+      }
+
+      const finalMessages = [...newMessages, assistantMessage];
+      setMessages(finalMessages);
+
+      await saveConversation(user.uid, finalMessages, currentChatId);
+
+      const fetchSuggestions = async () => {
+        setIsSuggestionsLoading(true);
+        try {
+          const newSuggestions = await generateSuggestedQuestions(query, assistantResponse.summary);
+          setSuggestions(newSuggestions);
+        } catch (err) {
+          console.error("Failed to fetch suggestions", err);
+          setSuggestions([]);
+        } finally {
+          setIsSuggestionsLoading(false);
+        }
+      };
+      fetchSuggestions();
+
+      if (!activeChatId) {
+         await fetchSidebarData();
+      } else {
+        const currentConvo = conversations.find(c => c.id === activeChatId);
+        if (currentConvo && currentConvo.title === 'Nova Conversa') {
+            await fetchSidebarData();
+        }
+      }
+
+    } catch (err: any) {
+      const errorMessageContent = `Ocorreu um erro: ${err.message}`;
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: errorMessageContent,
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      setError(errorMessageContent);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleSuggestionClick = (suggestion: string) => {
+    submitQuery(suggestion);
+  };
+  
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    submitQuery(input);
+  };
+
   const handleWebSearch = async () => {
     if (!lastFailedQuery || isLoading || !user) return;
 
@@ -480,6 +574,8 @@ function ChatPageContent() {
     setIsLoading(true);
     setError(null);
     setMessages(messagesWithUserQuery);
+    setSuggestions([]);
+    setIsSuggestionsLoading(false);
 
     try {
       const assistantResponse = await askAssistant(
@@ -507,69 +603,6 @@ function ChatPageContent() {
         content: errorMessageContent,
       };
       setMessages((prev) => [...messagesWithUserQuery, errorMessage]);
-      setError(errorMessageContent);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading || !user) return;
-
-    const userMessage: Message = { id: crypto.randomUUID(), role: 'user', content: input };
-    const newMessages = [...messages, userMessage];
-
-    setMessages(newMessages);
-    const currentInput = input;
-    setInput('');
-    setIsLoading(true);
-    setError(null);
-    setLastFailedQuery(null);
-
-    let currentChatId = activeChatId;
-
-    try {
-      if (!currentChatId) {
-        currentChatId = await saveConversation(user.uid, newMessages, null);
-        setActiveChatId(currentChatId);
-      } else {
-        await saveConversation(user.uid, newMessages, currentChatId);
-      }
-
-      const assistantResponse = await askAssistant(currentInput, {}, user.uid);
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: assistantResponse.summary,
-      };
-
-      if (assistantResponse.searchFailed) {
-        setLastFailedQuery(currentInput);
-      }
-
-      const finalMessages = [...newMessages, assistantMessage];
-      setMessages(finalMessages);
-
-      await saveConversation(user.uid, finalMessages, currentChatId);
-
-      if (!activeChatId) {
-         await fetchSidebarData();
-      } else {
-        const currentConvo = conversations.find(c => c.id === activeChatId);
-        if (currentConvo && currentConvo.title === 'Nova Conversa') {
-            await fetchSidebarData();
-        }
-      }
-
-    } catch (err: any) {
-      const errorMessageContent = `Ocorreu um erro: ${err.message}`;
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: errorMessageContent,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
       setError(errorMessageContent);
     } finally {
       setIsLoading(false);
@@ -915,7 +948,7 @@ function ChatPageContent() {
             </SidebarHeader>
 
             <SidebarContent>
-                <SidebarMenu className="items-start">
+                <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton 
                             onClick={handleNewChat}
@@ -923,13 +956,13 @@ function ChatPageContent() {
                             tooltip="Nova Conversa"
                         >
                             <Pencil />
-                            <span className="min-w-0 flex-1 transition-all duration-200 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">Nova conversa</span>
+                            <span>Nova conversa</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                          <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto">
                             <FolderPlus />
-                            <span className="min-w-0 flex-1 transition-all duration-200 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">Novo Projeto</span>
+                            <span>Novo Projeto</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
@@ -1290,6 +1323,35 @@ function ChatPageContent() {
                         </div>
                     </div>
                     )}
+
+                    {(isSuggestionsLoading || suggestions.length > 0) && !isLoading && (
+                        <div className="mt-6 flex flex-col items-start gap-3">
+                            <p className="text-sm text-muted-foreground">Sugestões:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {isSuggestionsLoading ? (
+                                    <>
+                                        <Skeleton className="h-9 w-48 rounded-full" />
+                                        <Skeleton className="h-9 w-40 rounded-full" />
+                                        <Skeleton className="h-9 w-52 rounded-full" />
+                                    </>
+                                ) : (
+                                    suggestions.map((s, i) => (
+                                        <Button
+                                            key={i}
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-full"
+                                            onClick={() => handleSuggestionClick(s)}
+                                            disabled={isLoading}
+                                        >
+                                            {s}
+                                        </Button>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     <div ref={messagesEndRef} />
                 </div>
                 )}
