@@ -127,6 +127,14 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
       }
 
       const data = await apiResponse.json();
+      
+      if (!data.results || data.results.length === 0) {
+          return { 
+              summary: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?", 
+              searchFailed: true 
+          };
+      }
+
       const summary = data.summary?.summaryText || "Não foi possível gerar um resumo.";
 
       const internalSearchFailureKeywords = [
@@ -135,7 +143,8 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
           "informações públicas de mercado",
           "busca na web",
           "nenhum resultado encontrado",
-          "não foi possível gerar um resumo"
+          "não foi possível gerar um resumo",
+          "no results could be found"
       ];
       const searchFailed = internalSearchFailureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
 
