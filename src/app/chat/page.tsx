@@ -686,7 +686,7 @@ export default function ChatPage() {
 
 
         <Sidebar>
-            <SidebarHeader className="flex h-16 items-center border-b border-sidebar-border px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+            <SidebarHeader className="flex h-16 items-center border-b border-sidebar-border p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
                  <div className="flex w-full items-center gap-3">
                     <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
@@ -735,7 +735,7 @@ export default function ChatPage() {
                                     <AccordionTrigger className="w-full justify-start rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:no-underline">
                                     <span className="truncate pr-2">{group.name}</span>
                                     </AccordionTrigger>
-                                    <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:opacity-100">
+                                    <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -1115,11 +1115,11 @@ function ConversationItem({
   onDelete,
 }: ConversationItemProps) {
   return (
-    <SidebarMenuItem className="flex items-center justify-between">
+    <SidebarMenuItem className="group/menu-item relative flex min-w-0 items-center">
       <SidebarMenuButton
         onClick={() => onSelect(conversation.id)}
         isActive={isActive}
-        className="h-auto flex-1 min-w-0 whitespace-normal justify-start py-2"
+        className="h-auto flex-1 justify-start whitespace-normal py-2"
         tooltip={conversation.title}
       >
         <MessageSquare />
