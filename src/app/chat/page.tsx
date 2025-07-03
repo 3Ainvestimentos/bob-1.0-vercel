@@ -817,7 +817,7 @@ function ChatPageContent() {
 
         <Sidebar>
             <SidebarHeader className="flex h-16 items-center border-b border-sidebar-border p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-                 <div className="flex w-full min-w-0 items-center gap-3">
+                 <div className="flex w-full min-w-0 items-center gap-3 group-data-[collapsible=icon]:w-auto">
                     <Avatar>
                         <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
