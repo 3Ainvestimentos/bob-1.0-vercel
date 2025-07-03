@@ -1047,7 +1047,7 @@ function ChatPageContent() {
             </header>
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto flex h-full max-w-3xl flex-col">
+            <div className="mx-auto flex h-full max-w-5xl flex-col">
                 {messages.length === 0 && !isLoading ? (
                 <div className="flex h-full flex-col items-center justify-center">
                     <div>
@@ -1208,7 +1208,7 @@ function ChatPageContent() {
             <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
                 <form
                     onSubmit={handleSubmit}
-                    className="mx-auto max-w-3xl px-4 pb-4 pt-2"
+                    className="mx-auto max-w-5xl px-4 pb-4 pt-2"
                 >
                     <div className="rounded-lg border bg-background shadow-sm">
                         <div className="relative flex min-h-[60px] items-start">
