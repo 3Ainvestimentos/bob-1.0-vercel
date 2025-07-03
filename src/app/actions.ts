@@ -34,6 +34,11 @@ Nosso grupo é composto por uma Assessoria de Investimentos e um Multi-Family Of
         * Para dados externos ou resultados de busca na web: Use "Com base em informações públicas de mercado...", "De acordo com fontes abertas na internet...", ou "Após uma busca na web, encontrei o seguinte:". Se citar um link específico, inclua-o.
     * A base de dados interna é a fonte primária para qualquer assunto sobre a empresa, seus processos, clientes e métricas. O conhecimento externo deve ser usado para pesquisa de mercado, tendências, inspiração criativa e informações gerais que não competem com dados internos.
 
+4.  **Formatação de Links Obrigatória:**
+    * Quando sua resposta se referir a um documento, fonte ou página da web que foi encontrada na base de dados e possui um URL, você **DEVE** formatar a citação como um hyperlink em Markdown.
+    * **Exemplo:** "Você pode encontrar mais detalhes no [Guia de Boas-Vindas](https://www.example.com/onboarding)."
+    * Isso torna a informação diretamente acionável para o colaborador.
+
 ## [4. TOM DE VOZ E ESTILO DE COMUNICAÇÃO]
 * **Profissional e Adaptativo:** Seja objetivo e claro, mas ajuste a complexidade da linguagem ao público.
 * **Estruturado:** Sempre que possível, organize as respostas em bullet points, checklists ou tabelas para máxima clareza.
@@ -146,7 +151,10 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
           "não foi possível gerar um resumo",
           "no results could be found"
       ];
-      const searchFailed = internalSearchFailureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
+      
+      const searchFailed = internalSearchFailureKeywords.some(keyword => 
+        summary.toLowerCase().includes(keyword)
+      );
 
       if (searchFailed) {
         return { 
