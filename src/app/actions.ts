@@ -251,7 +251,7 @@ export async function generateSuggestedQuestions(
       model: "gemini-1.5-pro-latest",
       generationConfig: {
         responseMimeType: "application/json",
-        temperature: 0.2
+        temperature: 0.1
       },
     });
 
