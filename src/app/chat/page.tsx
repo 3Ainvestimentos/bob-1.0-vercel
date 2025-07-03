@@ -753,7 +753,7 @@ function ChatPageContent() {
                                     <AccordionTrigger className="w-full justify-start rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:no-underline">
                                     <span className="truncate pr-2">{group.name}</span>
                                     </AccordionTrigger>
-                                    <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -872,7 +872,7 @@ function ChatPageContent() {
             </SidebarContent>
 
             <SidebarFooter>
-                <SidebarMenu>
+                <SidebarMenu className="group-data-[collapsible=icon]:items-center">
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild tooltip="Guias e FAQ">
                             <a href="#">
