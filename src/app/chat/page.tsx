@@ -33,7 +33,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuSub,
@@ -1116,71 +1115,71 @@ function ConversationItem({
   onDelete,
 }: ConversationItemProps) {
   return (
-    <SidebarMenuItem>
-        <SidebarMenuButton
-            onClick={() => onSelect(conversation.id)}
-            isActive={isActive}
-            className="h-auto whitespace-normal justify-start py-2"
-            tooltip={conversation.title}
-        >
-            <MessageSquare />
-            <span>{conversation.title}</span>
-        </SidebarMenuButton>
+    <SidebarMenuItem className="flex items-center justify-between">
+      <SidebarMenuButton
+        onClick={() => onSelect(conversation.id)}
+        isActive={isActive}
+        className="h-auto flex-1 min-w-0 whitespace-normal justify-start py-2"
+        tooltip={conversation.title}
+      >
+        <MessageSquare />
+        <span className="truncate">{conversation.title}</span>
+      </SidebarMenuButton>
 
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 group-data-[collapsible=icon]:hidden opacity-0 group-hover/menu-item:opacity-100">
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-                 <DropdownMenuItem onClick={() => onRename(conversation.id, conversation.title)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    <span>Renomear</span>
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                        <FolderPlus className="mr-2 h-4 w-4" />
-                        <span>Mover para...</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                        <DropdownMenuSubContent>
-                            {groups.map((group) => (
-                                <DropdownMenuItem
-                                    key={group.id}
-                                    disabled={conversation.groupId === group.id}
-                                    onClick={() => onMove(conversation.id, group.id)}
-                                >
-                                    {group.name}
-                                </DropdownMenuItem>
-                            ))}
-                            {conversation.groupId && (
-                            <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
-                                Remover do projeto
-                                </DropdownMenuItem>
-                            </>
-                            )}
-                            {groups.length === 0 && !conversation.groupId && (
-                                <DropdownMenuItem disabled>Nenhum projeto criado</DropdownMenuItem>
-                            )}
-                        </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                </DropdownMenuSub>
+      <div className="flex-shrink-0 group-data-[collapsible=icon]:hidden opacity-0 group-hover/menu-item:opacity-100">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => onRename(conversation.id, conversation.title)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Renomear</span>
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderPlus className="mr-2 h-4 w-4" />
+                <span>Mover para...</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  {groups.map((group) => (
+                    <DropdownMenuItem
+                      key={group.id}
+                      disabled={conversation.groupId === group.id}
+                      onClick={() => onMove(conversation.id, group.id)}
+                    >
+                      {group.name}
+                    </DropdownMenuItem>
+                  ))}
+                  {conversation.groupId && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
+                        Remover do projeto
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {groups.length === 0 && !conversation.groupId && (
+                    <DropdownMenuItem disabled>Nenhum projeto criado</DropdownMenuItem>
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
 
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem
-                    onClick={() => onDelete(conversation.id)}
-                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Excluir</span>
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-            </DropdownMenu>
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={() => onDelete(conversation.id)}
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Excluir</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </SidebarMenuItem>
   );
