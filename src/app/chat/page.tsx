@@ -142,18 +142,24 @@ type ConversationSidebarItem = Omit<Conversation, 'messages'>;
 
 async function getFeedbacksForConversation(userId: string, chatId: string): Promise<Record<string, 'positive' | 'negative'>> {
     if (!userId || !chatId) return {};
-    const feedbackRef = collection(db, 'feedbacks');
-    const q = query(feedbackRef, where('userId', '==', userId), where('chatId', '==', chatId));
-    const querySnapshot = await getDocs(q);
+    const feedbackCollRef = collection(db, 'users', userId, 'feedbacks');
+    const q = query(feedbackCollRef, where('chatId', '==', chatId));
     
-    const feedbacks: Record<string, 'positive' | 'negative'> = {};
-    querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.messageId) {
-            feedbacks[data.messageId] = data.rating;
-        }
-    });
-    return feedbacks;
+    try {
+        const querySnapshot = await getDocs(q);
+        const feedbacks: Record<string, 'positive' | 'negative'> = {};
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.messageId) {
+                feedbacks[data.messageId] = data.rating;
+            }
+        });
+        return feedbacks;
+    } catch (error) {
+        console.error("Error fetching feedbacks (this might require a Firestore index):", error);
+        // Inform the user that an index might be needed. The console error from Firebase is more useful.
+        return {};
+    }
 }
 
 async function setFeedback(
@@ -166,8 +172,7 @@ async function setFeedback(
 ) {
   if (!userId || !chatId || !messageId) throw new Error('User ID, Chat ID, and Message ID are required for feedback.');
   
-  const feedbackId = `${userId}_${messageId}`;
-  const feedbackRef = doc(db, 'feedbacks', feedbackId);
+  const feedbackRef = doc(db, 'users', userId, 'feedbacks', messageId);
 
   if (rating === null) {
     await deleteDoc(feedbackRef);
