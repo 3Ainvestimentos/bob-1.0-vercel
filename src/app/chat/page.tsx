@@ -53,9 +53,15 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useAuth } from '@/context/AuthProvider';
 import { auth, db } from '@/lib/firebase';
 import {
@@ -98,7 +104,13 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useTheme } from 'next-themes';
 
@@ -273,10 +285,11 @@ async function deleteConversation(userId: string, chatId: string): Promise<void>
 }
 
 
-export default function ChatPage() {
+function ChatPageContent() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { setTheme } = useTheme();
+  const { state: sidebarState, isMobile } = useSidebar();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -593,7 +606,6 @@ export default function ChatPage() {
   );
 
   return (
-    <SidebarProvider>
         <div className="flex h-screen w-full bg-background text-foreground">
         <Dialog
             open={isNewGroupDialogOpen}
@@ -870,30 +882,41 @@ export default function ChatPage() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                        <DropdownMenu>
+                      <DropdownMenu>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                             <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton tooltip="Configurações">
-                                    <Settings />
-                                    <span>Configurações</span>
-                                </SidebarMenuButton>
+                              <SidebarMenuButton>
+                                <Settings />
+                                <span>Configurações</span>
+                              </SidebarMenuButton>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent side="top" align="start">
-                                <DropdownMenuLabel>Tema</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => setTheme('light')}>
-                                    <Sun className="mr-2 h-4 w-4" />
-                                    <span>Claro</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setTheme('dark')}>
-                                    <Moon className="mr-2 h-4 w-4" />
-                                    <span>Escuro</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setTheme('system')}>
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    <span>Sistema</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="right"
+                            align="center"
+                            hidden={sidebarState !== 'collapsed' || isMobile}
+                          >
+                            Configurações
+                          </TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent side="top" align="start">
+                          <DropdownMenuLabel>Tema</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setTheme('light')}>
+                            <Sun className="mr-2 h-4 w-4" />
+                            <span>Claro</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTheme('dark')}>
+                            <Moon className="mr-2 h-4 w-4" />
+                            <span>Escuro</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTheme('system')}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            <span>Sistema</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </SidebarMenuItem>
                      <SidebarMenuItem>
                        {isAuthenticated ? (
@@ -1139,8 +1162,15 @@ export default function ChatPage() {
             </form>
         </main>
         </div>
-    </SidebarProvider>
   );
+}
+
+export default function ChatPage() {
+    return (
+        <SidebarProvider>
+            <ChatPageContent />
+        </SidebarProvider>
+    )
 }
 
 // ---- Sub-component for Conversation Item ----
