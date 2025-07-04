@@ -968,7 +968,7 @@ function ChatPageContent() {
                     <SidebarMenuItem>
                         <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto" variant="secondary">
                             <FolderPlus />
-                            <span>Novo Projeto</span>
+                            <span className="font-bold">Novo Projeto</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -978,12 +978,12 @@ function ChatPageContent() {
                             variant="secondary"
                         >
                             <Pencil />
-                            <span>Nova conversa</span>
+                            <span className="font-bold">Nova conversa</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
 
-                <div className="mt-4 flex-1 space-y-2 overflow-y-auto px-3">
+                <div className="mt-4 flex-1 space-y-1 overflow-y-auto px-3">
                 {isSidebarLoading ? (
                     <div className="space-y-2 px-2">
                     <Skeleton className="h-8 w-full" />
@@ -997,7 +997,7 @@ function ChatPageContent() {
                             <div key={group.id} className="space-y-1">
                                 <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground">
                                     <Folder className="mr-2 h-4 w-4 shrink-0" />
-                                    <span className="truncate">{group.name}</span>
+                                    <span className="truncate font-bold">{group.name}</span>
                                      <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -1040,22 +1040,22 @@ function ChatPageContent() {
                             </div>
                          ))}
                         
-                        {groups.length > 0 && ungroupedConversations.length > 0 && <Separator className="my-2" />}
-
-                        <div className="flex flex-col gap-1">
-                            {ungroupedConversations.map((convo) => (
-                            <ConversationItem
-                                key={convo.id}
-                                conversation={convo}
-                                isActive={activeChatId === convo.id}
-                                groups={groups}
-                                onSelect={handleSelectConversation}
-                                onMove={handleMoveConversation}
-                                onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
-                                onDelete={handleDeleteConvoRequest}
-                                />
-                            ))}
-                        </div>
+                        {ungroupedConversations.length > 0 && (
+                            <div className="flex flex-col gap-1 pt-2">
+                                {ungroupedConversations.map((convo) => (
+                                <ConversationItem
+                                    key={convo.id}
+                                    conversation={convo}
+                                    isActive={activeChatId === convo.id}
+                                    groups={groups}
+                                    onSelect={handleSelectConversation}
+                                    onMove={handleMoveConversation}
+                                    onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
+                                    onDelete={handleDeleteConvoRequest}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                     
                     <div className="hidden flex-col gap-1 pt-2 group-data-[collapsible=icon]:flex">
