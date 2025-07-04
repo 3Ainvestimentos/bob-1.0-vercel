@@ -995,7 +995,7 @@ function ChatPageContent() {
                     <div className="group-data-[collapsible=icon]:hidden">
                          {groups.map((group) => (
                             <div key={group.id} className="space-y-1">
-                                <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground">
+                                <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent">
                                     <Folder className="mr-2 h-4 w-4 shrink-0" />
                                     <span className="truncate font-bold">{group.name}</span>
                                      <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
