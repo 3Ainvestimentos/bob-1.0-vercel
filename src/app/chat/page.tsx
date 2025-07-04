@@ -67,6 +67,8 @@ import { useAuth } from '@/context/AuthProvider';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import {
+  ChevronsLeft,
+  ChevronsRight,
   FileText,
   Folder,
   FolderPlus,
@@ -389,7 +391,7 @@ function ChatPageContent() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { setTheme } = useTheme();
-  const { state: sidebarState, isMobile } = useSidebar();
+  const { state: sidebarState, isMobile, toggleSidebar } = useSidebar();
   const { toast } = useToast();
 
 
@@ -1122,14 +1124,6 @@ function ChatPageContent() {
             <SidebarFooter>
                 <SidebarMenu className="items-center group-data-[collapsible=expanded]:items-start">
                     <SidebarMenuItem>
-                        <SidebarMenuButton asChild tooltip="Guias e FAQ">
-                            <a href="#">
-                                <HelpCircle />
-                                <span className="min-w-0 flex-1">Guias e FAQ</span>
-                            </a>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
                       <DropdownMenu>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1163,21 +1157,36 @@ function ChatPageContent() {
                             <Settings className="mr-2 h-4 w-4" />
                             <span>Sistema</span>
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                              <a href="#">
+                                  <HelpCircle className="mr-2 h-4 w-4" />
+                                  <span>Guias e FAQ</span>
+                              </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {isAuthenticated ? (
+                            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                <LogOut className="mr-2 h-4 w-4" />
+                                <span>Sair</span>
+                            </DropdownMenuItem>
+                            ) : (
+                            <DropdownMenuItem onClick={() => router.push('/')}>
+                                <LogIn className="mr-2 h-4 w-4" />
+                                <span >Ir para Login</span>
+                            </DropdownMenuItem>
+                            )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </SidebarMenuItem>
                      <SidebarMenuItem>
-                       {isAuthenticated ? (
-                        <SidebarMenuButton onClick={handleSignOut} tooltip="Sair">
-                            <LogOut />
-                            <span className="min-w-0 flex-1">Sair</span>
+                        <SidebarMenuButton 
+                            onClick={toggleSidebar} 
+                            tooltip={sidebarState === 'expanded' ? 'Recolher' : 'Expandir'}
+                        >
+                            {sidebarState === 'expanded' ? <ChevronsLeft /> : <ChevronsRight />}
+                            <span className="min-w-0 flex-1">Recolher</span>
                         </SidebarMenuButton>
-                        ) : (
-                        <SidebarMenuButton onClick={() => router.push('/')} tooltip="Ir para Login">
-                            <LogIn />
-                            <span className="min-w-0 flex-1">Ir para Login</span>
-                        </SidebarMenuButton>
-                        )}
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarFooter>
