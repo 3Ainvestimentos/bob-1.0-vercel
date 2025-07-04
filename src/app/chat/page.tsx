@@ -962,7 +962,7 @@ function ChatPageContent() {
 
 
         <Sidebar>
-            <SidebarContent>
+            <SidebarContent className="pt-2">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto" variant="secondary">
