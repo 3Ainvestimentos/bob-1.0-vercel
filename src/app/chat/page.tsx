@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
   Sidebar,
@@ -997,67 +998,89 @@ function ChatPageContent() {
                     </SidebarMenuItem>
                 </SidebarMenu>
 
-                <div className="mt-4 flex-1 space-y-1 overflow-y-auto px-3">
-                {isSidebarLoading ? (
-                    <div className="space-y-2 px-2">
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                    </div>
-                ) : (
-                    <>
-                    <div className="group-data-[collapsible=icon]:hidden">
-                         {groups.map((group) => (
-                            <div key={group.id} className="space-y-1">
-                                <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent">
-                                    <Folder className="mr-2 h-4 w-4 shrink-0" />
-                                    <span className="truncate font-bold">{group.name}</span>
-                                     <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem onClick={() => handleRenameRequest(group.id, 'group', group.name)}>
-                                                <Pencil className="mr-2 h-4 w-4" />
-                                                <span>Renomear Projeto</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => handleDeleteRequest(group.id)}
-                                                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                            >
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                <span>Excluir Projeto</span>
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-1 pl-6">
-                                    {conversations
-                                    .filter((c) => c.groupId === group.id)
-                                    .map((convo) => (
-                                        <ConversationItem
-                                        key={convo.id}
-                                        conversation={convo}
-                                        isActive={activeChatId === convo.id}
-                                        groups={groups}
-                                        onSelect={handleSelectConversation}
-                                        onMove={handleMoveConversation}
-                                        onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
-                                        onDelete={handleDeleteConvoRequest}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                         ))}
-                        
-                        {ungroupedConversations.length > 0 && (
-                            <div className="flex flex-col gap-1 pt-2">
-                                {ungroupedConversations.map((convo) => (
-                                <ConversationItem
+                <ScrollArea className="mt-4 flex-1">
+                  <div className="space-y-1 px-3">
+                  {isSidebarLoading ? (
+                      <div className="space-y-2 px-2">
+                      <Skeleton className="h-8 w-full" />
+                      <Skeleton className="h-8 w-full" />
+                      <Skeleton className="h-8 w-full" />
+                      </div>
+                  ) : (
+                      <>
+                      <div className="group-data-[collapsible=icon]:hidden">
+                          {groups.map((group) => (
+                              <div key={group.id} className="space-y-1">
+                                  <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent">
+                                      <Folder className="mr-2 h-4 w-4 shrink-0" />
+                                      <span className="truncate font-bold">{group.name}</span>
+                                      <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
+                                      <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                  <MoreHorizontal className="h-4 w-4" />
+                                              </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent>
+                                              <DropdownMenuItem onClick={() => handleRenameRequest(group.id, 'group', group.name)}>
+                                                  <Pencil className="mr-2 h-4 w-4" />
+                                                  <span>Renomear Projeto</span>
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                  onClick={() => handleDeleteRequest(group.id)}
+                                                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                              >
+                                                  <Trash2 className="mr-2 h-4 w-4" />
+                                                  <span>Excluir Projeto</span>
+                                              </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                      </DropdownMenu>
+                                      </div>
+                                  </div>
+                                  <div className="flex flex-col gap-1 pl-6">
+                                      {conversations
+                                      .filter((c) => c.groupId === group.id)
+                                      .map((convo) => (
+                                          <ConversationItem
+                                          key={convo.id}
+                                          conversation={convo}
+                                          isActive={activeChatId === convo.id}
+                                          groups={groups}
+                                          onSelect={handleSelectConversation}
+                                          onMove={handleMoveConversation}
+                                          onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
+                                          onDelete={handleDeleteConvoRequest}
+                                          />
+                                      ))}
+                                  </div>
+                              </div>
+                          ))}
+                          
+                          {ungroupedConversations.length > 0 && (
+                              <div className="flex flex-col gap-1 pt-2">
+                                  {ungroupedConversations.map((convo) => (
+                                  <ConversationItem
+                                      key={convo.id}
+                                      conversation={convo}
+                                      isActive={activeChatId === convo.id}
+                                      groups={groups}
+                                      onSelect={handleSelectConversation}
+                                      onMove={handleMoveConversation}
+                                      onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
+                                      onDelete={handleDeleteConvoRequest}
+                                      />
+                                  ))}
+                              </div>
+                          )}
+                      </div>
+                      
+                      <div className="hidden flex-col gap-1 pt-2 group-data-[collapsible=icon]:flex">
+                        {groups.map((group) => (
+                            <React.Fragment key={group.id}>
+                              {conversations
+                                .filter((c) => c.groupId === group.id)
+                                .map((convo) => (
+                                  <ConversationItem
                                     key={convo.id}
                                     conversation={convo}
                                     isActive={activeChatId === convo.id}
@@ -1066,54 +1089,34 @@ function ChatPageContent() {
                                     onMove={handleMoveConversation}
                                     onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
                                     onDelete={handleDeleteConvoRequest}
-                                    />
+                                  />
                                 ))}
-                            </div>
-                        )}
-                    </div>
-                    
-                    <div className="hidden flex-col gap-1 pt-2 group-data-[collapsible=icon]:flex">
-                      {groups.map((group) => (
-                          <React.Fragment key={group.id}>
-                            {conversations
-                              .filter((c) => c.groupId === group.id)
-                              .map((convo) => (
-                                <ConversationItem
-                                  key={convo.id}
-                                  conversation={convo}
-                                  isActive={activeChatId === convo.id}
-                                  groups={groups}
-                                  onSelect={handleSelectConversation}
-                                  onMove={handleMoveConversation}
-                                  onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
-                                  onDelete={handleDeleteConvoRequest}
-                                />
-                              ))}
-                            <Separator className="my-1" />
-                          </React.Fragment>
+                              <Separator className="my-1" />
+                            </React.Fragment>
+                          ))}
+                        {ungroupedConversations.map((convo) => (
+                          <ConversationItem
+                            key={convo.id}
+                            conversation={convo}
+                            isActive={activeChatId === convo.id}
+                            groups={groups}
+                            onSelect={handleSelectConversation}
+                            onMove={handleMoveConversation}
+                            onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
+                            onDelete={handleDeleteConvoRequest}
+                          />
                         ))}
-                      {ungroupedConversations.map((convo) => (
-                        <ConversationItem
-                          key={convo.id}
-                          conversation={convo}
-                          isActive={activeChatId === convo.id}
-                          groups={groups}
-                          onSelect={handleSelectConversation}
-                          onMove={handleMoveConversation}
-                          onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
-                          onDelete={handleDeleteConvoRequest}
-                        />
-                      ))}
-                    </div>
+                      </div>
 
-                    {conversations.length === 0 && !isSidebarLoading && (
-                        <p className="px-2 text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">
-                            Nenhuma conversa ainda.
-                        </p>
-                    )}
-                    </>
-                )}
-                </div>
+                      {conversations.length === 0 && !isSidebarLoading && (
+                          <p className="px-2 text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">
+                              Nenhuma conversa ainda.
+                          </p>
+                      )}
+                      </>
+                  )}
+                  </div>
+                </ScrollArea>
             </SidebarContent>
 
             <SidebarFooter>
