@@ -75,6 +75,7 @@ import {
   LogOut,
   Mail,
   MessageSquare,
+  MessageSquareText,
   Mic,
   Moon,
   MoreHorizontal,
@@ -428,6 +429,19 @@ function ChatPageContent() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const theme = user?.email?.endsWith('@3ainvestimentos.com.br')
+    ? 'theme-blue'
+    : user?.email?.endsWith('@3ariva.com.br')
+    ? 'theme-green'
+    : '';
+
+  useEffect(() => {
+    document.body.classList.remove('theme-blue', 'theme-green');
+    if (theme) {
+      document.body.classList.add(theme);
+    }
+  }, [theme]);
 
   const fetchSidebarData = useCallback(async () => {
     if (!user) return;
@@ -1468,7 +1482,7 @@ function ConversationItem({
             className="h-auto flex-1 justify-start whitespace-normal py-2"
             tooltip={conversation.title}
         >
-            <MessageSquare />
+            <MessageSquareText />
             <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
         </SidebarMenuButton>
 

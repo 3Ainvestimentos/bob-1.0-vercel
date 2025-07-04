@@ -15,7 +15,7 @@
     --secondary: 220 15% 90%;
     --secondary-foreground: 220 10% 20%;
     --muted: 220 20% 94%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted-foreground: 240 4% 35%;
     --accent: 220 20% 94%;
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
@@ -64,6 +64,34 @@
     --sidebar-ring: 210 40% 98%;
     --user-bubble: 221.2 83.2% 53.3%;
     --user-bubble-foreground: 210 40% 98%;
+  }
+
+  .theme-blue {
+    --primary: 210 89% 55%;
+    --primary-foreground: 210 40% 98%;
+    --user-bubble: 210 89% 55%;
+    --user-bubble-foreground: 210 40% 98%;
+  }
+
+  .dark.theme-blue {
+    --primary: 210 89% 65%;
+    --primary-foreground: 220 10% 10%;
+    --user-bubble: 210 89% 65%;
+    --user-bubble-foreground: 220 10% 10%;
+  }
+
+  .theme-green {
+    --primary: 142 76% 36%;
+    --primary-foreground: 142 76% 96%;
+    --user-bubble: 142 76% 36%;
+    --user-bubble-foreground: 142 76% 96%;
+  }
+
+  .dark.theme-green {
+    --primary: 142 66% 46%;
+    --primary-foreground: 142 76% 96%;
+    --user-bubble: 142 66% 46%;
+    --user-bubble-foreground: 142 76% 96%;
   }
 }
 
