@@ -962,18 +962,6 @@ function ChatPageContent() {
 
 
         <Sidebar>
-            <SidebarHeader className="flex h-16 items-center border-b border-sidebar-border p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-                 <div className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:w-auto">
-                    <Avatar>
-                        <AvatarFallback>{userInitials}</AvatarFallback>
-                    </Avatar>
-                    <div className="grid min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                        <p className="truncate font-semibold">{userName}</p>
-                        <p className="truncate text-sm text-muted-foreground">{userEmail}</p>
-                    </div>
-                </div>
-            </SidebarHeader>
-
             <SidebarContent>
                 <SidebarMenu>
                     <SidebarMenuItem>
@@ -1188,10 +1176,6 @@ function ChatPageContent() {
         </Sidebar>
 
         <main className="flex flex-1 flex-col bg-background">
-            <header className="flex h-16 items-center border-b bg-background px-4 lg:px-6">
-                <SidebarTrigger />
-            </header>
-
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             <div className="mx-auto flex h-full max-w-5xl flex-col">
                 {messages.length === 0 && !isLoading ? (
