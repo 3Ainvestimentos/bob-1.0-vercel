@@ -965,19 +965,19 @@ function ChatPageContent() {
             <SidebarContent>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton 
-                            onClick={handleNewChat}
-                            isActive={activeChatId === null}
-                            tooltip="Nova Conversa"
-                        >
-                            <Pencil />
-                            <span>Nova conversa</span>
+                        <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto" variant="secondary">
+                            <FolderPlus />
+                            <span>Novo Projeto</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                         <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto">
-                            <FolderPlus />
-                            <span>Novo Projeto</span>
+                        <SidebarMenuButton 
+                            onClick={handleNewChat}
+                            tooltip="Nova Conversa"
+                            variant="secondary"
+                        >
+                            <Pencil />
+                            <span>Nova conversa</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
