@@ -350,8 +350,35 @@ async function updateConversationTitle(userId: string, chatId: string, newTitle:
 
 async function deleteConversation(userId: string, chatId: string): Promise<void> {
     if (!userId || !chatId) throw new Error('User ID and Chat ID are required.');
+
     const chatRef = doc(db, 'users', userId, 'chats', chatId);
-    await deleteDoc(chatRef);
+    const archivedChatRef = doc(db, 'archived_chats', chatId);
+
+    try {
+        const chatSnap = await getDoc(chatRef);
+        if (chatSnap.exists()) {
+            const chatData = chatSnap.data();
+            
+            const archivedData = {
+                ...chatData,
+                archivedAt: serverTimestamp(),
+                deletedBy: userId,
+            };
+            
+            // Use a batch write to make the move atomic
+            const batch = writeBatch(db);
+            batch.set(archivedChatRef, archivedData); // Copy to archive
+            batch.delete(chatRef); // Delete original
+            
+            await batch.commit();
+
+        } else {
+            console.warn(`Conversation with ID ${chatId} not found to archive. It might have been already deleted.`);
+        }
+    } catch (error) {
+        console.error("Error archiving and deleting conversation:", error);
+        throw new Error("Não foi possível excluir a conversa. Tente novamente.");
+    }
 }
 
 
