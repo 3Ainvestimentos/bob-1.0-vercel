@@ -168,7 +168,7 @@ async function logRegeneratedQuestion(
         return;
     };
     try {
-        const regeneratedRef = collection(db, 'regenerated_answers');
+        const regeneratedRef = collection(db, 'users', userId, 'regenerated_answers');
         await addDoc(regeneratedRef, {
             userId,
             chatId,
