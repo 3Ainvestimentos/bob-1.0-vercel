@@ -67,6 +67,7 @@ import { useAuth } from '@/context/AuthProvider';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import {
+  AlertTriangle,
   Bot,
   ChevronsLeft,
   ChevronsRight,
@@ -155,6 +156,29 @@ interface FeedbackDetails {
 
 
 // ---- Firestore Functions ----
+
+async function reportLegalIssue(
+  userId: string,
+  chatId: string,
+  messageId: string,
+  userQuery: string,
+  assistantResponse: string
+) {
+  if (!userId || !chatId || !messageId) {
+    throw new Error('User ID, Chat ID, and Message ID are required.');
+  }
+  
+  const reportRef = collection(db, 'legal_issue_alerts');
+  await addDoc(reportRef, {
+    userId,
+    chatId,
+    messageId,
+    userQuery,
+    assistantResponse,
+    reportedAt: serverTimestamp(),
+    status: 'new',
+  });
+}
 
 async function logRegeneratedQuestion(
     userId: string,
@@ -459,6 +483,9 @@ function ChatPageContent() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
   const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
+
+  const [isLegalReportDialogOpen, setIsLegalReportDialogOpen] = useState(false);
+  const [messageToReport, setMessageToReport] = useState<Message | null>(null);
 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -952,6 +979,54 @@ function ChatPageContent() {
     }
   };
 
+  const handleReportLegalIssueRequest = (message: Message) => {
+      setMessageToReport(message);
+      setIsLegalReportDialogOpen(true);
+  };
+
+  const handleConfirmLegalReport = async () => {
+    if (!messageToReport || !user || !activeChatId) {
+        toast({
+            variant: 'destructive',
+            title: 'Erro',
+            description: 'Não foi possível enviar o alerta. Faltam informações essenciais.',
+        });
+        return;
+    }
+
+    try {
+        const messageIndex = messages.findIndex(m => m.id === messageToReport.id);
+        if (messageIndex < 1) {
+            throw new Error("Não foi possível encontrar a pergunta do usuário associada a esta resposta.");
+        }
+        const userQuery = messages[messageIndex - 1].content;
+
+        await reportLegalIssue(
+            user.uid,
+            activeChatId,
+            messageToReport.id,
+            userQuery,
+            messageToReport.content
+        );
+
+        toast({
+            title: "Alerta Enviado",
+            description: "O problema jurídico foi reportado à equipe de conformidade com sucesso.",
+        });
+
+    } catch (err: any) {
+        console.error("Error reporting legal issue:", err);
+        toast({
+            variant: 'destructive',
+            title: 'Erro ao Enviar',
+            description: `Não foi possível reportar o problema: ${err.message}`,
+        });
+    } finally {
+        setIsLegalReportDialogOpen(false);
+        setMessageToReport(null);
+    }
+  };
+
 
   if (authLoading) {
     return (
@@ -1068,6 +1143,23 @@ function ChatPageContent() {
                     <AlertDialogCancel onClick={() => setConvoToDelete(null)}>Cancelar</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteConvoConfirm} className={buttonVariants({ variant: "destructive" })}>
                         Excluir
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isLegalReportDialogOpen} onOpenChange={setIsLegalReportDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Informar Problema Jurídico</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Você tem certeza de que deseja reportar um problema jurídico sobre esta resposta? Esta ação não pode ser desfeita e notificará a equipe de conformidade.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setMessageToReport(null)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmLegalReport} className={buttonVariants({ variant: "destructive" })}>
+                        Confirmar e Enviar
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -1443,9 +1535,23 @@ function ChatPageContent() {
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyToClipboard(msg.content)}>
                                                     <Share2 className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent>
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleReportLegalIssueRequest(msg)}
+                                                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                                        >
+                                                            <AlertTriangle className="mr-2 h-4 w-4" />
+                                                            <span>Informar problema jurídico</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+
                                                 {feedbacks[msg.id] === 'negative' && (
                                                     <Button variant="link" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => handleOpenFeedbackDialog(msg)}>
                                                         Adicionar feedback
