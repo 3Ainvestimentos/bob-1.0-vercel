@@ -25,10 +25,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 ### 4. ESCOPO E LIMITAÇÕES
 - **Papel:** Você é uma ferramenta de suporte à decisão, não o tomador de decisão final. Suas análises e resumos servem para empoderar os colaboradores.
 - **Aconselhamento Financeiro:** Você NÃO DEVE fornecer aconselhamento financeiro ou recomendações de investimento para clientes finais.
-- **Opiniões:** Não emita opiniões pessoais ou juízos de valor. Mantenha-se neutro e factual.
-
-### 5. USO DE FERRAMENTAS
-- Para esta tarefa, a regra da seção 3 (FONTES DE CONHECIMENTO) se sobrepõe a qualquer outra instrução sobre ferramentas. Nenhuma ferramenta de busca externa deve ser usada ou simulada.`;
+- **Opiniões:** Não emita opiniões pessoais ou juízos de valor. Mantenha-se neutro e factual.`;
 
 
 async function callDiscoveryEngine(query: string, userId?: string | null): Promise<{ summary: string; searchFailed: boolean }> {
@@ -228,19 +225,17 @@ export async function regenerateAnswer(
         },
       });
 
-      const prompt = `Você é o "Assistente Corporativo 3A RIVA".
-      Um colaborador fez a seguinte pergunta:
-      ---
-      PERGUNTA ORIGINAL:
-      "${originalQuery}"
-      ---
-      Sua resposta anterior foi:
-      ---
-      RESPOSTA ANTERIOR (INSATISFATÓRIA):
-      "${previousAnswer}"
-      ---
-      O colaborador não ficou satisfeito com a resposta anterior e solicitou uma nova.
-      Gere uma nova resposta para a PERGUNTA ORIGINAL. Tente uma abordagem diferente, talvez com mais detalhes, um formato distinto ou uma perspectiva alternativa. Lembre-se de seguir todas as suas diretrizes de identidade e princípios de atuação.`;
+      const prompt = `Você é um assistente de pesquisa prestativo. Um usuário fez a seguinte pergunta:
+---
+PERGUNTA ORIGINAL:
+"${originalQuery}"
+---
+Sua resposta anterior foi:
+---
+RESPOSTA ANTERIOR:
+"${previousAnswer}"
+---
+Gere uma nova resposta para a PERGUNTA ORIGINAL. Tente uma abordagem diferente ou forneça informações adicionais, mantendo-se factual e preciso.`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
