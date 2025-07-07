@@ -147,7 +147,7 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
 }
 
 
-async function callGemini(query: string): Promise<{ summary: string; searchFailed: boolean }> {
+async function callGemini(query: string): Promise<{ summary: string; searchFailed: boolean; tokenCount?: number }> {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) {
     throw new Error("A variável de ambiente GEMINI_API_KEY não está definida. Por favor, adicione-a ao seu arquivo .env.");
@@ -169,8 +169,9 @@ Pergunta: "${query}"`;
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    const tokenCount = response.usageMetadata?.totalTokenCount;
 
-    return { summary: text, searchFailed: false };
+    return { summary: text, searchFailed: false, tokenCount };
 
   } catch (error: any) {
     console.error("Error calling Gemini API:", error);
@@ -186,7 +187,7 @@ export async function askAssistant(
   query: string,
   options: { useWebSearch?: boolean } = {},
   userId?: string | null
-): Promise<{ summary: string; searchFailed: boolean }> {
+): Promise<{ summary: string; searchFailed: boolean; tokenCount?: number }> {
   const { useWebSearch = false } = options;
 
   try {
@@ -205,7 +206,7 @@ export async function askAssistant(
 export async function regenerateAnswer(
   originalQuery: string,
   previousAnswer: string
-): Promise<{ summary: string; searchFailed: boolean }> {
+): Promise<{ summary: string; searchFailed: boolean; tokenCount?: number }> {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) {
     throw new Error(
@@ -241,8 +242,9 @@ Gere uma nova resposta para a PERGUNTA ORIGINAL. Tente uma abordagem diferente, 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    const tokenCount = response.usageMetadata?.totalTokenCount;
 
-    return { summary: text, searchFailed: false };
+    return { summary: text, searchFailed: false, tokenCount };
   } catch (error: any) {
     console.error('Error calling Gemini API for regeneration:', error);
     if (error.message.includes('API key not valid')) {

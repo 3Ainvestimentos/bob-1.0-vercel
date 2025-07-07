@@ -136,6 +136,7 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  tokenCount?: number;
 }
 
 export interface Conversation {
@@ -619,6 +620,7 @@ function ChatPageContent() {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: assistantResponse.summary,
+        tokenCount: assistantResponse.tokenCount,
       };
 
       if (assistantResponse.searchFailed) {
@@ -699,6 +701,7 @@ function ChatPageContent() {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: assistantResponse.summary,
+        tokenCount: assistantResponse.tokenCount,
       };
 
       const finalMessages = [...messagesWithUserQuery, assistantMessage];
@@ -877,7 +880,7 @@ function ChatPageContent() {
     setError(null);
 
     try {
-      const { summary: newSummary } = await regenerateAnswer(userQuery, assistantResponse);
+      const { summary: newSummary, tokenCount } = await regenerateAnswer(userQuery, assistantResponse);
       
       // Log the regeneration event for future analysis
       await logRegeneratedQuestion(
@@ -892,6 +895,7 @@ function ChatPageContent() {
         id: crypto.randomUUID(), // New ID for the new message
         role: 'assistant',
         content: newSummary,
+        tokenCount: tokenCount,
       };
 
       // Replace the old message and the ones after it with the new response
@@ -1592,7 +1596,7 @@ function ChatPageContent() {
                                                 )}
                                             </div>
                                             <div className="text-xs text-muted-foreground">
-                                                Tokens usados: 9 {/* Placeholder */}
+                                                Tokens usados: {msg.tokenCount ?? 9}
                                             </div>
                                         </div>
                                     )}
