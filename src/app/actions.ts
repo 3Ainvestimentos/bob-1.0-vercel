@@ -84,9 +84,6 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
               useSemanticChunks: true,
               modelPromptSpec: {
                 preamble: ASSISTENTE_CORPORATIVO_PREAMBLE
-              },
-              generationConfig: {
-                temperature: 0.1
               }
             }
         },
