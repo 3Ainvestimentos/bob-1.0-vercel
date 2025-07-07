@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permite que usuários leiam e escrevam apenas em seus próprios dados
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Regra para a nova coleção de arquivo morto
+    match /archived_chats/{chatId} {
+      // Ninguém pode ler, atualizar ou excluir o arquivo morto pelo cliente.
+      allow read, update, delete: if false;
+
+      // Um usuário autenticado pode CRIAR (arquivar) um chat se o campo
+      // 'deletedBy' corresponder ao seu próprio ID de usuário.
+      allow create: if request.auth != null && request.resource.data.deletedBy == request.auth.uid;
+    }
+
+    // Permite que qualquer usuário autenticado crie um alerta jurídico.
+    match /legal_issue_alerts/{alertId} {
+      allow create: if request.auth != null;
+
+      // Nega explicitamente que usuários possam ler, atualizar ou deletar alertas.
+      // Isso garante que apenas seu backend ou administradores possam ver os alertas.
+      allow read, update, delete: if false;
+    }
+  }
+}
