@@ -3,6 +3,8 @@
 
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { db } from '@/lib/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
 
@@ -206,8 +208,6 @@ export async function regenerateAnswer(
   originalQuery: string,
   userId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
-  // Regeneration always starts with the internal search flow, as requested by the user.
-  // If this search fails, the UI will then present the option to search the web.
   try {
     return await callDiscoveryEngine(originalQuery, userId);
   } catch (error: any) {
@@ -255,5 +255,35 @@ export async function generateSuggestedQuestions(
   } catch (error: any) {
     console.error("Erro ao gerar sugestões:", error.message);
     return []; 
+  }
+}
+
+
+export async function logDlpAlert(
+  userId: string,
+  chatId: string,
+  originalQuery: string,
+  findings: any[]
+) {
+  if (!userId || !findings || findings.length === 0) {
+    return;
+  }
+  try {
+    const alertRef = collection(db, 'dlp_alerts');
+    await addDoc(alertRef, {
+      userId,
+      chatId,
+      originalQuery,
+      findings: findings.map((f) => ({
+        infoType: f.infoType?.name || 'Desconhecido',
+        likelihood: f.likelihood || 'Desconhecido',
+        quote: f.quote || 'N/A',
+      })),
+      detectedAt: serverTimestamp(),
+      status: 'new',
+    });
+  } catch (error) {
+    console.error('Error logging DLP alert to Firestore:', error);
+    // Fail silently. Alert logging should not interrupt the user experience.
   }
 }
