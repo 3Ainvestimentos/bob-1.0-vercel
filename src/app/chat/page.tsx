@@ -136,7 +136,8 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  tokenCount?: number;
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
 }
 
 export interface Conversation {
@@ -621,8 +622,12 @@ function ChatPageContent() {
         role: 'assistant',
         content: assistantResponse.summary,
       };
-      if (assistantResponse.tokenCount !== undefined) {
-        assistantMessage.tokenCount = assistantResponse.tokenCount;
+
+      if (assistantResponse.promptTokenCount !== undefined) {
+        assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
+      }
+      if (assistantResponse.candidatesTokenCount !== undefined) {
+        assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
       }
 
       if (assistantResponse.searchFailed) {
@@ -704,8 +709,11 @@ function ChatPageContent() {
         role: 'assistant',
         content: assistantResponse.summary,
       };
-      if (assistantResponse.tokenCount !== undefined) {
-        assistantMessage.tokenCount = assistantResponse.tokenCount;
+      if (assistantResponse.promptTokenCount !== undefined) {
+        assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
+      }
+      if (assistantResponse.candidatesTokenCount !== undefined) {
+        assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
       }
 
       const finalMessages = [...messagesWithUserQuery, assistantMessage];
@@ -884,7 +892,7 @@ function ChatPageContent() {
     setError(null);
 
     try {
-      const { summary: newSummary, tokenCount } = await regenerateAnswer(userQuery, assistantResponse);
+      const { summary: newSummary, promptTokenCount, candidatesTokenCount } = await regenerateAnswer(userQuery, assistantResponse);
       
       // Log the regeneration event for future analysis
       await logRegeneratedQuestion(
@@ -900,8 +908,11 @@ function ChatPageContent() {
         role: 'assistant',
         content: newSummary,
       };
-      if (tokenCount !== undefined) {
-          newAssistantMessage.tokenCount = tokenCount;
+      if (promptTokenCount !== undefined) {
+          newAssistantMessage.promptTokenCount = promptTokenCount;
+      }
+      if (candidatesTokenCount !== undefined) {
+          newAssistantMessage.candidatesTokenCount = candidatesTokenCount;
       }
 
       // Replace the old message and the ones after it with the new response
@@ -1602,7 +1613,9 @@ function ChatPageContent() {
                                                 )}
                                             </div>
                                             <div className="text-xs text-muted-foreground">
-                                                Tokens usados: {msg.tokenCount ?? 9}
+                                                {msg.promptTokenCount !== undefined && msg.candidatesTokenCount !== undefined
+                                                ? `Entrada: ${msg.promptTokenCount} | Saída: ${msg.candidatesTokenCount}`
+                                                : 'Tokens usados: 9'}
                                             </div>
                                         </div>
                                     )}
