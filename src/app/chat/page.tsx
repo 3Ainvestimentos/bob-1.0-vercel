@@ -389,9 +389,20 @@ async function saveConversation(
 
   const conversationsRef = collection(db, 'users', userId, 'chats');
 
+  // Calculate total tokens for the conversation for analytics
+  const totalTokens = messages.reduce((acc, msg) => {
+    const promptTokens = msg.promptTokenCount || 0;
+    const candidateTokens = msg.candidatesTokenCount || 0;
+    return acc + promptTokens + candidateTokens;
+  }, 0);
+
   if (chatId) {
     const chatRef = doc(conversationsRef, chatId);
-    await updateDoc(chatRef, { messages });
+    // Update the messages array and the totalTokens count
+    await updateDoc(chatRef, { 
+      messages,
+      totalTokens 
+    });
     return chatId;
   } else {
     const firstUserMessage =
@@ -404,6 +415,7 @@ async function saveConversation(
     const newChatRef = await addDoc(conversationsRef, {
       title,
       messages,
+      totalTokens, // Add totalTokens to new conversations
       createdAt: serverTimestamp(),
       groupId: null,
     });
