@@ -27,8 +27,12 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 - **Aconselhamento Financeiro:** Você NÃO DEVE fornecer aconselhamento financeiro ou recomendações de investimento para clientes finais.
 - **Opiniões:** Não emita opiniões pessoais ou juízos de valor. Mantenha-se neutro e factual.`;
 
+function estimateTokens(text: string): number {
+  // Uma aproximação comum é que 1 token equivale a cerca de 4 caracteres.
+  return Math.ceil((text || '').length / 4);
+}
 
-async function callDiscoveryEngine(query: string, userId?: string | null): Promise<{ summary: string; searchFailed: boolean }> {
+async function callDiscoveryEngine(query: string, userId?: string | null): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
     const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
     if (!serviceAccountKeyJson) {
       throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida no arquivo .env.`);
@@ -102,11 +106,16 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
       }
 
       const data = await apiResponse.json();
+      const promptTokenCount = estimateTokens(ASSISTENTE_CORPORATIVO_PREAMBLE + query);
       
       if (!data.summary || !data.results || data.results.length === 0) {
+          const summary = "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?";
+          const candidatesTokenCount = estimateTokens(summary);
           return { 
-              summary: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?", 
-              searchFailed: true 
+              summary, 
+              searchFailed: true,
+              promptTokenCount,
+              candidatesTokenCount
           };
       }
 
@@ -127,13 +136,18 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
       );
 
       if (searchFailed) {
+        const failedSummary = "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?";
+        const candidatesTokenCount = estimateTokens(failedSummary);
         return { 
-          summary: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?", 
-          searchFailed: true 
+          summary: failedSummary, 
+          searchFailed: true,
+          promptTokenCount,
+          candidatesTokenCount
         };
       }
 
-      return { summary, searchFailed: false };
+      const candidatesTokenCount = estimateTokens(summary);
+      return { summary, searchFailed: false, promptTokenCount, candidatesTokenCount };
 
     } catch (error: any) {
       console.error("Error in callDiscoveryEngine:", error.message);
@@ -191,11 +205,9 @@ export async function askAssistant(
 
   try {
     if (useWebSearch) {
-      const { summary, searchFailed, promptTokenCount, candidatesTokenCount } = await callGemini(query);
-      return { summary, searchFailed, promptTokenCount, candidatesTokenCount };
+      return await callGemini(query);
     } else {
-      const { summary, searchFailed } = await callDiscoveryEngine(query, userId);
-      return { summary, searchFailed };
+      return await callDiscoveryEngine(query, userId);
     }
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
@@ -253,10 +265,8 @@ Gere uma nova resposta para a PERGUNTA ORIGINAL. Tente uma abordagem diferente o
     }
   } else {
     // For internal search, regenerating means calling the same function again.
-    // The result will likely be the same unless the underlying data has changed.
     try {
-      const { summary, searchFailed } = await callDiscoveryEngine(originalQuery, userId);
-      return { summary, searchFailed };
+      return await callDiscoveryEngine(originalQuery, userId);
     } catch (error: any) {
       console.error("Error in regenerateAnswer (internal):", error.message);
       throw new Error(`Ocorreu um erro ao se comunicar com o assistente para regenerar a resposta: ${error.message}`);
