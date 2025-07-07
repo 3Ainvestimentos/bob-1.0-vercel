@@ -623,11 +623,11 @@ function ChatPageContent() {
         content: assistantResponse.summary,
       };
 
-      if (assistantResponse.promptTokenCount) {
-          assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
+      if (typeof assistantResponse.promptTokenCount === 'number') {
+        assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
       }
-      if (assistantResponse.candidatesTokenCount) {
-          assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
+      if (typeof assistantResponse.candidatesTokenCount === 'number') {
+        assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
       }
 
       if (assistantResponse.searchFailed) {
@@ -709,11 +709,11 @@ function ChatPageContent() {
         role: 'assistant',
         content: assistantResponse.summary,
       };
-      if (assistantResponse.promptTokenCount) {
-          assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
+      if (typeof assistantResponse.promptTokenCount === 'number') {
+        assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
       }
-      if (assistantResponse.candidatesTokenCount) {
-          assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
+      if (typeof assistantResponse.candidatesTokenCount === 'number') {
+        assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
       }
 
       const finalMessages = [...messagesWithUserQuery, assistantMessage];
@@ -887,12 +887,20 @@ function ChatPageContent() {
 
     const userQuery = messages[messageIndex - 1].content;
     const assistantResponse = messages[messageIndex].content;
+    const messageToRegenerate = messages[messageIndex];
+
+    const useWebSearch = typeof messageToRegenerate.promptTokenCount === 'number';
 
     setRegeneratingMessageId(assistantMessageId);
     setError(null);
 
     try {
-      const { summary: newSummary, promptTokenCount, candidatesTokenCount } = await regenerateAnswer(userQuery, assistantResponse);
+      const { summary: newSummary, promptTokenCount, candidatesTokenCount } = await regenerateAnswer(
+        userQuery,
+        assistantResponse,
+        { useWebSearch },
+        user.uid
+      );
       
       // Log the regeneration event for future analysis
       await logRegeneratedQuestion(
@@ -908,10 +916,10 @@ function ChatPageContent() {
         role: 'assistant',
         content: newSummary,
       };
-      if (promptTokenCount) {
+      if (typeof promptTokenCount === 'number') {
           newAssistantMessage.promptTokenCount = promptTokenCount;
       }
-      if (candidatesTokenCount) {
+      if (typeof candidatesTokenCount === 'number') {
           newAssistantMessage.candidatesTokenCount = candidatesTokenCount;
       }
 
@@ -1583,16 +1591,9 @@ function ChatPageContent() {
                                                 <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'negative' ? 'bg-destructive/10 text-destructive' : ''}`} onClick={() => handleFeedback(msg, 'negative')}>
                                                     <ThumbsDown className="h-4 w-4" />
                                                 </Button>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRegenerate(msg.id)} disabled={isLoading || !!regeneratingMessageId}>
-                                                            <RefreshCw className="h-4 w-4" />
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        Regenerar usando conhecimento geral
-                                                    </TooltipContent>
-                                                </Tooltip>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRegenerate(msg.id)} disabled={isLoading || !!regeneratingMessageId}>
+                                                    <RefreshCw className="h-4 w-4" />
+                                                </Button>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyToClipboard(msg.content)}>
                                                     <Share2 className="h-4 w-4" />
                                                 </Button>
@@ -1620,7 +1621,7 @@ function ChatPageContent() {
                                                 )}
                                             </div>
                                             <div className="text-xs text-muted-foreground">
-                                                {msg.promptTokenCount !== undefined && msg.candidatesTokenCount !== undefined
+                                                {typeof msg.promptTokenCount === 'number' && typeof msg.candidatesTokenCount === 'number'
                                                 ? `Tokens usados: ${msg.promptTokenCount + msg.candidatesTokenCount}`
                                                 : 'Tokens usados: 9'}
                                             </div>
