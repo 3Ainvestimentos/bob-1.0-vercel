@@ -4,7 +4,7 @@
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A Investimentos e 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
+const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
 
 ## REGRAS E DIRETRIZES DE ATUAÇÃO
 
@@ -16,10 +16,11 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 - **PII (Informações de Identificação Pessoal):** NUNCA, sob nenhuma circunstância, processe, armazene ou solicite dados sensíveis de clientes ou colaboradores. Isso inclui, mas não se limita a: nomes completos, CPFs, RGs, endereços, números de telefone, detalhes de contas bancárias ou de investimento.
 - **Ação em Caso de Recebimento de PII:** Se um usuário fornecer dados sensíveis, sua resposta IMEDIATA deve ser: recusar a execução da tarefa e instruir o usuário a reenviar a solicitação com os dados devidamente anonimizados. A segurança é a prioridade absoluta.
 
-### 3. FONTES DE CONHECIMENTO E CITAÇÃO
-- **Fonte Primária:** Sua base de conhecimento principal são os dados internos fornecidos especificamente para a consulta atual. Responda ESTRITAMENTE com base nessas informações. Não invente ou infira dados que não foram fornecidos.
-- **Conhecimento Externo:** Se a informação não estiver nos dados internos e você precisar usar seu conhecimento geral ou realizar uma busca na web, você DEVE citar a origem de forma explícita. Inicie a resposta com "Segundo fontes públicas..." ou "Após uma busca na web...".
-- **Formatação de Links:** Se uma fonte de dados for um link (URL), você deve formatá-lo como um hyperlink em Markdown para fácil acesso. Exemplo: [Título do Artigo](https://...).
+### 3. FONTES DE CONHECIMENTO (REGRA CRÍTICA)
+- **Fonte Primária e Única:** Sua ÚNICA fonte de conhecimento são os documentos internos fornecidos para esta consulta. Responda ESTRITAMENTE e APENAS com base nessas informações.
+- **Proibição de Conhecimento Externo:** É ESTRITAMENTE PROIBIDO usar seu conhecimento geral ou qualquer informação externa. Não invente, não infira, nem complemente informações que não estão explicitamente nos documentos.
+- **Incapacidade de Responder:** Se a resposta não puder ser encontrada nos documentos fornecidos, sua resposta DEVE indicar isso claramente, usando frases como "Não encontrei a informação nos documentos internos" ou "Com base nos dados fornecidos, não é possível responder".
+- **Formatação de Links:** Se uma fonte de dados for um link (URL), você deve formatá-lo como um hyperlink em Markdown. Exemplo: [Título do Artigo](https://...).
 
 ### 4. ESCOPO E LIMITAÇÕES
 - **Papel:** Você é uma ferramenta de suporte à decisão, não o tomador de decisão final. Suas análises e resumos servem para empoderar os colaboradores.
@@ -27,7 +28,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 - **Opiniões:** Não emita opiniões pessoais ou juízos de valor. Mantenha-se neutro e factual.
 
 ### 5. USO DE FERRAMENTAS
-- **Busca na Web:** Utilize a ferramenta 'performWebSearch' quando for necessário obter informações de mercado, notícias recentes ou dados públicos que não estão disponíveis nos documentos internos. Ao usar a ferramenta, resuma os resultados encontrados e cite os links de origem conforme a regra de formatação.`;
+- Para esta tarefa, a regra da seção 3 (FONTES DE CONHECIMENTO) se sobrepõe a qualquer outra instrução sobre ferramentas. Nenhuma ferramenta de busca externa deve ser usada ou simulada.`;
 
 
 async function callDiscoveryEngine(query: string, userId?: string | null): Promise<{ summary: string; searchFailed: boolean }> {
@@ -117,11 +118,11 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
       const internalSearchFailureKeywords = [
           "não encontrei a informação",
           "não foi possível encontrar",
-          "informações públicas de mercado",
+          "com base nos dados fornecidos, não é possível responder",
+          "os dados fornecidos não contêm",
           "busca na web",
           "nenhum resultado encontrado",
-          "não foi possível gerar um resumo",
-          "no results could be found"
+          "não foi possível gerar um resumo"
       ];
       
       const searchFailed = internalSearchFailureKeywords.some(keyword => 
@@ -193,9 +194,11 @@ export async function askAssistant(
 
   try {
     if (useWebSearch) {
-      return await callGemini(query);
+      const { summary, searchFailed, promptTokenCount, candidatesTokenCount } = await callGemini(query);
+      return { summary, searchFailed, promptTokenCount, candidatesTokenCount };
     } else {
-      return await callDiscoveryEngine(query, userId);
+      const { summary, searchFailed } = await callDiscoveryEngine(query, userId);
+      return { summary, searchFailed };
     }
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
