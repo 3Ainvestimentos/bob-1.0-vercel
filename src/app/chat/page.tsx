@@ -146,9 +146,10 @@ export interface Conversation {
   createdAt: string;
   messages: Message[];
   groupId?: string | null;
+  totalTokens?: number;
 }
 
-type ConversationSidebarItem = Omit<Conversation, 'messages'>;
+type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens'>;
 
 interface FeedbackDetails {
     messageId: string;
@@ -899,22 +900,19 @@ function ChatPageContent() {
 
     const userQuery = messages[messageIndex - 1].content;
     const assistantResponse = messages[messageIndex].content;
-    const messageToRegenerate = messages[messageIndex];
-
-    const useWebSearch = typeof messageToRegenerate.promptTokenCount === 'number';
 
     setRegeneratingMessageId(assistantMessageId);
     setError(null);
+    setLastFailedQuery(null);
+    setSuggestions([]);
+    setIsSuggestionsLoading(false);
 
     try {
-      const { summary: newSummary, promptTokenCount, candidatesTokenCount } = await regenerateAnswer(
+      const { summary: newSummary, searchFailed, promptTokenCount, candidatesTokenCount } = await regenerateAnswer(
         userQuery,
-        assistantResponse,
-        { useWebSearch },
         user.uid
       );
       
-      // Log the regeneration event for future analysis
       await logRegeneratedQuestion(
           user.uid,
           activeChatId,
@@ -935,7 +933,12 @@ function ChatPageContent() {
           newAssistantMessage.candidatesTokenCount = candidatesTokenCount;
       }
 
-      // Replace the old message and the ones after it with the new response
+      // If regeneration also fails, set the lastFailedQuery to show the web search button.
+      if (searchFailed) {
+        setLastFailedQuery(userQuery);
+      }
+
+      // Replace the old message and any subsequent messages with the new response
       const updatedMessages = [
         ...messages.slice(0, messageIndex),
         newAssistantMessage
@@ -955,7 +958,7 @@ function ChatPageContent() {
       await saveConversation(user.uid, updatedMessages, activeChatId);
 
     } catch (err: any) {
-      // If regeneration fails, restore the original message
+      // If regeneration fails, restore the original messages
       setError(`Erro ao regenerar: ${err.message}`);
       setMessages(messages); 
     } finally {

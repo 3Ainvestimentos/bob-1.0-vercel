@@ -18,7 +18,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 
 ### 3. FONTES DE CONHECIMENTO (REGRA CRÍTICA E INEGOCIÁVEL)
 - **Fonte Única:** Sua ÚNICA fonte de conhecimento são os documentos internos fornecidos nesta consulta. Responda ESTRITAMENTE e APENAS com base nessas informações.
-- **PROIBIÇÃO TOTAL DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado ou qualquer informação externa. Não invente, não infira, não adivinhe, nem complemente informações que não estão explicitamente nos documentos. Sua função é extrair e resumir, não criar.
+- **PROIBIÇÃO TOTAL DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado ou qualquer informação externa. Não invente, não infira, não adivinhe, nem complemente informações que não estão explicitamente nos documentos.
 - **PROCEDIMENTO EM CASO DE FALHA:** Se a resposta para a pergunta do usuário não puder ser encontrada de forma clara e direta nos documentos fornecidos, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?"
 - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).
 
@@ -204,59 +204,15 @@ export async function askAssistant(
 
 export async function regenerateAnswer(
   originalQuery: string,
-  previousAnswer: string,
-  options: { useWebSearch: boolean },
   userId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
-  if (options.useWebSearch) {
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) {
-      throw new Error('A variável de ambiente GEMINI_API_KEY não está definida.');
-    }
-
-    try {
-      const genAI = new GoogleGenerativeAI(geminiApiKey);
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-1.5-pro-latest',
-        generationConfig: {
-          temperature: 0.5, 
-        },
-      });
-
-      const prompt = `Você é um assistente de pesquisa prestativo. Um usuário fez a seguinte pergunta:
----
-PERGUNTA ORIGINAL:
-"${originalQuery}"
----
-Sua resposta anterior foi:
----
-RESPOSTA ANTERIOR:
-"${previousAnswer}"
----
-Gere uma nova resposta para a PERGUNTA ORIGINAL. Tente uma abordagem diferente ou forneça informações adicionais, mantendo-se factual e preciso.`;
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      const promptTokenCount = response.usageMetadata?.promptTokenCount;
-      const candidatesTokenCount = response.usageMetadata?.candidatesTokenCount;
-
-      return { summary: text, searchFailed: false, promptTokenCount, candidatesTokenCount };
-    } catch (error: any) {
-      console.error('Error calling Gemini API for regeneration:', error);
-      if (error.message.includes('API key not valid')) {
-        throw new Error(`A chave da API do Gemini (GEMINI_API_KEY) parece ser inválida.`);
-      }
-      throw new Error(`Ocorreu um erro ao se comunicar com o Gemini para regenerar a resposta: ${error.message}`);
-    }
-  } else {
-    // For internal search, regenerating means calling the same function again.
-    try {
-      return await callDiscoveryEngine(originalQuery, userId);
-    } catch (error: any) {
-      console.error("Error in regenerateAnswer (internal):", error.message);
-      throw new Error(`Ocorreu um erro ao se comunicar com o assistente para regenerar a resposta: ${error.message}`);
-    }
+  // Regeneration always starts with the internal search flow, as requested by the user.
+  // If this search fails, the UI will then present the option to search the web.
+  try {
+    return await callDiscoveryEngine(originalQuery, userId);
+  } catch (error: any) {
+    console.error("Error in regenerateAnswer (internal):", error.message);
+    throw new Error(`Ocorreu um erro ao se comunicar com o assistente para regenerar a resposta: ${error.message}`);
   }
 }
 
