@@ -67,6 +67,7 @@ import { useAuth } from '@/context/AuthProvider';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import {
+  Bot,
   ChevronsLeft,
   ChevronsRight,
   FileText,
@@ -89,6 +90,7 @@ import {
   Search,
   SendHorizontal,
   Settings,
+  Share2,
   Sun,
   ThumbsDown,
   ThumbsUp,
@@ -752,6 +754,7 @@ function ChatPageContent() {
 
       const messageIndex = messages.findIndex(m => m.id === message.id);
       if (messageIndex < 1 || messages[messageIndex - 1].role !== 'user') {
+        // This should not happen with the new layout, but it's good practice to keep the check
         setError("O feedback só pode ser dado a uma resposta que segue diretamente uma pergunta do usuário.");
         return;
       }
@@ -1274,59 +1277,75 @@ function ChatPageContent() {
                     </div>
                 </div>
                 ) : (
-                <div className="space-y-6">
-                    {messages.map((msg, index) => (
-                    <div
-                        key={msg.id}
-                        className={`flex items-start gap-4 ${
-                        msg.role === 'user' ? 'justify-end' : ''
-                        }`}
-                    >
-                        {msg.role === 'assistant' && (
-                          <Avatar>
-                              <AvatarFallback>AI</AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                          <div
-                            className={`max-w-[80%] rounded-lg p-3 ${
-                                msg.role === 'user'
-                                ? 'bg-user-bubble text-user-bubble-foreground'
-                                : 'bg-muted'
-                            }`}
-                          >
-                            <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
-                                {msg.content}
-                            </ReactMarkdown>
-                          </div>
-                          {msg.role === 'assistant' && activeChatId && (
-                            <div className="mt-2 flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className={`h-7 w-7 text-muted-foreground hover:text-primary ${feedbacks[msg.id] === 'positive' ? 'bg-primary/10 text-primary' : ''}`} onClick={() => handleFeedback(msg, 'positive')}>
-                                    <ThumbsUp className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className={`h-7 w-7 text-muted-foreground hover:text-destructive ${feedbacks[msg.id] === 'negative' ? 'bg-destructive/10 text-destructive' : ''}`} onClick={() => handleFeedback(msg, 'negative')}>
-                                    <ThumbsDown className="h-4 w-4" />
-                                </Button>
-                                {feedbacks[msg.id] === 'negative' && (
-                                    <Button variant="link" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => handleOpenFeedbackDialog(msg)}>
-                                        Adicionar feedback
-                                    </Button>
-                                )}
+                <div className="space-y-8">
+                    {messages.map((msg) => (
+                      <React.Fragment key={msg.id}>
+                        {msg.role === 'assistant' ? (
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback>
+                                  <Bot className="h-5 w-5" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-semibold text-foreground">Bob</span>
                             </div>
-                          )}
-                        </div>
-                        {msg.role === 'user' && (
-                          <Avatar>
-                              <AvatarFallback>{userInitials}</AvatarFallback>
-                          </Avatar>
+                            
+                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
+                                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                            </div>
+
+                            {activeChatId && (
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1 text-muted-foreground">
+                                        <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'positive' ? 'bg-primary/10 text-primary' : ''}`} onClick={() => handleFeedback(msg, 'positive')}>
+                                            <ThumbsUp className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'negative' ? 'bg-destructive/10 text-destructive' : ''}`} onClick={() => handleFeedback(msg, 'negative')}>
+                                            <ThumbsDown className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <RefreshCw className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <Share2 className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                        {feedbacks[msg.id] === 'negative' && (
+                                            <Button variant="link" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => handleOpenFeedbackDialog(msg)}>
+                                                Adicionar feedback
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Tokens usados: 9 {/* Placeholder */}
+                                    </div>
+                                </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-start justify-end gap-4">
+                            <div className="max-w-[80%] rounded-lg bg-user-bubble p-3 text-user-bubble-foreground">
+                                <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
+                                    {msg.content}
+                                </ReactMarkdown>
+                            </div>
+                            <Avatar>
+                                <AvatarFallback>{userInitials}</AvatarFallback>
+                            </Avatar>
+                          </div>
                         )}
-                    </div>
+                      </React.Fragment>
                     ))}
 
                     {isLoading && (
                     <div className="flex items-start gap-4">
                         <Avatar>
-                        <AvatarFallback>AI</AvatarFallback>
+                        <AvatarFallback>
+                            <Bot className="h-5 w-5" />
+                        </AvatarFallback>
                         </Avatar>
                         <div className="rounded-lg bg-muted p-3">
                         <p className="animate-pulse text-sm">Pensando...</p>
@@ -1342,12 +1361,17 @@ function ChatPageContent() {
                     </div>
                     )}
                     {error && !isLoading && (
-                    <div className="flex items-start gap-4">
-                        <Avatar>
-                        <AvatarFallback>AI</AvatarFallback>
-                        </Avatar>
-                        <div className="rounded-lg bg-destructive p-3 text-destructive-foreground">
-                        <p className="text-sm">{error}</p>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                                <Bot className="h-5 w-5" />
+                            </AvatarFallback>
+                            </Avatar>
+                            <span className="font-semibold text-foreground">Bob</span>
+                        </div>
+                        <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-destructive-foreground">
+                            <p className="text-sm">{error}</p>
                         </div>
                     </div>
                     )}
