@@ -623,11 +623,11 @@ function ChatPageContent() {
         content: assistantResponse.summary,
       };
 
-      if (assistantResponse.promptTokenCount !== undefined) {
-        assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
+      if (assistantResponse.promptTokenCount) {
+          assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
       }
-      if (assistantResponse.candidatesTokenCount !== undefined) {
-        assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
+      if (assistantResponse.candidatesTokenCount) {
+          assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
       }
 
       if (assistantResponse.searchFailed) {
@@ -709,11 +709,11 @@ function ChatPageContent() {
         role: 'assistant',
         content: assistantResponse.summary,
       };
-      if (assistantResponse.promptTokenCount !== undefined) {
-        assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
+      if (assistantResponse.promptTokenCount) {
+          assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
       }
-      if (assistantResponse.candidatesTokenCount !== undefined) {
-        assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
+      if (assistantResponse.candidatesTokenCount) {
+          assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
       }
 
       const finalMessages = [...messagesWithUserQuery, assistantMessage];
@@ -908,10 +908,10 @@ function ChatPageContent() {
         role: 'assistant',
         content: newSummary,
       };
-      if (promptTokenCount !== undefined) {
+      if (promptTokenCount) {
           newAssistantMessage.promptTokenCount = promptTokenCount;
       }
-      if (candidatesTokenCount !== undefined) {
+      if (candidatesTokenCount) {
           newAssistantMessage.candidatesTokenCount = candidatesTokenCount;
       }
 
@@ -1583,9 +1583,16 @@ function ChatPageContent() {
                                                 <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'negative' ? 'bg-destructive/10 text-destructive' : ''}`} onClick={() => handleFeedback(msg, 'negative')}>
                                                     <ThumbsDown className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRegenerate(msg.id)} disabled={isLoading || !!regeneratingMessageId}>
-                                                    <RefreshCw className="h-4 w-4" />
-                                                </Button>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRegenerate(msg.id)} disabled={isLoading || !!regeneratingMessageId}>
+                                                            <RefreshCw className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        Regenerar usando conhecimento geral
+                                                    </TooltipContent>
+                                                </Tooltip>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyToClipboard(msg.content)}>
                                                     <Share2 className="h-4 w-4" />
                                                 </Button>
