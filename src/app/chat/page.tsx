@@ -1,7 +1,7 @@
 
 'use client';
 
-import { askAssistant, generateSuggestedQuestions } from '@/app/actions';
+import { askAssistant, generateSuggestedQuestions, regenerateAnswer } from '@/app/actions';
 import {
   Accordion,
   AccordionContent,
@@ -430,6 +430,7 @@ function ChatPageContent() {
 
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
+  const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -790,6 +791,62 @@ function ChatPageContent() {
               return revertedFeedbacks;
           });
       }
+  };
+
+  const handleRegenerate = async (assistantMessageId: string) => {
+    if (isLoading || regeneratingMessageId || !user || !activeChatId) return;
+
+    const messageIndex = messages.findIndex(m => m.id === assistantMessageId);
+    if (messageIndex < 1 || messages[messageIndex - 1].role !== 'user') {
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Não foi possível encontrar a pergunta original para regenerar a resposta.',
+      });
+      return;
+    }
+
+    const userQuery = messages[messageIndex - 1].content;
+    const assistantResponse = messages[messageIndex].content;
+
+    setRegeneratingMessageId(assistantMessageId);
+    setError(null);
+
+    try {
+      const { summary: newSummary } = await regenerateAnswer(userQuery, assistantResponse);
+      
+      const newAssistantMessage: Message = {
+        id: crypto.randomUUID(), // New ID for the new message
+        role: 'assistant',
+        content: newSummary,
+      };
+
+      // Replace the old message and the ones after it with the new response
+      const updatedMessages = [
+        ...messages.slice(0, messageIndex),
+        newAssistantMessage
+      ];
+
+      setMessages(updatedMessages);
+
+      // Clear feedback for the old message if it existed
+      if (feedbacks[assistantMessageId]) {
+        setFeedbacks(prev => {
+            const newFeedbacks = { ...prev };
+            delete newFeedbacks[assistantMessageId];
+            return newFeedbacks;
+        });
+      }
+      
+      await saveConversation(user.uid, updatedMessages, activeChatId);
+
+    } catch (err: any) {
+      // If regeneration fails, restore the original message
+      setError(`Erro ao regenerar: ${err.message}`);
+      setMessages(messages); 
+    } finally {
+      setRegeneratingMessageId(null);
+    }
   };
 
   const handleOpenFeedbackDialog = (message: Message) => {
@@ -1291,38 +1348,52 @@ function ChatPageContent() {
                               <span className="font-semibold text-foreground">Bob</span>
                             </div>
                             
-                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                                <ReactMarkdown>{msg.content}</ReactMarkdown>
-                            </div>
-
-                            {activeChatId && (
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1 text-muted-foreground">
-                                        <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'positive' ? 'bg-primary/10 text-primary' : ''}`} onClick={() => handleFeedback(msg, 'positive')}>
-                                            <ThumbsUp className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'negative' ? 'bg-destructive/10 text-destructive' : ''}`} onClick={() => handleFeedback(msg, 'negative')}>
-                                            <ThumbsDown className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                            <RefreshCw className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                            <Share2 className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                        {feedbacks[msg.id] === 'negative' && (
-                                            <Button variant="link" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => handleOpenFeedbackDialog(msg)}>
-                                                Adicionar feedback
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        Tokens usados: 9 {/* Placeholder */}
+                            {regeneratingMessageId === msg.id ? (
+                                <div className="w-full max-w-md rounded-lg bg-muted p-4">
+                                    <p className="animate-pulse text-sm italic text-muted-foreground">
+                                        Bob está pensando...
+                                    </p>
+                                    <div className="mt-3 space-y-2">
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-4/5" />
                                     </div>
                                 </div>
+                            ) : (
+                                <>
+                                    <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
+                                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                    </div>
+
+                                    {activeChatId && (
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1 text-muted-foreground">
+                                                <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'positive' ? 'bg-primary/10 text-primary' : ''}`} onClick={() => handleFeedback(msg, 'positive')}>
+                                                    <ThumbsUp className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'negative' ? 'bg-destructive/10 text-destructive' : ''}`} onClick={() => handleFeedback(msg, 'negative')}>
+                                                    <ThumbsDown className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRegenerate(msg.id)} disabled={isLoading || !!regeneratingMessageId}>
+                                                    <RefreshCw className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                    <Share2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                                {feedbacks[msg.id] === 'negative' && (
+                                                    <Button variant="link" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => handleOpenFeedbackDialog(msg)}>
+                                                        Adicionar feedback
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                Tokens usados: 9 {/* Placeholder */}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                           </div>
                         ) : (

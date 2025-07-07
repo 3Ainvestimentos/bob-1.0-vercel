@@ -230,6 +230,61 @@ export async function askAssistant(
   }
 }
 
+export async function regenerateAnswer(
+  originalQuery: string,
+  previousAnswer: string
+): Promise<{ summary: string; searchFailed: boolean }> {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    throw new Error(
+      'A variável de ambiente GEMINI_API_KEY não está definida.'
+    );
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-pro-latest',
+      generationConfig: {
+        temperature: 0.5, // Aumenta um pouco a criatividade para obter uma resposta diferente
+      },
+    });
+
+    const prompt = `Você é o "Assistente Corporativo 3A RIVA".
+Um colaborador fez a seguinte pergunta:
+---
+PERGUNTA ORIGINAL:
+"${originalQuery}"
+---
+
+Sua resposta anterior foi:
+---
+RESPOSTA ANTERIOR (INSATISFATÓRIA):
+"${previousAnswer}"
+---
+
+O colaborador não ficou satisfeito com a resposta anterior e solicitou uma nova.
+Gere uma nova resposta para a PERGUNTA ORIGINAL. Tente uma abordagem diferente, talvez com mais detalhes, um formato distinto ou uma perspectiva alternativa. Lembre-se de seguir todas as suas diretrizes de identidade e princípios de atuação.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    return { summary: text, searchFailed: false };
+  } catch (error: any) {
+    console.error('Error calling Gemini API for regeneration:', error);
+    if (error.message.includes('API key not valid')) {
+      throw new Error(
+        `A chave da API do Gemini (GEMINI_API_KEY) parece ser inválida.`
+      );
+    }
+    throw new Error(
+      `Ocorreu um erro ao se comunicar com o Gemini para regenerar a resposta: ${error.message}`
+    );
+  }
+}
+
+
 export async function generateSuggestedQuestions(
   query: string,
   answer: string
