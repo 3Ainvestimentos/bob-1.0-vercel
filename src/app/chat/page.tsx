@@ -1341,16 +1341,30 @@ function ChatPageContent() {
                     ))}
 
                     {isLoading && (
-                    <div className="flex items-start gap-4">
-                        <Avatar>
-                        <AvatarFallback>
-                            <Bot className="h-5 w-5" />
-                        </AvatarFallback>
-                        </Avatar>
-                        <div className="rounded-lg bg-muted p-3">
-                        <p className="animate-pulse text-sm">Pensando...</p>
+                      <div className="flex items-start gap-3">
+                        <div className="relative shrink-0">
+                          <div className="absolute -top-3.5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-background p-0.5">
+                            <div className="rounded-full bg-primary/10 p-1">
+                              <Lightbulb className="h-4 w-4 animate-pulse text-primary" />
+                            </div>
+                          </div>
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              <Bot className="h-5 w-5" />
+                            </AvatarFallback>
+                          </Avatar>
                         </div>
-                    </div>
+                        <div className="w-full max-w-md rounded-lg bg-muted p-4">
+                          <p className="animate-pulse text-sm italic text-muted-foreground">
+                            Bob está pensando...
+                          </p>
+                          <div className="mt-3 space-y-2">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-4/5" />
+                            <Skeleton className="h-4 w-11/12" />
+                          </div>
+                        </div>
+                      </div>
                     )}
                     {lastFailedQuery && !isLoading && (
                     <div className="flex justify-center pt-4">
