@@ -162,14 +162,15 @@ async function reportLegalIssue(
   chatId: string,
   messageId: string,
   userQuery: string,
-  assistantResponse: string
+  assistantResponse: string,
+  comment?: string
 ) {
   if (!userId || !chatId || !messageId) {
     throw new Error('User ID, Chat ID, and Message ID are required.');
   }
-  
+
   const reportRef = collection(db, 'legal_issue_alerts');
-  await addDoc(reportRef, {
+  const payload: any = {
     userId,
     chatId,
     messageId,
@@ -177,8 +178,15 @@ async function reportLegalIssue(
     assistantResponse,
     reportedAt: serverTimestamp(),
     status: 'new',
-  });
+  };
+
+  if (comment && comment.trim()) {
+    payload.comment = comment;
+  }
+
+  await addDoc(reportRef, payload);
 }
+
 
 async function logRegeneratedQuestion(
     userId: string,
@@ -486,6 +494,7 @@ function ChatPageContent() {
 
   const [isLegalReportDialogOpen, setIsLegalReportDialogOpen] = useState(false);
   const [messageToReport, setMessageToReport] = useState<Message | null>(null);
+  const [legalReportComment, setLegalReportComment] = useState('');
 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -981,10 +990,13 @@ function ChatPageContent() {
 
   const handleReportLegalIssueRequest = (message: Message) => {
       setMessageToReport(message);
+      setLegalReportComment('');
       setIsLegalReportDialogOpen(true);
   };
 
-  const handleConfirmLegalReport = async () => {
+  const handleConfirmLegalReport = async (e: FormEvent) => {
+    e.preventDefault();
+
     if (!messageToReport || !user || !activeChatId) {
         toast({
             variant: 'destructive',
@@ -1006,7 +1018,8 @@ function ChatPageContent() {
             activeChatId,
             messageToReport.id,
             userQuery,
-            messageToReport.content
+            messageToReport.content,
+            legalReportComment
         );
 
         toast({
@@ -1024,6 +1037,7 @@ function ChatPageContent() {
     } finally {
         setIsLegalReportDialogOpen(false);
         setMessageToReport(null);
+        setLegalReportComment('');
     }
   };
 
@@ -1147,23 +1161,42 @@ function ChatPageContent() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        
+        <Dialog open={isLegalReportDialogOpen} onOpenChange={(open) => {
+            setIsLegalReportDialogOpen(open);
+            if (!open) {
+                setMessageToReport(null);
+                setLegalReportComment('');
+            }
+        }}>
+            <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleConfirmLegalReport}>
+                    <DialogHeader>
+                        <DialogTitle>Informar Problema Jurídico</DialogTitle>
+                        <DialogDescription>
+                            Descreva o problema jurídico que você identificou nesta resposta. Sua contribuição é confidencial e será enviada à equipe de conformidade.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Textarea
+                            placeholder="Opcional: Descreva o problema aqui..."
+                            value={legalReportComment}
+                            onChange={(e) => setLegalReportComment(e.target.value)}
+                            rows={4}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setIsLegalReportDialogOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button type="submit" variant="destructive">
+                            Enviar Alerta
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
 
-        <AlertDialog open={isLegalReportDialogOpen} onOpenChange={setIsLegalReportDialogOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Informar Problema Jurídico</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Você tem certeza de que deseja reportar um problema jurídico sobre esta resposta? Esta ação não pode ser desfeita e notificará a equipe de conformidade.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setMessageToReport(null)}>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleConfirmLegalReport} className={buttonVariants({ variant: "destructive" })}>
-                        Confirmar e Enviar
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
 
         <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
             <DialogContent className="sm:max-w-[425px]">
