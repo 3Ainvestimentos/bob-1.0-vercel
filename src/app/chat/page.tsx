@@ -1614,7 +1614,7 @@ function ChatPageContent() {
                                             </div>
                                             <div className="text-xs text-muted-foreground">
                                                 {msg.promptTokenCount !== undefined && msg.candidatesTokenCount !== undefined
-                                                ? `Entrada: ${msg.promptTokenCount} | Saída: ${msg.candidatesTokenCount}`
+                                                ? `Tokens usados: ${msg.promptTokenCount + msg.candidatesTokenCount}`
                                                 : 'Tokens usados: 9'}
                                             </div>
                                         </div>
