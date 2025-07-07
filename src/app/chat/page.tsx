@@ -156,6 +156,34 @@ interface FeedbackDetails {
 
 // ---- Firestore Functions ----
 
+async function logRegeneratedQuestion(
+    userId: string,
+    chatId: string,
+    originalQuery: string,
+    originalResponse: string,
+    newResponse: string
+) {
+    if (!userId || !chatId) {
+        console.error("User ID or Chat ID is missing, cannot log regenerated answer.");
+        return;
+    };
+    try {
+        const regeneratedRef = collection(db, 'regenerated_answers');
+        await addDoc(regeneratedRef, {
+            userId,
+            chatId,
+            originalQuery,
+            originalResponse,
+            newResponse,
+            regeneratedAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error("Error logging regenerated question to Firestore:", error);
+        // Fail silently, as this is a background logging task. The user experience shouldn't be affected.
+    }
+}
+
+
 async function getFeedbacksForConversation(userId: string, chatId: string): Promise<Record<string, 'positive' | 'negative'>> {
     if (!userId || !chatId) return {};
     const feedbackCollRef = collection(db, 'users', userId, 'feedbacks');
@@ -814,6 +842,15 @@ function ChatPageContent() {
 
     try {
       const { summary: newSummary } = await regenerateAnswer(userQuery, assistantResponse);
+      
+      // Log the regeneration event for future analysis
+      await logRegeneratedQuestion(
+          user.uid,
+          activeChatId,
+          userQuery,
+          assistantResponse,
+          newSummary
+      );
       
       const newAssistantMessage: Message = {
         id: crypto.randomUUID(), // New ID for the new message
