@@ -925,6 +925,33 @@ function ChatPageContent() {
     }
   };
 
+  const handleCopyToClipboard = async (text: string) => {
+    if (!navigator.clipboard) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Seu navegador não suporta esta funcionalidade.',
+      });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: 'Copiado!',
+        description:
+          'A resposta do assistente foi copiada para a área de transferência.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Falha ao copiar',
+        description:
+          'Não foi possível copiar o texto. Verifique as permissões do seu navegador.',
+      });
+      console.error('Falha ao copiar: ', err);
+    }
+  };
+
 
   if (authLoading) {
     return (
@@ -1413,7 +1440,7 @@ function ChatPageContent() {
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRegenerate(msg.id)} disabled={isLoading || !!regeneratingMessageId}>
                                                     <RefreshCw className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyToClipboard(msg.content)}>
                                                     <Share2 className="h-4 w-4" />
                                                 </Button>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8">
