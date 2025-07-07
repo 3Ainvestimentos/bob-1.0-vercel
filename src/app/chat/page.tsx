@@ -1,13 +1,18 @@
 
 'use client';
 
-import { askAssistant, generateSuggestedQuestions, regenerateAnswer } from '@/app/actions';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+  ChatInputForm
+} from '@/components/chat/ChatInputForm';
+import {
+  ChatMessageArea
+} from '@/components/chat/ChatMessageArea';
+import { ChatSidebar } from '@/components/chat/ChatSidebar';
+import {
+  askAssistant,
+  generateSuggestedQuestions,
+  regenerateAnswer
+} from '@/app/actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,9 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -29,91 +32,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
-} from '@/components/ui/sidebar';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { useAuth } from '@/context/AuthProvider';
+import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
-import { useToast } from "@/hooks/use-toast";
 import {
-  AlertTriangle,
-  Bot,
-  ChevronsLeft,
-  ChevronsRight,
-  FileText,
-  Folder,
-  FolderPlus,
-  HelpCircle,
-  Lightbulb,
-  LogIn,
-  LogOut,
-  Mail,
-  MessageSquare,
-  MessageSquareText,
-  Mic,
-  Moon,
-  MoreHorizontal,
-  Newspaper,
-  Pencil,
-  Paperclip,
-  RefreshCw,
-  Search,
-  SendHorizontal,
-  Settings,
-  Share2,
-  Sun,
-  ThumbsDown,
-  ThumbsUp,
-  Trash2,
-} from 'lucide-react';
-import { signOut } from 'firebase/auth';
-import {
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  orderBy,
-  doc,
-  updateDoc,
-  serverTimestamp,
-  getDoc,
   Timestamp,
-  where,
+  addDoc,
+  collection,
   deleteDoc,
-  writeBatch,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
   setDoc,
+  updateDoc,
+  where,
+  writeBatch,
 } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import React, {
   FormEvent,
@@ -122,9 +63,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import ReactMarkdown from 'react-markdown';
-import TextareaAutosize from 'react-textarea-autosize';
-import { useTheme } from 'next-themes';
 
 // ---- Data Types ----
 export interface Group {
@@ -149,7 +87,7 @@ export interface Conversation {
   totalTokens?: number;
 }
 
-type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens'>;
+export type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens'>;
 
 interface FeedbackDetails {
     messageId: string;
@@ -467,8 +405,6 @@ async function deleteConversation(userId: string, chatId: string): Promise<void>
 function ChatPageContent() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { setTheme } = useTheme();
-  const { state: sidebarState, isMobile, toggleSidebar } = useSidebar();
   const { toast } = useToast();
 
 
@@ -1096,7 +1032,6 @@ function ChatPageContent() {
 
   const isAuthenticated = !!user;
   const userName = user?.displayName ?? 'Usuário';
-  const userEmail = user?.email ?? '';
   const userInitials =
     userName
       ?.split(' ')
@@ -1104,10 +1039,6 @@ function ChatPageContent() {
       .join('')
       .substring(0, 2)
       .toUpperCase() ?? 'U';
-
-  const ungroupedConversations = conversations.filter(
-    (c) => !c.groupId
-  );
 
   return (
         <div className="flex h-screen w-full bg-background text-foreground">
@@ -1272,544 +1203,53 @@ function ChatPageContent() {
         </Dialog>
 
 
-        <Sidebar>
-            <SidebarContent className="pt-2">
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto" variant="secondary">
-                            <FolderPlus />
-                            <span className="font-bold">Novo Projeto</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton 
-                            onClick={handleNewChat}
-                            tooltip="Nova Conversa"
-                            variant="secondary"
-                        >
-                            <Pencil />
-                            <span className="font-bold">Nova conversa</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-
-                <ScrollArea className="mt-4 flex-1">
-                  <div className="space-y-1 px-3">
-                  {isSidebarLoading ? (
-                      <div className="space-y-2 px-2">
-                      <Skeleton className="h-8 w-full" />
-                      <Skeleton className="h-8 w-full" />
-                      <Skeleton className="h-8 w-full" />
-                      </div>
-                  ) : (
-                      <>
-                      <div className="group-data-[collapsible=icon]:hidden">
-                          {groups.map((group) => (
-                              <div key={group.id} className="space-y-1">
-                                  <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent">
-                                      <Folder className="mr-2 h-4 w-4 shrink-0" />
-                                      <span className="truncate font-bold">{group.name}</span>
-                                      <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
-                                      <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                              <Button variant="ghost" size="icon" className="h-6 w-6">
-                                                  <MoreHorizontal className="h-4 w-4" />
-                                              </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent>
-                                              <DropdownMenuItem onClick={() => handleRenameRequest(group.id, 'group', group.name)}>
-                                                  <Pencil className="mr-2 h-4 w-4" />
-                                                  <span>Renomear Projeto</span>
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem
-                                                  onClick={() => handleDeleteRequest(group.id)}
-                                                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                              >
-                                                  <Trash2 className="mr-2 h-4 w-4" />
-                                                  <span>Excluir Projeto</span>
-                                              </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                      </DropdownMenu>
-                                      </div>
-                                  </div>
-                                  <div className="flex flex-col gap-1 pl-6">
-                                      {conversations
-                                      .filter((c) => c.groupId === group.id)
-                                      .map((convo) => (
-                                          <ConversationItem
-                                          key={convo.id}
-                                          conversation={convo}
-                                          isActive={activeChatId === convo.id}
-                                          groups={groups}
-                                          onSelect={handleSelectConversation}
-                                          onMove={handleMoveConversation}
-                                          onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
-                                          onDelete={handleDeleteConvoRequest}
-                                          />
-                                      ))}
-                                  </div>
-                              </div>
-                          ))}
-                          
-                          {ungroupedConversations.length > 0 && (
-                              <div className="flex flex-col gap-1 pt-2">
-                                  {ungroupedConversations.map((convo) => (
-                                  <ConversationItem
-                                      key={convo.id}
-                                      conversation={convo}
-                                      isActive={activeChatId === convo.id}
-                                      groups={groups}
-                                      onSelect={handleSelectConversation}
-                                      onMove={handleMoveConversation}
-                                      onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
-                                      onDelete={handleDeleteConvoRequest}
-                                      />
-                                  ))}
-                              </div>
-                          )}
-                      </div>
-                      
-                      <div className="hidden flex-col gap-1 pt-2 group-data-[collapsible=icon]:flex">
-                        {groups.map((group) => (
-                            <React.Fragment key={group.id}>
-                              {conversations
-                                .filter((c) => c.groupId === group.id)
-                                .map((convo) => (
-                                  <ConversationItem
-                                    key={convo.id}
-                                    conversation={convo}
-                                    isActive={activeChatId === convo.id}
-                                    groups={groups}
-                                    onSelect={handleSelectConversation}
-                                    onMove={handleMoveConversation}
-                                    onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
-                                    onDelete={handleDeleteConvoRequest}
-                                  />
-                                ))}
-                              <Separator className="my-1" />
-                            </React.Fragment>
-                          ))}
-                        {ungroupedConversations.map((convo) => (
-                          <ConversationItem
-                            key={convo.id}
-                            conversation={convo}
-                            isActive={activeChatId === convo.id}
-                            groups={groups}
-                            onSelect={handleSelectConversation}
-                            onMove={handleMoveConversation}
-                            onRename={(id, name) => handleRenameRequest(id, 'conversation', name)}
-                            onDelete={handleDeleteConvoRequest}
-                          />
-                        ))}
-                      </div>
-
-                      {conversations.length === 0 && !isSidebarLoading && (
-                          <p className="px-2 text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">
-                              Nenhuma conversa ainda.
-                          </p>
-                      )}
-                      </>
-                  )}
-                  </div>
-                </ScrollArea>
-            </SidebarContent>
-
-            <SidebarFooter>
-                <SidebarMenu className="items-center group-data-[collapsible=expanded]:items-start">
-                    <SidebarMenuItem>
-                      <DropdownMenu>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <DropdownMenuTrigger asChild>
-                              <SidebarMenuButton>
-                                <Settings />
-                                <span className="min-w-0 flex-1">Configurações</span>
-                              </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="right"
-                            align="center"
-                            hidden={sidebarState !== 'collapsed' || isMobile}
-                          >
-                            Configurações
-                          </TooltipContent>
-                        </Tooltip>
-                        <DropdownMenuContent side="top" align="start">
-                          <DropdownMenuLabel>Tema</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setTheme('light')}>
-                            <Sun className="mr-2 h-4 w-4" />
-                            <span>Claro</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setTheme('dark')}>
-                            <Moon className="mr-2 h-4 w-4" />
-                            <span>Escuro</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setTheme('system')}>
-                            <Settings className="mr-2 h-4 w-4" />
-                            <span>Sistema</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                              <a href="#">
-                                  <HelpCircle className="mr-2 h-4 w-4" />
-                                  <span>Guias e FAQ</span>
-                              </a>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {isAuthenticated ? (
-                            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                                <LogOut className="mr-2 h-4 w-4" />
-                                <span>Sair</span>
-                            </DropdownMenuItem>
-                            ) : (
-                            <DropdownMenuItem onClick={() => router.push('/')}>
-                                <LogIn className="mr-2 h-4 w-4" />
-                                <span >Ir para Login</span>
-                            </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </SidebarMenuItem>
-                     <SidebarMenuItem>
-                        <SidebarMenuButton 
-                            onClick={toggleSidebar} 
-                            tooltip={sidebarState === 'expanded' ? 'Recolher' : 'Expandir'}
-                        >
-                            {sidebarState === 'expanded' ? <ChevronsLeft /> : <ChevronsRight />}
-                            <span className="min-w-0 flex-1">Recolher</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarFooter>
-        </Sidebar>
+        <ChatSidebar
+            conversations={conversations}
+            groups={groups}
+            activeChatId={activeChatId}
+            isSidebarLoading={isSidebarLoading}
+            onNewChat={handleNewChat}
+            onSelectConversation={handleSelectConversation}
+            onMoveConversation={handleMoveConversation}
+            onRenameRequest={handleRenameRequest}
+            onDeleteConvoRequest={handleDeleteConvoRequest}
+            setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
+            onDeleteGroupRequest={handleDeleteRequest}
+            isAuthenticated={isAuthenticated}
+            handleSignOut={handleSignOut}
+        />
 
         <main className="flex flex-1 flex-col bg-background">
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto flex h-full max-w-5xl flex-col">
-                {messages.length === 0 && !isLoading ? (
-                <div className="flex h-full flex-col items-center justify-center">
-                    <div>
-                    <div className="text-left">
-                        <h1 className="text-4xl font-bold">
-                        Olá, {userName.split(' ')[0]}! 👋
-                        </h1>
-                        <p className="mt-2 text-lg text-muted-foreground">
-                        Como posso te ajudar hoje?
-                        </p>
-                    </div>
+            <ChatMessageArea
+              messages={messages}
+              isLoading={isLoading}
+              error={error}
+              user={user}
+              userName={userName}
+              userInitials={userInitials}
+              lastFailedQuery={lastFailedQuery}
+              feedbacks={feedbacks}
+              suggestions={suggestions}
+              isSuggestionsLoading={isSuggestionsLoading}
+              regeneratingMessageId={regeneratingMessageId}
+              messagesEndRef={messagesEndRef}
+              onFeedback={handleFeedback}
+              onRegenerate={handleRegenerate}
+              onCopyToClipboard={handleCopyToClipboard}
+              onReportLegalIssueRequest={handleReportLegalIssueRequest}
+              onOpenFeedbackDialog={handleOpenFeedbackDialog}
+              onWebSearch={handleWebSearch}
+              onSuggestionClick={handleSuggestionClick}
+              activeChatId={activeChatId}
+            />
 
-                    <div className="mt-12">
-                        <div className="flex items-center justify-between">
-                        <p className="text-muted-foreground">
-                            Você também pode me perguntar assim:
-                        </p>
-                        <Button variant="ghost" size="icon">
-                            <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
-                            <div className="flex items-start gap-4">
-                            <Newspaper className="h-6 w-6 text-chart-1" />
-                            <div>
-                                <p className="font-semibold">
-                                Buscar notícias sobre IA
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                Explorar os últimos acontecimentos no mundo da IA
-                                </p>
-                            </div>
-                            </div>
-                        </Card>
-                        <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
-                            <div className="flex items-start gap-4">
-                            <Mail className="h-6 w-6 text-chart-1" />
-                            <div>
-                                <p className="font-semibold">
-                                Criar campanha de e-mail
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                para vendas de fim de ano
-                                </p>
-                            </div>
-                            </div>
-                        </Card>
-                        <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
-                            <div className="flex items-start gap-4">
-                            <Lightbulb className="h-6 w-6 text-chart-1" />
-                            <div>
-                                <p className="font-semibold">Preparar tópicos</p>
-                                <p className="text-sm text-muted-foreground">
-                                para uma entrevista sobre vida de nômade digital
-                                </p>
-                            </div>
-                            </div>
-                        </Card>
-                        <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
-                            <div className="flex items-start gap-4">
-                            <FileText className="h-6 w-6 text-chart-1" />
-                            <div>
-                                <p className="font-semibold">
-                                Analisar um novo artigo
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                Resumir e destacar pontos chave de um artigo
-                                científico
-                                </p>
-                            </div>
-                            </div>
-                        </Card>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-                ) : (
-                <div className="space-y-8">
-                    {messages.map((msg) => (
-                      <React.Fragment key={msg.id}>
-                        {msg.role === 'assistant' ? (
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback>
-                                  <Bot className="h-5 w-5" />
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-semibold text-foreground">Bob</span>
-                            </div>
-                            
-                            {regeneratingMessageId === msg.id ? (
-                                <div className="w-full max-w-md rounded-lg bg-muted p-4">
-                                    <p className="animate-pulse text-sm italic text-muted-foreground">
-                                        Bob está pensando...
-                                    </p>
-                                    <div className="mt-3 space-y-2">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-4/5" />
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                                    </div>
-
-                                    {activeChatId && (
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-1 text-muted-foreground">
-                                                <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'positive' ? 'bg-primary/10 text-primary' : ''}`} onClick={() => handleFeedback(msg, 'positive')}>
-                                                    <ThumbsUp className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className={`h-8 w-8 ${feedbacks[msg.id] === 'negative' ? 'bg-destructive/10 text-destructive' : ''}`} onClick={() => handleFeedback(msg, 'negative')}>
-                                                    <ThumbsDown className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRegenerate(msg.id)} disabled={isLoading || !!regeneratingMessageId}>
-                                                    <RefreshCw className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyToClipboard(msg.content)}>
-                                                    <Share2 className="h-4 w-4" />
-                                                </Button>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleReportLegalIssueRequest(msg)}
-                                                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                                        >
-                                                            <AlertTriangle className="mr-2 h-4 w-4" />
-                                                            <span>Informar problema jurídico</span>
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-
-                                                {feedbacks[msg.id] === 'negative' && (
-                                                    <Button variant="link" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => handleOpenFeedbackDialog(msg)}>
-                                                        Adicionar feedback
-                                                    </Button>
-                                                )}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {typeof msg.promptTokenCount === 'number' && typeof msg.candidatesTokenCount === 'number'
-                                                ? `Tokens usados: ${msg.promptTokenCount + msg.candidatesTokenCount}`
-                                                : 'Tokens usados: 9'}
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-start justify-end gap-4">
-                            <div className="max-w-[80%] rounded-lg bg-user-bubble p-3 text-user-bubble-foreground">
-                                <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
-                                    {msg.content}
-                                </ReactMarkdown>
-                            </div>
-                            <Avatar>
-                                <AvatarFallback>{userInitials}</AvatarFallback>
-                            </Avatar>
-                          </div>
-                        )}
-                      </React.Fragment>
-                    ))}
-
-                    {isLoading && (
-                      <div className="flex items-start gap-3">
-                        <div className="relative shrink-0">
-                          <div className="absolute -top-3.5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-background p-0.5">
-                            <div className="rounded-full bg-primary/10 p-1">
-                              <Lightbulb className="h-4 w-4 animate-pulse text-primary" />
-                            </div>
-                          </div>
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              <Bot className="h-5 w-5" />
-                            </AvatarFallback>
-                          </Avatar>
-                        </div>
-                        <div className="w-full max-w-md rounded-lg bg-muted p-4">
-                          <p className="animate-pulse text-sm italic text-muted-foreground">
-                            Bob está pensando...
-                          </p>
-                          <div className="mt-3 space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-4/5" />
-                            <Skeleton className="h-4 w-11/12" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {lastFailedQuery && !isLoading && (
-                    <div className="flex justify-center pt-4">
-                        <Button onClick={handleWebSearch} disabled={isLoading}>
-                        <Search className="mr-2 h-4 w-4" />
-                        Pesquisar na Web
-                        </Button>
-                    </div>
-                    )}
-                    {error && !isLoading && (
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                                <Bot className="h-5 w-5" />
-                            </AvatarFallback>
-                            </Avatar>
-                            <span className="font-semibold text-foreground">Bob</span>
-                        </div>
-                        <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-destructive-foreground">
-                            <p className="text-sm">{error}</p>
-                        </div>
-                    </div>
-                    )}
-
-                    {(isSuggestionsLoading || suggestions.length > 0) && !isLoading && (
-                        <div className="mt-6 flex flex-col items-start gap-3">
-                            <p className="text-sm text-muted-foreground">Sugestões:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {isSuggestionsLoading ? (
-                                    <>
-                                        <Skeleton className="h-9 w-48 rounded-full" />
-                                        <Skeleton className="h-9 w-40 rounded-full" />
-                                        <Skeleton className="h-9 w-52 rounded-full" />
-                                    </>
-                                ) : (
-                                    suggestions.map((s, i) => (
-                                        <Button
-                                            key={i}
-                                            variant="outline"
-                                            size="sm"
-                                            className="rounded-full"
-                                            onClick={() => handleSuggestionClick(s)}
-                                            disabled={isLoading}
-                                        >
-                                            {s}
-                                        </Button>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    <div ref={messagesEndRef} />
-                </div>
-                )}
-            </div>
-            </div>
-
-            <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
-                <form
-                    onSubmit={handleSubmit}
-                    className="mx-auto max-w-5xl px-4 pb-4 pt-2"
-                >
-                    <div className="rounded-lg border bg-background shadow-sm">
-                        <div className="relative flex min-h-[60px] items-start">
-                            <TextareaAutosize
-                                ref={inputRef}
-                                placeholder="Insira aqui um comando ou pergunta"
-                                className="min-h-[inherit] flex-1 resize-none border-0 bg-transparent p-4 pr-12 text-base focus-visible:ring-0"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                if (
-                                    e.key === 'Enter' &&
-                                    !e.shiftKey &&
-                                    !e.nativeEvent.isComposing
-                                ) {
-                                    e.preventDefault();
-                                    if (e.currentTarget.form) {
-                                      e.currentTarget.form.requestSubmit();
-                                    }
-                                }
-                                }}
-                                disabled={isLoading}
-                                rows={1}
-                                maxRows={8}
-                            />
-                            <Button
-                                type="submit"
-                                size="icon"
-                                variant="ghost"
-                                className="absolute right-3 top-3 h-8 w-8 rounded-full text-muted-foreground"
-                                disabled={isLoading || !input.trim()}
-                            >
-                                <SendHorizontal className="h-5 w-5" />
-                            </Button>
-                        </div>
-                        <Separator />
-                        <div className="flex items-center p-2">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground"
-                                disabled={isLoading}
-                            >
-                                <Paperclip className="h-5 w-5" />
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground"
-                                disabled={isLoading}
-                            >
-                                <Mic className="h-5 w-5" />
-                            </Button>
-                        </div>
-                    </div>
-                    <p className="pt-2 text-center text-xs text-muted-foreground">
-                        Sujeito aos Termos de uso 3A RIVA e à Política de Privacidade da 3A RIVA. O modelo Bob 1.0 pode cometer erros. Por isso, é bom checar as respostas.
-                    </p>
-                </form>
-            </div>
+            <ChatInputForm
+                input={input}
+                setInput={setInput}
+                handleSubmit={handleSubmit}
+                isLoading={isLoading}
+                inputRef={inputRef}
+            />
         </main>
         </div>
   );
@@ -1821,97 +1261,4 @@ export default function ChatPage() {
             <ChatPageContent />
         </SidebarProvider>
     )
-}
-
-// ---- Sub-component for Conversation Item ----
-interface ConversationItemProps {
-  conversation: ConversationSidebarItem;
-  isActive: boolean;
-  groups: Group[];
-  onSelect: (id: string) => void;
-  onMove: (chatId: string, groupId: string | null) => void;
-  onRename: (id: string, currentName: string) => void;
-  onDelete: (id: string) => void;
-}
-
-function ConversationItem({
-  conversation,
-  isActive,
-  groups,
-  onSelect,
-  onMove,
-  onRename,
-  onDelete,
-}: ConversationItemProps) {
-  return (
-    <SidebarMenuItem className="group/menu-item relative list-none">
-      <div className="flex min-w-0 items-center">
-        <SidebarMenuButton
-            onClick={() => onSelect(conversation.id)}
-            isActive={isActive}
-            className="h-auto flex-1 justify-start whitespace-normal py-2"
-            tooltip={conversation.title}
-        >
-            <MessageSquareText />
-            <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
-        </SidebarMenuButton>
-
-        <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 flex-shrink-0 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => onRename(conversation.id, conversation.title)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                <span>Renomear</span>
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                    <FolderPlus className="mr-2 h-4 w-4" />
-                    <span>Mover para...</span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                    <DropdownMenuSubContent>
-                    {groups.map((group) => (
-                        <DropdownMenuItem
-                        key={group.id}
-                        disabled={conversation.groupId === group.id}
-                        onClick={() => onMove(conversation.id, group.id)}
-                        >
-                        {group.name}
-                        </DropdownMenuItem>
-                    ))}
-                    {conversation.groupId && (
-                        <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
-                            Remover do projeto
-                        </DropdownMenuItem>
-                        </>
-                    )}
-                    {groups.length === 0 && !conversation.groupId && (
-                        <DropdownMenuItem disabled>Nenhum projeto criado</DropdownMenuItem>
-                    )}
-                    </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-                </DropdownMenuSub>
-
-                <DropdownMenuSeparator />
-
-                <DropdownMenuItem
-                onClick={() => onDelete(conversation.id)}
-                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                >
-                <Trash2 className="mr-2 h-4 w-4" />
-                <span>Excluir</span>
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
-      </div>
-    </SidebarMenuItem>
-  );
 }
