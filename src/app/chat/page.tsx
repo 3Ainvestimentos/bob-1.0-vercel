@@ -620,8 +620,10 @@ function ChatPageContent() {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: assistantResponse.summary,
-        tokenCount: assistantResponse.tokenCount,
       };
+      if (assistantResponse.tokenCount !== undefined) {
+        assistantMessage.tokenCount = assistantResponse.tokenCount;
+      }
 
       if (assistantResponse.searchFailed) {
         setLastFailedQuery(query);
@@ -701,8 +703,10 @@ function ChatPageContent() {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: assistantResponse.summary,
-        tokenCount: assistantResponse.tokenCount,
       };
+      if (assistantResponse.tokenCount !== undefined) {
+        assistantMessage.tokenCount = assistantResponse.tokenCount;
+      }
 
       const finalMessages = [...messagesWithUserQuery, assistantMessage];
       setMessages(finalMessages);
@@ -895,8 +899,10 @@ function ChatPageContent() {
         id: crypto.randomUUID(), // New ID for the new message
         role: 'assistant',
         content: newSummary,
-        tokenCount: tokenCount,
       };
+      if (tokenCount !== undefined) {
+          newAssistantMessage.tokenCount = tokenCount;
+      }
 
       // Replace the old message and the ones after it with the new response
       const updatedMessages = [
