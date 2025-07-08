@@ -240,7 +240,7 @@ export function ChatSidebar({
         </DragOverlay>
       </DndContext>
 
-      <SidebarFooter className="p-2">
+      <SidebarFooter className="py-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={onNewChat} tooltip="Nova Conversa">
