@@ -80,6 +80,7 @@ export function ChatMessageArea({
       <div className="mx-auto flex h-full max-w-5xl flex-col">
         {messages.length === 0 && !isLoading ? (
           <div className="flex h-full flex-col items-center justify-center">
+            <BobIcon className="mb-6 h-24 w-24" isGreeting={true} />
             <div>
               <div className="text-left">
                 <h1 className="text-4xl font-bold">
@@ -269,7 +270,7 @@ export function ChatMessageArea({
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                      <BobIcon className="h-6 w-6" />
+                      <BobIcon className="h-6 w-6" hasError={true} />
                     </AvatarFallback>
                   </Avatar>
                   <span className="font-semibold text-foreground">Bob</span>
