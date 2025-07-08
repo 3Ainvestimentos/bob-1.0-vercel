@@ -86,7 +86,7 @@ export function ChatSidebar({
 
   return (
     <>
-      <div className="flex h-14 items-center border-b border-sidebar-border p-2 group-data-[collapsible=icon]:justify-center">
+      <div className="flex h-14 items-center border-b border-sidebar-border p-2 group-data-[state=expanded]:justify-start group-data-[state=collapsed]:justify-center">
         <SidebarMenuButton
           onClick={toggleSidebar}
           className="size-8"
@@ -114,14 +114,14 @@ export function ChatSidebar({
                 {groups.map((group) => (
                   <SidebarMenuItem
                     key={group.id}
-                    className="group/menu-item relative space-y-1"
+                    className="group/menu-item relative"
                   >
-                    <div className="flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground">
+                    <div className="flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground">
                       <Folder className="mr-2 h-4 w-4 shrink-0" />
                       <span className="truncate font-bold group-data-[collapsible=icon]:hidden">
                         {group.name}
                       </span>
-                      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100">
+                      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -169,38 +169,36 @@ export function ChatSidebar({
                       {conversations
                         .filter((c) => c.groupId === group.id)
                         .map((convo) => (
-                          <SidebarMenuItem key={convo.id}>
-                            <ConversationItem
-                              conversation={convo}
-                              isActive={activeChatId === convo.id}
-                              groups={groups}
-                              onSelect={onSelectConversation}
-                              onMove={onMoveConversation}
-                              onRename={(id, name) =>
-                                onRenameRequest(id, 'conversation', name)
-                              }
-                              onDelete={onDeleteConvoRequest}
-                            />
-                          </SidebarMenuItem>
+                          <ConversationItem
+                            key={convo.id}
+                            conversation={convo}
+                            isActive={activeChatId === convo.id}
+                            groups={groups}
+                            onSelect={onSelectConversation}
+                            onMove={onMoveConversation}
+                            onRename={(id, name) =>
+                              onRenameRequest(id, 'conversation', name)
+                            }
+                            onDelete={onDeleteConvoRequest}
+                          />
                         ))}
                     </ul>
                   </SidebarMenuItem>
                 ))}
 
                 {ungroupedConversations.map((convo) => (
-                  <SidebarMenuItem key={convo.id}>
-                    <ConversationItem
-                      conversation={convo}
-                      isActive={activeChatId === convo.id}
-                      groups={groups}
-                      onSelect={onSelectConversation}
-                      onMove={onMoveConversation}
-                      onRename={(id, name) =>
-                        onRenameRequest(id, 'conversation', name)
-                      }
-                      onDelete={onDeleteConvoRequest}
-                    />
-                  </SidebarMenuItem>
+                  <ConversationItem
+                    key={convo.id}
+                    conversation={convo}
+                    isActive={activeChatId === convo.id}
+                    groups={groups}
+                    onSelect={onSelectConversation}
+                    onMove={onMoveConversation}
+                    onRename={(id, name) =>
+                      onRenameRequest(id, 'conversation', name)
+                    }
+                    onDelete={onDeleteConvoRequest}
+                  />
                 ))}
 
                 {conversations.length === 0 && !isSidebarLoading && (
@@ -274,7 +272,7 @@ function ConversationItem({
   onDelete,
 }: ConversationItemProps) {
   return (
-    <div className="group/menu-item relative flex min-w-0 items-center">
+    <SidebarMenuItem className="group/menu-item relative">
       <SidebarMenuButton
         onClick={() => onSelect(conversation.id)}
         isActive={isActive}
@@ -349,6 +347,6 @@ function ConversationItem({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </div>
+    </SidebarMenuItem>
   );
 }
