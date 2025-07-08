@@ -225,7 +225,7 @@ export function ChatMessageArea({
                   </div>
                 ) : (
                   <div className="flex items-start justify-end gap-4">
-                    <div className="max-w-[80%] rounded-lg bg-user-bubble p-3 text-user-bubble-foreground">
+                    <div className="max-w-[80%] rounded-xl bg-accent p-3 text-accent-foreground shadow-sm">
                       <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
                         {msg.content}
                       </ReactMarkdown>
