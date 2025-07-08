@@ -249,15 +249,15 @@ export function ChatSidebar({
         </DragOverlay>
       </DndContext>
 
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border/80">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
-              className="bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
+              className="h-9 w-full justify-start bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
             >
-              <Pencil className="size-4" />
+              <Pencil className="h-4 w-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -265,9 +265,9 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
-              className="bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
+              className="h-9 w-full justify-start bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
             >
-              <FolderPlus className="size-4" />
+              <FolderPlus className="h-4 w-4" />
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -276,8 +276,9 @@ export function ChatSidebar({
               onClick={() => {}}
               tooltip="Pesquisar"
               variant="ghost"
+              className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
             >
-              <Search className="size-5" />
+              <Search className="h-5 w-5" />
               <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -286,8 +287,9 @@ export function ChatSidebar({
               onClick={onOpenFaqDialog}
               tooltip="Guias e FAQ"
               variant="ghost"
+              className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
             >
-              <HelpCircle className="size-5" />
+              <HelpCircle className="h-5 w-5" />
               <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -404,7 +406,7 @@ function GroupItem({
               <div className="ml-auto flex items-center opacity-0 transition-opacity group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
