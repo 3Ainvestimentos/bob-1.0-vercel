@@ -447,6 +447,8 @@ function ChatPageContent() {
   const [messageToReport, setMessageToReport] = useState<Message | null>(null);
   const [legalReportComment, setLegalReportComment] = useState('');
 
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -474,6 +476,11 @@ function ChatPageContent() {
       ]);
       setConversations(userConversations);
       setGroups(userGroups);
+      // Initialize all groups as expanded by default
+      setExpandedGroups(userGroups.reduce((acc, group) => {
+          acc[group.id] = true;
+          return acc;
+      }, {} as Record<string, boolean>));
     } catch (err: any) {
       setError(`Erro ao carregar o histórico: ${err.message}`);
     } finally {
@@ -1021,6 +1028,9 @@ function ChatPageContent() {
     }
   };
 
+  const handleToggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   if (authLoading) {
     return (
@@ -1209,6 +1219,7 @@ function ChatPageContent() {
                 groups={groups}
                 activeChatId={activeChatId}
                 isSidebarLoading={isSidebarLoading}
+                expandedGroups={expandedGroups}
                 onNewChat={handleNewChat}
                 onSelectConversation={handleSelectConversation}
                 onMoveConversation={handleMoveConversation}
@@ -1216,6 +1227,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
+                onToggleGroup={handleToggleGroup}
                 isAuthenticated={isAuthenticated}
                 handleSignOut={handleSignOut}
             />
