@@ -23,7 +23,6 @@ import { Separator } from '@/components/ui/separator';
 import {
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -100,19 +99,15 @@ export function ChatSidebar({
 
   return (
     <>
-      <SidebarHeader className="flex h-14 items-center justify-between border-b border-sidebar-border p-2">
-        <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-          <BobIcon className="h-8 w-8" />
-          <span className="font-semibold">Bob 1.0</span>
-        </div>
+      <div className="flex h-14 items-center border-b border-sidebar-border p-2">
         <SidebarMenuButton 
           onClick={toggleSidebar} 
-          className="ml-auto size-8 group-data-[collapsible=icon]:mx-auto" 
+          className="size-8 group-data-[collapsible=icon]:mx-auto" 
           tooltip={sidebarState === 'expanded' ? 'Recolher' : 'Expandir'}
         >
           {sidebarState === 'expanded' ? <PanelLeftClose /> : <PanelLeftOpen />}
         </SidebarMenuButton>
-      </SidebarHeader>
+      </div>
 
       <SidebarContent>
         <ScrollArea className="flex-1">
@@ -165,7 +160,7 @@ export function ChatSidebar({
                       {conversations
                         .filter((c) => c.groupId === group.id)
                         .map((convo) => (
-                          <SidebarMenuItem key={convo.id} className="group/menu-item relative list-none">
+                           <SidebarMenuItem key={convo.id} className="group/menu-item relative list-none">
                             <ConversationItem
                               conversation={convo}
                               isActive={activeChatId === convo.id}
