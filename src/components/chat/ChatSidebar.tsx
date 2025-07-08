@@ -119,7 +119,7 @@ export function ChatSidebar({
                           <SidebarMenuButton.Text className="truncate font-bold">
                             {group.name}
                           </SidebarMenuButton.Text>
-                          <div className="pointer-events-none absolute right-1 top-1/2 ml-auto flex -translate-y-1/2 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
+                          <div className="pointer-events-none ml-auto flex items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
                             <Button
                               variant="ghost"
                               size="icon"
