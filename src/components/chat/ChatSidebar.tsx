@@ -256,6 +256,7 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
+              className="bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
             >
               <Pencil className="size-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
@@ -265,17 +266,17 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
+              className="bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
             >
               <FolderPlus className="size-4" />
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="mt-2">
             <SidebarMenuButton
               onClick={() => {}}
               tooltip="Pesquisar"
               variant="ghost"
-              size="sm"
             >
               <Search className="size-5" />
               <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
@@ -286,7 +287,6 @@ export function ChatSidebar({
               onClick={onOpenFaqDialog}
               tooltip="Guias e FAQ"
               variant="ghost"
-              size="sm"
             >
               <HelpCircle className="size-5" />
               <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
