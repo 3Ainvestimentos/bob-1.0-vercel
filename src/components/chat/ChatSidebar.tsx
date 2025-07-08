@@ -41,7 +41,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React from 'react';
 import { SettingsHelpDropdown } from './SettingsHelpDropdown';
 import { cn } from '@/lib/utils';
 import {
@@ -75,6 +75,7 @@ interface ChatSidebarProps {
   activeChatId: string | null;
   isSidebarLoading: boolean;
   expandedGroups: Record<string, boolean>;
+  activeDragItem: ConversationSidebarItem | Group | null;
   onNewChat: () => void;
   onSelectConversation: (id: string) => void;
   onMoveConversation: (chatId: string, groupId: string | null) => void;
@@ -87,6 +88,7 @@ interface ChatSidebarProps {
   setIsNewGroupDialogOpen: (isOpen: boolean) => void;
   onDeleteGroupRequest: (id: string) => void;
   onToggleGroup: (groupId: string) => void;
+  onDragStart: (event: DragStartEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
   isAuthenticated: boolean;
   handleSignOut: () => void;
@@ -98,6 +100,7 @@ export function ChatSidebar({
   activeChatId,
   isSidebarLoading,
   expandedGroups,
+  activeDragItem,
   onNewChat,
   onSelectConversation,
   onMoveConversation,
@@ -106,14 +109,13 @@ export function ChatSidebar({
   setIsNewGroupDialogOpen,
   onDeleteGroupRequest,
   onToggleGroup,
+  onDragStart,
   onDragEnd,
   isAuthenticated,
   handleSignOut,
 }: ChatSidebarProps) {
   const { state: sidebarState, toggleSidebar } = useSidebar();
-  const [activeDragItem, setActiveDragItem] =
-    useState<ConversationSidebarItem | null>(null);
-
+  
   const ungroupedConversations = conversations.filter((c) => !c.groupId);
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -123,19 +125,6 @@ export function ChatSidebar({
     }),
     useSensor(KeyboardSensor)
   );
-
-  function handleDragStart(event: DragStartEvent) {
-    const { active } = event;
-    const activeId = active.id.toString();
-
-    if (activeId.startsWith('convo-')) {
-      const conversationId = activeId.replace('convo-', '');
-      const draggedConvo = conversations.find((c) => c.id === conversationId);
-      if (draggedConvo) {
-        setActiveDragItem(draggedConvo);
-      }
-    }
-  }
 
   return (
     <>
@@ -158,11 +147,8 @@ export function ChatSidebar({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={(event) => {
-          onDragEnd(event);
-          setActiveDragItem(null);
-        }}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
       >
         <SidebarContent>
           <ScrollArea className="flex-1">
@@ -175,22 +161,27 @@ export function ChatSidebar({
                 </div>
               ) : (
                 <>
-                  {groups.map((group) => (
-                    <GroupItem
-                      key={group.id}
-                      group={group}
-                      conversations={conversations}
-                      isExpanded={expandedGroups[group.id] ?? false}
-                      activeChatId={activeChatId}
-                      groups={groups}
-                      onToggleGroup={onToggleGroup}
-                      onRenameRequest={onRenameRequest}
-                      onDeleteGroupRequest={onDeleteGroupRequest}
-                      onSelectConversation={onSelectConversation}
-                      onMoveConversation={onMoveConversation}
-                      onDeleteConvoRequest={onDeleteConvoRequest}
-                    />
-                  ))}
+                 <SortableContext
+                    items={groups.map((g) => `group-${g.id}`)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {groups.map((group) => (
+                      <GroupItem
+                        key={group.id}
+                        group={group}
+                        conversations={conversations}
+                        isExpanded={expandedGroups[group.id] ?? false}
+                        activeChatId={activeChatId}
+                        groups={groups}
+                        onToggleGroup={onToggleGroup}
+                        onRenameRequest={onRenameRequest}
+                        onDeleteGroupRequest={onDeleteGroupRequest}
+                        onSelectConversation={onSelectConversation}
+                        onMoveConversation={onMoveConversation}
+                        onDeleteConvoRequest={onDeleteConvoRequest}
+                      />
+                    ))}
+                  </SortableContext>
 
                   <UngroupedArea>
                     <SortableContext
@@ -227,15 +218,33 @@ export function ChatSidebar({
 
         <DragOverlay dropAnimation={null}>
           {activeDragItem ? (
-            <SidebarMenuButton
-              className="pointer-events-none w-full !cursor-grabbing !opacity-100 shadow-lg"
-              isActive={true}
-            >
-              <MessageSquareText className="size-4" />
-              <SidebarMenuButton.Text>
-                {activeDragItem.title}
-              </SidebarMenuButton.Text>
-            </SidebarMenuButton>
+            // Check if it's a group or conversation by checking for the 'name' property (unique to Groups)
+            'name' in activeDragItem ? (
+                <SidebarMenuItem className="pointer-events-none w-full !cursor-grabbing !opacity-100 shadow-lg bg-sidebar-accent">
+                    <div className="flex w-full items-center">
+                        <SidebarMenuButton
+                            className="h-9 flex-1 justify-start gap-2 overflow-hidden p-2 text-sm text-muted-foreground outline-none ring-sidebar-ring focus-visible:ring-2"
+                            isActive
+                        >
+                            <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200 rotate-90" />
+                            <Folder className="h-4 w-4 shrink-0" />
+                            <SidebarMenuButton.Text className="truncate font-bold">
+                                {activeDragItem.name}
+                            </SidebarMenuButton.Text>
+                        </SidebarMenuButton>
+                    </div>
+                </SidebarMenuItem>
+            ) : (
+                <SidebarMenuButton
+                    className="pointer-events-none w-full !cursor-grabbing !opacity-100 shadow-lg"
+                    isActive={true}
+                >
+                    <MessageSquareText className="size-4" />
+                    <SidebarMenuButton.Text>
+                    {activeDragItem.title}
+                    </SidebarMenuButton.Text>
+                </SidebarMenuButton>
+            )
           ) : null}
         </DragOverlay>
       </DndContext>
@@ -312,9 +321,32 @@ function GroupItem({
   onMoveConversation,
   onDeleteConvoRequest,
 }: GroupItemProps) {
-  const { isOver, setNodeRef } = useDroppable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setSortableNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: `group-${group.id}`,
   });
+  const { isOver, setNodeRef: setDroppableNodeRef } = useDroppable({
+    id: `group-${group.id}`,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 100 : 'auto',
+  };
+
+  const setNodeRef = (node: HTMLLIElement | null) => {
+    setSortableNodeRef(node);
+    setDroppableNodeRef(node);
+  };
+  
   const groupConversations = conversations.filter(
     (c) => c.groupId === group.id
   );
@@ -326,6 +358,7 @@ function GroupItem({
         <TooltipTrigger asChild>
           <SidebarMenuItem
             ref={setNodeRef}
+            style={style}
             className={cn(
               'rounded-md transition-colors',
               isOver && 'bg-sidebar-accent/50'
@@ -336,6 +369,8 @@ function GroupItem({
                 onClick={() => onToggleGroup(group.id)}
                 className="h-9 flex-1 justify-start gap-2 overflow-hidden p-2 text-sm text-muted-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent focus-visible:ring-2 group-data-[state=collapsed]:h-9 group-data-[state=collapsed]:w-9 group-data-[state=collapsed]:p-2"
                 tooltip={group.name}
+                {...attributes}
+                {...listeners}
               >
                 <ChevronRight
                   className={cn(

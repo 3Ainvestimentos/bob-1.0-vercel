@@ -63,7 +63,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import type { DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 
 
@@ -451,6 +451,7 @@ function ChatPageContent() {
   const [legalReportComment, setLegalReportComment] = useState('');
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [activeDragItem, setActiveDragItem] = useState<ConversationSidebarItem | Group | null>(null);
 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1037,8 +1038,29 @@ function ChatPageContent() {
     setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const activeId = active.id.toString();
+
+    if (activeId.startsWith('convo-')) {
+      const conversationId = activeId.replace('convo-', '');
+      const draggedConvo = conversations.find((c) => c.id === conversationId);
+      if (draggedConvo) {
+        setActiveDragItem(draggedConvo);
+      }
+    } else if (activeId.startsWith('group-')) {
+      const groupId = activeId.replace('group-', '');
+      const draggedGroup = groups.find((g) => g.id === groupId);
+      if (draggedGroup) {
+        setActiveDragItem(draggedGroup);
+      }
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+
+    setActiveDragItem(null);
 
     if (!over || active.id === over.id) {
         return;
@@ -1047,49 +1069,65 @@ function ChatPageContent() {
     const activeId = active.id as string;
     const overId = over.id as string;
     
-    // We only care about dragging conversations
-    if (!activeId.startsWith('convo-')) return;
-    const conversationId = activeId.replace('convo-', '');
-    
-    // --- Move to a different group ---
-    const conversation = conversations.find((c) => c.id === conversationId);
-    if (!conversation) return;
-
-    // Case 1: Dropping onto a group droppable area
-    if (overId.startsWith('group-')) {
-        const groupId = overId.replace('group-', '');
-        if (conversation.groupId !== groupId) {
-            await handleMoveConversation(conversationId, groupId);
-        }
-        return;
-    }
-    
-    // Case 2: Dropping onto the 'ungrouped' area
-    if (overId === 'ungrouped-area') {
-        if (conversation.groupId !== null) {
-            await handleMoveConversation(conversationId, null);
-        }
-        return;
-    }
-
-    // --- Reorder or Move by dropping on another conversation ---
-    if (overId.startsWith('convo-')) {
-        const overConversationId = overId.replace('convo-', '');
+    // --- Handle Group Reordering ---
+    if (activeId.startsWith('group-') && overId.startsWith('group-')) {
+        const activeGroupId = activeId.replace('group-', '');
+        const overGroupId = overId.replace('group-', '');
         
-        const activeIndex = conversations.findIndex(c => c.id === conversationId);
-        const overIndex = conversations.findIndex(c => c.id === overConversationId);
+        setGroups((items) => {
+            const oldIndex = items.findIndex((item) => item.id === activeGroupId);
+            const newIndex = items.findIndex((item) => item.id === overGroupId);
+            if (oldIndex !== -1 && newIndex !== -1) {
+                // Note: This reordering is visual only and will reset on page load.
+                // Persisting the order would require schema changes (e.g., an 'order' field).
+                return arrayMove(items, oldIndex, newIndex);
+            }
+            return items;
+        });
+        return;
+    }
 
-        if (activeIndex === -1 || overIndex === -1) return;
+    // --- Handle Conversation Dragging ---
+    if (activeId.startsWith('convo-')) {
+        const conversationId = activeId.replace('convo-', '');
+        const conversation = conversations.find((c) => c.id === conversationId);
+        if (!conversation) return;
 
-        // If the conversations are in the same group, reorder them.
-        if (conversations[activeIndex].groupId === conversations[overIndex].groupId) {
-            setConversations(items => arrayMove(items, activeIndex, overIndex));
-            // Note: This reordering is visual only and will reset on page load.
-            // Persisting the order would require schema changes (e.g., an 'order' field).
-        } else {
-            // Otherwise, move the active conversation to the 'over' conversation's group.
-            const targetGroupId = conversations[overIndex].groupId || null;
-            await handleMoveConversation(conversationId, targetGroupId);
+        // Case 1: Dropping onto a group droppable area
+        if (overId.startsWith('group-')) {
+            const groupId = overId.replace('group-', '');
+            if (conversation.groupId !== groupId) {
+                await handleMoveConversation(conversationId, groupId);
+            }
+            return;
+        }
+        
+        // Case 2: Dropping onto the 'ungrouped' area
+        if (overId === 'ungrouped-area') {
+            if (conversation.groupId !== null) {
+                await handleMoveConversation(conversationId, null);
+            }
+            return;
+        }
+
+        // Case 3: Reorder or Move by dropping on another conversation
+        if (overId.startsWith('convo-')) {
+            const overConversationId = overId.replace('convo-', '');
+            
+            const activeIndex = conversations.findIndex(c => c.id === conversationId);
+            const overIndex = conversations.findIndex(c => c.id === overConversationId);
+
+            if (activeIndex === -1 || overIndex === -1) return;
+
+            // If the conversations are in the same group, reorder them.
+            if (conversations[activeIndex].groupId === conversations[overIndex].groupId) {
+                setConversations(items => arrayMove(items, activeIndex, overIndex));
+                // Note: This reordering is visual only and will reset on page load.
+            } else {
+                // Otherwise, move the active conversation to the 'over' conversation's group.
+                const targetGroupId = conversations[overIndex].groupId || null;
+                await handleMoveConversation(conversationId, targetGroupId);
+            }
         }
     }
   };
@@ -1290,7 +1328,9 @@ function ChatPageContent() {
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
                 onToggleGroup={handleToggleGroup}
+                onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
+                activeDragItem={activeDragItem}
                 isAuthenticated={isAuthenticated}
                 handleSignOut={handleSignOut}
             />
