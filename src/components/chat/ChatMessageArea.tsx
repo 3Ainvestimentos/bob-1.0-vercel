@@ -15,7 +15,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { User } from 'firebase/auth';
 import {
   AlertTriangle,
-  Bot,
   FileText,
   Lightbulb,
   Mail,
@@ -29,6 +28,7 @@ import {
 } from 'lucide-react';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import { BobIcon } from '@/components/icons/BobIcon';
 
 interface ChatMessageAreaProps {
   messages: Message[];
@@ -156,7 +156,7 @@ export function ChatMessageArea({
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
-                          <Bot className="h-5 w-5" />
+                          <BobIcon className="h-6 w-6" />
                         </AvatarFallback>
                       </Avatar>
                       <span className="font-semibold text-foreground">Bob</span>
@@ -247,7 +247,7 @@ export function ChatMessageArea({
                   </div>
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                      <Bot className="h-5 w-5" />
+                      <BobIcon className="h-6 w-6" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
@@ -276,7 +276,7 @@ export function ChatMessageArea({
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                      <Bot className="h-5 w-5" />
+                      <BobIcon className="h-6 w-6" />
                     </AvatarFallback>
                   </Avatar>
                   <span className="font-semibold text-foreground">Bob</span>
