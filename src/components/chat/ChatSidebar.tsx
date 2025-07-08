@@ -118,10 +118,10 @@ export function ChatSidebar({
                   >
                     <div className="flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground">
                       <Folder className="mr-2 h-4 w-4 shrink-0" />
-                      <span className="truncate font-bold group-data-[collapsible=icon]:hidden">
+                      <SidebarMenuButton.Text className="truncate font-bold">
                         {group.name}
-                      </span>
-                      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
+                      </SidebarMenuButton.Text>
+                      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -165,7 +165,7 @@ export function ChatSidebar({
                         </DropdownMenu>
                       </div>
                     </div>
-                    <ul className="flex flex-col gap-1 border-l-2 border-sidebar-border/50 pl-4 ml-2 group-data-[collapsible=icon]:hidden">
+                    <ul className="flex flex-col gap-1 border-sidebar-border/50 group-data-[state=expanded]:ml-2 group-data-[state=expanded]:border-l-2 group-data-[state=expanded]:pl-4">
                       {conversations
                         .filter((c) => c.groupId === group.id)
                         .map((convo) => (
@@ -284,7 +284,7 @@ function ConversationItem({
           {conversation.title}
         </SidebarMenuButton.Text>
       </SidebarMenuButton>
-      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 flex-shrink-0 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
+      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 flex-shrink-0 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-7 w-7">
