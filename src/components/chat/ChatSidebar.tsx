@@ -40,9 +40,9 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import React from 'react';
 import { SettingsHelpDropdown } from './SettingsHelpDropdown';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface ChatSidebarProps {
   conversations: ConversationSidebarItem[];
@@ -79,7 +79,6 @@ export function ChatSidebar({
   isAuthenticated,
   handleSignOut,
 }: ChatSidebarProps) {
-  const router = useRouter();
   const { state: sidebarState, toggleSidebar } = useSidebar();
 
   const ungroupedConversations = conversations.filter((c) => !c.groupId);
@@ -112,59 +111,63 @@ export function ChatSidebar({
             ) : (
               <>
                 {groups.map((group) => (
-                  <SidebarMenuItem
-                    key={group.id}
-                    className="group/menu-item relative"
-                  >
-                    <div className="flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground">
-                      <Folder className="mr-2 h-4 w-4 shrink-0" />
-                      <SidebarMenuButton.Text className="truncate font-bold">
-                        {group.name}
-                      </SidebarMenuButton.Text>
-                      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          disabled
-                        >
-                          <Pin className="h-4 w-4" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                  <SidebarMenuItem key={group.id} className="relative">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                         <div className="flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground group/menu-item">
+                          <Folder className="mr-2 h-4 w-4 shrink-0" />
+                          <SidebarMenuButton.Text className="truncate font-bold">
+                            {group.name}
+                          </SidebarMenuButton.Text>
+                          <div className="pointer-events-none absolute right-1 top-1/2 ml-auto flex -translate-y-1/2 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6"
+                              disabled
                             >
-                              <MoreHorizontal className="h-4 w-4" />
+                              <Pin className="h-4 w-4" />
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => {}} disabled>
-                              <PinOff className="mr-2 h-4 w-4" />
-                              <span>Desafixar projeto</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                onRenameRequest(group.id, 'group', group.name)
-                              }
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              <span>Renomear Projeto</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => onDeleteGroupRequest(group.id)}
-                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              <span>Excluir Projeto</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => {}} disabled>
+                                  <PinOff className="mr-2 h-4 w-4" />
+                                  <span>Desafixar projeto</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    onRenameRequest(group.id, 'group', group.name)
+                                  }
+                                >
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  <span>Renomear Projeto</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => onDeleteGroupRequest(group.id)}
+                                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <span>Excluir Projeto</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                       <TooltipContent side="right" align="center" hidden={sidebarState !== 'collapsed'}>
+                          {group.name}
+                       </TooltipContent>
+                    </Tooltip>
                     <ul className="flex flex-col gap-1 border-sidebar-border/50 group-data-[state=expanded]:ml-2 group-data-[state=expanded]:border-l-2 group-data-[state=expanded]:pl-4">
                       {conversations
                         .filter((c) => c.groupId === group.id)
