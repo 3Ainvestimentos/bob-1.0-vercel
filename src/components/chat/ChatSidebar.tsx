@@ -21,7 +21,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
-  Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
@@ -37,8 +36,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  ChevronsLeft,
-  ChevronsRight,
   Copy,
   Folder,
   FolderPlus,
@@ -164,36 +161,38 @@ export function ChatSidebar({
                         </DropdownMenu>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1 border-l-2 border-sidebar-border/50 pl-4 ml-2">
+                    <ul className="flex flex-col gap-1 border-l-2 border-sidebar-border/50 pl-4 ml-2">
                       {conversations
                         .filter((c) => c.groupId === group.id)
                         .map((convo) => (
-                          <ConversationItem
-                            key={convo.id}
-                            conversation={convo}
-                            isActive={activeChatId === convo.id}
-                            groups={groups}
-                            onSelect={onSelectConversation}
-                            onMove={onMoveConversation}
-                            onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
-                            onDelete={onDeleteConvoRequest}
-                          />
+                          <SidebarMenuItem key={convo.id} className="group/menu-item relative list-none">
+                            <ConversationItem
+                              conversation={convo}
+                              isActive={activeChatId === convo.id}
+                              groups={groups}
+                              onSelect={onSelectConversation}
+                              onMove={onMoveConversation}
+                              onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
+                              onDelete={onDeleteConvoRequest}
+                            />
+                          </SidebarMenuItem>
                         ))}
-                    </div>
+                    </ul>
                   </SidebarMenuItem>
                 ))}
                 
                 {ungroupedConversations.map((convo) => (
-                  <ConversationItem
-                    key={convo.id}
-                    conversation={convo}
-                    isActive={activeChatId === convo.id}
-                    groups={groups}
-                    onSelect={onSelectConversation}
-                    onMove={onMoveConversation}
-                    onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
-                    onDelete={onDeleteConvoRequest}
-                  />
+                  <SidebarMenuItem key={convo.id} className="group/menu-item relative list-none">
+                    <ConversationItem
+                      conversation={convo}
+                      isActive={activeChatId === convo.id}
+                      groups={groups}
+                      onSelect={onSelectConversation}
+                      onMove={onMoveConversation}
+                      onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
+                      onDelete={onDeleteConvoRequest}
+                    />
+                  </SidebarMenuItem>
                 ))}
               
                 {conversations.length === 0 && !isSidebarLoading && (
@@ -211,12 +210,12 @@ export function ChatSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={onNewChat} tooltip="Nova Conversa">
-              <Pencil /> <span>Nova conversa</span>
+              <Pencil className="size-4" /> <span>Nova conversa</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto">
-              <FolderPlus /> <span>Novo Projeto</span>
+              <FolderPlus className="size-4" /> <span>Novo Projeto</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
            <SidebarMenuItem>
@@ -302,75 +301,73 @@ function ConversationItem({
   onDelete,
 }: ConversationItemProps) {
   return (
-    <SidebarMenuItem className="group/menu-item relative list-none">
-      <div className="flex min-w-0 items-center">
-        <SidebarMenuButton
-          onClick={() => onSelect(conversation.id)}
-          isActive={isActive}
-          className="h-auto flex-1 justify-start whitespace-normal py-2"
-          tooltip={conversation.title}
-        >
-          <MessageSquareText />
-          <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
-        </SidebarMenuButton>
-        <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 flex-shrink-0 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => onRename(conversation.id, conversation.title)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                <span>Renomear</span>
-              </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Move className="mr-2 h-4 w-4" />
-                  <span>Mover para...</span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent>
-                    {groups.map((group) => (
-                      <DropdownMenuItem
-                        key={group.id}
-                        disabled={conversation.groupId === group.id}
-                        onClick={() => onMove(conversation.id, group.id)}
-                      >
-                        {group.name}
+    <div className="flex min-w-0 items-center">
+      <SidebarMenuButton
+        onClick={() => onSelect(conversation.id)}
+        isActive={isActive}
+        className="h-auto flex-1 justify-start whitespace-normal py-2"
+        tooltip={conversation.title}
+      >
+        <MessageSquareText />
+        <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
+      </SidebarMenuButton>
+      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 flex-shrink-0 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => onRename(conversation.id, conversation.title)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Renomear</span>
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Move className="mr-2 h-4 w-4" />
+                <span>Mover para...</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  {groups.map((group) => (
+                    <DropdownMenuItem
+                      key={group.id}
+                      disabled={conversation.groupId === group.id}
+                      onClick={() => onMove(conversation.id, group.id)}
+                    >
+                      {group.name}
+                    </DropdownMenuItem>
+                  ))}
+                  {conversation.groupId && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
+                        Remover do projeto
                       </DropdownMenuItem>
-                    ))}
-                    {conversation.groupId && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
-                          Remover do projeto
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {groups.length === 0 && !conversation.groupId && (
-                      <DropdownMenuItem disabled>Nenhum projeto criado</DropdownMenuItem>
-                    )}
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
-              <DropdownMenuItem onClick={() => {}} disabled>
-                <Copy className="mr-2 h-4 w-4" />
-                <span>Copiar Link</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onDelete(conversation.id)}
-                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                <span>Excluir</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                    </>
+                  )}
+                  {groups.length === 0 && !conversation.groupId && (
+                    <DropdownMenuItem disabled>Nenhum projeto criado</DropdownMenuItem>
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuItem onClick={() => {}} disabled>
+              <Copy className="mr-2 h-4 w-4" />
+              <span>Copiar Link</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(conversation.id)}
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Excluir</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-    </SidebarMenuItem>
+    </div>
   );
 }
