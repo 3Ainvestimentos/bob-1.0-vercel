@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ConversationSidebarItem, Group } from '@/app/chat/page';
@@ -43,7 +42,6 @@ import {
 } from 'lucide-react';
 import React from 'react';
 import { SettingsHelpDropdown } from './SettingsHelpDropdown';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
   DndContext,
@@ -109,7 +107,6 @@ export function ChatSidebar({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        // Require the mouse to move by 8 pixels before activating a drag
         distance: 8,
       },
     }),
@@ -148,136 +145,23 @@ export function ChatSidebar({
                 </div>
               ) : (
                 <>
-                  {groups.map((group) => {
-                    const isExpanded = expandedGroups[group.id] ?? false;
-                    const groupConversations = conversations.filter(
-                      (c) => c.groupId === group.id
-                    );
-                    const { isOver, setNodeRef } = useDroppable({
-                      id: `group-${group.id}`,
-                    });
+                  {groups.map((group) => (
+                    <GroupItem
+                      key={group.id}
+                      group={group}
+                      conversations={conversations}
+                      isExpanded={expandedGroups[group.id] ?? false}
+                      activeChatId={activeChatId}
+                      groups={groups}
+                      onToggleGroup={onToggleGroup}
+                      onRenameRequest={onRenameRequest}
+                      onDeleteGroupRequest={onDeleteGroupRequest}
+                      onSelectConversation={onSelectConversation}
+                      onMoveConversation={onMoveConversation}
+                      onDeleteConvoRequest={onDeleteConvoRequest}
+                    />
+                  ))}
 
-                    return (
-                      <SidebarMenuItem
-                        key={group.id}
-                        ref={setNodeRef}
-                        className={cn(
-                          'rounded-md transition-colors',
-                          isOver && 'bg-sidebar-accent/50'
-                        )}
-                      >
-                        <div className="flex w-full items-center group/menu-item">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => onToggleGroup(group.id)}
-                                className="flex h-9 flex-1 items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm text-muted-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent focus-visible:ring-2 group-data-[state=collapsed]:h-9 group-data-[state=collapsed]:w-9 group-data-[state=collapsed]:p-2"
-                              >
-                                <ChevronRight
-                                  className={cn(
-                                    'h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=collapsed]:hidden',
-                                    isExpanded && 'rotate-90'
-                                  )}
-                                />
-                                <Folder className="h-4 w-4 shrink-0" />
-                                <SidebarMenuButton.Text className="truncate font-bold">
-                                  {group.name}
-                                </SidebarMenuButton.Text>
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent
-                              side="right"
-                              align="center"
-                              hidden={sidebarState !== 'collapsed'}
-                            >
-                              {group.name}
-                            </TooltipContent>
-                          </Tooltip>
-
-                          <div className="ml-auto flex items-center opacity-0 transition-opacity group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              disabled
-                            >
-                              <Pin className="h-4 w-4" />
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                <DropdownMenuItem onClick={() => {}} disabled>
-                                  <PinOff className="mr-2 h-4 w-4" />
-                                  <span>Desafixar projeto</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    onRenameRequest(
-                                      group.id,
-                                      'group',
-                                      group.name
-                                    )
-                                  }
-                                >
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  <span>Renomear Projeto</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    onDeleteGroupRequest(group.id)
-                                  }
-                                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  <span>Excluir Projeto</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                        <ul
-                          className={cn(
-                            'flex flex-col gap-1 overflow-hidden transition-all duration-300 ease-in-out',
-                            'border-sidebar-border/50 group-data-[state=expanded]:ml-4 group-data-[state=expanded]:border-l-2 group-data-[state=expanded]:pl-4',
-                            isExpanded
-                              ? 'max-h-[500px] opacity-100'
-                              : 'max-h-0 opacity-0'
-                          )}
-                        >
-                          <SortableContext
-                            items={groupConversations.map(
-                              (c) => `convo-${c.id}`
-                            )}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            {groupConversations.map((convo) => (
-                              <ConversationItem
-                                key={convo.id}
-                                conversation={convo}
-                                isActive={activeChatId === convo.id}
-                                groups={groups}
-                                onSelect={onSelectConversation}
-                                onMove={onMoveConversation}
-                                onRename={(id, name) =>
-                                  onRenameRequest(id, 'conversation', name)
-                                }
-                                onDelete={onDeleteConvoRequest}
-                              />
-                            ))}
-                          </SortableContext>
-                        </ul>
-                      </SidebarMenuItem>
-                    );
-                  })}
                   <UngroupedArea>
                     <SortableContext
                       items={ungroupedConversations.map((c) => `convo-${c.id}`)}
@@ -351,7 +235,134 @@ export function ChatSidebar({
   );
 }
 
-// ---- Sub-components for Drag and Drop ----
+// ---- Sub-components ----
+
+interface GroupItemProps {
+  group: Group;
+  conversations: ConversationSidebarItem[];
+  isExpanded: boolean;
+  activeChatId: string | null;
+  groups: Group[];
+  onToggleGroup: (groupId: string) => void;
+  onRenameRequest: (
+    id: string,
+    type: 'group' | 'conversation',
+    currentName: string
+  ) => void;
+  onDeleteGroupRequest: (id: string) => void;
+  onSelectConversation: (id: string) => void;
+  onMoveConversation: (chatId: string, groupId: string | null) => void;
+  onDeleteConvoRequest: (id: string) => void;
+}
+
+function GroupItem({
+  group,
+  conversations,
+  isExpanded,
+  activeChatId,
+  groups,
+  onToggleGroup,
+  onRenameRequest,
+  onDeleteGroupRequest,
+  onSelectConversation,
+  onMoveConversation,
+  onDeleteConvoRequest,
+}: GroupItemProps) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `group-${group.id}`,
+  });
+  const groupConversations = conversations.filter(
+    (c) => c.groupId === group.id
+  );
+
+  return (
+    <SidebarMenuItem
+      ref={setNodeRef}
+      className={cn(
+        'rounded-md transition-colors',
+        isOver && 'bg-sidebar-accent/50'
+      )}
+    >
+      <div className="flex w-full items-center group/menu-item">
+        <SidebarMenuButton
+          onClick={() => onToggleGroup(group.id)}
+          className="h-9 flex-1 justify-start gap-2 overflow-hidden p-2 text-sm text-muted-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent focus-visible:ring-2 group-data-[state=collapsed]:h-9 group-data-[state=collapsed]:w-9 group-data-[state=collapsed]:p-2"
+          tooltip={group.name}
+        >
+          <ChevronRight
+            className={cn(
+              'h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=collapsed]:hidden',
+              isExpanded && 'rotate-90'
+            )}
+          />
+          <Folder className="h-4 w-4 shrink-0" />
+          <SidebarMenuButton.Text className="truncate font-bold">
+            {group.name}
+          </SidebarMenuButton.Text>
+        </SidebarMenuButton>
+
+        <div className="ml-auto flex items-center opacity-0 transition-opacity group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
+          <Button variant="ghost" size="icon" className="h-6 w-6" disabled>
+            <Pin className="h-4 w-4" />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => {}} disabled>
+                <PinOff className="mr-2 h-4 w-4" />
+                <span>Desafixar projeto</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onRenameRequest(group.id, 'group', group.name)}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Renomear Projeto</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDeleteGroupRequest(group.id)}
+                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Excluir Projeto</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      <ul
+        className={cn(
+          'flex flex-col gap-1 overflow-hidden transition-all duration-300 ease-in-out',
+          'border-sidebar-border/50 group-data-[state=expanded]:ml-4 group-data-[state=expanded]:border-l-2 group-data-[state=expanded]:pl-4',
+          'group-data-[state=collapsed]:ml-0 group-data-[state=collapsed]:border-l-0 group-data-[state=collapsed]:pl-0',
+          isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+        )}
+      >
+        <SortableContext
+          items={groupConversations.map((c) => `convo-${c.id}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          {groupConversations.map((convo) => (
+            <ConversationItem
+              key={convo.id}
+              conversation={convo}
+              isActive={activeChatId === convo.id}
+              groups={groups}
+              onSelect={onSelectConversation}
+              onMove={onMoveConversation}
+              onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
+              onDelete={onDeleteConvoRequest}
+            />
+          ))}
+        </SortableContext>
+      </ul>
+    </SidebarMenuItem>
+  );
+}
 
 function UngroupedArea({ children }: { children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({
