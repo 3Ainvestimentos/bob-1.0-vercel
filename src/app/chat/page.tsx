@@ -1241,7 +1241,7 @@ function ChatPageContent() {
                   onCopyToClipboard={handleCopyToClipboard}
                   onReportLegalIssueRequest={handleReportLegalIssueRequest}
                   onOpenFeedbackDialog={handleOpenFeedbackDialog}
-                  onWebSearch={onWebSearch}
+                  onWebSearch={handleWebSearch}
                   onSuggestionClick={handleSuggestionClick}
                   activeChatId={activeChatId}
                 />
