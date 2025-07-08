@@ -148,7 +148,7 @@ export function ChatSidebar({
                           </TooltipContent>
                         </Tooltip>
 
-                        <div className="pointer-events-none ml-auto flex items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
+                        <div className="ml-auto flex items-center opacity-0 transition-opacity group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -196,26 +196,32 @@ export function ChatSidebar({
                           </DropdownMenu>
                         </div>
                       </div>
-                      {isExpanded && (
-                        <ul className="flex flex-col gap-1 border-sidebar-border/50 group-data-[state=expanded]:ml-4 group-data-[state=expanded]:border-l-2 group-data-[state=expanded]:pl-4">
-                          {conversations
-                            .filter((c) => c.groupId === group.id)
-                            .map((convo) => (
-                              <ConversationItem
-                                key={convo.id}
-                                conversation={convo}
-                                isActive={activeChatId === convo.id}
-                                groups={groups}
-                                onSelect={onSelectConversation}
-                                onMove={onMoveConversation}
-                                onRename={(id, name) =>
-                                  onRenameRequest(id, 'conversation', name)
-                                }
-                                onDelete={onDeleteConvoRequest}
-                              />
-                            ))}
-                        </ul>
-                      )}
+                      <ul
+                        className={cn(
+                          'flex flex-col gap-1 overflow-hidden transition-all duration-300 ease-in-out',
+                          'border-sidebar-border/50 group-data-[state=expanded]:ml-4 group-data-[state=expanded]:border-l-2 group-data-[state=expanded]:pl-4',
+                          isExpanded
+                            ? 'max-h-[500px] opacity-100'
+                            : 'max-h-0 opacity-0'
+                        )}
+                      >
+                        {conversations
+                          .filter((c) => c.groupId === group.id)
+                          .map((convo) => (
+                            <ConversationItem
+                              key={convo.id}
+                              conversation={convo}
+                              isActive={activeChatId === convo.id}
+                              groups={groups}
+                              onSelect={onSelectConversation}
+                              onMove={onMoveConversation}
+                              onRename={(id, name) =>
+                                onRenameRequest(id, 'conversation', name)
+                              }
+                              onDelete={onDeleteConvoRequest}
+                            />
+                          ))}
+                      </ul>
                     </SidebarMenuItem>
                   );
                 })}
