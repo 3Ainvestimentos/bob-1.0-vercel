@@ -36,7 +36,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
-  Pin,
   Search,
   Settings,
   Trash2,
@@ -386,12 +385,16 @@ function GroupItem({
                 {...attributes}
                 {...listeners}
               >
-                <ChevronRight
-                  className={cn(
-                    'h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=collapsed]:hidden',
-                    isExpanded && 'rotate-90'
-                  )}
-                />
+                {groupConversations.length > 0 ? (
+                  <ChevronRight
+                    className={cn(
+                      'h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=collapsed]:hidden',
+                      isExpanded && 'rotate-90'
+                    )}
+                  />
+                ) : (
+                  <span className="h-4 w-4 shrink-0 group-data-[state=collapsed]:hidden" />
+                )}
                 <Folder className="h-4 w-4 shrink-0" />
                 <SidebarMenuButton.Text className="truncate font-bold">
                   {group.name}
