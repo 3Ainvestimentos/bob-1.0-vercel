@@ -247,7 +247,7 @@ export function ChatSidebar({
         </DragOverlay>
       </DndContext>
 
-      <SidebarFooter className="py-3">
+      <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
