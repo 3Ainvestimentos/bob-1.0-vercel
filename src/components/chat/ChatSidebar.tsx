@@ -24,6 +24,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -38,6 +39,7 @@ import {
 import {
   ChevronsLeft,
   ChevronsRight,
+  Copy,
   Folder,
   FolderPlus,
   HelpCircle,
@@ -46,7 +48,13 @@ import {
   MessageSquareText,
   Moon,
   MoreHorizontal,
+  Move,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pencil,
+  Pin,
+  PinOff,
+  Search,
   Settings,
   Sun,
   Trash2,
@@ -54,6 +62,7 @@ import {
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import React from 'react';
+import { BobIcon } from '../icons/BobIcon';
 
 interface ChatSidebarProps {
   conversations: ConversationSidebarItem[];
@@ -93,24 +102,24 @@ export function ChatSidebar({
   const ungroupedConversations = conversations.filter((c) => !c.groupId);
 
   return (
-    <Sidebar>
-      <SidebarContent className="pt-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto" variant="secondary">
-              <FolderPlus />
-              <span className="font-bold">Novo Projeto</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={onNewChat} tooltip="Nova Conversa" variant="secondary">
-              <Pencil />
-              <span className="font-bold">Nova conversa</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <ScrollArea className="mt-4 flex-1">
-          <div className="space-y-1 px-3">
+    <>
+      <SidebarHeader className="flex h-14 items-center justify-between border-b border-sidebar-border p-2">
+        <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+          <BobIcon className="h-8 w-8" />
+          <span className="font-semibold">Bob 1.0</span>
+        </div>
+        <SidebarMenuButton 
+          onClick={toggleSidebar} 
+          className="ml-auto size-8 group-data-[collapsible=icon]:mx-auto" 
+          tooltip={sidebarState === 'expanded' ? 'Recolher' : 'Expandir'}
+        >
+          {sidebarState === 'expanded' ? <PanelLeftClose /> : <PanelLeftOpen />}
+        </SidebarMenuButton>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <ScrollArea className="flex-1">
+          <SidebarMenu>
             {isSidebarLoading ? (
               <div className="space-y-2 px-2">
                 <Skeleton className="h-8 w-full" />
@@ -119,73 +128,43 @@ export function ChatSidebar({
               </div>
             ) : (
               <>
-                <div className="group-data-[collapsible=icon]:hidden">
-                  {groups.map((group) => (
-                    <div key={group.id} className="space-y-1">
-                      <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent">
-                        <Folder className="mr-2 h-4 w-4 shrink-0" />
-                        <span className="truncate font-bold">{group.name}</span>
-                        <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem onClick={() => onRenameRequest(group.id, 'group', group.name)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                <span>Renomear Projeto</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => onDeleteGroupRequest(group.id)}
-                                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Excluir Projeto</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1 pl-6">
-                        {conversations
-                          .filter((c) => c.groupId === group.id)
-                          .map((convo) => (
-                            <ConversationItem
-                              key={convo.id}
-                              conversation={convo}
-                              isActive={activeChatId === convo.id}
-                              groups={groups}
-                              onSelect={onSelectConversation}
-                              onMove={onMoveConversation}
-                              onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
-                              onDelete={onDeleteConvoRequest}
-                            />
-                          ))}
+                {groups.map((group) => (
+                  <SidebarMenuItem key={group.id} className="space-y-1">
+                    <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-sidebar-accent">
+                      <Folder className="mr-2 h-4 w-4 shrink-0" />
+                      <span className="truncate font-bold">{group.name}</span>
+                      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" disabled>
+                            <Pin className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => {}} disabled>
+                              <PinOff className="mr-2 h-4 w-4" />
+                              <span>Desafixar projeto</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onRenameRequest(group.id, 'group', group.name)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              <span>Renomear Projeto</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => onDeleteGroupRequest(group.id)}
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Excluir Projeto</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-                  ))}
-                  {ungroupedConversations.length > 0 && (
-                    <div className="flex flex-col gap-1 pt-2">
-                      {ungroupedConversations.map((convo) => (
-                        <ConversationItem
-                          key={convo.id}
-                          conversation={convo}
-                          isActive={activeChatId === convo.id}
-                          groups={groups}
-                          onSelect={onSelectConversation}
-                          onMove={onMoveConversation}
-                          onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
-                          onDelete={onDeleteConvoRequest}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="hidden flex-col gap-1 pt-2 group-data-[collapsible=icon]:flex">
-                  {groups.map((group) => (
-                    <React.Fragment key={group.id}>
+                    <div className="flex flex-col gap-1 border-l-2 border-sidebar-border/50 pl-4 ml-2">
                       {conversations
                         .filter((c) => c.groupId === group.id)
                         .map((convo) => (
@@ -200,22 +179,23 @@ export function ChatSidebar({
                             onDelete={onDeleteConvoRequest}
                           />
                         ))}
-                      <Separator className="my-1" />
-                    </React.Fragment>
-                  ))}
-                  {ungroupedConversations.map((convo) => (
-                    <ConversationItem
-                      key={convo.id}
-                      conversation={convo}
-                      isActive={activeChatId === convo.id}
-                      groups={groups}
-                      onSelect={onSelectConversation}
-                      onMove={onMoveConversation}
-                      onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
-                      onDelete={onDeleteConvoRequest}
-                    />
-                  ))}
-                </div>
+                    </div>
+                  </SidebarMenuItem>
+                ))}
+                
+                {ungroupedConversations.map((convo) => (
+                  <ConversationItem
+                    key={convo.id}
+                    conversation={convo}
+                    isActive={activeChatId === convo.id}
+                    groups={groups}
+                    onSelect={onSelectConversation}
+                    onMove={onMoveConversation}
+                    onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
+                    onDelete={onDeleteConvoRequest}
+                  />
+                ))}
+              
                 {conversations.length === 0 && !isSidebarLoading && (
                   <p className="px-2 text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">
                     Nenhuma conversa ainda.
@@ -223,69 +203,80 @@ export function ChatSidebar({
                 )}
               </>
             )}
-          </div>
+          </SidebarMenu>
         </ScrollArea>
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu className="items-center group-data-[collapsible=expanded]:items-start">
+
+      <SidebarFooter className="p-2">
+        <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton>
-                      <Settings />
-                      <span className="min-w-0 flex-1">Configurações</span>
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="right" align="center" hidden={sidebarState !== 'collapsed' || isMobile}>
-                  Configurações
-                </TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent side="top" align="start">
-                <DropdownMenuLabel>Tema</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setTheme('light')}>
-                  <Sun className="mr-2 h-4 w-4" />
-                  <span>Claro</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme('dark')}>
-                  <Moon className="mr-2 h-4 w-4" />
-                  <span>Escuro</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme('system')}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Sistema</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <a href="#"><HelpCircle className="mr-2 h-4 w-4" /><span>Guias e FAQ</span></a>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {isAuthenticated ? (
-                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sair</span>
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={() => router.push('/')}>
-                    <LogIn className="mr-2 h-4 w-4" />
-                    <span >Ir para Login</span>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <SidebarMenuButton onClick={onNewChat} tooltip="Nova Conversa">
+              <Pencil /> <span>Nova conversa</span>
+            </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={toggleSidebar} tooltip={sidebarState === 'expanded' ? 'Recolher' : 'Expandir'}>
-              {sidebarState === 'expanded' ? <ChevronsLeft /> : <ChevronsRight />}
-              <span className="min-w-0 flex-1">Recolher</span>
+            <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto">
+              <FolderPlus /> <span>Novo Projeto</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton onClick={() => {}} tooltip="Pesquisar">
+              <Search className="size-5" /> <span>Pesquisar</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        
+        <Separator className="my-1" />
+
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton>
+                  <Settings className="size-5" />
+                  <span className="min-w-0 flex-1">Configurações e Ajuda</span>
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="right" align="center" hidden={sidebarState !== 'collapsed' || isMobile}>
+              Configurações e Ajuda
+            </TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent side="top" align="start" className="w-56">
+            <DropdownMenuLabel>Tema</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setTheme('light')}>
+              <Sun className="mr-2 h-4 w-4" />
+              <span>Claro</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTheme('dark')}>
+              <Moon className="mr-2 h-4 w-4" />
+              <span>Escuro</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTheme('system')}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Sistema</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="#"><HelpCircle className="mr-2 h-5 w-5" /><span>Guias e FAQ</span></a>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {isAuthenticated ? (
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={() => router.push('/')}>
+                <LogIn className="mr-2 h-4 w-4" />
+                <span >Ir para Login</span>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
-    </Sidebar>
+    </>
   );
 }
 
@@ -336,7 +327,7 @@ function ConversationItem({
               </DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <FolderPlus className="mr-2 h-4 w-4" />
+                  <Move className="mr-2 h-4 w-4" />
                   <span>Mover para...</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
@@ -364,6 +355,10 @@ function ConversationItem({
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
+              <DropdownMenuItem onClick={() => {}} disabled>
+                <Copy className="mr-2 h-4 w-4" />
+                <span>Copiar Link</span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => onDelete(conversation.id)}

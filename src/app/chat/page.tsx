@@ -33,7 +33,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
@@ -417,7 +417,7 @@ function ChatPageContent() {
     []
   );
   const [groups, setGroups] = useState<Group[]>([]);
-  const [isSidebarLoading, setIsSidebarLoading] = useState(false);
+  const [isSidebarLoading, setIsSidebarLoading] = useState(true);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
 
@@ -1203,54 +1203,58 @@ function ChatPageContent() {
         </Dialog>
 
 
-        <ChatSidebar
-            conversations={conversations}
-            groups={groups}
-            activeChatId={activeChatId}
-            isSidebarLoading={isSidebarLoading}
-            onNewChat={handleNewChat}
-            onSelectConversation={handleSelectConversation}
-            onMoveConversation={handleMoveConversation}
-            onRenameRequest={handleRenameRequest}
-            onDeleteConvoRequest={handleDeleteConvoRequest}
-            setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
-            onDeleteGroupRequest={handleDeleteRequest}
-            isAuthenticated={isAuthenticated}
-            handleSignOut={handleSignOut}
-        />
-
-        <main className="flex flex-1 flex-col bg-background">
-            <ChatMessageArea
-              messages={messages}
-              isLoading={isLoading}
-              error={error}
-              user={user}
-              userName={userName}
-              userInitials={userInitials}
-              lastFailedQuery={lastFailedQuery}
-              feedbacks={feedbacks}
-              suggestions={suggestions}
-              isSuggestionsLoading={isSuggestionsLoading}
-              regeneratingMessageId={regeneratingMessageId}
-              messagesEndRef={messagesEndRef}
-              onFeedback={handleFeedback}
-              onRegenerate={handleRegenerate}
-              onCopyToClipboard={handleCopyToClipboard}
-              onReportLegalIssueRequest={handleReportLegalIssueRequest}
-              onOpenFeedbackDialog={handleOpenFeedbackDialog}
-              onWebSearch={handleWebSearch}
-              onSuggestionClick={handleSuggestionClick}
-              activeChatId={activeChatId}
+        <Sidebar>
+            <ChatSidebar
+                conversations={conversations}
+                groups={groups}
+                activeChatId={activeChatId}
+                isSidebarLoading={isSidebarLoading}
+                onNewChat={handleNewChat}
+                onSelectConversation={handleSelectConversation}
+                onMoveConversation={handleMoveConversation}
+                onRenameRequest={handleRenameRequest}
+                onDeleteConvoRequest={handleDeleteConvoRequest}
+                setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
+                onDeleteGroupRequest={handleDeleteRequest}
+                isAuthenticated={isAuthenticated}
+                handleSignOut={handleSignOut}
             />
+        </Sidebar>
 
-            <ChatInputForm
-                input={input}
-                setInput={setInput}
-                handleSubmit={handleSubmit}
-                isLoading={isLoading}
-                inputRef={inputRef}
-            />
-        </main>
+        <SidebarInset>
+            <main className="flex flex-1 flex-col bg-background">
+                <ChatMessageArea
+                  messages={messages}
+                  isLoading={isLoading}
+                  error={error}
+                  user={user}
+                  userName={userName}
+                  userInitials={userInitials}
+                  lastFailedQuery={lastFailedQuery}
+                  feedbacks={feedbacks}
+                  suggestions={suggestions}
+                  isSuggestionsLoading={isSuggestionsLoading}
+                  regeneratingMessageId={regeneratingMessageId}
+                  messagesEndRef={messagesEndRef}
+                  onFeedback={handleFeedback}
+                  onRegenerate={handleRegenerate}
+                  onCopyToClipboard={handleCopyToClipboard}
+                  onReportLegalIssueRequest={handleReportLegalIssueRequest}
+                  onOpenFeedbackDialog={handleOpenFeedbackDialog}
+                  onWebSearch={onWebSearch}
+                  onSuggestionClick={handleSuggestionClick}
+                  activeChatId={activeChatId}
+                />
+
+                <ChatInputForm
+                    input={input}
+                    setInput={setInput}
+                    handleSubmit={handleSubmit}
+                    isLoading={isLoading}
+                    inputRef={inputRef}
+                />
+            </main>
+        </SidebarInset>
         </div>
   );
 }
