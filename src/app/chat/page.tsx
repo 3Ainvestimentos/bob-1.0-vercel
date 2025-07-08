@@ -1360,7 +1360,7 @@ function ChatPageContent() {
                   onRegenerate={handleRegenerate}
                   onCopyToClipboard={handleCopyToClipboard}
                   onReportLegalIssueRequest={handleReportLegalIssueRequest}
-                  onOpenFeedbackDialog={onOpenFeedbackDialog}
+                  onOpenFeedbackDialog={handleOpenFeedbackDialog}
                   onWebSearch={handleWebSearch}
                   onSuggestionClick={handleSuggestionClick}
                   activeChatId={activeChatId}
@@ -1386,3 +1386,5 @@ export default function ChatPage() {
         </SidebarProvider>
     )
 }
+
+    
