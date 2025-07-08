@@ -64,6 +64,7 @@ import React, {
   useState,
 } from 'react';
 import type { DragEndEvent } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 
 
 // ---- Data Types ----
@@ -1039,48 +1040,55 @@ function ChatPageContent() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (!over) {
-      return;
+    if (!over || active.id === over.id) {
+        return;
     }
 
     const activeId = active.id as string;
     const overId = over.id as string;
-
-    if (activeId === overId) {
-      return;
-    }
-
-    const isDraggingConversation = activeId.startsWith('convo-');
-    if (!isDraggingConversation) return;
-
+    
+    // We only care about dragging conversations
+    if (!activeId.startsWith('convo-')) return;
     const conversationId = activeId.replace('convo-', '');
+    
+    // --- Move to a different group ---
     const conversation = conversations.find((c) => c.id === conversationId);
     if (!conversation) return;
 
-    // Case 1: Dropping onto a group
+    // Case 1: Dropping onto a group droppable area
     if (overId.startsWith('group-')) {
-      const groupId = overId.replace('group-', '');
-      if (conversation.groupId !== groupId) {
-        await handleMoveConversation(conversationId, groupId);
-      }
-      return;
+        const groupId = overId.replace('group-', '');
+        if (conversation.groupId !== groupId) {
+            await handleMoveConversation(conversationId, groupId);
+        }
+        return;
     }
     
     // Case 2: Dropping onto the 'ungrouped' area
     if (overId === 'ungrouped-area') {
-        if (conversation.groupId) { // Only move if it was in a group
+        if (conversation.groupId !== null) {
             await handleMoveConversation(conversationId, null);
         }
         return;
     }
 
-    // Case 3: Dropping onto another conversation to move into its group/area
+    // --- Reorder or Move by dropping on another conversation ---
     if (overId.startsWith('convo-')) {
-        const overConversation = conversations.find(c => c.id === overId.replace('convo-', ''));
-        if (!overConversation) return;
+        const overConversationId = overId.replace('convo-', '');
+        
+        const activeIndex = conversations.findIndex(c => c.id === conversationId);
+        const overIndex = conversations.findIndex(c => c.id === overConversationId);
 
-        const targetGroupId = overConversation.groupId || null;
-        if(conversation.groupId !== targetGroupId) {
+        if (activeIndex === -1 || overIndex === -1) return;
+
+        // If the conversations are in the same group, reorder them.
+        if (conversations[activeIndex].groupId === conversations[overIndex].groupId) {
+            setConversations(items => arrayMove(items, activeIndex, overIndex));
+            // Note: This reordering is visual only and will reset on page load.
+            // Persisting the order would require schema changes (e.g., an 'order' field).
+        } else {
+            // Otherwise, move the active conversation to the 'over' conversation's group.
+            const targetGroupId = conversations[overIndex].groupId || null;
             await handleMoveConversation(conversationId, targetGroupId);
         }
     }
