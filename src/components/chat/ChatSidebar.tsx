@@ -271,7 +271,7 @@ export function ChatSidebar({
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="mt-2">
             <SidebarMenuButton
               onClick={() => {}}
               tooltip="Pesquisar"
