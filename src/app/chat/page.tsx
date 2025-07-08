@@ -11,6 +11,7 @@ import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import {
   askAssistant,
   generateSuggestedQuestions,
+  generateTitleForConversation,
   regenerateAnswer
 } from '@/app/actions';
 import {
@@ -324,7 +325,8 @@ async function getConversationMessages(
 async function saveConversation(
   userId: string,
   messages: Message[],
-  chatId?: string | null
+  chatId?: string | null,
+  newChatTitle?: string
 ): Promise<string> {
   if (!userId) throw new Error('User ID is required.');
   if (!messages || messages.length === 0)
@@ -348,12 +350,12 @@ async function saveConversation(
     });
     return chatId;
   } else {
-    const firstUserMessage =
-      messages.find((m) => m.role === 'user')?.content || 'Nova Conversa';
-    const title =
-      firstUserMessage.length > 30
-        ? firstUserMessage.substring(0, 27) + '...'
-        : firstUserMessage;
+    const title = newChatTitle || (() => {
+        const firstUserMessage = messages.find((m) => m.role === 'user')?.content || 'Nova Conversa';
+        return firstUserMessage.length > 30
+            ? firstUserMessage.substring(0, 27) + '...'
+            : firstUserMessage;
+    })();
 
     const newChatRef = await addDoc(conversationsRef, {
       title,
@@ -571,7 +573,8 @@ function ChatPageContent() {
 
     try {
       if (!currentChatId) {
-        const newId = await saveConversation(user.uid, newMessages, null);
+        const newTitle = await generateTitleForConversation(query);
+        const newId = await saveConversation(user.uid, newMessages, null, newTitle);
         setActiveChatId(newId);
         currentChatId = newId;
       } else {

@@ -259,6 +259,47 @@ export async function generateSuggestedQuestions(
 }
 
 
+export async function generateTitleForConversation(
+  query: string
+): Promise<string> {
+  const fallbackTitle = query.length > 30 ? query.substring(0, 27) + '...' : query;
+  
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    console.error("A variável de ambiente GEMINI_API_KEY não está definida. Não é possível gerar título.");
+    return fallbackTitle;
+  }
+
+  const prompt = `Gere um título curto e descritivo em português com no máximo 5 palavras para a seguinte pergunta. Retorne APENAS o título, sem aspas, marcadores ou qualquer outro texto.
+
+Pergunta: "${query}"`;
+
+  try {
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash-latest",
+      generationConfig: {
+        temperature: 0.1,
+      },
+    });
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const title = response.text().trim().replace(/"/g, '');
+
+    if (title && title.length > 0 && title.length < 60) {
+      return title;
+    }
+    
+    return fallbackTitle;
+
+  } catch (error: any) {
+    console.error("Erro ao gerar título da conversa:", error.message);
+    return fallbackTitle;
+  }
+}
+
+
 export async function logDlpAlert(
   userId: string,
   chatId: string,
