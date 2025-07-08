@@ -63,6 +63,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import type { DragEndEvent } from '@dnd-kit/core';
+
 
 // ---- Data Types ----
 export interface Group {
@@ -711,12 +713,14 @@ function ChatPageContent() {
   ) => {
     if (!user) return;
     try {
+      // Optimistically update the UI
       setConversations((convos) =>
         convos.map((c) => (c.id === chatId ? { ...c, groupId } : c))
       );
       await updateConversationGroup(user.uid, chatId, groupId);
     } catch (err: any) {
       setError(`Erro ao mover a conversa: ${err.message}`);
+      // Revert if there was an error
       fetchSidebarData();
     }
   };
@@ -1032,6 +1036,56 @@ function ChatPageContent() {
     setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over) {
+      return;
+    }
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    if (activeId === overId) {
+      return;
+    }
+
+    const isDraggingConversation = activeId.startsWith('convo-');
+    if (!isDraggingConversation) return;
+
+    const conversationId = activeId.replace('convo-', '');
+    const conversation = conversations.find((c) => c.id === conversationId);
+    if (!conversation) return;
+
+    // Case 1: Dropping onto a group
+    if (overId.startsWith('group-')) {
+      const groupId = overId.replace('group-', '');
+      if (conversation.groupId !== groupId) {
+        await handleMoveConversation(conversationId, groupId);
+      }
+      return;
+    }
+    
+    // Case 2: Dropping onto the 'ungrouped' area
+    if (overId === 'ungrouped-area') {
+        if (conversation.groupId) { // Only move if it was in a group
+            await handleMoveConversation(conversationId, null);
+        }
+        return;
+    }
+
+    // Case 3: Dropping onto another conversation to move into its group/area
+    if (overId.startsWith('convo-')) {
+        const overConversation = conversations.find(c => c.id === overId.replace('convo-', ''));
+        if (!overConversation) return;
+
+        const targetGroupId = overConversation.groupId || null;
+        if(conversation.groupId !== targetGroupId) {
+            await handleMoveConversation(conversationId, targetGroupId);
+        }
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -1228,6 +1282,7 @@ function ChatPageContent() {
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
                 onToggleGroup={handleToggleGroup}
+                onDragEnd={handleDragEnd}
                 isAuthenticated={isAuthenticated}
                 handleSignOut={handleSignOut}
             />
