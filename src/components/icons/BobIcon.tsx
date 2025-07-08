@@ -1,7 +1,11 @@
 import React from 'react';
 import { cn } from "@/lib/utils";
 
-export const BobIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
+interface BobIconProps extends React.SVGProps<SVGSVGElement> {
+    isThinking?: boolean;
+}
+
+export const BobIcon = ({ className, isThinking = false, ...props }: BobIconProps) => (
     <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 28"
@@ -9,7 +13,7 @@ export const BobIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) 
         className={cn(className)}
         {...props}
     >
-        <g transform="translate(0, 1.5)">
+        <g transform="translate(0, 1.5)" className={cn(isThinking && 'animate-pulse')}>
             {/* Lâmpada */}
             <circle cx="12" cy="6.5" r="5.5" fill="#FFFFE0" opacity="0.3"/>
             <circle cx="12" cy="6.5" r="4.5" fill="#FFFFE0" opacity="0.5"/>

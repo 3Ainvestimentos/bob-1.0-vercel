@@ -239,18 +239,11 @@ export function ChatMessageArea({
             ))}
             {isLoading && (
               <div className="flex items-start gap-3">
-                <div className="relative shrink-0">
-                  <div className="absolute -top-3.5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-background p-0.5">
-                    <div className="rounded-full bg-primary/10 p-1">
-                      <Lightbulb className="h-4 w-4 animate-pulse text-primary" />
-                    </div>
-                  </div>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      <BobIcon className="h-6 w-6" />
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarFallback>
+                    <BobIcon className="h-6 w-6" isThinking />
+                  </AvatarFallback>
+                </Avatar>
                 <div className="w-full max-w-md rounded-lg bg-muted p-4">
                   <p className="animate-pulse text-sm italic text-muted-foreground">
                     Bob está pensando...
