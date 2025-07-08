@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SidebarMenuButton } from '@/components/ui/sidebar';
-import { HelpCircle, LogIn, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { LogIn, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 
@@ -48,13 +48,6 @@ export function SettingsHelpDropdown({
         <DropdownMenuItem onClick={() => setTheme('system')}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Sistema</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <a href="#">
-            <HelpCircle className="mr-2 h-5 w-5" />
-            <span>Guias e FAQ</span>
-          </a>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {isAuthenticated ? (

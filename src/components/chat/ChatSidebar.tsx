@@ -30,6 +30,7 @@ import {
   Copy,
   Folder,
   FolderPlus,
+  HelpCircle,
   MessageSquareText,
   MoreHorizontal,
   Move,
@@ -278,6 +279,12 @@ export function ChatSidebar({
 
         <Separator className="my-1" />
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={() => {}} tooltip="Guias e FAQ">
+              <HelpCircle className="size-5" />
+              <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SettingsHelpDropdown
               isAuthenticated={isAuthenticated}
