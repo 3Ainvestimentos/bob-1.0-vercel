@@ -218,7 +218,6 @@ export function ChatSidebar({
 
         <DragOverlay dropAnimation={null}>
           {activeDragItem ? (
-            // Check if it's a group or conversation by checking for the 'name' property (unique to Groups)
             'name' in activeDragItem ? (
                 <SidebarMenuItem className="pointer-events-none w-full !cursor-grabbing !opacity-100 shadow-lg bg-sidebar-accent">
                     <div className="flex w-full items-center">
@@ -366,7 +365,12 @@ function GroupItem({
           >
             <div className="flex w-full items-center group/menu-item">
               <SidebarMenuButton
-                onClick={() => onToggleGroup(group.id)}
+                onClick={() => {
+                  if (groupConversations.length > 0) {
+                    onToggleGroup(group.id);
+                  }
+                }}
+                aria-disabled={groupConversations.length === 0}
                 className="h-9 flex-1 justify-start gap-2 overflow-hidden p-2 text-sm text-muted-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent focus-visible:ring-2 group-data-[state=collapsed]:h-9 group-data-[state=collapsed]:w-9 group-data-[state=collapsed]:p-2"
                 tooltip={group.name}
                 {...attributes}
@@ -375,7 +379,8 @@ function GroupItem({
                 <ChevronRight
                   className={cn(
                     'h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=collapsed]:hidden',
-                    isExpanded && 'rotate-90'
+                    isExpanded && 'rotate-90',
+                    groupConversations.length === 0 && 'invisible'
                   )}
                 />
                 <Folder className="h-4 w-4 shrink-0" />
