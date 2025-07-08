@@ -241,41 +241,49 @@ export function ChatSidebar({
       </DndContext>
 
       <SidebarFooter className="p-2">
-        <div className="group">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={onNewChat} tooltip="Nova Conversa">
-                <Pencil className="size-4" />
-                <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => setIsNewGroupDialogOpen(true)}
-                tooltip="Novo Projeto"
-              >
-                <FolderPlus className="size-4" />
-                <SidebarMenuButton.Text>Novo Projeto</SidebarMenuButton.Text>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => {}} tooltip="Pesquisar">
-                <Search className="size-5" />
-                <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={onNewChat}
+              tooltip="Nova Conversa"
+              className="group-data-[collapsible=icon]:!w-full"
+            >
+              <Pencil className="size-4" />
+              <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => setIsNewGroupDialogOpen(true)}
+              tooltip="Novo Projeto"
+              className="group-data-[collapsible=icon]:!w-full"
+            >
+              <FolderPlus className="size-4" />
+              <SidebarMenuButton.Text>Novo Projeto</SidebarMenuButton.Text>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => {}}
+              tooltip="Pesquisar"
+              className="group-data-[collapsible=icon]:!w-full"
+            >
+              <Search className="size-5" />
+              <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
 
-          <Separator className="my-1" />
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SettingsHelpDropdown
-                isAuthenticated={isAuthenticated}
-                handleSignOut={handleSignOut}
-              />
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </div>
+        <Separator className="my-1" />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SettingsHelpDropdown
+              isAuthenticated={isAuthenticated}
+              handleSignOut={handleSignOut}
+              className="group-data-[collapsible=icon]:!w-full"
+            />
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </>
   );
@@ -337,6 +345,7 @@ function GroupItem({
               <SidebarMenuButton
                 onClick={() => onToggleGroup(group.id)}
                 className="h-9 flex-1 justify-start gap-2 overflow-hidden p-2 text-sm text-muted-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent focus-visible:ring-2 group-data-[state=collapsed]:h-9 group-data-[state=collapsed]:w-9 group-data-[state=collapsed]:p-2"
+                tooltip={group.name}
               >
                 <ChevronRight
                   className={cn(
