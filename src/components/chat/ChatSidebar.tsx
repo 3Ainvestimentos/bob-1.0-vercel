@@ -41,7 +41,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import React from 'react';
+import React, { useState } from 'react';
 import { SettingsHelpDropdown } from './SettingsHelpDropdown';
 import { cn } from '@/lib/utils';
 import {
@@ -53,6 +53,8 @@ import {
   type DragEndEvent,
   closestCenter,
   useDroppable,
+  DragOverlay,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -103,6 +105,7 @@ export function ChatSidebar({
   handleSignOut,
 }: ChatSidebarProps) {
   const { state: sidebarState, toggleSidebar } = useSidebar();
+  const [activeDragItem, setActiveDragItem] = useState<ConversationSidebarItem | null>(null);
 
   const ungroupedConversations = conversations.filter((c) => !c.groupId);
   const sensors = useSensors(
@@ -113,6 +116,19 @@ export function ChatSidebar({
     }),
     useSensor(KeyboardSensor)
   );
+
+  function handleDragStart(event: DragStartEvent) {
+    const { active } = event;
+    const activeId = active.id.toString();
+
+    if (activeId.startsWith('convo-')) {
+      const conversationId = activeId.replace('convo-', '');
+      const draggedConvo = conversations.find((c) => c.id === conversationId);
+      if (draggedConvo) {
+        setActiveDragItem(draggedConvo);
+      }
+    }
+  }
 
   return (
     <>
@@ -133,7 +149,11 @@ export function ChatSidebar({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragEnd={onDragEnd}
+        onDragStart={handleDragStart}
+        onDragEnd={(event) => {
+          onDragEnd(event);
+          setActiveDragItem(null);
+        }}
       >
         <SidebarContent>
           <ScrollArea className="flex-1">
@@ -195,6 +215,18 @@ export function ChatSidebar({
             </SidebarMenu>
           </ScrollArea>
         </SidebarContent>
+
+        <DragOverlay dropAnimation={null}>
+          {activeDragItem ? (
+            <SidebarMenuButton
+              className="pointer-events-none w-full !cursor-grabbing !opacity-100 shadow-lg"
+              isActive={true}
+            >
+              <MessageSquareText className="size-4" />
+              <SidebarMenuButton.Text>{activeDragItem.title}</SidebarMenuButton.Text>
+            </SidebarMenuButton>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       <SidebarFooter className="p-2">
@@ -502,5 +534,3 @@ function ConversationItem({
     </SidebarMenuItem>
   );
 }
-
-    
