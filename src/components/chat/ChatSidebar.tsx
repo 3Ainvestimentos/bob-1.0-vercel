@@ -399,9 +399,6 @@ function GroupItem({
               </SidebarMenuButton>
 
               <div className="ml-auto flex items-center opacity-0 transition-opacity group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <Pin className="h-4 w-4" />
-                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-6 w-6">
