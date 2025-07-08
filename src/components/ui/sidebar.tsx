@@ -9,10 +9,7 @@ import { PanelLeft } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
@@ -225,6 +222,7 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
+            "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
@@ -292,7 +290,8 @@ const SidebarInset = React.forwardRef<
         <main
         ref={ref}
         className={cn(
-            "relative flex min-h-svh flex-1 flex-col bg-background",
+            "relative flex min-h-svh flex-1 flex-col bg-background transition-[margin-left] duration-200 ease-linear",
+            "md:peer-data-[state=collapsed]:peer-data-[collapsible=icon]:ml-[--sidebar-width-icon]",
             "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-[calc(var(--sidebar-width-icon)_+_theme(spacing.8))] md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
             className
         )}
@@ -371,14 +370,14 @@ const SidebarMenuItem = React.forwardRef<
   <li
     ref={ref}
     data-sidebar="menu-item"
-    className={cn("list-none group/menu-item relative", className)}
+    className={cn("list-none", className)}
     {...props}
   />
 ))
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm text-muted-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent group-data-[collapsible=icon]:!size-9 group-data-[collapsible=icon]:!p-2 [&>span]:truncate [&>span]:transition-all [&>span]:duration-200 [&>span]:group-data-[collapsible=icon]:w-0 [&>span]:group-data-[collapsible=icon]:opacity-0 [&>svg]:size-4 [&>svg]:shrink-0",
+  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm text-muted-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent group-data-[collapsible=icon]:!size-9 group-data-[collapsible=icon]:!p-2",
   {
     variants: {
       variant: {
@@ -400,6 +399,24 @@ const sidebarMenuButtonVariants = cva(
   }
 )
 
+const SidebarMenuButtonText = React.forwardRef<
+  HTMLSpanElement,
+  React.HTMLAttributes<HTMLSpanElement>
+>(({ className, ...props }, ref) => {
+  return (
+    <span
+      ref={ref}
+      className={cn(
+        "truncate transition-all duration-200 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0",
+        className
+      )}
+      {...props}
+    />
+  )
+})
+SidebarMenuButtonText.displayName = "SidebarMenuButton.Text"
+
+
 const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> & {
@@ -416,6 +433,7 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
+      children,
       ...props
     },
     ref
@@ -431,13 +449,15 @@ const SidebarMenuButton = React.forwardRef<
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
-      />
+      >
+        {children}
+      </Comp>
     )
 
     if (!tooltip) {
       return button
     }
-
+    
     const tooltipContent = typeof tooltip === "string" ? { children: tooltip } : tooltip;
 
     return (
@@ -454,6 +474,8 @@ const SidebarMenuButton = React.forwardRef<
   }
 )
 SidebarMenuButton.displayName = "SidebarMenuButton"
+SidebarMenuButton.Text = SidebarMenuButtonText
+
 
 const SidebarMenuAction = React.forwardRef<
   HTMLButtonElement,

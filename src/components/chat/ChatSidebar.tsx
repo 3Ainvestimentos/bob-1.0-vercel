@@ -30,11 +30,6 @@ import {
 } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   Copy,
   Folder,
   FolderPlus,
@@ -58,7 +53,6 @@ import {
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import React from 'react';
-import { BobIcon } from '../icons/BobIcon';
 
 interface ChatSidebarProps {
   conversations: ConversationSidebarItem[];
@@ -93,19 +87,19 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const router = useRouter();
   const { setTheme } = useTheme();
-  const { state: sidebarState, isMobile, toggleSidebar } = useSidebar();
+  const { state: sidebarState, toggleSidebar } = useSidebar();
   
   const ungroupedConversations = conversations.filter((c) => !c.groupId);
 
   return (
     <>
-      <div className="flex h-14 items-center border-b border-sidebar-border p-2">
+      <div className="flex h-14 items-center border-b border-sidebar-border p-2 group-data-[collapsible=icon]:justify-center">
         <SidebarMenuButton 
           onClick={toggleSidebar} 
-          className="size-8 group-data-[collapsible=icon]:mx-auto" 
+          className="size-8"
           tooltip={sidebarState === 'expanded' ? 'Recolher' : 'Expandir'}
         >
-          {sidebarState === 'expanded' ? <PanelLeftClose /> : <PanelLeftOpen />}
+          {sidebarState === 'expanded' ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
         </SidebarMenuButton>
       </div>
 
@@ -124,7 +118,7 @@ export function ChatSidebar({
                   <SidebarMenuItem key={group.id} className="space-y-1">
                     <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-sidebar-accent">
                       <Folder className="mr-2 h-4 w-4 shrink-0" />
-                      <span className="truncate font-bold">{group.name}</span>
+                      <span className="truncate font-bold group-data-[collapsible=icon]:hidden">{group.name}</span>
                       <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
                         <Button variant="ghost" size="icon" className="h-6 w-6" disabled>
                             <Pin className="h-4 w-4" />
@@ -156,11 +150,11 @@ export function ChatSidebar({
                         </DropdownMenu>
                       </div>
                     </div>
-                    <ul className="flex flex-col gap-1 border-l-2 border-sidebar-border/50 pl-4 ml-2">
+                    <ul className="flex flex-col gap-1 border-l-2 border-sidebar-border/50 pl-4 ml-2 group-data-[collapsible=icon]:hidden">
                       {conversations
                         .filter((c) => c.groupId === group.id)
                         .map((convo) => (
-                           <SidebarMenuItem key={convo.id} className="group/menu-item relative list-none">
+                           <SidebarMenuItem key={convo.id}>
                             <ConversationItem
                               conversation={convo}
                               isActive={activeChatId === convo.id}
@@ -177,7 +171,7 @@ export function ChatSidebar({
                 ))}
                 
                 {ungroupedConversations.map((convo) => (
-                  <SidebarMenuItem key={convo.id} className="group/menu-item relative list-none">
+                  <SidebarMenuItem key={convo.id}>
                     <ConversationItem
                       conversation={convo}
                       isActive={activeChatId === convo.id}
@@ -205,17 +199,20 @@ export function ChatSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={onNewChat} tooltip="Nova Conversa">
-              <Pencil className="size-4" /> <span>Nova conversa</span>
+              <Pencil className="size-4" /> 
+              <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto">
-              <FolderPlus className="size-4" /> <span>Novo Projeto</span>
+              <FolderPlus className="size-4" /> 
+              <SidebarMenuButton.Text>Novo Projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
            <SidebarMenuItem>
             <SidebarMenuButton onClick={() => {}} tooltip="Pesquisar">
-              <Search className="size-5" /> <span>Pesquisar</span>
+              <Search className="size-5" /> 
+              <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -223,19 +220,12 @@ export function ChatSidebar({
         <Separator className="my-1" />
 
         <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  <Settings className="size-5" />
-                  <span className="min-w-0 flex-1">Configurações e Ajuda</span>
-                </SidebarMenuButton>
+            <SidebarMenuButton asChild tooltip="Configurações e Ajuda">
+              <DropdownMenuTrigger>
+                <Settings className="size-5" />
+                <SidebarMenuButton.Text>Configurações e Ajuda</SidebarMenuButton.Text>
               </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="center" hidden={sidebarState !== 'collapsed' || isMobile}>
-              Configurações e Ajuda
-            </TooltipContent>
-          </Tooltip>
+            </SidebarMenuButton>
           <DropdownMenuContent side="top" align="start" className="w-56">
             <DropdownMenuLabel>Tema</DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -296,15 +286,15 @@ function ConversationItem({
   onDelete,
 }: ConversationItemProps) {
   return (
-    <div className="flex min-w-0 items-center">
+    <div className="group/menu-item relative flex min-w-0 items-center">
       <SidebarMenuButton
         onClick={() => onSelect(conversation.id)}
         isActive={isActive}
         className="h-auto flex-1 justify-start whitespace-normal py-2"
         tooltip={conversation.title}
       >
-        <MessageSquareText />
-        <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
+        <MessageSquareText className="size-4" />
+        <SidebarMenuButton.Text className="min-w-0 flex-1 truncate">{conversation.title}</SidebarMenuButton.Text>
       </SidebarMenuButton>
       <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 flex-shrink-0 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
         <DropdownMenu>
