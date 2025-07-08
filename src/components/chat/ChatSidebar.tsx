@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ConversationSidebarItem, Group } from '@/app/chat/page';
@@ -36,8 +35,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
-  Pin,
-  PinOff,
   Search,
   Trash2,
 } from 'lucide-react';
@@ -390,9 +387,6 @@ function GroupItem({
               </SidebarMenuButton>
 
               <div className="ml-auto flex items-center opacity-0 transition-opacity group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
-                <Button variant="ghost" size="icon" className="h-6 w-6" disabled>
-                  <Pin className="h-4 w-4" />
-                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -400,10 +394,6 @@ function GroupItem({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => {}} disabled>
-                      <PinOff className="mr-2 h-4 w-4" />
-                      <span>Desafixar projeto</span>
-                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() =>
                         onRenameRequest(group.id, 'group', group.name)
