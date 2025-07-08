@@ -243,11 +243,7 @@ export function ChatSidebar({
       <SidebarFooter className="p-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={onNewChat}
-              tooltip="Nova Conversa"
-              className="group-data-[collapsible=icon]:!w-full"
-            >
+            <SidebarMenuButton onClick={onNewChat} tooltip="Nova Conversa">
               <Pencil className="size-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
             </SidebarMenuButton>
@@ -256,19 +252,14 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
-              className="group-data-[collapsible=icon]:!w-full"
             >
               <FolderPlus className="size-4" />
               <SidebarMenuButton.Text>Novo Projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => {}}
-              tooltip="Pesquisar"
-              className="group-data-[collapsible=icon]:!w-full"
-            >
-              <Search className="size-5" />
+            <SidebarMenuButton onClick={() => {}} tooltip="Pesquisar">
+              <Search className="size-4" />
               <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -280,7 +271,6 @@ export function ChatSidebar({
             <SettingsHelpDropdown
               isAuthenticated={isAuthenticated}
               handleSignOut={handleSignOut}
-              className="group-data-[collapsible=icon]:!w-full"
             />
           </SidebarMenuItem>
         </SidebarMenu>

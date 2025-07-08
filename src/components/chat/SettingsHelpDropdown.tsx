@@ -17,24 +17,18 @@ import { useRouter } from 'next/navigation';
 interface SettingsHelpDropdownProps {
   isAuthenticated: boolean;
   handleSignOut: () => void;
-  className?: string;
 }
 
 export function SettingsHelpDropdown({
   isAuthenticated,
   handleSignOut,
-  className,
 }: SettingsHelpDropdownProps) {
   const { setTheme } = useTheme();
   const router = useRouter();
 
   return (
     <DropdownMenu>
-      <SidebarMenuButton
-        asChild
-        tooltip="Configurações e Ajuda"
-        className={className}
-      >
+      <SidebarMenuButton asChild tooltip="Configurações e Ajuda">
         <DropdownMenuTrigger>
           <Settings className="size-5" />
           <SidebarMenuButton.Text>Configurações e Ajuda</SidebarMenuButton.Text>
