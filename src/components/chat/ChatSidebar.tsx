@@ -36,6 +36,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
+  Pin,
   Search,
   Settings,
   Trash2,
@@ -89,6 +90,7 @@ interface ChatSidebarProps {
   onToggleGroup: (groupId: string) => void;
   onDragStart: (event: DragStartEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
+  onOpenFaqDialog: () => void;
   isAuthenticated: boolean;
   handleSignOut: () => void;
 }
@@ -110,6 +112,7 @@ export function ChatSidebar({
   onToggleGroup,
   onDragStart,
   onDragEnd,
+  onOpenFaqDialog,
   isAuthenticated,
   handleSignOut,
 }: ChatSidebarProps) {
@@ -253,8 +256,6 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
-              size="default"
-              className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold hover:bg-sidebar-accent/80"
             >
               <Pencil className="size-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
@@ -264,20 +265,17 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
-              size="default"
-              className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold hover:bg-sidebar-accent/80"
             >
               <FolderPlus className="size-4" />
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem className="mt-2">
+          <SidebarMenuItem>
             <SidebarMenuButton
               onClick={() => {}}
               tooltip="Pesquisar"
               variant="ghost"
               size="sm"
-              className="text-sm text-sidebar-foreground"
             >
               <Search className="size-5" />
               <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
@@ -285,24 +283,19 @@ export function ChatSidebar({
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => {}}
+              onClick={onOpenFaqDialog}
               tooltip="Guias e FAQ"
               variant="ghost"
               size="sm"
-              className="text-sm text-sidebar-foreground"
             >
               <HelpCircle className="size-5" />
               <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SettingsHelpDropdown
-              isAuthenticated={isAuthenticated}
-              handleSignOut={handleSignOut}
-              triggerClassName="text-sm text-sidebar-foreground"
-              triggerSize="sm"
-            />
-          </SidebarMenuItem>
+          <SettingsHelpDropdown
+            isAuthenticated={isAuthenticated}
+            handleSignOut={handleSignOut}
+          />
         </SidebarMenu>
       </SidebarFooter>
     </>
@@ -387,12 +380,7 @@ function GroupItem({
           >
             <div className="flex w-full items-center group/menu-item">
               <SidebarMenuButton
-                onClick={() => {
-                  if (groupConversations.length > 0) {
-                    onToggleGroup(group.id);
-                  }
-                }}
-                aria-disabled={groupConversations.length === 0}
+                onClick={() => onToggleGroup(group.id)}
                 className="h-9 flex-1 justify-start gap-2 overflow-hidden p-2 text-sm text-muted-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent focus-visible:ring-2 group-data-[state=collapsed]:h-9 group-data-[state=collapsed]:w-9 group-data-[state=collapsed]:p-2"
                 tooltip={group.name}
                 {...attributes}
@@ -401,8 +389,7 @@ function GroupItem({
                 <ChevronRight
                   className={cn(
                     'h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=collapsed]:hidden',
-                    isExpanded && 'rotate-90',
-                    groupConversations.length === 0 && 'invisible'
+                    isExpanded && 'rotate-90'
                   )}
                 />
                 <Folder className="h-4 w-4 shrink-0" />
@@ -412,6 +399,9 @@ function GroupItem({
               </SidebarMenuButton>
 
               <div className="ml-auto flex items-center opacity-0 transition-opacity group-hover/menu-item:opacity-100 group-data-[state=collapsed]:hidden">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Pin className="h-4 w-4" />
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-6 w-6">

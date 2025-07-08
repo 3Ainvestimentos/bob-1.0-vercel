@@ -65,6 +65,7 @@ import React, {
 } from 'react';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
+import { FaqDialog } from '@/components/chat/FaqDialog';
 
 
 // ---- Data Types ----
@@ -452,6 +453,7 @@ function ChatPageContent() {
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [activeDragItem, setActiveDragItem] = useState<ConversationSidebarItem | Group | null>(null);
+  const [isFaqDialogOpen, setIsFaqDialogOpen] = useState(false);
 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1311,6 +1313,8 @@ function ChatPageContent() {
                 </form>
             </DialogContent>
         </Dialog>
+        
+        <FaqDialog open={isFaqDialogOpen} onOpenChange={setIsFaqDialogOpen} />
 
 
         <Sidebar>
@@ -1331,6 +1335,7 @@ function ChatPageContent() {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
+                onOpenFaqDialog={() => setIsFaqDialogOpen(true)}
                 isAuthenticated={isAuthenticated}
                 handleSignOut={handleSignOut}
             />
@@ -1355,7 +1360,7 @@ function ChatPageContent() {
                   onRegenerate={handleRegenerate}
                   onCopyToClipboard={handleCopyToClipboard}
                   onReportLegalIssueRequest={handleReportLegalIssueRequest}
-                  onOpenFeedbackDialog={handleOpenFeedbackDialog}
+                  onOpenFeedbackDialog={onOpenFeedbackDialog}
                   onWebSearch={handleWebSearch}
                   onSuggestionClick={handleSuggestionClick}
                   activeChatId={activeChatId}

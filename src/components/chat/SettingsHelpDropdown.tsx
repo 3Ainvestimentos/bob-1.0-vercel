@@ -9,41 +9,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { SidebarMenuButton } from '@/components/ui/sidebar';
-import { LogIn, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { HelpCircle, LogIn, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 
 interface SettingsHelpDropdownProps {
   isAuthenticated: boolean;
   handleSignOut: () => void;
-  triggerClassName?: string;
-  triggerSize?: 'default' | 'sm' | 'lg' | null;
 }
 
 export function SettingsHelpDropdown({
   isAuthenticated,
   handleSignOut,
-  triggerClassName,
-  triggerSize = 'sm',
 }: SettingsHelpDropdownProps) {
   const { setTheme } = useTheme();
   const router = useRouter();
 
   return (
     <DropdownMenu>
-      <SidebarMenuButton
-        asChild
-        tooltip="Configurações"
-        variant="ghost"
-        size={triggerSize}
-        className={triggerClassName}
-      >
-        <DropdownMenuTrigger>
-          <Settings className="size-5" />
-          <SidebarMenuButton.Text>Configurações</SidebarMenuButton.Text>
-        </DropdownMenuTrigger>
-      </SidebarMenuButton>
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="Configurações" variant="ghost" size="sm">
+          <DropdownMenuTrigger>
+            <Settings className="size-5" />
+            <SidebarMenuButton.Text>Configurações</SidebarMenuButton.Text>
+          </DropdownMenuTrigger>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
       <DropdownMenuContent side="top" align="start" className="w-56">
         <DropdownMenuLabel>Tema</DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -58,6 +50,11 @@ export function SettingsHelpDropdown({
         <DropdownMenuItem onClick={() => setTheme('system')}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Sistema</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => {}}>
+          <HelpCircle className="mr-2 h-4 w-4" />
+          <span>Guias e FAQ</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {isAuthenticated ? (
