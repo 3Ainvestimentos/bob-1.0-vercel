@@ -1,16 +1,12 @@
 
 'use client';
 
-import {
-  ConversationSidebarItem,
-  Group,
-} from '@/app/chat/page';
+import { ConversationSidebarItem, Group } from '@/app/chat/page';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuSub,
@@ -33,11 +29,7 @@ import {
   Copy,
   Folder,
   FolderPlus,
-  HelpCircle,
-  LogIn,
-  LogOut,
   MessageSquareText,
-  Moon,
   MoreHorizontal,
   Move,
   PanelLeftClose,
@@ -46,13 +38,11 @@ import {
   Pin,
   PinOff,
   Search,
-  Settings,
-  Sun,
   Trash2,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import React from 'react';
+import { SettingsHelpDropdown } from './SettingsHelpDropdown';
 
 interface ChatSidebarProps {
   conversations: ConversationSidebarItem[];
@@ -62,7 +52,11 @@ interface ChatSidebarProps {
   onNewChat: () => void;
   onSelectConversation: (id: string) => void;
   onMoveConversation: (chatId: string, groupId: string | null) => void;
-  onRenameRequest: (id: string, type: 'group' | 'conversation', currentName: string) => void;
+  onRenameRequest: (
+    id: string,
+    type: 'group' | 'conversation',
+    currentName: string
+  ) => void;
   onDeleteConvoRequest: (id: string) => void;
   setIsNewGroupDialogOpen: (isOpen: boolean) => void;
   onDeleteGroupRequest: (id: string) => void;
@@ -86,20 +80,23 @@ export function ChatSidebar({
   handleSignOut,
 }: ChatSidebarProps) {
   const router = useRouter();
-  const { setTheme } = useTheme();
   const { state: sidebarState, toggleSidebar } = useSidebar();
-  
+
   const ungroupedConversations = conversations.filter((c) => !c.groupId);
 
   return (
     <>
       <div className="flex h-14 items-center border-b border-sidebar-border p-2 group-data-[collapsible=icon]:justify-center">
-        <SidebarMenuButton 
-          onClick={toggleSidebar} 
+        <SidebarMenuButton
+          onClick={toggleSidebar}
           className="size-8"
           tooltip={sidebarState === 'expanded' ? 'Recolher' : 'Expandir'}
         >
-          {sidebarState === 'expanded' ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+          {sidebarState === 'expanded' ? (
+            <PanelLeftClose className="size-4" />
+          ) : (
+            <PanelLeftOpen className="size-4" />
+          )}
         </SidebarMenuButton>
       </div>
 
@@ -115,17 +112,31 @@ export function ChatSidebar({
             ) : (
               <>
                 {groups.map((group) => (
-                  <SidebarMenuItem key={group.id} className="space-y-1">
-                    <div className="group/trigger relative flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-sidebar-accent">
+                  <SidebarMenuItem
+                    key={group.id}
+                    className="group/menu-item relative space-y-1"
+                  >
+                    <div className="flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium text-foreground">
                       <Folder className="mr-2 h-4 w-4 shrink-0" />
-                      <span className="truncate font-bold group-data-[collapsible=icon]:hidden">{group.name}</span>
-                      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover/trigger:pointer-events-auto group-hover/trigger:opacity-100">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" disabled>
-                            <Pin className="h-4 w-4" />
+                      <span className="truncate font-bold group-data-[collapsible=icon]:hidden">
+                        {group.name}
+                      </span>
+                      <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          disabled
+                        >
+                          <Pin className="h-4 w-4" />
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -134,7 +145,11 @@ export function ChatSidebar({
                               <PinOff className="mr-2 h-4 w-4" />
                               <span>Desafixar projeto</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onRenameRequest(group.id, 'group', group.name)}>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                onRenameRequest(group.id, 'group', group.name)
+                              }
+                            >
                               <Pencil className="mr-2 h-4 w-4" />
                               <span>Renomear Projeto</span>
                             </DropdownMenuItem>
@@ -154,14 +169,16 @@ export function ChatSidebar({
                       {conversations
                         .filter((c) => c.groupId === group.id)
                         .map((convo) => (
-                           <SidebarMenuItem key={convo.id}>
+                          <SidebarMenuItem key={convo.id}>
                             <ConversationItem
                               conversation={convo}
                               isActive={activeChatId === convo.id}
                               groups={groups}
                               onSelect={onSelectConversation}
                               onMove={onMoveConversation}
-                              onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
+                              onRename={(id, name) =>
+                                onRenameRequest(id, 'conversation', name)
+                              }
                               onDelete={onDeleteConvoRequest}
                             />
                           </SidebarMenuItem>
@@ -169,7 +186,7 @@ export function ChatSidebar({
                     </ul>
                   </SidebarMenuItem>
                 ))}
-                
+
                 {ungroupedConversations.map((convo) => (
                   <SidebarMenuItem key={convo.id}>
                     <ConversationItem
@@ -178,12 +195,14 @@ export function ChatSidebar({
                       groups={groups}
                       onSelect={onSelectConversation}
                       onMove={onMoveConversation}
-                      onRename={(id, name) => onRenameRequest(id, 'conversation', name)}
+                      onRename={(id, name) =>
+                        onRenameRequest(id, 'conversation', name)
+                      }
                       onDelete={onDeleteConvoRequest}
                     />
                   </SidebarMenuItem>
                 ))}
-              
+
                 {conversations.length === 0 && !isSidebarLoading && (
                   <p className="px-2 text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">
                     Nenhuma conversa ainda.
@@ -199,71 +218,40 @@ export function ChatSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={onNewChat} tooltip="Nova Conversa">
-              <Pencil className="size-4" /> 
+              <Pencil className="size-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => setIsNewGroupDialogOpen(true)} tooltip="Novo Projeto">
-              <FolderPlus className="size-4" /> 
+            <SidebarMenuButton
+              onClick={() => setIsNewGroupDialogOpen(true)}
+              tooltip="Novo Projeto"
+            >
+              <FolderPlus className="size-4" />
               <SidebarMenuButton.Text>Novo Projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
-           <SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton onClick={() => {}} tooltip="Pesquisar">
-              <Search className="size-5" /> 
+              <Search className="size-5" />
               <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        
-        <Separator className="my-1" />
 
-        <DropdownMenu>
-            <SidebarMenuButton asChild tooltip="Configurações e Ajuda">
-              <DropdownMenuTrigger>
-                <Settings className="size-5" />
-                <SidebarMenuButton.Text>Configurações e Ajuda</SidebarMenuButton.Text>
-              </DropdownMenuTrigger>
-            </SidebarMenuButton>
-          <DropdownMenuContent side="top" align="start" className="w-56">
-            <DropdownMenuLabel>Tema</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setTheme('light')}>
-              <Sun className="mr-2 h-4 w-4" />
-              <span>Claro</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme('dark')}>
-              <Moon className="mr-2 h-4 w-4" />
-              <span>Escuro</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme('system')}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Sistema</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <a href="#"><HelpCircle className="mr-2 h-5 w-5" /><span>Guias e FAQ</span></a>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {isAuthenticated ? (
-              <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Sair</span>
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={() => router.push('/')}>
-                <LogIn className="mr-2 h-4 w-4" />
-                <span >Ir para Login</span>
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Separator className="my-1" />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SettingsHelpDropdown
+              isAuthenticated={isAuthenticated}
+              handleSignOut={handleSignOut}
+            />
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </>
   );
 }
-
 
 // ---- Sub-component for Conversation Item ----
 interface ConversationItemProps {
@@ -294,7 +282,9 @@ function ConversationItem({
         tooltip={conversation.title}
       >
         <MessageSquareText className="size-4" />
-        <SidebarMenuButton.Text className="min-w-0 flex-1 truncate">{conversation.title}</SidebarMenuButton.Text>
+        <SidebarMenuButton.Text className="min-w-0 flex-1 truncate">
+          {conversation.title}
+        </SidebarMenuButton.Text>
       </SidebarMenuButton>
       <div className="pointer-events-none absolute right-1 top-1/2 flex -translate-y-1/2 flex-shrink-0 items-center opacity-0 transition-opacity group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden">
         <DropdownMenu>
@@ -304,7 +294,9 @@ function ConversationItem({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => onRename(conversation.id, conversation.title)}>
+            <DropdownMenuItem
+              onClick={() => onRename(conversation.id, conversation.title)}
+            >
               <Pencil className="mr-2 h-4 w-4" />
               <span>Renomear</span>
             </DropdownMenuItem>
@@ -327,13 +319,17 @@ function ConversationItem({
                   {conversation.groupId && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onMove(conversation.id, null)}>
+                      <DropdownMenuItem
+                        onClick={() => onMove(conversation.id, null)}
+                      >
                         Remover do projeto
                       </DropdownMenuItem>
                     </>
                   )}
                   {groups.length === 0 && !conversation.groupId && (
-                    <DropdownMenuItem disabled>Nenhum projeto criado</DropdownMenuItem>
+                    <DropdownMenuItem disabled>
+                      Nenhum projeto criado
+                    </DropdownMenuItem>
                   )}
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
