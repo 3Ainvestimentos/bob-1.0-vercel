@@ -107,21 +107,27 @@ const faqData = [
 export function FaqDialog({ open, onOpenChange }: FaqDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl flex flex-col p-0 max-h-[80vh]">
+        <DialogHeader className="p-6 pb-4 border-b shrink-0">
           <DialogTitle className="text-xl font-bold">
             Guias e Perguntas Frequentes
           </DialogTitle>
         </DialogHeader>
-        <div className="py-4 max-h-[70vh] overflow-y-auto pr-6">
-          <Accordion type="single" collapsible className="w-full">
-            {faqData.map((item) => (
-              <AccordionItem key={item.value} value={item.value}>
-                <AccordionTrigger>{item.trigger}</AccordionTrigger>
-                <AccordionContent>{item.content}</AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+        <div className="overflow-y-auto">
+          <div className="px-6 pb-6">
+            <Accordion type="single" collapsible className="w-full">
+              {faqData.map((item) => (
+                <AccordionItem key={item.value} value={item.value}>
+                  <AccordionTrigger className="font-semibold hover:no-underline text-left">
+                    {item.trigger}
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-2">
+                    {item.content}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
