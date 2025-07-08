@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ConversationSidebarItem, Group } from '@/app/chat/page';
@@ -248,7 +249,11 @@ export function ChatSidebar({
       <SidebarFooter className="py-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onNewChat} tooltip="Nova Conversa">
+            <SidebarMenuButton
+              onClick={onNewChat}
+              tooltip="Nova Conversa"
+              className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+            >
               <Pencil className="size-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
             </SidebarMenuButton>
@@ -257,6 +262,7 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
+              className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
             >
               <FolderPlus className="size-4" />
               <SidebarMenuButton.Text>Novo Projeto</SidebarMenuButton.Text>
