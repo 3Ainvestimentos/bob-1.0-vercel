@@ -15,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import {
   SidebarContent,
   SidebarFooter,
@@ -38,6 +37,7 @@ import {
   PanelLeftOpen,
   Pencil,
   Search,
+  Settings,
   Trash2,
 } from 'lucide-react';
 import React from 'react';
@@ -247,13 +247,14 @@ export function ChatSidebar({
         </DragOverlay>
       </DndContext>
 
-      <SidebarFooter className="py-2">
+      <SidebarFooter className="py-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
-              className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+              size="default"
+              className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold hover:bg-sidebar-accent/80"
             >
               <Pencil className="size-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
@@ -263,24 +264,33 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
-              className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+              size="default"
+              className="bg-sidebar-accent text-sidebar-accent-foreground font-semibold hover:bg-sidebar-accent/80"
             >
               <FolderPlus className="size-4" />
-              <SidebarMenuButton.Text>Novo Projeto</SidebarMenuButton.Text>
+              <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => {}} tooltip="Pesquisar">
-              <Search className="size-4" />
+            <SidebarMenuButton
+              onClick={() => {}}
+              tooltip="Pesquisar"
+              variant="ghost"
+              size="sm"
+              className="text-sm text-sidebar-foreground"
+            >
+              <Search className="size-5" />
               <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
-        </SidebarMenu>
-
-        <Separator className="my-1" />
-        <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => {}} tooltip="Guias e FAQ">
+            <SidebarMenuButton
+              onClick={() => {}}
+              tooltip="Guias e FAQ"
+              variant="ghost"
+              size="sm"
+              className="text-sm text-sidebar-foreground"
+            >
               <HelpCircle className="size-5" />
               <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
             </SidebarMenuButton>
@@ -289,6 +299,8 @@ export function ChatSidebar({
             <SettingsHelpDropdown
               isAuthenticated={isAuthenticated}
               handleSignOut={handleSignOut}
+              triggerClassName="text-sm text-sidebar-foreground"
+              triggerSize="sm"
             />
           </SidebarMenuItem>
         </SidebarMenu>
