@@ -26,7 +26,7 @@ export function ChatInputForm({
     <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
       <form
         onSubmit={handleSubmit}
-        className="mx-auto max-w-5xl px-4 pb-4 pt-2"
+        className="px-4 pb-4 pt-2 sm:px-6 lg:px-8"
       >
         <div className="rounded-lg border bg-background shadow-sm">
           <div className="relative flex min-h-[60px] items-start">

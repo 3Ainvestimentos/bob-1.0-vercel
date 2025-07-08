@@ -20,6 +20,7 @@ import {
   Mail,
   MoreHorizontal,
   Newspaper,
+  Pin,
   RefreshCw,
   Search,
   Share2,
@@ -77,7 +78,7 @@ export function ChatMessageArea({
 }: ChatMessageAreaProps) {
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto flex h-full max-w-5xl flex-col">
+      <div className="flex h-full flex-col">
         {messages.length === 0 && !isLoading ? (
           <div className="flex h-full flex-col items-center justify-center">
             <BobIcon className="mb-6 h-24 w-24" isGreeting={true} />
@@ -314,5 +315,3 @@ export function ChatMessageArea({
     </div>
   );
 }
-
-    
