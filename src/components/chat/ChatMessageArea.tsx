@@ -156,7 +156,7 @@ export function ChatMessageArea({
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
-                          <BobIcon className="h-6 w-6" />
+                          <BobIcon className="h-6 w-6" isThinking={regeneratingMessageId === msg.id} />
                         </AvatarFallback>
                       </Avatar>
                       <span className="font-semibold text-foreground">Bob</span>
@@ -313,3 +313,5 @@ export function ChatMessageArea({
     </div>
   );
 }
+
+    
