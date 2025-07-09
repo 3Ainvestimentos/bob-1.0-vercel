@@ -39,3 +39,13 @@ O fluxo foi desenhado para garantir que dados sensíveis originais nunca sejam a
 
 **Conclusão da Estratégia de Armazenamento:**
 Ao seguir este fluxo, o dado sensível original é "usado e descartado" na memória do servidor durante a transação, mas **nunca é escrito em disco**, seja no banco de dados do histórico, seja nos logs de auditoria. Esta é a abordagem mais segura e em conformidade com as melhores práticas de privacidade de dados.
+
+---
+
+## 3. Nota de Arquivamento e Limitações
+
+Esta estratégia de anonimização com a API de DLP é excelente para o caso de uso de **interação em tempo real com a IA, garantindo que o modelo nunca receba dados sensíveis**.
+
+No entanto, ela é **insuficiente** para um requisito de negócio futuro que envolva **auditoria e a construção de um histórico de relacionamento pesquisável por cliente**. Como os dados originais são destruídos e substituídos por placeholders (ex: `[PERSON_NAME]`), torna-se impossível pesquisar por um cliente específico ou recuperar o conteúdo original das conversas.
+
+Para atender a esse requisito avançado, uma arquitetura de **criptografia do lado do cliente (client-side encryption)**, com chaves de usuário gerenciadas por um serviço como o Google Cloud KMS, seria necessária. Essa abordagem, embora mais complexa, permite armazenar dados de forma segura e ilegível no banco de dados, com a capacidade de descriptografá-los para fins de auditoria por pessoal autorizado.

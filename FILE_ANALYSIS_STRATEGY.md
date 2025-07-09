@@ -1,72 +1,60 @@
-# Estratégia de Análise de Arquivos com o Sistema RAG
+# Estratégia de Análise de Arquivos e Histórico de Cliente com Criptografia
 
-## Objetivo
+## 1. Objetivo e Desafio
 
-Este documento descreve a estratégia técnica para implementar uma funcionalidade avançada no assistente: permitir que os usuários insiram arquivos (como planilhas de posição consolidada, PDFs, etc.) e recebam análises que cruzam as informações do arquivo com o conhecimento existente na base de dados interna (RAG via Vertex AI Search).
+Para habilitar funcionalidades futuras de **auditoria e construção de um histórico de relacionamento com o cliente**, é necessário que as conversas possam ser recuperadas e pesquisadas em seu formato original por pessoal autorizado. A simples anonimização (substituir dados por placeholders) inviabiliza isso.
 
-O caso de uso principal é:
-> Um usuário anexa sua planilha de "posição consolidada" e pergunta: "Com base nas recomendações da 3A RIVA, quais ajustes eu deveria fazer na minha carteira?". O assistente deve usar o conteúdo da planilha e o conhecimento do RAG sobre recomendações de ativos para fornecer uma análise contextualizada.
+O desafio é: como armazenar os dados de forma que o usuário possa vê-los, auditores possam pesquisá-los, mas o sistema (servidores, banco de dados, IA) permaneça "zero-trust", ou seja, sem acesso ao conteúdo original?
 
-A seguir, apresentamos a abordagem recomendada para implementar esta funcionalidade.
-
----
-
-## Abordagem Recomendada: Enriquecimento de Prompt
-
-Esta é a abordagem mais direta, robusta e eficiente, pois aproveita a infraestrutura RAG existente, apenas "enriquecendo" a informação que é enviada para ela.
-
-O fluxo é dividido em três etapas principais:
-
-### 1. Interface do Usuário e Pré-processamento
-
--   **Seleção de Arquivo:** O usuário utiliza o botão de anexo (`<Paperclip />`) para selecionar um arquivo local (PDF, Word, Excel, etc.).
--   **Conversão para Texto:** No backend, a primeira e mais crucial etapa é converter o conteúdo binário do arquivo em texto puro. Bibliotecas específicas para cada tipo de arquivo serão necessárias (ex: `pdf-parse` para PDFs, `mammoth` para `.docx`, `xlsx` para planilhas). O resultado final é uma única variável de texto contendo os dados do arquivo do usuário.
-
-### 2. Lógica de Geração: A Construção do Prompt Combinado
-
-Esta é a parte central da lógica. Em vez de enviar apenas a pergunta do usuário para a função `callDiscoveryEngine`, o sistema montará um **novo prompt combinado e detalhado** dentro do parâmetro `query`.
-
-Este prompt instrui o modelo de linguagem sobre como utilizar as informações fornecidas. A estrutura do prompt combinado seria:
-
-```plaintext
-[Instruções e Pergunta do Usuário]
-
-[Contexto Adicional do Arquivo do Usuário]
-
-[Instrução Final para a IA]
-```
-
-**Exemplo Prático do `query` a ser enviado:**
-
-```
-Usuário fez a seguinte pergunta: "Com base nas recomendações da 3A RIVA, quais ajustes eu deveria fazer na minha carteira?"
-
-Para responder, considere o portfólio do usuário, que está descrito abaixo:
---- INÍCIO DO ARQUIVO DO USUÁRIO ---
-[Aqui entraria o texto extraído da planilha:
-- Ação XYZ, Quantidade: 1000, Valor: R$ 50.000
-- Debênture ABC, Quantidade: 50, Valor: R$ 52.000
-...]
---- FIM DO ARQUIVO DO USUÁRIO ---
-
-Agora, utilize o seu conhecimento interno (os documentos do RAG) sobre as recomendações de debêntures e outros ativos para analisar o portfólio acima e responder à pergunta do usuário de forma detalhada e comparativa.
-```
-
-### 3. Execução e Resposta
-
--   O `query` gigante e enriquecido é enviado para o endpoint do Vertex AI Search através da função `callDiscoveryEngine`.
--   O sistema RAG utilizará as palavras-chave tanto da pergunta quanto do conteúdo do arquivo para encontrar os documentos mais relevantes na base de conhecimento.
--   O modelo de linguagem final (que gera o resumo) receberá o prompt enriquecido e os documentos do RAG, tendo todo o contexto necessário para gerar a análise comparativa solicitada.
+A solução é uma arquitetura de **criptografia do lado do cliente (Client-Side Encryption)** com gerenciamento de chaves centralizado.
 
 ---
 
-## Abordagem Alternativa: Análise em Duas Etapas (Avançado)
+## 2. Arquitetura Proposta
 
-Uma alternativa mais complexa seria tratar a busca no RAG como uma "ferramenta" que a IA pode invocar.
+### 2.1. Componentes Principais
 
-1.  A IA recebe a pergunta e o texto do arquivo.
-2.  Ela entende que precisa de informações internas e chama uma ferramenta que nós definimos, como `buscarRecomendacoesInternas(topico: "debentures")`.
-3.  Nosso código executa essa função (que por baixo dos panos chama o `callDiscoveryEngine`) e retorna os resultados para a IA.
-4.  Com ambas as informações em mãos (arquivo do usuário + dados do RAG), a IA formula a resposta final.
+1.  **Aplicação do Usuário (Client):** O navegador do usuário, onde a criptografia e descriptografia ocorrem.
+2.  **Servidor da Aplicação (Backend):** Atua como um intermediário, mas não consegue ler os dados.
+3.  **Banco de Dados (Firestore):** Armazena apenas o conteúdo criptografado.
+4.  **Serviço de Gerenciamento de Chaves (Google Cloud KMS):** O cofre seguro para as chaves mestras.
+5.  **Interface de Auditoria:** Um portal web separado e seguro para administradores e auditores.
 
-**Conclusão:** Embora poderosa, esta abordagem adiciona complexidade desnecessária para o caso de uso atual. A abordagem de **Enriquecimento de Prompt** é mais simples de implementar, mais controlável e atinge o objetivo desejado de forma eficaz.
+### 2.2. Fluxo de uma Conversa Normal
+
+1.  **Login do Usuário:** Ao fazer login, o cliente solicita sua chave de criptografia pessoal ao backend.
+2.  **Recuperação da Chave:**
+    -   O backend busca a chave *criptografada* do usuário no Firestore.
+    -   Ele envia essa chave criptografada para o Google Cloud KMS.
+    -   O KMS usa a chave mestra do projeto para descriptografar a chave do usuário e a retorna ao backend.
+    -   O backend envia a chave do usuário (agora descriptografada) para o navegador do cliente via HTTPS. A chave só existe na memória do navegador.
+3.  **Envio de Mensagem:**
+    -   O usuário digita: "Revisar o portfólio de João da Silva".
+    -   **No navegador**, a mensagem é criptografada usando a chave pessoal. O resultado é um texto ilegível: `xyz123...abc`.
+4.  **Armazenamento:** O texto `xyz123...abc` é enviado e salvo no Firestore. **Nenhum dado original é armazenado**.
+5.  **Visualização:** Para exibir o histórico, o processo inverso ocorre: o texto criptografado é enviado ao navegador, que o descriptografa com a chave em memória para exibição.
+
+### 2.3. Fluxo de uma Auditoria
+
+1.  **Login do Auditor:** Um usuário com permissões de `auditor` faz login em uma interface web separada e segura.
+2.  **Pesquisa:** O auditor pesquisa por "João da Silva".
+3.  **Processo de Descriptografia em Massa:**
+    -   O backend de auditoria primeiro precisa identificar quais conversas podem conter o termo. Isso pode ser feito com índices pré-computados ou outras estratégias.
+    -   Para cada conversa candidata, o backend recupera o texto criptografado e a chave criptografada do usuário correspondente do Firestore.
+    -   Ele solicita ao KMS para descriptografar a chave do usuário.
+    -   Com a chave do usuário em mãos, o backend descriptografa o conteúdo da conversa **na memória**.
+    -   Ele então realiza a pesquisa pelo termo "João da Silva" no texto agora legível.
+4.  **Exibição dos Resultados:** As conversas que correspondem à pesquisa são exibidas para o auditor. Os dados descriptografados existem apenas durante a sessão do auditor e nunca são armazenados de forma legível.
+
+---
+
+## 3. Análise de Custo e Complexidade
+
+*   **Custo Financeiro:** Introduz custos operacionais recorrentes para o uso do Google Cloud KMS (por chave armazenada e por operação de criptografia/descriptografia).
+*   **Complexidade de Implementação:** Este é um esforço de desenvolvimento significativo. Requer:
+    -   Implementação de uma biblioteca de criptografia no cliente.
+    -   Criação de todo o fluxo de gerenciamento de chaves no backend.
+    -   Desenvolvimento de uma interface de auditoria segura e separada.
+    -   Um modelo de permissões (IAM) rigoroso para controlar o acesso ao KMS e à interface de auditoria.
+
+**Conclusão:** Embora complexa, esta é a arquitetura correta e padrão da indústria para construir sistemas que equilibram funcionalidades de negócio avançadas (auditoria, CRM) com segurança de dados de "confiança zero". É um investimento estratégico para o futuro do produto.
