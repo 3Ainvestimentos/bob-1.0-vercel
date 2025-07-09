@@ -77,7 +77,7 @@ Esta conta de serviço é usada para autenticar as chamadas à API do **Vertex A
 
 ### 4.3. Regras de Segurança do Firestore
 
-Para proteger os dados no Firestore, é crucial implementar regras de segurança. Embora não haja um arquivo `firestore.rules` no projeto, estas são as regras recomendadas para blindar o acesso:
+Para proteger os dados no Firestore, as seguintes regras de segurança são aplicadas através do arquivo `firestore.rules`. Elas são essenciais para blindar o acesso direto ao banco de dados:
 
 ```
 rules_version = '2';
@@ -111,9 +111,8 @@ service cloud.firestore {
   }
 }
 ```
-**Como implementar:**
-1. Crie um arquivo `firestore.rules` na raiz do projeto com este conteúdo.
-2. Implante as regras usando a Firebase CLI: `firebase deploy --only firestore:rules`.
+**Implantação:**
+As regras são implantadas automaticamente com o restante da configuração do Firebase. Para atualizações manuais, use a Firebase CLI: `firebase deploy --only firestore:rules`.
 
 ### 4.4. Prevenção de Perda de Dados (DLP)
 - **Preamble:** A instrução `ASSISTENTE_CORPORATIVO_PREAMBLE` no arquivo `src/app/actions.ts` proíbe explicitamente o modelo de processar ou solicitar dados sensíveis (PII).
@@ -164,7 +163,7 @@ A aplicação evoluiu significativamente desde sua concepção inicial.
 ---
 ## 7. Recomendações e Próximos Passos
 
--   **Implementar Regras do Firestore:** A implantação das regras de segurança sugeridas na seção 4.3 é a prioridade máxima para proteger os dados.
+-   **Manter e Auditar Regras do Firestore:** É crucial garantir que as regras de segurança do Firestore (descritas na seção 4.3) estejam sempre atualizadas e corretas para proteger os dados.
 -   **Rotação de Chaves:** Estabelecer uma política para rotacionar `GEMINI_API_KEY` e as chaves da `SERVICE_ACCOUNT_KEY_INTERNAL` periodicamente.
 -   **Auditoria de Permissões:** Revisar regularmente as permissões IAM da conta de serviço para garantir que ela siga o princípio de privilégio mínimo.
 -   **DLP no Cliente:** Implementar uma verificação no lado do cliente usando uma biblioteca ou regex para detectar PII *antes* que os dados sejam enviados ao backend, fornecendo um alerta imediato ao usuário.
