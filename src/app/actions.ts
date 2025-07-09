@@ -3,6 +3,7 @@
 
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { DlpServiceClient } from '@google-cloud/dlp';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
@@ -28,6 +29,59 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 - **Papel:** Você é um suporte à decisão, não o tomador de decisão final.
 - **Aconselhamento Financeiro:** Você NÃO DEVE fornecer aconselhamento financeiro ou recomendações de investimento para clientes finais.
 - **Opiniões:** Não emita opiniões pessoais ou juízos de valor. Mantenha-se neutro e factual.`;
+
+
+async function deidentifyQuery(query: string, projectId: string): Promise<string> {
+    const dlp = new DlpServiceClient();
+    const location = 'global';
+
+    // Os tipos de informações a serem detectados e anonimizados.
+    const infoTypes = [
+        { name: 'CPF_NUMBER' },
+        { name: 'RG_NUMBER' },
+        { name: 'PHONE_NUMBER' },
+        { name: 'EMAIL_ADDRESS' },
+        { name: 'BRAZIL_CNPJ_NUMBER' },
+        { name: 'CREDIT_CARD_NUMBER' },
+    ];
+
+    // Configuração para substituir os dados sensíveis pelo nome do tipo de informação.
+    // Ex: "123.456.789-00" será substituído por "[CPF_NUMBER]".
+    const deidentifyConfig = {
+        infoTypeTransformations: {
+            transformations: [
+                {
+                    primitiveTransformation: {
+                        replaceWithInfoTypeConfig: {},
+                    },
+                },
+            ],
+        },
+    };
+
+    const inspectConfig = {
+        infoTypes: infoTypes,
+    };
+    
+    const request = {
+        parent: `projects/${projectId}/locations/${location}`,
+        deidentifyConfig: deidentifyConfig,
+        inspectConfig: inspectConfig,
+        item: { value: query },
+    };
+
+    try {
+        const [response] = await dlp.deidentifyContent(request);
+        const deidentifiedItem = response.item;
+        return deidentifiedItem?.value || query;
+    } catch (error) {
+        console.error('Error calling DLP API:', error);
+        // Em caso de erro na API de DLP, retorna a query original para não quebrar o fluxo.
+        // A segurança ainda será tratada pelo preamble do assistente.
+        return query;
+    }
+}
+
 
 function estimateTokens(text: string): number {
   // Uma aproximação comum é que 1 token equivale a cerca de 4 caracteres.
@@ -72,9 +126,12 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
       if (!accessToken) {
         throw new Error(`Falha ao obter o token de acesso usando a conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL).`);
       }
+      
+      // *** DLP Integration: De-identify the query before sending it to the engine ***
+      const deidentifiedQuery = await deidentifyQuery(query, projectId);
 
       const requestBody: any = {
-        query: query,
+        query: deidentifiedQuery, // Use a query anonimizada
         pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
@@ -108,7 +165,7 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
       }
 
       const data = await apiResponse.json();
-      const promptTokenCount = estimateTokens(ASSISTENTE_CORPORATIVO_PREAMBLE + query);
+      const promptTokenCount = estimateTokens(ASSISTENTE_CORPORATIVO_PREAMBLE + deidentifiedQuery);
       const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?";
       
       if (!data.summary || !data.summary.summaryText || !data.results || data.results.length === 0) {
@@ -187,7 +244,8 @@ Pergunta: "${query}"`;
 export async function askAssistant(
   query: string,
   options: { useWebSearch?: boolean } = {},
-  userId?: string | null
+  userId?: string | null,
+  activeChatId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
   const { useWebSearch = false } = options;
 

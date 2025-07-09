@@ -581,7 +581,7 @@ function ChatPageContent() {
         await saveConversation(user.uid, newMessages, currentChatId);
       }
 
-      const assistantResponse = await askAssistant(query, {}, user.uid);
+      const assistantResponse = await askAssistant(query, {}, user.uid, currentChatId);
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -667,7 +667,8 @@ function ChatPageContent() {
       const assistantResponse = await askAssistant(
         query,
         { useWebSearch: true },
-        user.uid
+        user.uid,
+        activeChatId
       );
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
