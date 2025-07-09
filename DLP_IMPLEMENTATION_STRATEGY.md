@@ -69,3 +69,23 @@ Esta é a abordagem mais segura e robusta. Toda a lógica de detecção e anonim
 -   **Auditoria Completa:** Mantemos um registro detalhado de todas as tentativas de uso de PII para fins de conformidade e segurança.
 -   **Conformidade:** Impede o envio de PII para serviços de IA de terceiros, ajudando a cumprir regulações de privacidade como a LGPD.
 -   **Simplicidade de Manutenção:** A lógica é centralizada em um único local (`actions.ts` e `dlp-patterns.ts`), facilitando futuras atualizações nos padrões de DLP.
+
+## 4. Análise de Custo da Implementação
+
+A implementação da estratégia de anonimização no lado do servidor tem um **impacto financeiro insignificante** sobre o custo total de cada consulta. A análise abaixo detalha os principais componentes de custo:
+
+-   **Custo da IA (Vertex AI / Gemini):**
+    -   **Impacto:** Praticamente nulo.
+    -   **Justificativa:** O custo dos modelos de IA é baseado na contagem de tokens (texto processado). A anonimização substitui um dado sensível por um placeholder de tamanho semelhante (ex: `123.456.789-00` vira `[CPF_REMOVIDO]`). A variação no número de tokens por consulta é mínima e não afeta o custo de forma perceptível.
+
+-   **Custo de Processamento (Firebase App Hosting):**
+    -   **Impacto:** Desprezível.
+    -   **Justificativa:** A execução de expressões regulares para encontrar e substituir PII é uma operação computacionalmente muito leve. Ela adiciona apenas alguns milissegundos ao tempo de processamento da função no servidor, sem impacto relevante no consumo de CPU da instância.
+
+-   **Custo do Banco de Dados (Firestore):**
+    -   **Impacto:** Mínimo e condicional.
+    -   **Justificativa:** Este é o único ponto que pode gerar um custo direto, mas ele é extremamente baixo. A função `logDlpAlert` é acionada **apenas quando** um PII é detectado. Isso resulta em **uma única operação de escrita** no Firestore por ocorrência. Considerando a generosa camada gratuita do Firestore e o baixo custo por escrita excedente, o impacto financeiro é mínimo e restrito apenas às consultas que contêm dados sensíveis.
+
+### Conclusão
+
+A estratégia de DLP via anonimização é uma implementação de **alto valor de segurança e conformidade** com um **custo financeiro praticamente zero**, tornando-se um investimento altamente recomendável para o projeto.
