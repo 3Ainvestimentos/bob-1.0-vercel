@@ -158,7 +158,6 @@ A aplicação evoluiu significativamente desde sua concepção inicial.
     -   Implementação de um popup de "Guias e FAQ" para autoatendimento.
     -   Ajustes de espaçamento e consistência visual nos botões da barra lateral.
     -   Tematização dinâmica que adapta as cores primárias com base no domínio do e-mail do usuário (`@3ariva.com.br` ou `@3ainvestimentos.com.br`).
-    -   Design minimalista da caixa de texto, removendo botões desnecessários para uma aparência mais limpa.
 
 ---
 ## 7. Recomendações e Próximos Passos
