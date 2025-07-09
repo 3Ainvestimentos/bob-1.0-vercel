@@ -37,7 +37,10 @@ Esta é a abordagem mais segura e robusta. Toda a lógica de detecção e anonim
     export const piiPatterns = [
         { name: 'CPF', regex: /\b\d{3}[.]?\d{3}[.]?\d{3}[-]?\d{2}\b/g, placeholder: '[CPF_REMOVIDO]' },
         { name: 'Email', regex: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, placeholder: '[EMAIL_REMOVIDO]' },
-        // ... outros padrões
+        { name: 'Telefone', regex: /\b\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b/g, placeholder: '[TELEFONE_REMOVIDO]' },
+        { name: 'RG', regex: /\b\d{1,2}\.?\d{3}\.?\d{3}-?[\d|X|x]\b/g, placeholder: '[RG_REMOVIDO]' },
+        { name: 'CNPJ', regex: /\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, placeholder: '[CNPJ_REMOVIDO]' },
+        { name: 'Cartao de Credito', regex: /\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b/g, placeholder: '[CARTAO_REMOVIDO]' },
     ];
     ```
 
@@ -65,4 +68,4 @@ Esta é a abordagem mais segura e robusta. Toda a lógica de detecção e anonim
 -   **Excelente Experiência do Usuário:** O usuário não é interrompido por alertas ou bloqueios. A anonimização é transparente para ele.
 -   **Auditoria Completa:** Mantemos um registro detalhado de todas as tentativas de uso de PII para fins de conformidade e segurança.
 -   **Conformidade:** Impede o envio de PII para serviços de IA de terceiros, ajudando a cumprir regulações de privacidade como a LGPD.
--   **Simplicidade de Manutenção:** A lógica é centralizada em um único local (`actions.ts`), facilitando futuras atualizações nos padrões de DLP.
+-   **Simplicidade de Manutenção:** A lógica é centralizada em um único local (`actions.ts` e `dlp-patterns.ts`), facilitando futuras atualizações nos padrões de DLP.
