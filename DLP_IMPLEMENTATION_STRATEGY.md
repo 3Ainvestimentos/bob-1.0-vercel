@@ -1,81 +1,68 @@
-# Estratégia de Implementação de DLP (Prevenção de Perda de Dados)
+# Estratégia de Implementação de DLP (Prevenção de Perda de Dados) - Abordagem de Anonimização
 
 ## 1. Objetivo
 
-Implementar um sistema de Prevenção de Perda de Dados (DLP) robusto para proteger informações sensíveis, como PII (Informações de Identificação Pessoal), impedindo que sejam processadas pela IA e registrando tentativas para fins de auditoria de segurança.
+Implementar um sistema de Prevenção de Perda de Dados (DLP) que permita aos usuários inserir informações sensíveis (PII), mas que garanta que esses dados sejam **anonimizados** antes de serem processados pela IA. O sistema também deve registrar as ocorrências para fins de auditoria de segurança, sem interromper o fluxo do usuário.
 
-A estratégia é baseada em uma abordagem de **defesa em profundidade de duas camadas**:
-1.  **Validação no Lado do Cliente:** Feedback em tempo real para o usuário, prevenindo o envio de dados.
-2.  **Verificação e Log no Lado do Servidor:** Uma rede de segurança para auditoria e como barreira final.
+A estratégia é baseada em uma abordagem de **anonimização segura e transparente no lado do servidor**.
 
 ---
 
-## 2. Camada 1: Validação no Lado do Cliente
+## 2. Estratégia Principal: Anonimização no Lado do Servidor
 
-Esta é a primeira e mais importante linha de defesa. O objetivo é impedir que dados sensíveis saiam do navegador do usuário.
+Esta é a abordagem mais segura e robusta. Toda a lógica de detecção e anonimização ocorre no backend, tornando-a invisível e impossível de ser contornada pelo cliente.
 
 ### 2.1. Fluxo de Funcionamento
 
-1.  O usuário digita na caixa de texto do chat.
-2.  A cada alteração no texto, uma função em JavaScript executa uma verificação usando uma lista de expressões regulares (regex) para identificar padrões de PII (CPF, e-mail, telefone, etc.).
-3.  **Se um padrão é encontrado:**
-    *   Uma mensagem de alerta discreta é exibida abaixo da caixa de texto (ex: "Dados sensíveis detectados. Remova-os para enviar.").
-    *   O botão de envio é desabilitado (`disabled`).
-4.  **Se nenhum padrão é encontrado (ou após o usuário corrigir o texto):**
-    *   A mensagem de alerta desaparece.
-    *   O botão de envio é reabilitado.
+1.  **Entrada do Usuário:** O usuário digita sua consulta na caixa de chat, que pode conter dados sensíveis (CPF, e-mail, telefone, etc.).
+2.  **Envio Bruto:** O texto é enviado ao servidor exatamente como foi digitado.
+3.  **Processamento no Backend (`askAssistant`):**
+    a. A função `askAssistant` no servidor recebe a consulta original (`query`).
+    b. **ANTES** de passar a consulta para a IA, ela é enviada para uma nova função auxiliar chamada `anonymizeQuery(query)`.
+    c. A função `anonymizeQuery` usa uma lista de expressões regulares (`piiPatterns`) para encontrar e substituir cada dado sensível por um placeholder genérico (ex: `123.456.789-00` vira `[CPF_REMOVIDO]`).
+    d. Ao mesmo tempo, a função identifica quais tipos de PII foram encontrados.
+4.  **Log de Auditoria:**
+    a. Se algum PII foi detectado, a função `logDlpAlert` (já existente) é chamada.
+    b. O log armazena o `userId`, `chatId`, a `originalQuery` e os `findings` (os tipos de PII encontrados, como 'CPF' ou 'Email').
+5.  **Envio para a IA:**
+    a. Apenas a consulta **totalmente anonimizada** é enviada para o `callDiscoveryEngine`.
+    b. **O dado sensível original NUNCA chega ao serviço de IA.**
+6.  **Resposta ao Usuário:** A IA processa a consulta anonimizada e retorna a resposta. O usuário recebe a resposta e, como ele tem o contexto original, entende a que os placeholders se referem.
 
 ### 2.2. Plano de Implementação Técnica
 
 -   **Novo Arquivo (`src/lib/dlp-patterns.ts`):**
-    -   Criar um arquivo para exportar um array de objetos, onde cada objeto contém o nome do padrão e sua respectiva regex.
+    -   Criar um arquivo para exportar um array de objetos, onde cada objeto contém o nome do padrão, sua respectiva regex e o placeholder de substituição.
     ```javascript
     export const piiPatterns = [
-        { name: 'CPF', regex: /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g },
-        { name: 'Email', regex: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi },
+        { name: 'CPF', regex: /\b\d{3}[.]?\d{3}[.]?\d{3}[-]?\d{2}\b/g, placeholder: '[CPF_REMOVIDO]' },
+        { name: 'Email', regex: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, placeholder: '[EMAIL_REMOVIDO]' },
         // ... outros padrões
     ];
     ```
 
--   **Modificação em `src/components/chat/ChatInputForm.tsx`:**
-    -   Importar `piiPatterns`.
-    -   Adicionar um estado para gerenciar o alerta: `const [dlpWarning, setDlpWarning] = useState<string | null>(null);`
-    -   Usar um hook `useEffect` que observa o estado `input`.
-    -   Dentro do `useEffect`, iterar sobre os `piiPatterns`. Se algum padrão corresponder ao texto, atualizar o estado `setDlpWarning` com uma mensagem apropriada. Caso contrário, defini-lo como `null`.
-    -   No JSX, renderizar a mensagem de alerta condicionalmente.
-    -   Adicionar a propriedade `disabled` ao botão de envio, baseando-se em `isLoading || !input.trim() || !!dlpWarning`.
-
----
-
-## 3. Camada 2: Verificação e Log no Lado do Servidor
-
-Esta camada funciona como uma rede de segurança e um sistema de auditoria, caso a validação do cliente seja contornada.
-
-### 3.1. Fluxo de Funcionamento
-
-1.  O usuário envia uma mensagem (o `query`).
-2.  A função `askAssistant` no servidor recebe o `query`.
-3.  **Antes** de enviar o `query` para a API de IA, uma função de verificação interna é chamada.
-4.  Esta função usa os mesmos `piiPatterns` para verificar o `query`.
-5.  **Se um padrão é encontrado:**
-    -   A função `logDlpAlert` (já existente) é chamada, registrando os detalhes da tentativa no Firestore na coleção `dlp_alerts`.
-    -   A execução continua normalmente. O `query` ainda é enviado para a IA.
-6.  O `preamble` de segurança da IA (que já proíbe o processamento de PII) atua como a barreira final, garantindo que o modelo se recuse a processar a solicitação.
-
-### 3.2. Plano de Implementação Técnica
-
 -   **Modificação em `src/app/actions.ts`:**
-    -   Importar `piiPatterns` do `src/lib/dlp-patterns.ts` (ou duplicar as regex, se preferir manter o backend sem dependências diretas do `lib`).
-    -   Criar uma função auxiliar assíncrona dentro do arquivo, como `async function detectAndLogDlp(query: string, userId: string, chatId: string)`.
+    -   Importar `piiPatterns` de `src/lib/dlp-patterns.ts`.
+    -   Criar uma função auxiliar `async function anonymizeAndLog(query: string, userId: string, chatId: string): Promise<string>`.
     -   Esta função irá:
-        -   Testar o `query` contra as regex.
-        -   Se encontrar correspondências, formatará os "findings" e chamará `logDlpAlert`.
-    -   Dentro da função `askAssistant`, chamar esta nova função: `await detectAndLogDlp(query, userId, activeChatId);` (será necessário passar o `chatId` para `askAssistant`).
+        -   Iterar sobre `piiPatterns`.
+        -   Manter um array `findings` com os nomes dos padrões encontrados.
+        -   Usar `query.replace(pattern.regex, pattern.placeholder)` para criar a versão anonimizada.
+        -   Se `findings` não estiver vazio, chamar `logDlpAlert`.
+        -   Retornar a string da consulta anonimizada.
+    -   Dentro da função `askAssistant`, modificar a chamada:
+        -   Originalmente: `return await callDiscoveryEngine(query, userId);`
+        -   Modificado:
+            ```javascript
+            // É necessário passar chatId para askAssistant
+            const anonymizedQuery = await anonymizeAndLog(query, userId, activeChatId);
+            return await callDiscoveryEngine(anonymizedQuery, userId);
+            ```
 
-## 4. Benefícios da Abordagem
+## 3. Benefícios da Abordagem
 
--   **Segurança em Camadas:** Não depende de uma única linha de defesa.
--   **Experiência do Usuário:** O feedback imediato no cliente é mais amigável do que uma simples recusa do servidor.
--   **Auditoria:** Fornece um rastro claro para a equipe de segurança sobre tentativas de vazamento de dados.
--   **Eficiência:** Evita o custo e a latência de chamar uma API de DLP externa para cada mensagem.
--   **Resiliência:** Mesmo que a validação do cliente falhe ou seja contornada, o servidor e a IA ainda fornecem proteção.
+-   **Segurança Máxima:** A lógica de DLP está no servidor, imune a manipulação no cliente. Os dados sensíveis nunca saem da nossa infraestrutura controlada.
+-   **Excelente Experiência do Usuário:** O usuário não é interrompido por alertas ou bloqueios. A anonimização é transparente para ele.
+-   **Auditoria Completa:** Mantemos um registro detalhado de todas as tentativas de uso de PII para fins de conformidade e segurança.
+-   **Conformidade:** Impede o envio de PII para serviços de IA de terceiros, ajudando a cumprir regulações de privacidade como a LGPD.
+-   **Simplicidade de Manutenção:** A lógica é centralizada em um único local (`actions.ts`), facilitando futuras atualizações nos padrões de DLP.
