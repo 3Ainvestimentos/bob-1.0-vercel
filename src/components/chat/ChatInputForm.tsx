@@ -95,7 +95,7 @@ export function ChatInputForm({
               size="icon"
               variant="ghost"
               className="absolute right-3 top-3 h-8 w-8 rounded-full text-muted-foreground"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || (!input.trim() && !selectedFile)}
             >
               <SendHorizontal className="h-5 w-5" />
             </Button>
@@ -107,6 +107,7 @@ export function ChatInputForm({
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
+              accept=".pdf,.doc,.docx,text/plain"
               disabled={isLoading}
             />
             <Button

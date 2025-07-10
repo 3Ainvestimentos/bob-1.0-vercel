@@ -552,7 +552,9 @@ function ChatPageContent() {
   };
 
   const submitQuery = async (query: string, file: File | null) => {
-    if (!query.trim() || isLoading || !user) return;
+    if (!query.trim() && !file) return;
+    if (isLoading || !user) return;
+
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -579,8 +581,10 @@ function ChatPageContent() {
         fileDataUri = await readFileAsDataURL(file);
       }
       
+      const finalQuery = query || `Analise o arquivo ${file?.name || 'anexado'}.`;
+
       if (!currentChatId) {
-        const newTitle = await generateTitleForConversation(query, file?.name);
+        const newTitle = await generateTitleForConversation(finalQuery, file?.name);
         const newId = await saveConversation(user.uid, newMessages, null, newTitle);
         setActiveChatId(newId);
         currentChatId = newId;
@@ -588,7 +592,7 @@ function ChatPageContent() {
         await saveConversation(user.uid, newMessages, currentChatId);
       }
 
-      const assistantResponse = await askAssistant(query, { fileDataUri }, user.uid, currentChatId);
+      const assistantResponse = await askAssistant(finalQuery, { fileDataUri }, user.uid, currentChatId);
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -598,7 +602,7 @@ function ChatPageContent() {
       };
 
       if (assistantResponse.searchFailed) {
-        setLastFailedQuery(query);
+        setLastFailedQuery(finalQuery);
       }
 
       const finalMessages = [...newMessages, assistantMessage];
@@ -609,7 +613,7 @@ function ChatPageContent() {
       const fetchSuggestions = async () => {
         setIsSuggestionsLoading(true);
         try {
-          const newSuggestions = await generateSuggestedQuestions(query, assistantResponse.summary);
+          const newSuggestions = await generateSuggestedQuestions(finalQuery, assistantResponse.summary);
           setSuggestions(newSuggestions);
         } catch (err) {
           console.error("Failed to fetch suggestions", err);
@@ -1305,7 +1309,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}

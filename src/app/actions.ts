@@ -6,6 +6,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { DlpServiceClient } from '@google-cloud/dlp';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import mammoth from 'mammoth';
+import pdfParse from 'pdf-parse';
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
 
@@ -81,6 +83,28 @@ function estimateTokens(text: string): number {
   return Math.ceil((text || '').length / 4);
 }
 
+async function getFileContent(fileDataUri: string): Promise<string> {
+    const [header, base64Data] = fileDataUri.split(',');
+    if (!header || !base64Data) {
+        throw new Error('Formato inválido de Data URI.');
+    }
+    const mimeType = header.match(/:(.*?);/)?.[1];
+    const fileBuffer = Buffer.from(base64Data, 'base64');
+
+    if (mimeType === 'application/pdf') {
+        const data = await pdfParse(fileBuffer);
+        return data.text;
+    } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const { value } = await mammoth.extractRawText({ buffer: fileBuffer });
+        return value;
+    } else if (mimeType?.startsWith('text/')) {
+        return fileBuffer.toString('utf-8');
+    }
+
+    throw new Error(`Tipo de arquivo não suportado: ${mimeType}. Por favor, envie um DOCX, PDF ou arquivo de texto.`);
+}
+
+
 async function callDiscoveryEngine(
     query: string,
     fileDataUri: string | null,
@@ -124,22 +148,18 @@ async function callDiscoveryEngine(
         throw new Error(`Falha ao obter o token de acesso usando a conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL).`);
       }
       
-      // *** DLP Integration: De-identify the query and file content ***
       const deidentifiedQuery = await deidentifyText(query, projectId);
       
-      let deidentifiedFileData = null;
       let finalQuery = deidentifiedQuery;
 
       if (fileDataUri) {
-          const base64Data = fileDataUri.split(',')[1];
-          const fileContent = Buffer.from(base64Data, 'base64').toString('utf-8');
-          deidentifiedFileData = await deidentifyText(fileContent, projectId);
-          // Combine the user's query with the de-identified file content for the final prompt
+          const fileContent = await getFileContent(fileDataUri);
+          const deidentifiedFileData = await deidentifyText(fileContent, projectId);
           finalQuery = `${deidentifiedQuery}\n\nContexto do arquivo anexado:\n\n${deidentifiedFileData}`;
       }
 
       const requestBody: any = {
-        query: finalQuery, // Use a query combinada e anonimizada
+        query: finalQuery, 
         pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
