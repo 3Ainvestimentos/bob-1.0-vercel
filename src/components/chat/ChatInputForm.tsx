@@ -17,6 +17,7 @@ interface ChatInputFormProps {
   inputRef: React.RefObject<HTMLTextAreaElement>;
   selectedFile: File | null;
   setSelectedFile: (file: File | null) => void;
+  activeChatHasFile: boolean;
 }
 
 export function ChatInputForm({
@@ -27,6 +28,7 @@ export function ChatInputForm({
   inputRef,
   selectedFile,
   setSelectedFile,
+  activeChatHasFile,
 }: ChatInputFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,7 +97,7 @@ export function ChatInputForm({
               size="icon"
               variant="ghost"
               className="absolute right-3 top-3 h-8 w-8 rounded-full text-muted-foreground"
-              disabled={isLoading || (!input.trim() && !selectedFile)}
+              disabled={isLoading || (!input.trim() && !selectedFile && !activeChatHasFile)}
             >
               <SendHorizontal className="h-5 w-5" />
             </Button>
@@ -108,15 +110,16 @@ export function ChatInputForm({
               onChange={handleFileChange}
               className="hidden"
               accept=".pdf,.doc,.docx,text/plain"
-              disabled={isLoading}
+              disabled={isLoading || activeChatHasFile}
             />
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground"
-              disabled={isLoading}
+              disabled={isLoading || activeChatHasFile}
               onClick={handleAttachClick}
+              title={activeChatHasFile ? "Um arquivo já está anexado a esta conversa." : "Anexar arquivo"}
             >
               <Paperclip className="h-5 w-5" />
             </Button>
@@ -138,3 +141,4 @@ export function ChatInputForm({
     </div>
   );
 }
+

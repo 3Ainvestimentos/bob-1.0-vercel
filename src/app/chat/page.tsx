@@ -92,9 +92,10 @@ export interface Conversation {
   groupId?: string | null;
   totalTokens?: number;
   fileContext?: string | null;
+  fileName?: string | null;
 }
 
-export type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens' | 'fileContext'>;
+export type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens' | 'fileContext' | 'fileName'>;
 
 interface FeedbackDetails {
     messageId: string;
@@ -315,6 +316,7 @@ async function getFullConversation(userId: string, chatId: string): Promise<Conv
                 groupId: data.groupId || null,
                 totalTokens: data.totalTokens || 0,
                 fileContext: data.fileContext || null,
+                fileName: data.fileName || null,
             } as Conversation;
         } else {
             console.log('No such document!');
@@ -333,6 +335,7 @@ async function saveConversation(
   options: {
     newChatTitle?: string;
     fileContext?: string | null;
+    fileName?: string | null;
   } = {}
 ): Promise<string> {
   if (!userId) throw new Error('User ID is required.');
@@ -364,6 +367,7 @@ async function saveConversation(
     };
     if (options.fileContext !== undefined) {
       updatePayload.fileContext = options.fileContext;
+      updatePayload.fileName = options.fileName;
     }
     await updateDoc(chatRef, updatePayload);
     return chatId;
@@ -378,6 +382,7 @@ async function saveConversation(
         createdAt: serverTimestamp(),
         groupId: null,
         fileContext: options.fileContext ?? null,
+        fileName: options.fileName ?? null,
     };
 
     const newChatRef = await addDoc(conversationsRef, newChatPayload);
@@ -596,7 +601,7 @@ function ChatPageContent() {
         id: crypto.randomUUID(),
         role: 'user',
         content: query,
-        fileName: file?.name,
+        fileName: file?.name ?? activeChat?.fileName,
     };
     const newMessages = [...messages, userMessage];
 
@@ -612,12 +617,10 @@ function ChatPageContent() {
     let currentChatId = activeChatId;
     let fileDataUri: string | null = null;
     let fileContextForRequest: string | null = activeChat?.fileContext ?? null;
-
+    
     try {
         if (file) {
             fileDataUri = await readFileAsDataURL(file);
-            // Se um novo arquivo for enviado, o contexto antigo é sobrescrito na requisição.
-            // A persistência acontecerá depois da resposta da IA.
             fileContextForRequest = null; 
         }
 
@@ -648,9 +651,10 @@ function ChatPageContent() {
         setMessages(finalMessages);
 
         const newFileContext = fileDataUri ? assistantResponse.deidentifiedFileContent : activeChat?.fileContext;
+        const newFileName = file ? file.name : activeChat?.fileName;
 
         if (!currentChatId) {
-            const newTitle = await generateTitleForConversation(finalQuery, file?.name);
+            const newTitle = await generateTitleForConversation(finalQuery, newFileName);
             const newId = await saveConversation(
                 user.uid,
                 finalMessages,
@@ -658,9 +662,9 @@ function ChatPageContent() {
                 {
                     newChatTitle: newTitle,
                     fileContext: newFileContext,
+                    fileName: newFileName,
                 }
             );
-            currentChatId = newId;
             const newFullChat = await getFullConversation(user.uid, newId);
             setActiveChat(newFullChat);
         } else {
@@ -669,12 +673,12 @@ function ChatPageContent() {
                 finalMessages,
                 currentChatId,
                 {
-                    fileContext: newFileContext
+                    fileContext: newFileContext,
+                    fileName: newFileName,
                 }
             );
-            // Atualiza o estado do chat ativo com o novo contexto do arquivo, se houver.
-            if (newFileContext !== activeChat?.fileContext) {
-                 setActiveChat(prev => prev ? { ...prev, fileContext: newFileContext } : null);
+            if (newFileContext !== activeChat?.fileContext || newFileName !== activeChat?.fileName) {
+                 setActiveChat(prev => prev ? { ...prev, fileContext: newFileContext, fileName: newFileName } : null);
             }
         }
 
@@ -1410,7 +1414,7 @@ function ChatPageContent() {
                   onOpenFeedbackDialog={handleOpenFeedbackDialog}
                   onWebSearch={handleWebSearch}
                   onSuggestionClick={handleSuggestionClick}
-                  activeChatId={activeChatId}
+                  activeChat={activeChat}
                 />
 
                 <ChatInputForm
@@ -1421,6 +1425,7 @@ function ChatPageContent() {
                     inputRef={inputRef}
                     selectedFile={selectedFile}
                     setSelectedFile={setSelectedFile}
+                    activeChatHasFile={!!activeChat?.fileContext}
                 />
             </main>
         </SidebarInset>
@@ -1437,3 +1442,4 @@ export default function ChatPage() {
 }
 
     
+
