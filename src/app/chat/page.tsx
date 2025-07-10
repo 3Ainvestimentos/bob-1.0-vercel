@@ -362,7 +362,7 @@ async function saveConversation(
       messages: sanitizedMessages,
       totalTokens 
     };
-    if (options.fileContext) {
+    if (options.fileContext !== undefined) {
       updatePayload.fileContext = options.fileContext;
     }
     await updateDoc(chatRef, updatePayload);
@@ -592,12 +592,11 @@ function ChatPageContent() {
     if (!query.trim() && !file) return;
     if (isLoading || !user) return;
 
-
     const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: query,
-      fileName: file?.name,
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: query,
+        fileName: file?.name,
     };
     const newMessages = [...messages, userMessage];
 
@@ -612,94 +611,101 @@ function ChatPageContent() {
 
     let currentChatId = activeChatId;
     let fileDataUri: string | null = null;
+    let fileContextForRequest: string | null = activeChat?.fileContext ?? null;
 
     try {
-      if (file) {
-        fileDataUri = await readFileAsDataURL(file);
-      }
-      
-      const finalQuery = query || `Analise o arquivo ${file?.name || 'anexado'}.`;
-      
-      const assistantResponse = await askAssistant(
-          finalQuery, 
-          { 
-              fileDataUri, 
-              fileContext: activeChat?.fileContext 
-          }, 
-          user.uid
-      );
-      
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: assistantResponse.summary,
-        promptTokenCount: assistantResponse.promptTokenCount,
-        candidatesTokenCount: assistantResponse.candidatesTokenCount,
-      };
-
-      if (assistantResponse.searchFailed) {
-        setLastFailedQuery(finalQuery);
-      }
-
-      const finalMessages = [...newMessages, assistantMessage];
-      setMessages(finalMessages);
-      
-      if (!currentChatId) {
-        const newTitle = await generateTitleForConversation(finalQuery, file?.name);
-        const newId = await saveConversation(
-            user.uid, 
-            finalMessages, 
-            null, 
-            { 
-                newChatTitle: newTitle, 
-                fileContext: assistantResponse.deidentifiedFileContent 
-            }
-        );
-        currentChatId = newId;
-        const newFullChat = await getFullConversation(user.uid, newId);
-        setActiveChat(newFullChat);
-      } else {
-        await saveConversation(
-            user.uid, 
-            finalMessages, 
-            currentChatId, 
-            { 
-                fileContext: activeChat?.fileContext || assistantResponse.deidentifiedFileContent 
-            }
-        );
-        if (assistantResponse.deidentifiedFileContent && !activeChat?.fileContext) {
-            setActiveChat(prev => prev ? { ...prev, fileContext: assistantResponse.deidentifiedFileContent } : null);
+        if (file) {
+            fileDataUri = await readFileAsDataURL(file);
+            // Se um novo arquivo for enviado, o contexto antigo é sobrescrito na requisição.
+            // A persistência acontecerá depois da resposta da IA.
+            fileContextForRequest = null; 
         }
-      }
 
+        const finalQuery = query || `Analise o arquivo ${file?.name || 'anexado'}.`;
 
-      const fetchSuggestions = async () => {
-        setIsSuggestionsLoading(true);
-        try {
-          const newSuggestions = await generateSuggestedQuestions(finalQuery, assistantResponse.summary);
-          setSuggestions(newSuggestions);
-        } catch (err) {
-          console.error("Failed to fetch suggestions", err);
-          setSuggestions([]);
-        } finally {
-          setIsSuggestionsLoading(false);
+        const assistantResponse = await askAssistant(
+            finalQuery,
+            {
+                fileDataUri,
+                fileContext: fileContextForRequest,
+            },
+            user.uid
+        );
+
+        const assistantMessage: Message = {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: assistantResponse.summary,
+            promptTokenCount: assistantResponse.promptTokenCount,
+            candidatesTokenCount: assistantResponse.candidatesTokenCount,
+        };
+
+        if (assistantResponse.searchFailed) {
+            setLastFailedQuery(finalQuery);
         }
-      };
-      fetchSuggestions();
+
+        const finalMessages = [...newMessages, assistantMessage];
+        setMessages(finalMessages);
+
+        const newFileContext = fileDataUri ? assistantResponse.deidentifiedFileContent : activeChat?.fileContext;
+
+        if (!currentChatId) {
+            const newTitle = await generateTitleForConversation(finalQuery, file?.name);
+            const newId = await saveConversation(
+                user.uid,
+                finalMessages,
+                null,
+                {
+                    newChatTitle: newTitle,
+                    fileContext: newFileContext,
+                }
+            );
+            currentChatId = newId;
+            const newFullChat = await getFullConversation(user.uid, newId);
+            setActiveChat(newFullChat);
+        } else {
+            await saveConversation(
+                user.uid,
+                finalMessages,
+                currentChatId,
+                {
+                    fileContext: newFileContext
+                }
+            );
+            // Atualiza o estado do chat ativo com o novo contexto do arquivo, se houver.
+            if (newFileContext !== activeChat?.fileContext) {
+                 setActiveChat(prev => prev ? { ...prev, fileContext: newFileContext } : null);
+            }
+        }
+
+
+        const fetchSuggestions = async () => {
+            setIsSuggestionsLoading(true);
+            try {
+                const newSuggestions = await generateSuggestedQuestions(finalQuery, assistantResponse.summary);
+                setSuggestions(newSuggestions);
+            } catch (err) {
+                console.error("Failed to fetch suggestions", err);
+                setSuggestions([]);
+            } finally {
+                setIsSuggestionsLoading(false);
+            }
+        };
+        fetchSuggestions();
       
-      await fetchSidebarData();
+        await fetchSidebarData();
 
     } catch (err: any) {
-      const errorMessageContent = `Ocorreu um erro: ${err.message}`;
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: errorMessageContent,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      setError(errorMessageContent);
+        const errorMessageContent = `Ocorreu um erro: ${err.message}`;
+        const errorMessage: Message = {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: errorMessageContent,
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        setError(errorMessageContent);
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
   
@@ -1429,3 +1435,5 @@ export default function ChatPage() {
         </SidebarProvider>
     )
 }
+
+    
