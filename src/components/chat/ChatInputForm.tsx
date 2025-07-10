@@ -3,8 +3,10 @@
 
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Mic, Paperclip, SendHorizontal } from 'lucide-react';
-import React, { FormEvent } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { File, Mic, Paperclip, SendHorizontal, X } from 'lucide-react';
+import React, { FormEvent, useRef } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
 interface ChatInputFormProps {
@@ -13,6 +15,8 @@ interface ChatInputFormProps {
   handleSubmit: (e: FormEvent) => void;
   isLoading: boolean;
   inputRef: React.RefObject<HTMLTextAreaElement>;
+  selectedFile: File | null;
+  setSelectedFile: (file: File | null) => void;
 }
 
 export function ChatInputForm({
@@ -21,14 +25,48 @@ export function ChatInputForm({
   handleSubmit,
   isLoading,
   inputRef,
+  selectedFile,
+  setSelectedFile,
 }: ChatInputFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      setSelectedFile(event.target.files[0]);
+    }
+  };
+
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
   return (
     <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
       <form
         onSubmit={handleSubmit}
         className="px-4 pb-4 pt-2 sm:px-6 lg:px-8"
       >
-        <div className="rounded-lg border bg-background shadow-sm">
+        <div className={cn("rounded-lg border bg-background shadow-sm", selectedFile && "relative pb-10")}>
+          {selectedFile && (
+            <div className="absolute bottom-11 left-2 w-[calc(100%-1rem)] p-2">
+                <Badge variant="secondary" className="flex max-w-full items-center justify-between gap-2 pl-2 pr-1">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        <File className="h-4 w-4 shrink-0"/>
+                        <span className="truncate text-xs">{selectedFile.name}</span>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="h-5 w-5 shrink-0 rounded-full" onClick={handleRemoveFile}>
+                        <X className="h-3 w-3" />
+                    </Button>
+                </Badge>
+            </div>
+          )}
           <div className="relative flex min-h-[60px] items-start">
             <TextareaAutosize
               ref={inputRef}
@@ -64,12 +102,20 @@ export function ChatInputForm({
           </div>
           <Separator />
           <div className="flex items-center p-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={isLoading}
+            />
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground"
               disabled={isLoading}
+              onClick={handleAttachClick}
             >
               <Paperclip className="h-5 w-5" />
             </Button>

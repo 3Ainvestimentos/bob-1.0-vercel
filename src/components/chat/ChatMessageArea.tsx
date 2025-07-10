@@ -20,6 +20,7 @@ import {
   Mail,
   MoreHorizontal,
   Newspaper,
+  Paperclip,
   Pin,
   RefreshCw,
   Search,
@@ -218,7 +219,7 @@ export function ChatMessageArea({
                             <div className="text-xs text-muted-foreground">
                               {typeof msg.promptTokenCount === 'number' && typeof msg.candidatesTokenCount === 'number'
                                 ? `Tokens usados: ${msg.promptTokenCount + msg.candidatesTokenCount}`
-                                : 'Tokens usados: 9'}
+                                : ''}
                             </div>
                           </div>
                         )}
@@ -228,6 +229,12 @@ export function ChatMessageArea({
                 ) : (
                   <div className="flex items-start justify-end gap-4">
                     <div className="max-w-[80%] rounded-xl bg-accent p-3 text-accent-foreground shadow-sm">
+                      {msg.fileName && (
+                          <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-background/50 p-2 text-xs">
+                              <Paperclip className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{msg.fileName}</span>
+                          </div>
+                      )}
                       <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
                         {msg.content}
                       </ReactMarkdown>

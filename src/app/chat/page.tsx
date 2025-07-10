@@ -79,6 +79,7 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  fileName?: string;
   promptTokenCount?: number;
   candidatesTokenCount?: number;
 }
@@ -157,7 +158,6 @@ async function logRegeneratedQuestion(
         });
     } catch (error) {
         console.error("Error logging regenerated question to Firestore:", error);
-        // Fail silently, as this is a background logging task. The user experience shouldn't be affected.
     }
 }
 
@@ -179,7 +179,6 @@ async function getFeedbacksForConversation(userId: string, chatId: string): Prom
         return feedbacks;
     } catch (error) {
         console.error("Error fetching feedbacks (this might require a Firestore index):", error);
-        // Inform the user that an index might be needed. The console error from Firebase is more useful.
         return {};
     }
 }
@@ -199,9 +198,6 @@ async function setFeedback(
   if (rating === null) {
     await deleteDoc(feedbackRef);
   } else {
-    // Overwrite the document completely. This ensures that if we switch from
-    // negative to positive, any existing comment is removed.
-    // The comment will be added separately if the user provides one.
     await setDoc(feedbackRef, {
       userId,
       chatId,
@@ -334,7 +330,6 @@ async function saveConversation(
 
   const conversationsRef = collection(db, 'users', userId, 'chats');
 
-  // Calculate total tokens for the conversation for analytics
   const totalTokens = messages.reduce((acc, msg) => {
     const promptTokens = msg.promptTokenCount || 0;
     const candidateTokens = msg.candidatesTokenCount || 0;
@@ -343,24 +338,19 @@ async function saveConversation(
 
   if (chatId) {
     const chatRef = doc(conversationsRef, chatId);
-    // Update the messages array and the totalTokens count
     await updateDoc(chatRef, { 
       messages,
       totalTokens 
     });
     return chatId;
   } else {
-    const title = newChatTitle || (() => {
-        const firstUserMessage = messages.find((m) => m.role === 'user')?.content || 'Nova Conversa';
-        return firstUserMessage.length > 30
-            ? firstUserMessage.substring(0, 27) + '...'
-            : firstUserMessage;
-    })();
+    const firstUserMessage = messages.find((m) => m.role === 'user');
+    const title = newChatTitle || (firstUserMessage?.content || 'Nova Conversa').substring(0, 30);
 
     const newChatRef = await addDoc(conversationsRef, {
       title,
       messages,
-      totalTokens, // Add totalTokens to new conversations
+      totalTokens,
       createdAt: serverTimestamp(),
       groupId: null,
     });
@@ -391,15 +381,14 @@ async function deleteConversation(userId: string, chatId: string): Promise<void>
                 deletedBy: userId,
             };
             
-            // Use a batch write to make the move atomic
             const batch = writeBatch(db);
-            batch.set(archivedChatRef, archivedData); // Copy to archive
-            batch.delete(chatRef); // Delete original
+            batch.set(archivedChatRef, archivedData);
+            batch.delete(chatRef);
             
             await batch.commit();
 
         } else {
-            console.warn(`Conversation with ID ${chatId} not found to archive. It might have been already deleted.`);
+            console.warn(`Conversation with ID ${chatId} not found to archive.`);
         }
     } catch (error) {
         console.error("Error archiving and deleting conversation:", error);
@@ -413,15 +402,12 @@ function ChatPageContent() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [conversations, setConversations] = useState<ConversationSidebarItem[]>(
-    []
-  );
+  const [conversations, setConversations] = useState<ConversationSidebarItem[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isSidebarLoading, setIsSidebarLoading] = useState(true);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -456,7 +442,7 @@ function ChatPageContent() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [activeDragItem, setActiveDragItem] = useState<ConversationSidebarItem | Group | null>(null);
   const [isFaqDialogOpen, setIsFaqDialogOpen] = useState(false);
-
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -484,7 +470,6 @@ function ChatPageContent() {
       ]);
       setConversations(userConversations);
       setGroups(userGroups);
-      // Initialize all groups as expanded by default
       setExpandedGroups(userGroups.reduce((acc, group) => {
           acc[group.id] = true;
           return acc;
@@ -513,6 +498,7 @@ function ChatPageContent() {
     setFeedbacks({});
     setSuggestions([]);
     setIsSuggestionsLoading(false);
+    setSelectedFile(null);
   };
 
   useEffect(() => {
@@ -540,6 +526,7 @@ function ChatPageContent() {
     setFeedbacks({});
     setSuggestions([]);
     setIsSuggestionsLoading(false);
+    setSelectedFile(null);
     try {
         const [fetchedMessages, fetchedFeedbacks] = await Promise.all([
             getConversationMessages(user.uid, chatId),
@@ -555,14 +542,29 @@ function ChatPageContent() {
     }
   };
 
-  const submitQuery = async (query: string) => {
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const submitQuery = async (query: string, file: File | null) => {
     if (!query.trim() || isLoading || !user) return;
 
-    const userMessage: Message = { id: crypto.randomUUID(), role: 'user', content: query };
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: query,
+      fileName: file?.name,
+    };
     const newMessages = [...messages, userMessage];
 
     setMessages(newMessages);
     setInput('');
+    setSelectedFile(null);
     setIsLoading(true);
     setError(null);
     setLastFailedQuery(null);
@@ -570,10 +572,15 @@ function ChatPageContent() {
     setIsSuggestionsLoading(false);
 
     let currentChatId = activeChatId;
+    let fileDataUri: string | null = null;
 
     try {
+      if (file) {
+        fileDataUri = await readFileAsDataURL(file);
+      }
+      
       if (!currentChatId) {
-        const newTitle = await generateTitleForConversation(query);
+        const newTitle = await generateTitleForConversation(query, file?.name);
         const newId = await saveConversation(user.uid, newMessages, null, newTitle);
         setActiveChatId(newId);
         currentChatId = newId;
@@ -581,19 +588,14 @@ function ChatPageContent() {
         await saveConversation(user.uid, newMessages, currentChatId);
       }
 
-      const assistantResponse = await askAssistant(query, {}, user.uid, currentChatId);
+      const assistantResponse = await askAssistant(query, { fileDataUri }, user.uid, currentChatId);
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: assistantResponse.summary,
+        promptTokenCount: assistantResponse.promptTokenCount,
+        candidatesTokenCount: assistantResponse.candidatesTokenCount,
       };
-
-      if (typeof assistantResponse.promptTokenCount === 'number') {
-        assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
-      }
-      if (typeof assistantResponse.candidatesTokenCount === 'number') {
-        assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
-      }
 
       if (assistantResponse.searchFailed) {
         setLastFailedQuery(query);
@@ -617,15 +619,8 @@ function ChatPageContent() {
         }
       };
       fetchSuggestions();
-
-      if (!activeChatId) {
-         await fetchSidebarData();
-      } else {
-        const currentConvo = conversations.find(c => c.id === activeChatId);
-        if (currentConvo && currentConvo.title === 'Nova Conversa') {
-            await fetchSidebarData();
-        }
-      }
+      
+      await fetchSidebarData();
 
     } catch (err: any) {
       const errorMessageContent = `Ocorreu um erro: ${err.message}`;
@@ -642,12 +637,12 @@ function ChatPageContent() {
   };
   
   const handleSuggestionClick = (suggestion: string) => {
-    submitQuery(suggestion);
+    submitQuery(suggestion, null);
   };
   
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    submitQuery(input);
+    submitQuery(input, selectedFile);
   };
 
   const handleWebSearch = async () => {
@@ -674,13 +669,9 @@ function ChatPageContent() {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: assistantResponse.summary,
+        promptTokenCount: assistantResponse.promptTokenCount,
+        candidatesTokenCount: assistantResponse.candidatesTokenCount,
       };
-      if (typeof assistantResponse.promptTokenCount === 'number') {
-        assistantMessage.promptTokenCount = assistantResponse.promptTokenCount;
-      }
-      if (typeof assistantResponse.candidatesTokenCount === 'number') {
-        assistantMessage.candidatesTokenCount = assistantResponse.candidatesTokenCount;
-      }
 
       const finalMessages = [...messagesWithUserQuery, assistantMessage];
       setMessages(finalMessages);
@@ -721,14 +712,12 @@ function ChatPageContent() {
   ) => {
     if (!user) return;
     try {
-      // Optimistically update the UI
       setConversations((convos) =>
         convos.map((c) => (c.id === chatId ? { ...c, groupId } : c))
       );
       await updateConversationGroup(user.uid, chatId, groupId);
     } catch (err: any) {
       setError(`Erro ao mover a conversa: ${err.message}`);
-      // Revert if there was an error
       fetchSidebarData();
     }
   };
@@ -802,7 +791,6 @@ function ChatPageContent() {
 
       const messageIndex = messages.findIndex(m => m.id === message.id);
       if (messageIndex < 1 || messages[messageIndex - 1].role !== 'user') {
-        // This should not happen with the new layout, but it's good practice to keep the check
         setError("O feedback só pode ser dado a uma resposta que segue diretamente uma pergunta do usuário.");
         return;
       }
@@ -877,23 +865,17 @@ function ChatPageContent() {
       );
       
       const newAssistantMessage: Message = {
-        id: crypto.randomUUID(), // New ID for the new message
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: newSummary,
+        promptTokenCount: promptTokenCount,
+        candidatesTokenCount: candidatesTokenCount,
       };
-      if (typeof promptTokenCount === 'number') {
-          newAssistantMessage.promptTokenCount = promptTokenCount;
-      }
-      if (typeof candidatesTokenCount === 'number') {
-          newAssistantMessage.candidatesTokenCount = candidatesTokenCount;
-      }
 
-      // If regeneration also fails, set the lastFailedQuery to show the web search button.
       if (searchFailed) {
         setLastFailedQuery(userQuery);
       }
 
-      // Replace the old message and any subsequent messages with the new response
       const updatedMessages = [
         ...messages.slice(0, messageIndex),
         newAssistantMessage
@@ -901,7 +883,6 @@ function ChatPageContent() {
 
       setMessages(updatedMessages);
 
-      // Clear feedback for the old message if it existed
       if (feedbacks[assistantMessageId]) {
         setFeedbacks(prev => {
             const newFeedbacks = { ...prev };
@@ -913,7 +894,6 @@ function ChatPageContent() {
       await saveConversation(user.uid, updatedMessages, activeChatId);
 
     } catch (err: any) {
-      // If regeneration fails, restore the original messages
       setError(`Erro ao regenerar: ${err.message}`);
       setMessages(messages); 
     } finally {
@@ -1075,7 +1055,6 @@ function ChatPageContent() {
     const activeId = active.id as string;
     const overId = over.id as string;
     
-    // --- Handle Group Reordering ---
     if (activeId.startsWith('group-') && overId.startsWith('group-')) {
         const activeGroupId = activeId.replace('group-', '');
         const overGroupId = overId.replace('group-', '');
@@ -1084,8 +1063,6 @@ function ChatPageContent() {
             const oldIndex = items.findIndex((item) => item.id === activeGroupId);
             const newIndex = items.findIndex((item) => item.id === overGroupId);
             if (oldIndex !== -1 && newIndex !== -1) {
-                // Note: This reordering is visual only and will reset on page load.
-                // Persisting the order would require schema changes (e.g., an 'order' field).
                 return arrayMove(items, oldIndex, newIndex);
             }
             return items;
@@ -1093,13 +1070,11 @@ function ChatPageContent() {
         return;
     }
 
-    // --- Handle Conversation Dragging ---
     if (activeId.startsWith('convo-')) {
         const conversationId = activeId.replace('convo-', '');
         const conversation = conversations.find((c) => c.id === conversationId);
         if (!conversation) return;
 
-        // Case 1: Dropping onto a group droppable area
         if (overId.startsWith('group-')) {
             const groupId = overId.replace('group-', '');
             if (conversation.groupId !== groupId) {
@@ -1108,7 +1083,6 @@ function ChatPageContent() {
             return;
         }
         
-        // Case 2: Dropping onto the 'ungrouped' area
         if (overId === 'ungrouped-area') {
             if (conversation.groupId !== null) {
                 await handleMoveConversation(conversationId, null);
@@ -1116,7 +1090,6 @@ function ChatPageContent() {
             return;
         }
 
-        // Case 3: Reorder or Move by dropping on another conversation
         if (overId.startsWith('convo-')) {
             const overConversationId = overId.replace('convo-', '');
             
@@ -1125,12 +1098,9 @@ function ChatPageContent() {
 
             if (activeIndex === -1 || overIndex === -1) return;
 
-            // If the conversations are in the same group, reorder them.
             if (conversations[activeIndex].groupId === conversations[overIndex].groupId) {
                 setConversations(items => arrayMove(items, activeIndex, overIndex));
-                // Note: This reordering is visual only and will reset on page load.
             } else {
-                // Otherwise, move the active conversation to the 'over' conversation's group.
                 const targetGroupId = conversations[overIndex].groupId || null;
                 await handleMoveConversation(conversationId, targetGroupId);
             }
@@ -1376,6 +1346,8 @@ function ChatPageContent() {
                     handleSubmit={handleSubmit}
                     isLoading={isLoading}
                     inputRef={inputRef}
+                    selectedFile={selectedFile}
+                    setSelectedFile={setSelectedFile}
                 />
             </main>
         </SidebarInset>
@@ -1390,5 +1362,3 @@ export default function ChatPage() {
         </SidebarProvider>
     )
 }
-
-    

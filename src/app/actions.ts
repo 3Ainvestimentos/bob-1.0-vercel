@@ -20,22 +20,20 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 - **Ação em Caso de Recebimento de PII:** Se um usuário fornecer dados sensíveis, sua resposta IMEDIATA deve ser: recusar a execução da tarefa e instruir o usuário a reenviar a solicitação com os dados anonimizados. A segurança é a prioridade absoluta.
 
 ### 3. FONTES DE CONHECIMENTO (REGRA CRÍTICA E INEGOCIÁVEL)
-- **Fonte Única:** Sua ÚNICA fonte de conhecimento são os documentos internos fornecidos nesta consulta. Responda ESTRITAMENTE e APENAS com base nessas informações.
+- **Fonte Única:** Sua ÚNICA fonte de conhecimento são os documentos internos fornecidos nesta consulta (seja por texto ou arquivo). Responda ESTRITAMENTE e APENAS com base nessas informações.
 - **PROIBIÇÃO TOTAL DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado ou qualquer informação externa. Não invente, não infira, não adivinhe, nem complemente informações que não estão explicitamente nos documentos.
 - **PROCEDIMENTO EM CASO DE FALHA:** Se a resposta para a pergunta do usuário não puder ser encontrada de forma clara e direta nos documentos fornecidos, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?"
 - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).
 
-### 4. ESCOPO E LIMITAÇÕES
-- **Papel:** Você é um suporte à decisão, não o tomador de decisão final.
-- **Aconselhamento Financeiro:** Você NÃO DEVE fornecer aconselhamento financeiro ou recomendações de investimento para clientes finais.
-- **Opiniões:** Não emita opiniões pessoais ou juízos de valor. Mantenha-se neutro e factual.`;
+### 4. ANÁLISE DE ARQUIVOS
+- Ao analisar um arquivo fornecido pelo usuário, baseie sua resposta nas informações contidas nele, em conjunto com o prompt do usuário.`;
 
 
-async function deidentifyQuery(query: string, projectId: string): Promise<string> {
+async function deidentifyText(text: string, projectId: string): Promise<string> {
+    if (!text) return text;
     const dlp = new DlpServiceClient();
     const location = 'global';
 
-    // Os tipos de informações a serem detectados e anonimizados.
     const infoTypes = [
         { name: 'CPF_NUMBER' },
         { name: 'RG_NUMBER' },
@@ -45,8 +43,6 @@ async function deidentifyQuery(query: string, projectId: string): Promise<string
         { name: 'CREDIT_CARD_NUMBER' },
     ];
 
-    // Configuração para substituir os dados sensíveis pelo nome do tipo de informação.
-    // Ex: "123.456.789-00" será substituído por "[CPF_NUMBER]".
     const deidentifyConfig = {
         infoTypeTransformations: {
             transformations: [
@@ -67,28 +63,29 @@ async function deidentifyQuery(query: string, projectId: string): Promise<string
         parent: `projects/${projectId}/locations/${location}`,
         deidentifyConfig: deidentifyConfig,
         inspectConfig: inspectConfig,
-        item: { value: query },
+        item: { value: text },
     };
 
     try {
         const [response] = await dlp.deidentifyContent(request);
         const deidentifiedItem = response.item;
-        return deidentifiedItem?.value || query;
+        return deidentifiedItem?.value || text;
     } catch (error) {
-        console.error('Error calling DLP API:', error);
-        // Em caso de erro na API de DLP, retorna a query original para não quebrar o fluxo.
-        // A segurança ainda será tratada pelo preamble do assistente.
-        return query;
+        console.error('Error calling DLP API for text:', error);
+        return text;
     }
 }
 
 
 function estimateTokens(text: string): number {
-  // Uma aproximação comum é que 1 token equivale a cerca de 4 caracteres.
   return Math.ceil((text || '').length / 4);
 }
 
-async function callDiscoveryEngine(query: string, userId?: string | null): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
+async function callDiscoveryEngine(
+    query: string,
+    fileDataUri: string | null,
+    userId?: string | null
+): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
     const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
     if (!serviceAccountKeyJson) {
       throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida no arquivo .env.`);
@@ -127,11 +124,22 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
         throw new Error(`Falha ao obter o token de acesso usando a conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL).`);
       }
       
-      // *** DLP Integration: De-identify the query before sending it to the engine ***
-      const deidentifiedQuery = await deidentifyQuery(query, projectId);
+      // *** DLP Integration: De-identify the query and file content ***
+      const deidentifiedQuery = await deidentifyText(query, projectId);
+      
+      let deidentifiedFileData = null;
+      let finalQuery = deidentifiedQuery;
+
+      if (fileDataUri) {
+          const base64Data = fileDataUri.split(',')[1];
+          const fileContent = Buffer.from(base64Data, 'base64').toString('utf-8');
+          deidentifiedFileData = await deidentifyText(fileContent, projectId);
+          // Combine the user's query with the de-identified file content for the final prompt
+          finalQuery = `${deidentifiedQuery}\n\nContexto do arquivo anexado:\n\n${deidentifiedFileData}`;
+      }
 
       const requestBody: any = {
-        query: deidentifiedQuery, // Use a query anonimizada
+        query: finalQuery, // Use a query combinada e anonimizada
         pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
@@ -165,7 +173,7 @@ async function callDiscoveryEngine(query: string, userId?: string | null): Promi
       }
 
       const data = await apiResponse.json();
-      const promptTokenCount = estimateTokens(ASSISTENTE_CORPORATIVO_PREAMBLE + deidentifiedQuery);
+      const promptTokenCount = estimateTokens(ASSISTENTE_CORPORATIVO_PREAMBLE + finalQuery);
       const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?";
       
       if (!data.summary || !data.summary.summaryText || !data.results || data.results.length === 0) {
@@ -243,21 +251,21 @@ Pergunta: "${query}"`;
 
 export async function askAssistant(
   query: string,
-  options: { useWebSearch?: boolean } = {},
+  options: { useWebSearch?: boolean; fileDataUri?: string | null } = {},
   userId?: string | null,
   activeChatId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
-  const { useWebSearch = false } = options;
+  const { useWebSearch = false, fileDataUri = null } = options;
 
   try {
     if (useWebSearch) {
+      // Web search does not support file uploads in this implementation
       return await callGemini(query);
     } else {
-      return await callDiscoveryEngine(query, userId);
+      return await callDiscoveryEngine(query, fileDataUri, userId);
     }
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
-    // Re-throw a user-friendly error
     throw new Error(`Ocorreu um erro ao se comunicar com o assistente: ${error.message}`);
   }
 }
@@ -267,7 +275,9 @@ export async function regenerateAnswer(
   userId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
   try {
-    return await callDiscoveryEngine(originalQuery, userId);
+    // Note: Regeneration does not include the original file for simplicity.
+    // This could be enhanced later if needed.
+    return await callDiscoveryEngine(originalQuery, null, userId);
   } catch (error: any) {
     console.error("Error in regenerateAnswer (internal):", error.message);
     throw new Error(`Ocorreu um erro ao se comunicar com o assistente para regenerar a resposta: ${error.message}`);
@@ -318,9 +328,11 @@ export async function generateSuggestedQuestions(
 
 
 export async function generateTitleForConversation(
-  query: string
+  query: string,
+  fileName?: string | null
 ): Promise<string> {
-  const fallbackTitle = query.length > 30 ? query.substring(0, 27) + '...' : query;
+  const baseQuery = fileName ? `${query} (analisando ${fileName})` : query;
+  const fallbackTitle = baseQuery.length > 30 ? baseQuery.substring(0, 27) + '...' : baseQuery;
   
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) {
@@ -328,9 +340,9 @@ export async function generateTitleForConversation(
     return fallbackTitle;
   }
 
-  const prompt = `Gere um título curto e descritivo em português com no máximo 5 palavras para a seguinte pergunta. Retorne APENAS o título, sem aspas, marcadores ou qualquer outro texto.
+  const prompt = `Gere um título curto e descritivo em português com no máximo 5 palavras para a seguinte pergunta. Se a pergunta incluir o nome de um arquivo, o título deve refletir isso. Retorne APENAS o título, sem aspas, marcadores ou qualquer outro texto.
 
-Pergunta: "${query}"`;
+Pergunta: "${baseQuery}"`;
 
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
@@ -372,7 +384,7 @@ export async function logDlpAlert(
     await addDoc(alertRef, {
       userId,
       chatId,
-      originalQuery,
+      originalQuery, // NOTE: This stores the original query for audit purposes. Consider security implications.
       findings: findings.map((f) => ({
         infoType: f.infoType?.name || 'Desconhecido',
         likelihood: f.likelihood || 'Desconhecido',
@@ -383,6 +395,5 @@ export async function logDlpAlert(
     });
   } catch (error) {
     console.error('Error logging DLP alert to Firestore:', error);
-    // Fail silently. Alert logging should not interrupt the user experience.
   }
 }
