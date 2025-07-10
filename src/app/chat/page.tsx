@@ -79,9 +79,9 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  fileName?: string;
-  promptTokenCount?: number;
-  candidatesTokenCount?: number;
+  fileName?: string | null;
+  promptTokenCount?: number | null;
+  candidatesTokenCount?: number | null;
 }
 
 export interface Conversation {
@@ -330,7 +330,15 @@ async function saveConversation(
 
   const conversationsRef = collection(db, 'users', userId, 'chats');
 
-  const totalTokens = messages.reduce((acc, msg) => {
+  // Sanitize messages to replace undefined with null
+  const sanitizedMessages = messages.map(msg => ({
+    ...msg,
+    fileName: msg.fileName ?? null,
+    promptTokenCount: msg.promptTokenCount ?? null,
+    candidatesTokenCount: msg.candidatesTokenCount ?? null,
+  }));
+
+  const totalTokens = sanitizedMessages.reduce((acc, msg) => {
     const promptTokens = msg.promptTokenCount || 0;
     const candidateTokens = msg.candidatesTokenCount || 0;
     return acc + promptTokens + candidateTokens;
@@ -339,17 +347,17 @@ async function saveConversation(
   if (chatId) {
     const chatRef = doc(conversationsRef, chatId);
     await updateDoc(chatRef, { 
-      messages,
+      messages: sanitizedMessages,
       totalTokens 
     });
     return chatId;
   } else {
-    const firstUserMessage = messages.find((m) => m.role === 'user');
+    const firstUserMessage = sanitizedMessages.find((m) => m.role === 'user');
     const title = newChatTitle || (firstUserMessage?.content || 'Nova Conversa').substring(0, 30);
 
     const newChatRef = await addDoc(conversationsRef, {
       title,
-      messages,
+      messages: sanitizedMessages,
       totalTokens,
       createdAt: serverTimestamp(),
       groupId: null,
