@@ -91,9 +91,10 @@ export interface Conversation {
   messages: Message[];
   groupId?: string | null;
   totalTokens?: number;
+  fileContext?: string | null;
 }
 
-export type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens'>;
+export type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens' | 'fileContext'>;
 
 interface FeedbackDetails {
     messageId: string;
@@ -294,35 +295,45 @@ async function getConversations(
   }
 }
 
-async function getConversationMessages(
-  userId: string,
-  chatId: string
-): Promise<Message[]> {
-  try {
-    const chatRef = doc(db, 'users', userId, 'chats', chatId);
-    const chatSnap = await getDoc(chatRef);
+async function getFullConversation(userId: string, chatId: string): Promise<Conversation | null> {
+    try {
+        const chatRef = doc(db, 'users', userId, 'chats', chatId);
+        const chatSnap = await getDoc(chatRef);
 
-    if (chatSnap.exists()) {
-      const messagesWithIds = (chatSnap.data().messages || []).map((m: any) => ({
-          ...m,
-          id: m.id || crypto.randomUUID(),
-      }));
-      return messagesWithIds as Message[];
-    } else {
-      console.log('No such document!');
-      return [];
+        if (chatSnap.exists()) {
+            const data = chatSnap.data();
+            const firestoreTimestamp = data.createdAt as Timestamp;
+            const messagesWithIds = (data.messages || []).map((m: any) => ({
+                ...m,
+                id: m.id || crypto.randomUUID(),
+            }));
+            return {
+                id: chatSnap.id,
+                title: data.title,
+                createdAt: firestoreTimestamp.toDate().toISOString(),
+                messages: messagesWithIds,
+                groupId: data.groupId || null,
+                totalTokens: data.totalTokens || 0,
+                fileContext: data.fileContext || null,
+            } as Conversation;
+        } else {
+            console.log('No such document!');
+            return null;
+        }
+    } catch (err: any) {
+        console.error('Error fetching full conversation:', err);
+        throw new Error('Não foi possível carregar a conversa completa.');
     }
-  } catch (err: any) {
-    console.error('Error fetching messages:', err);
-    throw new Error('Não foi possível carregar as mensagens da conversa.');
-  }
 }
 
 async function saveConversation(
   userId: string,
   messages: Message[],
   chatId?: string | null,
-  newChatTitle?: string
+  options: {
+    newChatTitle?: string;
+    fileContext?: string | null;
+  } = {}
 ): Promise<string> {
   if (!userId) throw new Error('User ID is required.');
   if (!messages || messages.length === 0)
@@ -330,9 +341,10 @@ async function saveConversation(
 
   const conversationsRef = collection(db, 'users', userId, 'chats');
 
-  // Sanitize messages to replace undefined with null
   const sanitizedMessages = messages.map(msg => ({
-    ...msg,
+    id: msg.id,
+    role: msg.role,
+    content: msg.content,
     fileName: msg.fileName ?? null,
     promptTokenCount: msg.promptTokenCount ?? null,
     candidatesTokenCount: msg.candidatesTokenCount ?? null,
@@ -346,22 +358,29 @@ async function saveConversation(
 
   if (chatId) {
     const chatRef = doc(conversationsRef, chatId);
-    await updateDoc(chatRef, { 
+    const updatePayload: any = { 
       messages: sanitizedMessages,
       totalTokens 
-    });
+    };
+    if (options.fileContext) {
+      updatePayload.fileContext = options.fileContext;
+    }
+    await updateDoc(chatRef, updatePayload);
     return chatId;
   } else {
     const firstUserMessage = sanitizedMessages.find((m) => m.role === 'user');
-    const title = newChatTitle || (firstUserMessage?.content || 'Nova Conversa').substring(0, 30);
+    const title = options.newChatTitle || (firstUserMessage?.content || 'Nova Conversa').substring(0, 30);
+    
+    const newChatPayload: any = {
+        title,
+        messages: sanitizedMessages,
+        totalTokens,
+        createdAt: serverTimestamp(),
+        groupId: null,
+        fileContext: options.fileContext ?? null,
+    };
 
-    const newChatRef = await addDoc(conversationsRef, {
-      title,
-      messages: sanitizedMessages,
-      totalTokens,
-      createdAt: serverTimestamp(),
-      groupId: null,
-    });
+    const newChatRef = await addDoc(conversationsRef, newChatPayload);
     return newChatRef.id;
   }
 }
@@ -418,7 +437,7 @@ function ChatPageContent() {
   const [conversations, setConversations] = useState<ConversationSidebarItem[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isSidebarLoading, setIsSidebarLoading] = useState(true);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChat, setActiveChat] = useState<Conversation | null>(null);
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
 
   const [isNewGroupDialogOpen, setIsNewGroupDialogOpen] = useState(false);
@@ -454,6 +473,8 @@ function ChatPageContent() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const activeChatId = activeChat?.id ?? null;
 
   const theme = user?.email?.endsWith('@3ainvestimentos.com.br')
     ? 'theme-blue'
@@ -498,7 +519,7 @@ function ChatPageContent() {
   }, [isLoading, activeChatId]);
 
   const handleNewChat = () => {
-    setActiveChatId(null);
+    setActiveChat(null);
     setMessages([]);
     setInput('');
     setError(null);
@@ -529,19 +550,27 @@ function ChatPageContent() {
     setIsLoading(true);
     setError(null);
     setLastFailedQuery(null);
-    setActiveChatId(chatId);
     setMessages([]); 
     setFeedbacks({});
     setSuggestions([]);
     setIsSuggestionsLoading(false);
     setSelectedFile(null);
     try {
-        const [fetchedMessages, fetchedFeedbacks] = await Promise.all([
-            getConversationMessages(user.uid, chatId),
-            getFeedbacksForConversation(user.uid, chatId)
-        ]);
-        setMessages(fetchedMessages);
-        setFeedbacks(fetchedFeedbacks);
+        const fullChat = await getFullConversation(user.uid, chatId);
+        if (fullChat) {
+            setActiveChat(fullChat);
+            setMessages(fullChat.messages);
+            const fetchedFeedbacks = await getFeedbacksForConversation(user.uid, chatId);
+            setFeedbacks(fetchedFeedbacks);
+        } else {
+            // If chat not found, start a new one.
+            handleNewChat();
+            toast({
+                variant: "destructive",
+                title: "Erro",
+                description: "A conversa selecionada não foi encontrada. Iniciando um novo chat.",
+            });
+        }
     } catch (err: any) {
       setError(`Erro ao carregar a conversa: ${err.message}`);
       setMessages([]);
@@ -590,17 +619,16 @@ function ChatPageContent() {
       }
       
       const finalQuery = query || `Analise o arquivo ${file?.name || 'anexado'}.`;
-
-      if (!currentChatId) {
-        const newTitle = await generateTitleForConversation(finalQuery, file?.name);
-        const newId = await saveConversation(user.uid, newMessages, null, newTitle);
-        setActiveChatId(newId);
-        currentChatId = newId;
-      } else {
-        await saveConversation(user.uid, newMessages, currentChatId);
-      }
-
-      const assistantResponse = await askAssistant(finalQuery, { fileDataUri }, user.uid, currentChatId);
+      
+      const assistantResponse = await askAssistant(
+          finalQuery, 
+          { 
+              fileDataUri, 
+              fileContext: activeChat?.fileContext 
+          }, 
+          user.uid
+      );
+      
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -615,8 +643,35 @@ function ChatPageContent() {
 
       const finalMessages = [...newMessages, assistantMessage];
       setMessages(finalMessages);
+      
+      if (!currentChatId) {
+        const newTitle = await generateTitleForConversation(finalQuery, file?.name);
+        const newId = await saveConversation(
+            user.uid, 
+            finalMessages, 
+            null, 
+            { 
+                newChatTitle: newTitle, 
+                fileContext: assistantResponse.deidentifiedFileContent 
+            }
+        );
+        currentChatId = newId;
+        const newFullChat = await getFullConversation(user.uid, newId);
+        setActiveChat(newFullChat);
+      } else {
+        await saveConversation(
+            user.uid, 
+            finalMessages, 
+            currentChatId, 
+            { 
+                fileContext: activeChat?.fileContext || assistantResponse.deidentifiedFileContent 
+            }
+        );
+        if (assistantResponse.deidentifiedFileContent && !activeChat?.fileContext) {
+            setActiveChat(prev => prev ? { ...prev, fileContext: assistantResponse.deidentifiedFileContent } : null);
+        }
+      }
 
-      await saveConversation(user.uid, finalMessages, currentChatId);
 
       const fetchSuggestions = async () => {
         setIsSuggestionsLoading(true);
@@ -674,8 +729,7 @@ function ChatPageContent() {
       const assistantResponse = await askAssistant(
         query,
         { useWebSearch: true },
-        user.uid,
-        activeChatId
+        user.uid
       );
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
@@ -865,6 +919,7 @@ function ChatPageContent() {
     try {
       const { summary: newSummary, searchFailed, promptTokenCount, candidatesTokenCount } = await regenerateAnswer(
         userQuery,
+        activeChat?.fileContext ?? null,
         user.uid
       );
       

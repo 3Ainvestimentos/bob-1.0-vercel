@@ -107,9 +107,9 @@ async function getFileContent(fileDataUri: string): Promise<string> {
 
 async function callDiscoveryEngine(
     query: string,
-    fileDataUri: string | null,
+    fileContent: string | null,
     userId?: string | null
-): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
+): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number; deidentifiedFileContent: string | null }> {
     const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
     if (!serviceAccountKeyJson) {
       throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida no arquivo .env.`);
@@ -151,11 +151,11 @@ async function callDiscoveryEngine(
       const deidentifiedQuery = await deidentifyText(query, projectId);
       
       let finalQuery = deidentifiedQuery;
+      let deidentifiedFileContent: string | null = null;
 
-      if (fileDataUri) {
-          const fileContent = await getFileContent(fileDataUri);
-          const deidentifiedFileData = await deidentifyText(fileContent, projectId);
-          finalQuery = `${deidentifiedQuery}\n\nContexto do arquivo anexado:\n\n${deidentifiedFileData}`;
+      if (fileContent) {
+          deidentifiedFileContent = await deidentifyText(fileContent, projectId);
+          finalQuery = `${deidentifiedQuery}\n\nContexto do arquivo anexado:\n\n${deidentifiedFileContent}`;
       }
 
       const requestBody: any = {
@@ -202,7 +202,8 @@ async function callDiscoveryEngine(
               summary: failureMessage, 
               searchFailed: true,
               promptTokenCount,
-              candidatesTokenCount
+              candidatesTokenCount,
+              deidentifiedFileContent,
           };
       }
 
@@ -215,12 +216,13 @@ async function callDiscoveryEngine(
           summary, 
           searchFailed: true,
           promptTokenCount,
-          candidatesTokenCount
+          candidatesTokenCount,
+          deidentifiedFileContent,
         };
       }
 
       const candidatesTokenCount = estimateTokens(summary);
-      return { summary, searchFailed: false, promptTokenCount, candidatesTokenCount };
+      return { summary, searchFailed: false, promptTokenCount, candidatesTokenCount, deidentifiedFileContent };
 
     } catch (error: any) {
       console.error("Error in callDiscoveryEngine:", error.message);
@@ -271,18 +273,32 @@ Pergunta: "${query}"`;
 
 export async function askAssistant(
   query: string,
-  options: { useWebSearch?: boolean; fileDataUri?: string | null } = {},
-  userId?: string | null,
-  activeChatId?: string | null
-): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
-  const { useWebSearch = false, fileDataUri = null } = options;
+  options: {
+    useWebSearch?: boolean;
+    fileDataUri?: string | null;
+    fileContext?: string | null;
+  } = {},
+  userId?: string | null
+): Promise<{
+  summary: string;
+  searchFailed: boolean;
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  deidentifiedFileContent: string | null;
+}> {
+  const { useWebSearch = false, fileDataUri = null, fileContext = null } = options;
 
   try {
     if (useWebSearch) {
       // Web search does not support file uploads in this implementation
-      return await callGemini(query);
+      const result = await callGemini(query);
+      return { ...result, deidentifiedFileContent: null };
     } else {
-      return await callDiscoveryEngine(query, fileDataUri, userId);
+      let fileContent = fileContext;
+      if (fileDataUri) {
+          fileContent = await getFileContent(fileDataUri);
+      }
+      return await callDiscoveryEngine(query, fileContent, userId);
     }
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
@@ -290,14 +306,15 @@ export async function askAssistant(
   }
 }
 
+
 export async function regenerateAnswer(
   originalQuery: string,
+  fileContext: string | null,
   userId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
   try {
-    // Note: Regeneration does not include the original file for simplicity.
-    // This could be enhanced later if needed.
-    return await callDiscoveryEngine(originalQuery, null, userId);
+    const { summary, searchFailed, promptTokenCount, candidatesTokenCount } = await callDiscoveryEngine(originalQuery, fileContext, userId);
+    return { summary, searchFailed, promptTokenCount, candidatesTokenCount };
   } catch (error: any) {
     console.error("Error in regenerateAnswer (internal):", error.message);
     throw new Error(`Ocorreu um erro ao se comunicar com o assistente para regenerar a resposta: ${error.message}`);
