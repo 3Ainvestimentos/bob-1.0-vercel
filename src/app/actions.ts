@@ -21,13 +21,12 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 - **Ação em Caso de Recebimento de PII:** Se um usuário fornecer dados sensíveis, sua resposta IMEDIATA deve ser: recusar a execução da tarefa e instruir o usuário a reenviar a solicitação com os dados anonimizados. A segurança é a prioridade absoluta.
 
 ### 3. FONTES DE CONHECIMENTO (REGRA CRÍTICA E INEGOCIÁVEL)
-- **Fonte Única:** Sua ÚNICA fonte de conhecimento são os documentos internos fornecidos nesta consulta (seja por texto ou arquivo). Responda ESTRITAMENTE e APENAS com base nessas informações.
-- **PROIBIÇÃO TOTAL DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado ou qualquer informação externa. Não invente, não infira, não adivinhe, nem complemente informações que não estão explicitamente nos documentos.
-- **PROCEDIMENTO EM CASO DE FALHA:** Se a resposta para a pergunta do usuário não puder ser encontrada de forma clara e direta nos documentos fornecidos, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?"
-- **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).
-
-### 4. ANÁLISE DE ARQUIVOS
-- Ao analisar um arquivo fornecido pelo usuário, baseie sua resposta nas informações contidas nele, em conjunto com o prompt do usuário.`;
+- **Fonte Primária (Base de Conhecimento RAG):** Sua principal fonte de conhecimento são os documentos internos recuperados pelo sistema de busca (RAG).
+- **Fonte Secundária (Contexto do Usuário):** O usuário pode fornecer um contexto adicional (texto ou arquivo).
+- **Tarefa:** Sua tarefa é responder à pergunta do usuário utilizando AMBAS as fontes. Se o arquivo do usuário e a base de conhecimento RAG forem mencionados, você deve sintetizar informações de ambos para fornecer a resposta mais completa.
+- **PROIBIÇÃO TOTAL DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado ou qualquer informação externa que não seja fornecida aqui. Não invente, não infira, não adivinhe.
+- **PROCEDIMENTO EM CASO DE FALHA:** Se a resposta não puder ser encontrada em nenhuma das fontes fornecidas, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?"
+- **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).`;
 
 
 async function deidentifyText(text: string, projectId: string): Promise<string> {
@@ -150,16 +149,23 @@ async function callDiscoveryEngine(
       
       const deidentifiedQuery = await deidentifyText(query, projectId);
       
-      let finalQuery = deidentifiedQuery;
       let deidentifiedFileContent: string | null = null;
+      let modelPrompt = ASSISTENTE_CORPORATIVO_PREAMBLE;
 
       if (fileContent) {
           deidentifiedFileContent = await deidentifyText(fileContent, projectId);
-          finalQuery = `${deidentifiedQuery}\n\nContexto do arquivo anexado:\n\n${deidentifiedFileContent}`;
+          // Explicitly structure the context for the model
+          modelPrompt = `${ASSISTENTE_CORPORATIVO_PREAMBLE}
+
+## CONTEXTO FORNECIDO PELO USUÁRIO (ARQUIVO ANEXADO)
+A seguir, o conteúdo de um arquivo fornecido pelo usuário. Use-o como contexto adicional para responder à pergunta.
+---
+${deidentifiedFileContent}
+---`;
       }
 
       const requestBody: any = {
-        query: finalQuery, 
+        query: deidentifiedQuery, 
         pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
@@ -170,7 +176,7 @@ async function callDiscoveryEngine(
               ignoreAdversarialQuery: true,
               useSemanticChunks: true,
               modelPromptSpec: {
-                preamble: ASSISTENTE_CORPORATIVO_PREAMBLE
+                preamble: modelPrompt
               }
             }
         },
@@ -193,7 +199,8 @@ async function callDiscoveryEngine(
       }
 
       const data = await apiResponse.json();
-      const promptTokenCount = estimateTokens(ASSISTENTE_CORPORATIVO_PREAMBLE + finalQuery);
+      const promptForTokenCount = modelPrompt + deidentifiedQuery;
+      const promptTokenCount = estimateTokens(promptForTokenCount);
       const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?";
       
       if (!data.summary || !data.summary.summaryText || !data.results || data.results.length === 0) {
