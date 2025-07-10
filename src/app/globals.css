@@ -101,6 +101,26 @@
     --user-bubble: 142 66% 46%;
     --user-bubble-foreground: 142 76% 96%;
   }
+
+  /* Custom Prose Styles for Markdown Tables */
+  .prose table {
+    @apply w-full my-4 border-collapse;
+  }
+  .prose thead {
+    @apply bg-muted;
+  }
+  .prose th, .prose td {
+    @apply border border-border px-4 py-2 text-left;
+  }
+  .prose th {
+    @apply font-semibold;
+  }
+  .prose tbody tr:nth-child(even) {
+    @apply bg-muted/50;
+  }
+  .dark .prose tbody tr:nth-child(even) {
+      @apply bg-muted/50;
+  }
 }
 
 @layer base {
