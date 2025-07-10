@@ -34,6 +34,7 @@ async function deidentifyText(text: string, projectId: string): Promise<string> 
     const dlp = new DlpServiceClient();
     const location = 'global';
 
+    // Ajustado para focar em PII inequívoco e evitar a remoção de dados financeiros genéricos.
     const infoTypes = [
         { name: 'CPF_NUMBER' },
         { name: 'RG_NUMBER' },
@@ -41,6 +42,9 @@ async function deidentifyText(text: string, projectId: string): Promise<string> 
         { name: 'EMAIL_ADDRESS' },
         { name: 'BRAZIL_CNPJ_NUMBER' },
         { name: 'CREDIT_CARD_NUMBER' },
+        // Tipos mais genéricos como 'FINANCIAL_ACCOUNT_NUMBER' ou 'IBAN_CODE' foram removidos
+        // para evitar a substituição de dados de rentabilidade e valores que não são PII diretos.
+        // O tipo 'PERSON_NAME' também foi omitido intencionalmente para permitir a menção de nomes de clientes.
     ];
 
     const deidentifyConfig = {
