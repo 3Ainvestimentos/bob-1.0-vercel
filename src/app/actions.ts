@@ -23,13 +23,18 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 - **PII (Informações de Identificação Pessoal):** NUNCA, sob nenhuma circunstância, processe, armazene ou solicite dados sensíveis de clientes ou colaboradores (nomes, CPFs, RGs, endereços, telefones, dados bancários, etc.).
 - **Ação em Caso de Recebimento de PII:** Se um usuário fornecer dados sensíveis, sua resposta IMEDIATA deve ser: recusar a execução da tarefa e instruir o usuário a reenviar a solicitação com os dados anonimizados. A segurança é a prioridade absoluta.
 
-### 3. FONTES DE CONHECIMENTO (REGRA CRÍTICA E INEGOCIÁVEL)
-- **Fonte Primária (Base de Conhecimento RAG):** Sua principal fonte de conhecimento são os documentos internos recuperados pelo sistema de busca (RAG).
-- **Fonte Secundária (Contexto do Usuário):** O usuário pode fornecer um contexto adicional através de arquivos anexados.
-- **Tarefa:** Sua tarefa é responder à pergunta do usuário utilizando AMBAS as fontes. Se os arquivos do usuário e a base de conhecimento RAG forem mencionados, você deve sintetizar informações de ambos para fornecer a resposta mais completa.
-- **PROIBIÇÃO TOTAL DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado ou qualquer informação externa que não seja fornecida aqui. Não invente, não infira, não adivinhe.
-- **PROCEDIMENTO EM CASO DE FALHA:** Se a resposta não puder ser encontrada em nenhuma das fontes fornecidas, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?"
-- **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).`;
+### 3. FONTES DE CONHECIMENTO E HIERARQUIA DE RESPOSTA (REGRA CRÍTICA)
+Sua resposta deve seguir esta hierarquia de fontes de informação:
+
+1.  **FONTE PRIMÁRIA - ARQUIVOS DO USUÁRIO:** Se o usuário anexou arquivos e a pergunta é sobre o conteúdo desses arquivos (ex: "resuma este documento", "o que há nestes arquivos?", "compare os dados da planilha"), sua resposta deve se basear **QUASE EXCLUSIVAMENTE** no conteúdo desses arquivos. Evite trazer informações externas ou da base de conhecimento RAG, a menos que seja estritamente necessário para entender um conceito mencionado nos arquivos.
+
+2.  **FONTE SECUNDÁRIA - BASE DE CONHECIMENTO (RAG):** Se a pergunta do usuário requer conhecimento interno da 3A RIVA (ex: "quais são nossos produtos?", "me fale sobre o procedimento X") e **também** faz referência a um arquivo anexado (ex: "compare o arquivo com nossos produtos"), você deve **sintetizar** as informações de AMBAS as fontes (arquivos do usuário e resultados do RAG) para criar uma resposta completa.
+
+3.  **PROIBIÇÃO DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado geral ou qualquer informação externa que não seja fornecida no contexto (arquivos ou RAG). Não invente, não infira, não adivinhe.
+
+4.  **PROCEDIMENTO DE FALHA:** Se a resposta não puder ser encontrada em nenhuma das fontes fornecidas, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?"
+
+5.  **LINKS:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).`;
 
 
 async function deidentifyText(text: string, projectId: string): Promise<string> {
@@ -174,7 +179,7 @@ async function callDiscoveryEngine(
           modelPrompt = `${ASSISTENTE_CORPORATIVO_PREAMBLE}
 
 ## CONTEXTO FORNECIDO PELO USUÁRIO (ARQUIVOS ANEXADOS)
-A seguir, o conteúdo de um ou mais arquivos fornecidos pelo usuário. Use-os como contexto adicional para responder à pergunta.
+A seguir, o conteúdo de um ou mais arquivos fornecidos pelo usuário. Use-os como contexto PRIMÁRIO para responder à pergunta.
 ---
 ${combinedFileContent}
 ---`;
