@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
+import * as XLSX from 'xlsx';
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
 
@@ -100,11 +101,23 @@ async function getFileContent(fileDataUri: string): Promise<string> {
     } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         const { value } = await mammoth.extractRawText({ buffer: fileBuffer });
         return value;
+    } else if (
+        mimeType === 'application/vnd.ms-excel' || 
+        mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ) {
+        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+        let fullText = '';
+        workbook.SheetNames.forEach(sheetName => {
+            const worksheet = workbook.Sheets[sheetName];
+            const sheetData = XLSX.utils.sheet_to_csv(worksheet, { header: 1 });
+            fullText += `Planilha: ${sheetName}\n${sheetData}\n\n`;
+        });
+        return fullText;
     } else if (mimeType?.startsWith('text/')) {
         return fileBuffer.toString('utf-8');
     }
 
-    throw new Error(`Tipo de arquivo não suportado: ${mimeType}. Por favor, envie um DOCX, PDF ou arquivo de texto.`);
+    throw new Error(`Tipo de arquivo não suportado: ${mimeType}. Por favor, envie um DOCX, PDF, XLS, XLSX ou arquivo de texto.`);
 }
 
 
