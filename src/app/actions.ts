@@ -127,7 +127,10 @@ async function getFileContent(fileDataUri: string): Promise<string> {
 async function callDiscoveryEngine(
     query: string,
     attachments: AttachedFile[],
-    userId?: string | null
+    userId?: string | null,
+    // Este é um placeholder para a futura funcionalidade de drive pessoal.
+    // Em uma implementação real, esta função obteria o ID da pasta do Drive do usuário.
+    userDriveFolderId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number; }> {
     const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
     if (!serviceAccountKeyJson) {
@@ -185,6 +188,7 @@ async function callDiscoveryEngine(
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
         languageCode: 'pt-BR',
+        params: {},
         contentSearchSpec: {
             summarySpec: {
               summaryResultCount: 5,
@@ -197,6 +201,13 @@ async function callDiscoveryEngine(
         },
         userPseudoId: userId || 'anonymous-user',
       };
+
+      // **MECANISMO DE SEGURANÇA PARA DRIVE PESSOAL**
+      // Se um ID de pasta do drive for fornecido, adicionamos um filtro estrito.
+      // Isso garante que a busca só acontecerá nos arquivos daquele usuário.
+      if (userDriveFolderId) {
+        requestBody.params.filter = `uri: INCLUDES("${userDriveFolderId}")`;
+      }
 
       const apiResponse = await fetch(url, {
         method: 'POST',
