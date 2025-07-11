@@ -27,6 +27,7 @@ import {
   Share2,
   ThumbsDown,
   ThumbsUp,
+  X,
 } from 'lucide-react';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -79,17 +80,28 @@ export function ChatMessageArea({
   activeChat,
 }: ChatMessageAreaProps) {
   const activeChatId = activeChat?.id ?? null;
-  const attachedFileNames = activeChat?.attachedFiles.map(f => f.fileName) ?? [];
+  const attachedFiles = activeChat?.attachedFiles ?? [];
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto flex h-full max-w-4xl flex-col">
-        {attachedFileNames.length > 0 && (
-            <div className="sticky top-0 z-10 mb-4 flex justify-center bg-background/80 py-2 backdrop-blur-sm">
-                <Badge variant="secondary" className="flex items-center gap-2 p-2 px-3 text-sm">
-                    <Pin className="h-4 w-4" />
-                    Analisando: <span className="font-semibold">{attachedFileNames.join(', ')}</span>
-                </Badge>
+        {attachedFiles.length > 0 && (
+            <div className="sticky top-0 z-10 mb-4 flex flex-wrap justify-center gap-2 bg-background/80 py-2 backdrop-blur-sm">
+                 {attachedFiles.map(file => (
+                    <Badge key={file.id} variant="secondary" className="flex items-center gap-1 p-1 pl-2 text-sm">
+                        <Pin className="h-3 w-3" />
+                        <span className="font-semibold">{file.fileName}</span>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 rounded-full"
+                            // onClick={() => onRemoveFile(file.id)} // Funcionalidade a ser implementada no Passo 2
+                        >
+                            <X className="h-3 w-3" />
+                        </Button>
+                    </Badge>
+                ))}
             </div>
         )}
         {messages.length === 0 && !isLoading ? (
