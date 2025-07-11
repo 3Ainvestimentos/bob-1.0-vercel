@@ -176,13 +176,7 @@ async function callDiscoveryEngine(
               `--- CONTEÚDO DO ARQUIVO: ${file.fileName} ---\n${file.deidentifiedContent}`
           ).join('\n\n');
           
-          modelPrompt = `${ASSISTENTE_CORPORATIVO_PREAMBLE}
-
-## CONTEXTO FORNECIDO PELO USUÁRIO (ARQUIVOS ANEXADOS)
-A seguir, o conteúdo de um ou mais arquivos fornecidos pelo usuário. Use-os como contexto PRIMÁRIO para responder à pergunta.
----
-${combinedFileContent}
----`;
+          modelPrompt = `${ASSISTENTE_CORPORATIVO_PREAMBLE}\n\n## CONTEXTO FORNECIDO PELO USUÁRIO (ARQUIVOS ANEXADOS)\nA seguir, o conteúdo de um ou mais arquivos fornecidos pelo usuário. Use-os como contexto PRIMÁRIO para responder à pergunta.\n---\n${combinedFileContent}\n---`;
       }
 
       const requestBody: any = {
