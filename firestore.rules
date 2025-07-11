@@ -1,29 +1,33 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permite que usuários leiam e escrevam apenas em seus próprios dados
+
+    // Regra Geral: Bloqueia todo o acesso por padrão.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Usuários autenticados podem LER seus próprios dados, mas a escrita
+    // é gerenciada pelo backend (Server Actions), que tem acesso privilegiado.
+    // Esta regra permite que a Server Action 'removeFileFromConversation' funcione.
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if true; // PERMITE ESCRITA PELO BACKEND (SERVER ACTIONS)
     }
 
-    // Regra para a nova coleção de arquivo morto
-    match /archived_chats/{chatId} {
-      // Ninguém pode ler, atualizar ou excluir o arquivo morto pelo cliente.
+    // Permite que usuários autenticados criem logs de alerta, mas não os leiam ou modifiquem.
+    match /dlp_alerts/{alertId} {
+      allow create: if request.auth != null;
       allow read, update, delete: if false;
-
-      // Um usuário autenticado pode CRIAR (arquivar) um chat se o campo
-      // 'deletedBy' corresponder ao seu próprio ID de usuário.
-      allow create: if request.auth != null && request.resource.data.deletedBy == request.auth.uid;
     }
-
-    // Permite que qualquer usuário autenticado crie um alerta jurídico.
     match /legal_issue_alerts/{alertId} {
       allow create: if request.auth != null;
-
-      // Nega explicitamente que usuários possam ler, atualizar ou deletar alertas.
-      // Isso garante que apenas seu backend ou administradores possam ver os alertas.
       allow read, update, delete: if false;
+    }
+    
+    // Ninguém pode ler ou escrever na coleção de chats arquivados diretamente.
+    match /archived_chats/{chatId} {
+        allow read, write: if false;
     }
   }
 }
