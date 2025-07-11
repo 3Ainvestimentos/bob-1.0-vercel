@@ -79,9 +79,15 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  fileName?: string | null;
+  fileNames?: string[] | null;
   promptTokenCount?: number | null;
   candidatesTokenCount?: number | null;
+}
+
+export interface AttachedFile {
+  id: string;
+  fileName: string;
+  deidentifiedContent: string;
 }
 
 export interface Conversation {
@@ -91,11 +97,10 @@ export interface Conversation {
   messages: Message[];
   groupId?: string | null;
   totalTokens?: number;
-  fileContext?: string | null;
-  fileName?: string | null;
+  attachedFiles: AttachedFile[];
 }
 
-export type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens' | 'fileContext' | 'fileName'>;
+export type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens' | 'attachedFiles'>;
 
 interface FeedbackDetails {
     messageId: string;
@@ -315,8 +320,7 @@ async function getFullConversation(userId: string, chatId: string): Promise<Conv
                 messages: messagesWithIds,
                 groupId: data.groupId || null,
                 totalTokens: data.totalTokens || 0,
-                fileContext: data.fileContext || null,
-                fileName: data.fileName || null,
+                attachedFiles: data.attachedFiles || [],
             } as Conversation;
         } else {
             console.log('No such document!');
@@ -334,8 +338,7 @@ async function saveConversation(
   chatId?: string | null,
   options: {
     newChatTitle?: string;
-    fileContext?: string | null;
-    fileName?: string | null;
+    newAttachedFiles?: AttachedFile[];
   } = {}
 ): Promise<string> {
   if (!userId) throw new Error('User ID is required.');
@@ -348,7 +351,7 @@ async function saveConversation(
     id: msg.id,
     role: msg.role,
     content: msg.content,
-    fileName: msg.fileName ?? null,
+    fileNames: msg.fileNames ?? null,
     promptTokenCount: msg.promptTokenCount ?? null,
     candidatesTokenCount: msg.candidatesTokenCount ?? null,
   }));
@@ -365,9 +368,8 @@ async function saveConversation(
       messages: sanitizedMessages,
       totalTokens 
     };
-    if (options.fileContext !== undefined) {
-      updatePayload.fileContext = options.fileContext;
-      updatePayload.fileName = options.fileName;
+    if (options.newAttachedFiles) {
+      updatePayload.attachedFiles = options.newAttachedFiles;
     }
     await updateDoc(chatRef, updatePayload);
     return chatId;
@@ -381,8 +383,7 @@ async function saveConversation(
         totalTokens,
         createdAt: serverTimestamp(),
         groupId: null,
-        fileContext: options.fileContext ?? null,
-        fileName: options.fileName ?? null,
+        attachedFiles: options.newAttachedFiles || [],
     };
 
     const newChatRef = await addDoc(conversationsRef, newChatPayload);
@@ -474,7 +475,7 @@ function ChatPageContent() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [activeDragItem, setActiveDragItem] = useState<ConversationSidebarItem | Group | null>(null);
   const [isFaqDialogOpen, setIsFaqDialogOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -532,7 +533,7 @@ function ChatPageContent() {
     setFeedbacks({});
     setSuggestions([]);
     setIsSuggestionsLoading(false);
-    setSelectedFile(null);
+    setSelectedFiles([]);
   };
 
   useEffect(() => {
@@ -559,7 +560,7 @@ function ChatPageContent() {
     setFeedbacks({});
     setSuggestions([]);
     setIsSuggestionsLoading(false);
-    setSelectedFile(null);
+    setSelectedFiles([]);
     try {
         const fullChat = await getFullConversation(user.uid, chatId);
         if (fullChat) {
@@ -593,21 +594,24 @@ function ChatPageContent() {
     });
   };
 
-  const submitQuery = async (query: string, file: File | null) => {
-    if (!query.trim() && !file) return;
+  const submitQuery = async (query: string, files: File[]) => {
+    if (!query.trim() && files.length === 0) return;
     if (isLoading || !user) return;
+
+    const fileNames = files.map(f => f.name);
+    const allFileNames = [...(activeChat?.attachedFiles.map(f => f.fileName) || []), ...fileNames];
 
     const userMessage: Message = {
         id: crypto.randomUUID(),
         role: 'user',
         content: query,
-        fileName: file?.name ?? activeChat?.fileName,
+        fileNames: allFileNames.length > 0 ? allFileNames : null,
     };
     const newMessages = [...messages, userMessage];
 
     setMessages(newMessages);
     setInput('');
-    setSelectedFile(null);
+    setSelectedFiles([]);
     setIsLoading(true);
     setError(null);
     setLastFailedQuery(null);
@@ -615,22 +619,25 @@ function ChatPageContent() {
     setIsSuggestionsLoading(false);
 
     let currentChatId = activeChatId;
-    let fileDataUri: string | null = null;
-    let fileContextForRequest: string | null = activeChat?.fileContext ?? null;
+    let fileDataUris: { name: string; dataUri: string }[] = [];
     
     try {
-        if (file) {
-            fileDataUri = await readFileAsDataURL(file);
-            fileContextForRequest = null; 
+        if (files.length > 0) {
+            fileDataUris = await Promise.all(
+                files.map(async file => ({
+                    name: file.name,
+                    dataUri: await readFileAsDataURL(file)
+                }))
+            );
         }
-
-        const finalQuery = query || `Analise o arquivo ${file?.name || 'anexado'}.`;
+        
+        const finalQuery = query || `Analise os arquivos anexados.`;
 
         const assistantResponse = await askAssistant(
             finalQuery,
             {
-                fileDataUri,
-                fileContext: fileContextForRequest,
+                fileDataUris,
+                existingAttachments: activeChat?.attachedFiles ?? [],
             },
             user.uid
         );
@@ -650,19 +657,17 @@ function ChatPageContent() {
         const finalMessages = [...newMessages, assistantMessage];
         setMessages(finalMessages);
 
-        const newFileContext = fileDataUri ? assistantResponse.deidentifiedFileContent : activeChat?.fileContext;
-        const newFileName = file ? file.name : activeChat?.fileName;
-
+        const newAttachedFiles = assistantResponse.updatedAttachments;
+        
         if (!currentChatId) {
-            const newTitle = await generateTitleForConversation(finalQuery, newFileName);
+            const newTitle = await generateTitleForConversation(finalQuery, fileNames.join(', '));
             const newId = await saveConversation(
                 user.uid,
                 finalMessages,
                 null,
                 {
                     newChatTitle: newTitle,
-                    fileContext: newFileContext,
-                    fileName: newFileName,
+                    newAttachedFiles: newAttachedFiles,
                 }
             );
             const newFullChat = await getFullConversation(user.uid, newId);
@@ -673,13 +678,10 @@ function ChatPageContent() {
                 finalMessages,
                 currentChatId,
                 {
-                    fileContext: newFileContext,
-                    fileName: newFileName,
+                    newAttachedFiles: newAttachedFiles
                 }
             );
-            if (newFileContext !== activeChat?.fileContext || newFileName !== activeChat?.fileName) {
-                 setActiveChat(prev => prev ? { ...prev, fileContext: newFileContext, fileName: newFileName } : null);
-            }
+            setActiveChat(prev => prev ? { ...prev, attachedFiles: newAttachedFiles } : null);
         }
 
 
@@ -714,12 +716,12 @@ function ChatPageContent() {
   };
   
   const handleSuggestionClick = (suggestion: string) => {
-    submitQuery(suggestion, null);
+    submitQuery(suggestion, []);
   };
   
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    submitQuery(input, selectedFile);
+    submitQuery(input, selectedFiles);
   };
 
   const handleWebSearch = async () => {
@@ -905,7 +907,7 @@ function ChatPageContent() {
   };
 
   const handleRegenerate = async (assistantMessageId: string) => {
-    if (isLoading || regeneratingMessageId || !user || !activeChatId) return;
+    if (isLoading || regeneratingMessageId || !user || !activeChatId || !activeChat) return;
 
     const messageIndex = messages.findIndex(m => m.id === assistantMessageId);
     if (messageIndex < 1 || messages[messageIndex - 1].role !== 'user') {
@@ -929,7 +931,7 @@ function ChatPageContent() {
     try {
       const { summary: newSummary, searchFailed, promptTokenCount, candidatesTokenCount } = await regenerateAnswer(
         userQuery,
-        activeChat?.fileContext ?? null,
+        activeChat.attachedFiles,
         user.uid
       );
       
@@ -1423,9 +1425,8 @@ function ChatPageContent() {
                     handleSubmit={handleSubmit}
                     isLoading={isLoading}
                     inputRef={inputRef}
-                    selectedFile={selectedFile}
-                    setSelectedFile={setSelectedFile}
-                    activeChatHasFile={!!activeChat?.fileContext}
+                    selectedFiles={selectedFiles}
+                    setSelectedFiles={setSelectedFiles}
                 />
             </main>
         </SidebarInset>
@@ -1440,6 +1441,3 @@ export default function ChatPage() {
         </SidebarProvider>
     )
 }
-
-    
-

@@ -7,8 +7,9 @@ import { DlpServiceClient } from '@google-cloud/dlp';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import mammoth from 'mammoth';
-import pdfParse from 'pdf-parse';
 import * as XLSX from 'xlsx';
+import { AttachedFile } from './chat/page';
+
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
 
@@ -24,8 +25,8 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
 
 ### 3. FONTES DE CONHECIMENTO (REGRA CRÍTICA E INEGOCIÁVEL)
 - **Fonte Primária (Base de Conhecimento RAG):** Sua principal fonte de conhecimento são os documentos internos recuperados pelo sistema de busca (RAG).
-- **Fonte Secundária (Contexto do Usuário):** O usuário pode fornecer um contexto adicional (texto ou arquivo).
-- **Tarefa:** Sua tarefa é responder à pergunta do usuário utilizando AMBAS as fontes. Se o arquivo do usuário e a base de conhecimento RAG forem mencionados, você deve sintetizar informações de ambos para fornecer a resposta mais completa.
+- **Fonte Secundária (Contexto do Usuário):** O usuário pode fornecer um contexto adicional através de arquivos anexados.
+- **Tarefa:** Sua tarefa é responder à pergunta do usuário utilizando AMBAS as fontes. Se os arquivos do usuário e a base de conhecimento RAG forem mencionados, você deve sintetizar informações de ambos para fornecer a resposta mais completa.
 - **PROIBIÇÃO TOTAL DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado ou qualquer informação externa que não seja fornecida aqui. Não invente, não infira, não adivinhe.
 - **PROCEDIMENTO EM CASO DE FALHA:** Se a resposta não puder ser encontrada em nenhuma das fontes fornecidas, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?"
 - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).`;
@@ -36,7 +37,6 @@ async function deidentifyText(text: string, projectId: string): Promise<string> 
     const dlp = new DlpServiceClient();
     const location = 'global';
 
-    // Ajustado para focar em PII inequívoco e evitar a remoção de dados financeiros genéricos.
     const infoTypes = [
         { name: 'CPF_NUMBER' },
         { name: 'RG_NUMBER' },
@@ -44,9 +44,6 @@ async function deidentifyText(text: string, projectId: string): Promise<string> 
         { name: 'EMAIL_ADDRESS' },
         { name: 'BRAZIL_CNPJ_NUMBER' },
         { name: 'CREDIT_CARD_NUMBER' },
-        // Tipos mais genéricos como 'FINANCIAL_ACCOUNT_NUMBER' ou 'IBAN_CODE' foram removidos
-        // para evitar a substituição de dados de rentabilidade e valores que não são PII diretos.
-        // O tipo 'PERSON_NAME' também foi omitido intencionalmente para permitir a menção de nomes de clientes.
     ];
 
     const deidentifyConfig = {
@@ -96,6 +93,7 @@ async function getFileContent(fileDataUri: string): Promise<string> {
     const fileBuffer = Buffer.from(base64Data, 'base64');
 
     if (mimeType === 'application/pdf') {
+        const pdfParse = (await import('pdf-parse')).default;
         const data = await pdfParse(fileBuffer);
         return data.text;
     } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
@@ -123,9 +121,9 @@ async function getFileContent(fileDataUri: string): Promise<string> {
 
 async function callDiscoveryEngine(
     query: string,
-    fileContent: string | null,
+    attachments: AttachedFile[],
     userId?: string | null
-): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number; deidentifiedFileContent: string | null }> {
+): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number; }> {
     const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
     if (!serviceAccountKeyJson) {
       throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida no arquivo .env.`);
@@ -166,18 +164,19 @@ async function callDiscoveryEngine(
       
       const deidentifiedQuery = await deidentifyText(query, projectId);
       
-      let deidentifiedFileContent: string | null = null;
       let modelPrompt = ASSISTENTE_CORPORATIVO_PREAMBLE;
 
-      if (fileContent) {
-          deidentifiedFileContent = await deidentifyText(fileContent, projectId);
-          // Explicitly structure the context for the model
+      if (attachments.length > 0) {
+          const combinedFileContent = attachments.map(file => 
+              `--- CONTEÚDO DO ARQUIVO: ${file.fileName} ---\n${file.deidentifiedContent}`
+          ).join('\n\n');
+          
           modelPrompt = `${ASSISTENTE_CORPORATIVO_PREAMBLE}
 
-## CONTEXTO FORNECIDO PELO USUÁRIO (ARQUIVO ANEXADO)
-A seguir, o conteúdo de um arquivo fornecido pelo usuário. Use-o como contexto adicional para responder à pergunta.
+## CONTEXTO FORNECIDO PELO USUÁRIO (ARQUIVOS ANEXADOS)
+A seguir, o conteúdo de um ou mais arquivos fornecidos pelo usuário. Use-os como contexto adicional para responder à pergunta.
 ---
-${deidentifiedFileContent}
+${combinedFileContent}
 ---`;
       }
 
@@ -227,7 +226,6 @@ ${deidentifiedFileContent}
               searchFailed: true,
               promptTokenCount,
               candidatesTokenCount,
-              deidentifiedFileContent,
           };
       }
 
@@ -241,12 +239,11 @@ ${deidentifiedFileContent}
           searchFailed: true,
           promptTokenCount,
           candidatesTokenCount,
-          deidentifiedFileContent,
         };
       }
 
       const candidatesTokenCount = estimateTokens(summary);
-      return { summary, searchFailed: false, promptTokenCount, candidatesTokenCount, deidentifiedFileContent };
+      return { summary, searchFailed: false, promptTokenCount, candidatesTokenCount };
 
     } catch (error: any) {
       console.error("Error in callDiscoveryEngine:", error.message);
@@ -299,8 +296,8 @@ export async function askAssistant(
   query: string,
   options: {
     useWebSearch?: boolean;
-    fileDataUri?: string | null;
-    fileContext?: string | null;
+    fileDataUris?: { name: string; dataUri: string }[];
+    existingAttachments?: AttachedFile[];
   } = {},
   userId?: string | null
 ): Promise<{
@@ -308,21 +305,43 @@ export async function askAssistant(
   searchFailed: boolean;
   promptTokenCount?: number;
   candidatesTokenCount?: number;
-  deidentifiedFileContent: string | null;
+  updatedAttachments: AttachedFile[];
 }> {
-  const { useWebSearch = false, fileDataUri = null, fileContext = null } = options;
+  const { useWebSearch = false, fileDataUris = [], existingAttachments = [] } = options;
+  const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
+  if (!serviceAccountKeyJson) throw new Error('SERVICE_ACCOUNT_KEY_INTERNAL is not set');
+  const projectId = JSON.parse(serviceAccountKeyJson).project_id;
+
 
   try {
     if (useWebSearch) {
       // Web search does not support file uploads in this implementation
       const result = await callGemini(query);
-      return { ...result, deidentifiedFileContent: null };
+      return { ...result, updatedAttachments: existingAttachments };
     } else {
-      let fileContent = fileContext;
-      if (fileDataUri) {
-          fileContent = await getFileContent(fileDataUri);
-      }
-      return await callDiscoveryEngine(query, fileContent, userId);
+        const newAttachments: AttachedFile[] = await Promise.all(
+            (fileDataUris).map(async (file) => {
+                const content = await getFileContent(file.dataUri);
+                const deidentifiedContent = await deidentifyText(content, projectId);
+                return {
+                    id: crypto.randomUUID(),
+                    fileName: file.name,
+                    deidentifiedContent: deidentifiedContent,
+                };
+            })
+        );
+        
+        const allAttachments = [...existingAttachments, ...newAttachments];
+        
+        const { summary, searchFailed, promptTokenCount, candidatesTokenCount } = await callDiscoveryEngine(query, allAttachments, userId);
+        
+        return {
+            summary,
+            searchFailed,
+            promptTokenCount,
+            candidatesTokenCount,
+            updatedAttachments: allAttachments
+        };
     }
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
@@ -333,11 +352,11 @@ export async function askAssistant(
 
 export async function regenerateAnswer(
   originalQuery: string,
-  fileContext: string | null,
+  attachments: AttachedFile[],
   userId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
   try {
-    const { summary, searchFailed, promptTokenCount, candidatesTokenCount } = await callDiscoveryEngine(originalQuery, fileContext, userId);
+    const { summary, searchFailed, promptTokenCount, candidatesTokenCount } = await callDiscoveryEngine(originalQuery, attachments, userId);
     return { summary, searchFailed, promptTokenCount, candidatesTokenCount };
   } catch (error: any) {
     console.error("Error in regenerateAnswer (internal):", error.message);

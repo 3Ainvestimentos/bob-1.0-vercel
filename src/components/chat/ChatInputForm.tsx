@@ -15,9 +15,8 @@ interface ChatInputFormProps {
   handleSubmit: (e: FormEvent) => void;
   isLoading: boolean;
   inputRef: React.RefObject<HTMLTextAreaElement>;
-  selectedFile: File | null;
-  setSelectedFile: (file: File | null) => void;
-  activeChatHasFile: boolean;
+  selectedFiles: File[];
+  setSelectedFiles: (files: File[]) => void;
 }
 
 export function ChatInputForm({
@@ -26,15 +25,14 @@ export function ChatInputForm({
   handleSubmit,
   isLoading,
   inputRef,
-  selectedFile,
-  setSelectedFile,
-  activeChatHasFile,
+  selectedFiles,
+  setSelectedFiles,
 }: ChatInputFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      setSelectedFile(event.target.files[0]);
+    if (event.target.files) {
+      setSelectedFiles(Array.from(event.target.files));
     }
   };
 
@@ -42,10 +40,10 @@ export function ChatInputForm({
     fileInputRef.current?.click();
   };
 
-  const handleRemoveFile = () => {
-    setSelectedFile(null);
+  const handleRemoveFile = (fileNameToRemove: string) => {
+    setSelectedFiles(selectedFiles.filter(file => file.name !== fileNameToRemove));
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+        fileInputRef.current.value = '';
     }
   };
   
@@ -55,18 +53,20 @@ export function ChatInputForm({
         onSubmit={handleSubmit}
         className="px-4 pb-4 pt-2 sm:px-6 lg:px-8"
       >
-        <div className={cn("rounded-lg border bg-background shadow-sm", selectedFile && "relative pb-10")}>
-          {selectedFile && (
-            <div className="absolute bottom-11 left-2 w-[calc(100%-1rem)] p-2">
-                <Badge variant="secondary" className="flex max-w-full items-center justify-between gap-2 pl-2 pr-1">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <File className="h-4 w-4 shrink-0"/>
-                        <span className="truncate text-xs">{selectedFile.name}</span>
-                    </div>
-                    <Button type="button" variant="ghost" size="icon" className="h-5 w-5 shrink-0 rounded-full" onClick={handleRemoveFile}>
-                        <X className="h-3 w-3" />
-                    </Button>
-                </Badge>
+        <div className={cn("rounded-lg border bg-background shadow-sm", selectedFiles.length > 0 && "relative pb-10")}>
+          {selectedFiles.length > 0 && (
+            <div className="absolute bottom-11 left-2 w-[calc(100%-1rem)] p-2 space-y-1">
+                {selectedFiles.map(file => (
+                  <Badge key={file.name} variant="secondary" className="flex max-w-full items-center justify-between gap-2 pl-2 pr-1">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                          <File className="h-4 w-4 shrink-0"/>
+                          <span className="truncate text-xs">{file.name}</span>
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="h-5 w-5 shrink-0 rounded-full" onClick={() => handleRemoveFile(file.name)}>
+                          <X className="h-3 w-3" />
+                      </Button>
+                  </Badge>
+                ))}
             </div>
           )}
           <div className="relative flex min-h-[60px] items-start">
@@ -97,7 +97,7 @@ export function ChatInputForm({
               size="icon"
               variant="ghost"
               className="absolute right-3 top-3 h-8 w-8 rounded-full text-muted-foreground"
-              disabled={isLoading || (!input.trim() && !selectedFile && !activeChatHasFile)}
+              disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}
             >
               <SendHorizontal className="h-5 w-5" />
             </Button>
@@ -106,20 +106,21 @@ export function ChatInputForm({
           <div className="flex items-center p-2">
             <input
               type="file"
+              multiple
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
               accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              disabled={isLoading || activeChatHasFile}
+              disabled={isLoading}
             />
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground"
-              disabled={isLoading || activeChatHasFile}
+              disabled={isLoading}
               onClick={handleAttachClick}
-              title={activeChatHasFile ? "Um arquivo já está anexado a esta conversa." : "Anexar arquivo"}
+              title={"Anexar arquivo(s)"}
             >
               <Paperclip className="h-5 w-5" />
             </Button>

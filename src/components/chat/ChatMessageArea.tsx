@@ -79,16 +79,16 @@ export function ChatMessageArea({
   activeChat,
 }: ChatMessageAreaProps) {
   const activeChatId = activeChat?.id ?? null;
-  const activeChatFileName = activeChat?.fileName ?? null;
+  const attachedFileNames = activeChat?.attachedFiles.map(f => f.fileName) ?? [];
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto flex h-full max-w-4xl flex-col">
-        {activeChatFileName && (
+        {attachedFileNames.length > 0 && (
             <div className="sticky top-0 z-10 mb-4 flex justify-center bg-background/80 py-2 backdrop-blur-sm">
                 <Badge variant="secondary" className="flex items-center gap-2 p-2 px-3 text-sm">
                     <Pin className="h-4 w-4" />
-                    Analisando o arquivo: <span className="font-semibold">{activeChatFileName}</span>
+                    Analisando: <span className="font-semibold">{attachedFileNames.join(', ')}</span>
                 </Badge>
             </div>
         )}
@@ -241,10 +241,10 @@ export function ChatMessageArea({
                 ) : (
                   <div className="flex items-start justify-end gap-4">
                     <div className="max-w-[80%] rounded-xl bg-accent p-3 text-accent-foreground shadow-sm">
-                      {msg.fileName && !activeChatFileName && (
+                      {msg.fileNames && (
                           <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-background/50 p-2 text-xs">
                               <Paperclip className="h-4 w-4 shrink-0" />
-                              <span className="truncate">{msg.fileName}</span>
+                              <span className="truncate">{msg.fileNames.join(', ')}</span>
                           </div>
                       )}
                       <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
@@ -334,4 +334,3 @@ export function ChatMessageArea({
     </div>
   );
 }
-
