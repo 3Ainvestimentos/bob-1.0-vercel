@@ -9,6 +9,7 @@ import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'fir
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import { AttachedFile } from './chat/page';
+import pdfParse from 'pdf-parse';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
@@ -98,7 +99,6 @@ async function getFileContent(fileDataUri: string): Promise<string> {
     const fileBuffer = Buffer.from(base64Data, 'base64');
 
     if (mimeType === 'application/pdf') {
-        const pdfParse = (await import('pdf-parse')).default;
         const data = await pdfParse(fileBuffer);
         return data.text;
     } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
