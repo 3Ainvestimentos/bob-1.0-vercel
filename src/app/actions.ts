@@ -5,7 +5,7 @@ import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { DlpServiceClient } from '@google-cloud/dlp';
 import { db } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import { AttachedFile } from './chat/page';
@@ -481,4 +481,37 @@ export async function logDlpAlert(
   } catch (error) {
     console.error('Error logging DLP alert to Firestore:', error);
   }
+}
+
+export async function removeFileFromConversation(
+  userId: string,
+  chatId: string,
+  fileId: string
+): Promise<AttachedFile[]> {
+    if (!userId || !chatId || !fileId) {
+        throw new Error("User ID, Chat ID, and File ID are required.");
+    }
+
+    try {
+        const chatRef = doc(db, 'users', userId, 'chats', chatId);
+        const chatSnap = await getDoc(chatRef);
+
+        if (!chatSnap.exists()) {
+            throw new Error("Conversation not found.");
+        }
+
+        const chatData = chatSnap.data();
+        const existingFiles: AttachedFile[] = chatData.attachedFiles || [];
+
+        const updatedFiles = existingFiles.filter(file => file.id !== fileId);
+
+        await updateDoc(chatRef, {
+            attachedFiles: updatedFiles,
+        });
+
+        return updatedFiles;
+    } catch (error: any) {
+        console.error("Error removing file from conversation:", error);
+        throw new Error(`Failed to remove file from conversation: ${error.message}`);
+    }
 }

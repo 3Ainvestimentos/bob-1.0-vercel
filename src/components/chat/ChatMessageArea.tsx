@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Conversation, Message } from '@/app/chat/page';
+import { Conversation, Message, AttachedFile } from '@/app/chat/page';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -55,6 +55,7 @@ interface ChatMessageAreaProps {
   onWebSearch: () => void;
   onSuggestionClick: (suggestion: string) => void;
   activeChat: Conversation | null;
+  onRemoveFile: (fileId: string) => void;
 }
 
 export function ChatMessageArea({
@@ -78,6 +79,7 @@ export function ChatMessageArea({
   onWebSearch,
   onSuggestionClick,
   activeChat,
+  onRemoveFile,
 }: ChatMessageAreaProps) {
   const activeChatId = activeChat?.id ?? null;
   const attachedFiles = activeChat?.attachedFiles ?? [];
@@ -96,7 +98,7 @@ export function ChatMessageArea({
                             variant="ghost"
                             size="icon"
                             className="h-5 w-5 rounded-full"
-                            // onClick={() => onRemoveFile(file.id)} // Funcionalidade a ser implementada no Passo 2
+                            onClick={() => onRemoveFile(file.id)}
                         >
                             <X className="h-3 w-3" />
                         </Button>

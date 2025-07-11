@@ -12,7 +12,8 @@ import {
   askAssistant,
   generateSuggestedQuestions,
   generateTitleForConversation,
-  regenerateAnswer
+  regenerateAnswer,
+  removeFileFromConversation
 } from '@/app/actions';
 import {
   AlertDialog,
@@ -338,7 +339,7 @@ async function saveConversation(
   chatId?: string | null,
   options: {
     newChatTitle?: string;
-    newAttachedFiles?: AttachedFile[];
+    updatedAttachedFiles?: AttachedFile[];
   } = {}
 ): Promise<string> {
   if (!userId) throw new Error('User ID is required.');
@@ -368,8 +369,8 @@ async function saveConversation(
       messages: sanitizedMessages,
       totalTokens 
     };
-    if (options.newAttachedFiles) {
-      updatePayload.attachedFiles = options.newAttachedFiles;
+    if (options.updatedAttachedFiles) {
+      updatePayload.attachedFiles = options.updatedAttachedFiles;
     }
     await updateDoc(chatRef, updatePayload);
     return chatId;
@@ -383,7 +384,7 @@ async function saveConversation(
         totalTokens,
         createdAt: serverTimestamp(),
         groupId: null,
-        attachedFiles: options.newAttachedFiles || [],
+        attachedFiles: options.updatedAttachedFiles || [],
     };
 
     const newChatRef = await addDoc(conversationsRef, newChatPayload);
@@ -657,7 +658,7 @@ function ChatPageContent() {
         const finalMessages = [...newMessages, assistantMessage];
         setMessages(finalMessages);
 
-        const newAttachedFiles = assistantResponse.updatedAttachments;
+        const updatedAttachedFiles = assistantResponse.updatedAttachments;
         
         if (!currentChatId) {
             const newTitle = await generateTitleForConversation(finalQuery, fileNames.join(', '));
@@ -667,7 +668,7 @@ function ChatPageContent() {
                 null,
                 {
                     newChatTitle: newTitle,
-                    newAttachedFiles: newAttachedFiles,
+                    updatedAttachedFiles: updatedAttachedFiles,
                 }
             );
             const newFullChat = await getFullConversation(user.uid, newId);
@@ -678,10 +679,10 @@ function ChatPageContent() {
                 finalMessages,
                 currentChatId,
                 {
-                    newAttachedFiles: newAttachedFiles
+                    updatedAttachedFiles: updatedAttachedFiles
                 }
             );
-            setActiveChat(prev => prev ? { ...prev, attachedFiles: newAttachedFiles } : null);
+            setActiveChat(prev => prev ? { ...prev, attachedFiles: updatedAttachedFiles } : null);
         }
 
 
@@ -1187,6 +1188,24 @@ function ChatPageContent() {
     }
   };
 
+  const handleRemoveFile = async (fileId: string) => {
+    if (!user || !activeChatId || !activeChat) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não há uma conversa ativa para remover o arquivo.' });
+        return;
+    }
+
+    const fileToRemove = activeChat.attachedFiles.find(f => f.id === fileId);
+    if (!fileToRemove) return;
+
+    try {
+        const updatedFiles = await removeFileFromConversation(user.uid, activeChatId, fileId);
+        setActiveChat(prev => prev ? { ...prev, attachedFiles: updatedFiles } : null);
+        toast({ title: 'Arquivo removido', description: `"${fileToRemove.fileName}" foi removido do contexto da conversa.` });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Erro ao remover arquivo', description: error.message });
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -1417,6 +1436,7 @@ function ChatPageContent() {
                   onWebSearch={handleWebSearch}
                   onSuggestionClick={handleSuggestionClick}
                   activeChat={activeChat}
+                  onRemoveFile={handleRemoveFile}
                 />
 
                 <ChatInputForm
