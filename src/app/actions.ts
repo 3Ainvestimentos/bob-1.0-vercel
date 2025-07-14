@@ -3,7 +3,7 @@
 
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { DlpServiceClient } from '@google-cloud-dlp';
+import { DlpServiceClient } from '@google-cloud/dlp';
 import { Storage } from '@google-cloud/storage';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -581,4 +581,5 @@ export async function removeFileFromConversation(
         throw new Error(`Failed to remove file from conversation: ${error.message}`);
     }
 }
+    
     

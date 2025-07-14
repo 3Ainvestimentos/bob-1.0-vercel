@@ -435,7 +435,7 @@ async function deleteConversation(userId: string, chatId: string): Promise<void>
 function ChatPageContent() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { toast } } from useToast();
+  const { toast } = useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -1447,7 +1447,7 @@ function ChatPageContent() {
                   onRegenerate={handleRegenerate}
                   onCopyToClipboard={handleCopyToClipboard}
                   onReportLegalIssueRequest={handleReportLegalIssueRequest}
-                  onOpenFeedbackDialog={handleOpenFeedbackDialog}
+                  onOpenFeedbackDialog={onOpenFeedbackDialog}
                   onWebSearch={handleWebSearch}
                   onSuggestionClick={handleSuggestionClick}
                   activeChat={activeChat}
