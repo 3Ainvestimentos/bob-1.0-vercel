@@ -4,6 +4,7 @@
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { DlpServiceClient } from '@google-cloud/dlp';
+import { SpeechClient } from '@google-cloud/speech';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import mammoth from 'mammoth';
@@ -306,7 +307,7 @@ export async function askAssistant(
   query: string,
   options: {
     useWebSearch?: boolean;
-    fileDataUris?: { name: string; dataUri: string }[];
+    fileDataUris?: { name: string; dataUri: string, mimeType: string }[];
     existingAttachments?: AttachedFile[];
   } = {},
   userId?: string | null
@@ -357,6 +358,43 @@ export async function askAssistant(
     console.error("Error in askAssistant:", error.message);
     throw new Error(`Ocorreu um erro ao se comunicar com o assistente: ${error.message}`);
   }
+}
+
+export async function transcribeAudio(audioDataUri: string): Promise<string> {
+    const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
+    if (!serviceAccountKeyJson) {
+      throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida.`);
+    }
+
+    try {
+        const speechClient = new SpeechClient();
+        const [header, base64Data] = audioDataUri.split(',');
+        if (!base64Data) throw new Error('Invalid audio data URI.');
+
+        const audioBytes = base64Data;
+
+        const request = {
+            audio: {
+                content: audioBytes,
+            },
+            config: {
+                encoding: 'MP3' as const, // A API pode auto-detectar para vários formatos, mas especificar ajuda.
+                sampleRateHertz: 16000,   // Ajuste se souber a taxa de amostragem.
+                languageCode: 'pt-BR',
+                model: 'default', // ou 'telephony', 'medical_dictation', etc.
+            },
+        };
+
+        const [response] = await speechClient.recognize(request);
+        const transcription = response.results
+            ?.map(result => result.alternatives?.[0].transcript)
+            .join('\n');
+            
+        return transcription || "Não foi possível transcrever o áudio.";
+    } catch (error: any) {
+        console.error("Error calling Speech-to-Text API:", error);
+        throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}. Verifique se a API de Speech-to-Text está habilitada no projeto.`);
+    }
 }
 
 

@@ -13,7 +13,8 @@ import {
   generateSuggestedQuestions,
   generateTitleForConversation,
   regenerateAnswer,
-  removeFileFromConversation
+  removeFileFromConversation,
+  transcribeAudio
 } from '@/app/actions';
 import {
   AlertDialog,
@@ -586,10 +587,14 @@ function ChatPageContent() {
     }
   };
 
-  const readFileAsDataURL = (file: File): Promise<string> => {
+  const readFileAsDataURL = (file: File): Promise<{name: string, mimeType: string, dataUri: string}> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = () => resolve({
+        name: file.name,
+        mimeType: file.type,
+        dataUri: reader.result as string
+      });
       reader.onerror = (error) => reject(error);
       reader.readAsDataURL(file);
     });
@@ -620,85 +625,92 @@ function ChatPageContent() {
     setIsSuggestionsLoading(false);
 
     let currentChatId = activeChatId;
-    let fileDataUris: { name: string; dataUri: string }[] = [];
     
     try {
-        if (files.length > 0) {
-            fileDataUris = await Promise.all(
-                files.map(async file => ({
-                    name: file.name,
-                    dataUri: await readFileAsDataURL(file)
-                }))
+        let assistantMessage: Message;
+
+        if (files.length > 0 && files[0].type.startsWith('audio/')) {
+            const audioFile = files[0];
+            const audioData = await readFileAsDataURL(audioFile);
+            const transcription = await transcribeAudio(audioData.dataUri);
+            assistantMessage = {
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                content: `**Transcrição de ${audioFile.name}:**\n\n${transcription}`,
+            };
+        } else {
+            let fileDataUris: { name: string; mimeType: string, dataUri: string }[] = [];
+            if (files.length > 0) {
+                fileDataUris = await Promise.all(files.map(readFileAsDataURL));
+            }
+            
+            const finalQuery = query || `Analise os arquivos anexados.`;
+            const assistantResponse = await askAssistant(
+                finalQuery,
+                { fileDataUris, existingAttachments: activeChat?.attachedFiles ?? [] },
+                user.uid
             );
-        }
-        
-        const finalQuery = query || `Analise os arquivos anexados.`;
 
-        const assistantResponse = await askAssistant(
-            finalQuery,
-            {
-                fileDataUris,
-                existingAttachments: activeChat?.attachedFiles ?? [],
-            },
-            user.uid
-        );
+            assistantMessage = {
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                content: assistantResponse.summary,
+                promptTokenCount: assistantResponse.promptTokenCount,
+                candidatesTokenCount: assistantResponse.candidatesTokenCount,
+            };
 
-        const assistantMessage: Message = {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: assistantResponse.summary,
-            promptTokenCount: assistantResponse.promptTokenCount,
-            candidatesTokenCount: assistantResponse.candidatesTokenCount,
-        };
+            if (assistantResponse.searchFailed) {
+                setLastFailedQuery(finalQuery);
+            }
 
-        if (assistantResponse.searchFailed) {
-            setLastFailedQuery(finalQuery);
+            const updatedAttachedFiles = assistantResponse.updatedAttachments;
+             if (!currentChatId) {
+                const newTitle = await generateTitleForConversation(finalQuery, fileNames.join(', '));
+                const newId = await saveConversation(
+                    user.uid,
+                    [...newMessages, assistantMessage],
+                    null,
+                    { newChatTitle: newTitle, updatedAttachedFiles }
+                );
+                const newFullChat = await getFullConversation(user.uid, newId);
+                setActiveChat(newFullChat);
+            } else {
+                await saveConversation(
+                    user.uid,
+                    [...newMessages, assistantMessage],
+                    currentChatId,
+                    { updatedAttachedFiles }
+                );
+                setActiveChat(prev => prev ? { ...prev, attachedFiles: updatedAttachedFiles } : null);
+            }
+            
+            const fetchSuggestions = async () => {
+                setIsSuggestionsLoading(true);
+                try {
+                    const newSuggestions = await generateSuggestedQuestions(finalQuery, assistantResponse.summary);
+                    setSuggestions(newSuggestions);
+                } catch (err) {
+                    console.error("Failed to fetch suggestions", err);
+                } finally {
+                    setIsSuggestionsLoading(false);
+                }
+            };
+            fetchSuggestions();
         }
 
         const finalMessages = [...newMessages, assistantMessage];
         setMessages(finalMessages);
 
-        const updatedAttachedFiles = assistantResponse.updatedAttachments;
-        
-        if (!currentChatId) {
-            const newTitle = await generateTitleForConversation(finalQuery, fileNames.join(', '));
-            const newId = await saveConversation(
-                user.uid,
-                finalMessages,
-                null,
-                {
-                    newChatTitle: newTitle,
-                    updatedAttachedFiles: updatedAttachedFiles,
-                }
-            );
+        if (!currentChatId && !files[0]?.type.startsWith('audio/')) {
+            // Already handled for non-audio files
+        } else if (currentChatId) {
+            await saveConversation(user.uid, finalMessages, currentChatId);
+        } else { // New chat for audio transcription
+            const newTitle = await generateTitleForConversation(query, fileNames.join(', '));
+            const newId = await saveConversation(user.uid, finalMessages, null, { newChatTitle: newTitle });
             const newFullChat = await getFullConversation(user.uid, newId);
             setActiveChat(newFullChat);
-        } else {
-            await saveConversation(
-                user.uid,
-                finalMessages,
-                currentChatId,
-                {
-                    updatedAttachedFiles: updatedAttachedFiles
-                }
-            );
-            setActiveChat(prev => prev ? { ...prev, attachedFiles: updatedAttachedFiles } : null);
         }
-
-
-        const fetchSuggestions = async () => {
-            setIsSuggestionsLoading(true);
-            try {
-                const newSuggestions = await generateSuggestedQuestions(finalQuery, assistantResponse.summary);
-                setSuggestions(newSuggestions);
-            } catch (err) {
-                console.error("Failed to fetch suggestions", err);
-                setSuggestions([]);
-            } finally {
-                setIsSuggestionsLoading(false);
-            }
-        };
-        fetchSuggestions();
       
         await fetchSidebarData();
 
@@ -1403,9 +1415,9 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
+                onToggleGroup={onToggleGroup}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
                 activeDragItem={activeDragItem}
                 onOpenFaqDialog={() => setIsFaqDialogOpen(true)}
                 isAuthenticated={isAuthenticated}

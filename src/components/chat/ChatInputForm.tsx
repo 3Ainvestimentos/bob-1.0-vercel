@@ -32,7 +32,14 @@ export function ChatInputForm({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      setSelectedFiles(Array.from(event.target.files));
+      // If an audio file is selected, only keep that one. Otherwise, keep all.
+      const files = Array.from(event.target.files);
+      const audioFile = files.find(file => file.type.startsWith('audio/'));
+      if (audioFile) {
+        setSelectedFiles([audioFile]);
+      } else {
+        setSelectedFiles(files);
+      }
     }
   };
 
@@ -47,6 +54,8 @@ export function ChatInputForm({
     }
   };
   
+  const isAudioSelected = selectedFiles.length > 0 && selectedFiles[0].type.startsWith('audio/');
+
   return (
     <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
       <form
@@ -72,7 +81,7 @@ export function ChatInputForm({
           <div className="relative flex min-h-[60px] items-start">
             <TextareaAutosize
               ref={inputRef}
-              placeholder="Insira aqui um comando ou pergunta"
+              placeholder={isAudioSelected ? "Opcional: adicione um comando como 'transcreva este áudio'" : "Insira aqui um comando ou pergunta"}
               className="min-h-[inherit] flex-1 resize-none border-0 bg-transparent p-4 pr-12 text-base focus-visible:ring-0"
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -106,11 +115,11 @@ export function ChatInputForm({
           <div className="flex items-center p-2">
             <input
               type="file"
-              multiple
+              multiple={!isAudioSelected}
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
-              accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/mpeg,audio/wav,audio/aac,audio/ogg"
               disabled={isLoading}
             />
             <Button
