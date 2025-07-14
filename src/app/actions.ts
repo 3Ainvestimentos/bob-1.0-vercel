@@ -4,7 +4,6 @@
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { DlpServiceClient } from '@google-cloud/dlp';
-import { SpeechClient } from '@google-cloud/speech';
 import { Storage } from '@google-cloud/storage';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -12,6 +11,8 @@ import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import { AttachedFile } from './chat/page';
 import pdfParse from 'pdf-parse';
+import ffmpeg from 'fluent-ffmpeg';
+import { Readable } from 'stream';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
@@ -364,6 +365,28 @@ export async function askAssistant(
   }
 }
 
+async function convertAudioToMp3(inputBuffer: Buffer): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        const readableStream = new Readable();
+        readableStream.push(inputBuffer);
+        readableStream.push(null);
+
+        const chunks: Buffer[] = [];
+        ffmpeg(readableStream)
+            .toFormat('mp3')
+            .on('error', (err) => {
+                reject(new Error(`Erro ao converter áudio com FFmpeg: ${err.message}`));
+            })
+            .on('end', () => {
+                resolve(Buffer.concat(chunks));
+            })
+            .pipe()
+            .on('data', (chunk) => {
+                chunks.push(chunk);
+            });
+    });
+}
+
 
 export async function transcribeAudio(audioData: { dataUri: string; mimeType: string }): Promise<string> {
     const serviceAccountCredentials = await getServiceAccountCredentials();
@@ -374,55 +397,65 @@ export async function transcribeAudio(audioData: { dataUri: string; mimeType: st
     }
 
     try {
-        const speech = new SpeechClient({ credentials: serviceAccountCredentials });
         const storage = new Storage({ credentials: serviceAccountCredentials });
-
-        const audioBuffer = Buffer.from(audioData.dataUri.split(',')[1], 'base64');
-        const fileName = `audio-to-transcribe-${Date.now()}`;
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
         
-        await storage.bucket(gcsBucketName).file(fileName).save(audioBuffer);
+        let audioBuffer = Buffer.from(audioData.dataUri.split(',')[1], 'base64');
+        let finalMimeType = audioData.mimeType;
 
-        const gcsUri = `gs://${gcsBucketName}/${fileName}`;
-        const audio = { uri: gcsUri };
-
-        const config: any = {
-            languageCode: 'pt-BR',
-        };
-        
-        if (audioData.mimeType === 'audio/ogg' || audioData.mimeType === 'audio/opus') {
-            config.encoding = 'OGG_OPUS';
-            config.sampleRateHertz = 48000;
-        } else {
-            config.encoding = 'ENCODING_UNSPECIFIED';
+        // Converte para MP3 se não for um formato diretamente suportado pelo Gemini (como WAV, MP3)
+        if (!['audio/mpeg', 'audio/wav', 'audio/mp3'].includes(audioData.mimeType)) {
+             try {
+                audioBuffer = await convertAudioToMp3(audioBuffer);
+                finalMimeType = 'audio/mp3';
+            } catch (conversionError) {
+                console.error(conversionError);
+                throw new Error("Falha ao converter o formato do áudio. Por favor, tente um formato diferente como MP3 ou WAV. Detalhes: " + (conversionError as Error).message);
+            }
         }
+        
+        const fileName = `audio-to-transcribe-${Date.now()}`;
+        const file = storage.bucket(gcsBucketName).file(fileName);
+        
+        await file.save(audioBuffer, {
+            metadata: { contentType: finalMimeType },
+        });
 
-        const request = {
-            audio: audio,
-            config: config,
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+
+        const audioFilePart = {
+            fileData: {
+                mimeType: finalMimeType,
+                fileUri: `gs://${gcsBucketName}/${fileName}`
+            }
         };
+        
+        const prompt = "Transcreva o seguinte áudio em português do Brasil. Retorne apenas o texto transcrito, sem nenhum outro comentário ou formatação.";
+        
+        const result = await model.generateContent([prompt, audioFilePart]);
+        const response = await result.response;
+        const transcription = response.text();
 
-        const [operation] = await speech.longRunningRecognize(request);
-        const [response] = await operation.promise();
-
-        const transcription = response.results
-            ?.map(result => result.alternatives?.[0].transcript)
-            .join('\n');
-            
-        await storage.bucket(gcsBucketName).file(fileName).delete();
+        // Limpeza: apaga o arquivo do GCS após a transcrição
+        await file.delete().catch(err => console.error(`Falha ao deletar arquivo ${fileName} do GCS:`, err));
 
         return transcription || "Não foi possível transcrever o áudio.";
 
     } catch (error: any) {
         console.error("Detailed Speech-to-Text Error:", JSON.stringify(error, null, 2));
-        if (error.message.includes('INVALID_ARGUMENT')) {
-           throw new Error(`Ocorreu um erro ao transcrever o áudio: Formato de áudio inválido ou não suportado. Verifique o arquivo. Detalhes: ${error.details}`);
+         if (error.response?.candidates?.[0]?.finishReason === 'SAFETY') {
+            throw new Error('A transcrição foi bloqueada por políticas de segurança do modelo.');
         }
-        if (error.details) {
-            throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.details}.`);
+        if (error.message.includes('Could not find model')) {
+           throw new Error(`O modelo de IA não foi encontrado. Verifique se o nome do modelo está correto.`);
         }
-        throw new Error(`An unexpected response was received from the server.`);
+        if (error.message.includes('PERMISSION_DENIED')) {
+            throw new Error('Erro de permissão. Verifique se a conta de serviço tem acesso ao GCS e à API Gemini.');
+        }
+        throw new Error(`Ocorreu um erro inesperado durante a transcrição: ${error.message}`);
     }
 }
+
 
 
 export async function regenerateAnswer(
