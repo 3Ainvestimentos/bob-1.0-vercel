@@ -387,10 +387,14 @@ export async function transcribeAudio(audioData: { dataUri: string; mimeType: st
 
         const config: any = {
             languageCode: 'pt-BR',
-            useEnhanced: true,
-            enableAutomaticPunctuation: true,
-            encoding: 'ENCODING_UNSPECIFIED',
         };
+        
+        if (audioData.mimeType === 'audio/ogg' || audioData.mimeType === 'audio/opus') {
+            config.encoding = 'OGG_OPUS';
+            config.sampleRateHertz = 48000;
+        } else {
+            config.encoding = 'ENCODING_UNSPECIFIED';
+        }
 
         const request = {
             audio: audio,
