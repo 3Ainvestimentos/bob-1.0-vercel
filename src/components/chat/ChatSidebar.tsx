@@ -54,11 +54,14 @@ import {
   useDroppable,
   DragOverlay,
   type DragStartEvent,
+  DraggableSyntheticListeners,
+  UniqueIdentifier,
 } from '@dnd-kit/core';
 import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
+  SortableContextProps,
 } from '@dnd-kit/sortable';
 import {
   Tooltip,
@@ -66,6 +69,8 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from '@/components/ui/tooltip';
+import { CSS } from '@dnd-kit/utilities';
+
 
 interface ChatSidebarProps {
   conversations: ConversationSidebarItem[];
@@ -170,7 +175,7 @@ export function ChatSidebar({
                         key={group.id}
                         group={group}
                         conversations={conversations.filter(c => c.groupId === group.id)}
-                        isExpanded={expandedGroups[group.id] ?? false}
+                        isExpanded={expandedGroups[group.id]}
                         activeChatId={activeChatId}
                         groups={groups}
                         onToggleGroup={onToggleGroup}
@@ -350,7 +355,7 @@ function GroupItem({
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform ? CSS.Transform.toString(transform) : undefined,
     transition,
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 100 : 'auto',
@@ -515,7 +520,7 @@ function ConversationItem({
   } = useSortable({ id: `convo-${conversation.id}` });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform ? CSS.Transform.toString(transform) : undefined,
     transition,
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 100 : 'auto',
