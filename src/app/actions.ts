@@ -40,9 +40,28 @@ Sua resposta deve seguir esta hierarquia de fontes de informação:
 5.  **LINKS:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).`;
 
 
+async function getServiceAccountCredentials() {
+    const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
+    if (!serviceAccountKeyJson) {
+        throw new Error('A variável de ambiente SERVICE_ACCOUNT_KEY_INTERNAL não está definida.');
+    }
+    try {
+        const credentials = JSON.parse(serviceAccountKeyJson);
+        if (credentials.private_key) {
+            credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+        }
+        return credentials;
+    } catch (e: any) {
+        console.error('Falha ao analisar SERVICE_ACCOUNT_KEY_INTERNAL:', e.message);
+        throw new Error('Falha ao analisar a chave da conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL). Verifique o formato do JSON.');
+    }
+}
+
+
 async function deidentifyText(text: string, projectId: string): Promise<string> {
     if (!text) return text;
-    const dlp = new DlpServiceClient();
+    const credentials = await getServiceAccountCredentials();
+    const dlp = new DlpServiceClient({ credentials });
     const location = 'global';
 
     const infoTypes = [
@@ -134,22 +153,7 @@ async function callDiscoveryEngine(
     // Em uma implementação real, esta função obteria o ID da pasta do Drive do usuário.
     userDriveFolderId?: string | null
 ): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number; }> {
-    const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
-    if (!serviceAccountKeyJson) {
-      throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida no arquivo .env.`);
-    }
-
-    let serviceAccountCredentials;
-    try {
-      serviceAccountCredentials = JSON.parse(serviceAccountKeyJson);
-      if (serviceAccountCredentials.private_key) {
-        serviceAccountCredentials.private_key = serviceAccountCredentials.private_key.replace(/\\n/g, '\n');
-      }
-    } catch (e: any) {
-      console.error(`Falha ao analisar SERVICE_ACCOUNT_KEY_INTERNAL. Verifique o formato do JSON no seu arquivo .env. Erro:`, e.message);
-      throw new Error(`Falha ao analisar a chave da conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL). Verifique se a variável de ambiente está definida e se o valor é um JSON válido e formatado corretamente em uma única linha no arquivo .env.`);
-    }
-
+    const serviceAccountCredentials = await getServiceAccountCredentials();
     const projectId = serviceAccountCredentials.project_id;
     const location = 'global';
     const engineId = 'datavisorvscoderagtest_1751310702302';
@@ -268,39 +272,40 @@ async function callDiscoveryEngine(
 
 
 async function callGemini(query: string): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
-    throw new Error("A variável de ambiente GEMINI_API_KEY não está definida. Por favor, adicione-a ao seu arquivo .env.");
-  }
-  
-  try {
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-pro-latest",
-      generationConfig: {
-        temperature: 0.2
-      } 
+    const credentials = await getServiceAccountCredentials();
+    const auth = new GoogleAuth({
+        credentials,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
     });
-    
-    const prompt = `Você é um assistente de pesquisa prestativo. Responda à seguinte pergunta do usuário da forma mais completa e precisa possível com base em seu conhecimento geral.
+
+    try {
+        const genAI = new GoogleGenerativeAI(credentials.client_email, auth);
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-pro-latest",
+            generationConfig: {
+                temperature: 0.2
+            }
+        });
+
+        const prompt = `Você é um assistente de pesquisa prestativo. Responda à seguinte pergunta do usuário da forma mais completa e precisa possível com base em seu conhecimento geral.
 
 Pergunta: "${query}"`;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    const promptTokenCount = response.usageMetadata?.promptTokenCount;
-    const candidatesTokenCount = response.usageMetadata?.candidatesTokenCount;
 
-    return { summary: text, searchFailed: false, promptTokenCount, candidatesTokenCount };
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        const promptTokenCount = response.usageMetadata?.promptTokenCount;
+        const candidatesTokenCount = response.usageMetadata?.candidatesTokenCount;
 
-  } catch (error: any) {
-    console.error("Error calling Gemini API:", error);
-    if (error.message.includes('API key not valid')) {
-      throw new Error(`A chave da API do Gemini (GEMINI_API_KEY) parece ser inválida. Verifique a chave no seu arquivo .env e no Google AI Studio.`);
+        return { summary: text, searchFailed: false, promptTokenCount, candidatesTokenCount };
+
+    } catch (error: any) {
+        console.error("Error calling Gemini API:", error);
+        if (error.message.includes('permission')) {
+            throw new Error(`Erro de permissão ao chamar a API Gemini. Verifique se a conta de serviço tem o papel "Usuário de IA generativa do Vertex AI".`);
+        }
+        throw new Error(`Ocorreu um erro ao se comunicar com o Gemini: ${error.message}`);
     }
-    throw new Error(`Ocorreu um erro ao se comunicar com o Gemini: ${error.message}`);
-  }
 }
 
 
@@ -320,9 +325,8 @@ export async function askAssistant(
   updatedAttachments: AttachedFile[];
 }> {
   const { useWebSearch = false, fileDataUris = [], existingAttachments = [] } = options;
-  const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
-  if (!serviceAccountKeyJson) throw new Error('SERVICE_ACCOUNT_KEY_INTERNAL is not set');
-  const projectId = JSON.parse(serviceAccountKeyJson).project_id;
+  const serviceAccountCredentials = await getServiceAccountCredentials();
+  const projectId = serviceAccountCredentials.project_id;
 
 
   try {
@@ -362,22 +366,13 @@ export async function askAssistant(
 }
 
 export async function transcribeAudio(audioDataUri: string): Promise<string> {
-    const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
-    if (!serviceAccountKeyJson) {
-        throw new Error(`A variável de ambiente SERVICE_ACCOUNT_KEY_INTERNAL não está definida.`);
-    }
-
+    const serviceAccountCredentials = await getServiceAccountCredentials();
     const gcsBucketName = process.env.GCS_BUCKET_NAME;
     if (!gcsBucketName) {
         throw new Error(`A variável de ambiente GCS_BUCKET_NAME não está definida. Adicione-a ao seu .env.`);
     }
 
     try {
-        const serviceAccountCredentials = JSON.parse(serviceAccountKeyJson);
-        if (serviceAccountCredentials.private_key) {
-            serviceAccountCredentials.private_key = serviceAccountCredentials.private_key.replace(/\\n/g, '\n');
-        }
-
         const speechClient = new SpeechClient({ credentials: serviceAccountCredentials });
         const storage = new Storage({ credentials: serviceAccountCredentials });
 
@@ -398,13 +393,12 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         const request = { audio, config };
 
         const [operation] = await speechClient.longRunningRecognize(request);
-        
         const [response] = await operation.promise();
 
         if (!response.results || response.results.length === 0) {
             return "A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.";
         }
-
+        
         const transcription = response.results
             .map(result => result.alternatives?.[0]?.transcript)
             .filter(transcript => !!transcript)
@@ -414,11 +408,8 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
 
     } catch (error: any) {
         console.error("Detailed Speech-to-Text API Error:", JSON.stringify(error, null, 2));
-        if (error.message?.includes('Could not refresh access token') || error.message?.includes('permission')) {
-            throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço tem o papel "Editor da API Cloud Speech" e "Administrador de objetos do Storage".`);
-        }
-        if (error.message?.includes('INVALID_ARGUMENT')) {
-            throw new Error(`Argumento inválido para a API de transcrição. Detalhes: ${error.message}`);
+        if (error.code === 7 && error.details?.includes('permission')) {
+             throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço tem o papel "Editor da API Cloud Speech" e se o agente de serviço da API Speech tem acesso de "Visualizador de Objetos do Storage" ao bucket.`);
         }
         if (error.message) {
             throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}.`);
@@ -447,11 +438,11 @@ export async function generateSuggestedQuestions(
   query: string,
   answer: string
 ): Promise<string[]> {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
-    console.error("A variável de ambiente GEMINI_API_KEY não está definida. Não é possível gerar sugestões.");
-    return [];
-  }
+    const credentials = await getServiceAccountCredentials();
+    const auth = new GoogleAuth({
+        credentials,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    });
 
   const prompt = `Baseado na pergunta do usuário e na resposta do assistente, gere 3 perguntas de acompanhamento curtas e relevantes que o usuário poderia fazer a seguir. Retorne APENAS um array JSON de strings, sem nenhum outro texto ou formatação. As perguntas devem ser concisas e em português.
 
@@ -459,7 +450,7 @@ export async function generateSuggestedQuestions(
   Resposta do Assistente: "${answer}"`;
 
   try {
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const genAI = new GoogleGenerativeAI(credentials.client_email, auth);
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-pro-latest",
       generationConfig: {
@@ -492,18 +483,18 @@ export async function generateTitleForConversation(
   const baseQuery = fileName ? `${query} (analisando ${fileName})` : query;
   const fallbackTitle = baseQuery.length > 30 ? baseQuery.substring(0, 27) + '...' : baseQuery;
   
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
-    console.error("A variável de ambiente GEMINI_API_KEY não está definida. Não é possível gerar título.");
-    return fallbackTitle;
-  }
+  const credentials = await getServiceAccountCredentials();
+    const auth = new GoogleAuth({
+        credentials,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    });
 
   const prompt = `Gere um título curto e descritivo em português com no máximo 5 palavras para a seguinte pergunta. Se a pergunta incluir o nome de um arquivo, o título deve refletir isso. Retorne APENAS o título, sem aspas, marcadores ou qualquer outro texto.
 
 Pergunta: "${baseQuery}"`;
 
   try {
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const genAI = new GoogleGenerativeAI(credentials.client_email, auth);
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash-latest",
       generationConfig: {
@@ -588,5 +579,4 @@ export async function removeFileFromConversation(
         throw new Error(`Failed to remove file from conversation: ${error.message}`);
     }
 }
-
     
