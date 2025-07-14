@@ -13,8 +13,9 @@ import { AttachedFile } from './chat/page';
 import pdfParse from 'pdf-parse';
 import ffmpeg from 'fluent-ffmpeg';
 import { Readable } from 'stream';
-import { path as ffmpegPath } from '@ffmpeg-installer/ffmpeg';
-import { path as ffprobePath } from '@ffmpeg-installer/ffprobe';
+
+const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+const ffprobePath = require('@ffprobe-installer/ffprobe').path;
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
