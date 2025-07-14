@@ -404,6 +404,10 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         // Wait for the operation to complete
         const [response] = await operation.promise();
 
+        // **Atenção:** Nesta implementação, o arquivo não será excluído do bucket.
+        // Se a exclusão for necessária, descomente a linha abaixo.
+        // await storage.bucket(gcsBucketName).file(fileName).delete();
+
         if (!response.results || response.results.length === 0) {
             throw new Error("A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.");
         }
