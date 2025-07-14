@@ -388,10 +388,8 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         const fileName = `audio-to-transcribe-${Date.now()}`;
         const gcsUri = `gs://${gcsBucketName}/${fileName}`;
 
-        // 1. Upload to GCS
         await storage.bucket(gcsBucketName).file(fileName).save(audioBuffer);
 
-        // 2. Transcribe from GCS using LongRunningRecognize
         const audio = { uri: gcsUri };
         const config = {
             encoding: 'ENCODING_UNSPECIFIED' as const,
@@ -401,19 +399,15 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
 
         const [operation] = await speechClient.longRunningRecognize(request);
         
-        // Wait for the operation to complete
         const [response] = await operation.promise();
-
-        // **Atenção:** Nesta implementação, o arquivo não será excluído do bucket.
-        // Se a exclusão for necessária, descomente a linha abaixo.
-        // await storage.bucket(gcsBucketName).file(fileName).delete();
 
         if (!response.results || response.results.length === 0) {
             throw new Error("A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.");
         }
 
         const transcription = response.results
-            .map(result => result.alternatives?.[0].transcript)
+            .map(result => result.alternatives && result.alternatives[0] ? result.alternatives[0].transcript : null)
+            .filter(transcript => transcript !== null)
             .join('\n');
 
         return transcription || "Não foi possível transcrever o áudio.";
