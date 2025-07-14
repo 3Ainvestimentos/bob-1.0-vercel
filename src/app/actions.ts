@@ -387,17 +387,10 @@ export async function transcribeAudio(audioData: { dataUri: string; mimeType: st
 
         const config: any = {
             languageCode: 'pt-BR',
-            useEnhanced: true, // Use o modelo de reconhecimento aprimorado
-            enableAutomaticPunctuation: true, // Adiciona pontuação automaticamente
+            useEnhanced: true,
+            enableAutomaticPunctuation: true,
+            encoding: 'ENCODING_UNSPECIFIED',
         };
-
-        if (audioData.mimeType === 'audio/ogg' || audioData.mimeType === 'audio/opus') {
-            config.encoding = 'OGG_OPUS';
-            // A API infere a sampleRateHertz para OGG_OPUS, então não precisamos especificar.
-        } else {
-            config.encoding = 'ENCODING_UNSPECIFIED';
-        }
-
 
         const request = {
             audio: audio,
@@ -590,6 +583,8 @@ export async function removeFileFromConversation(
     }
 }
     
+    
+
     
 
     
