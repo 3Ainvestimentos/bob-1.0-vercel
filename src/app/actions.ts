@@ -4,7 +4,6 @@
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { DlpServiceClient } from '@google-cloud/dlp';
-import { Storage } from '@google-cloud/storage';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import mammoth from 'mammoth';
@@ -371,7 +370,7 @@ export async function askAssistant(
   }
 }
 
-async function convertAudioToMp3(inputBuffer: Buffer): Promise<Buffer> {
+function convertAudioToMp3(inputBuffer: Buffer): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         const readableStream = new Readable();
         readableStream.push(inputBuffer);
@@ -395,21 +394,13 @@ async function convertAudioToMp3(inputBuffer: Buffer): Promise<Buffer> {
 
 
 export async function transcribeAudio(audioData: { dataUri: string; mimeType: string }): Promise<string> {
-    const serviceAccountCredentials = await getServiceAccountCredentials();
-    const gcsBucketName = process.env.GCS_BUCKET_NAME;
-
-    if (!gcsBucketName) {
-        throw new Error(`A variável de ambiente GCS_BUCKET_NAME não está definida. Adicione-a ao seu .env.`);
-    }
-
     try {
-        const storage = new Storage({ credentials: serviceAccountCredentials });
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
         
         let audioBuffer = Buffer.from(audioData.dataUri.split(',')[1], 'base64');
         let finalMimeType = audioData.mimeType;
 
-        // Converte para MP3 se não for um formato diretamente suportado pelo Gemini (como WAV, MP3)
+        // Converte para MP3 se não for um formato diretamente suportado pelo Gemini
         if (!['audio/mpeg', 'audio/wav', 'audio/mp3'].includes(audioData.mimeType)) {
              try {
                 audioBuffer = await convertAudioToMp3(audioBuffer);
@@ -420,19 +411,12 @@ export async function transcribeAudio(audioData: { dataUri: string; mimeType: st
             }
         }
         
-        const fileName = `audio-to-transcribe-${Date.now()}`;
-        const file = storage.bucket(gcsBucketName).file(fileName);
-        
-        await file.save(audioBuffer, {
-            metadata: { contentType: finalMimeType },
-        });
-
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
 
         const audioFilePart = {
-            fileData: {
+            inlineData: {
+                data: audioBuffer.toString('base64'),
                 mimeType: finalMimeType,
-                fileUri: `gs://${gcsBucketName}/${fileName}`
             }
         };
         
@@ -441,9 +425,6 @@ export async function transcribeAudio(audioData: { dataUri: string; mimeType: st
         const result = await model.generateContent([prompt, audioFilePart]);
         const response = await result.response;
         const transcription = response.text();
-
-        // Limpeza: apaga o arquivo do GCS após a transcrição
-        await file.delete().catch(err => console.error(`Falha ao deletar arquivo ${fileName} do GCS:`, err));
 
         return transcription || "Não foi possível transcrever o áudio.";
 
@@ -456,7 +437,7 @@ export async function transcribeAudio(audioData: { dataUri: string; mimeType: st
            throw new Error(`O modelo de IA não foi encontrado. Verifique se o nome do modelo está correto.`);
         }
         if (error.message.includes('PERMISSION_DENIED')) {
-            throw new Error('Erro de permissão. Verifique se a conta de serviço tem acesso ao GCS e à API Gemini.');
+            throw new Error('Erro de permissão. Verifique se a conta de serviço tem acesso à API Gemini.');
         }
         throw new Error(`Ocorreu um erro inesperado durante a transcrição: ${error.message}`);
     }
@@ -633,3 +614,4 @@ export async function removeFileFromConversation(
     
 
     
+
