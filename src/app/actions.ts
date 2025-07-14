@@ -367,23 +367,47 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
     }
 
     try {
-        const speechClient = new SpeechClient();
+        const serviceAccountCredentials = JSON.parse(serviceAccountKeyJson);
+        if (serviceAccountCredentials.private_key) {
+            serviceAccountCredentials.private_key = serviceAccountCredentials.private_key.replace(/\\n/g, '\n');
+        }
+
+        const speechClient = new SpeechClient({
+            credentials: serviceAccountCredentials
+        });
+
         const [header, base64Data] = audioDataUri.split(',');
         if (!base64Data) throw new Error('Invalid audio data URI.');
+        const mimeType = header.match(/:(.*?);/)?.[1];
 
         const audioBytes = base64Data;
+        let encoding: any = 'ENCODING_UNSPECIFIED';
 
-        const request = {
+        if (mimeType === 'audio/ogg' || mimeType === 'audio/opus') {
+            encoding = 'OGG_OPUS';
+        } else if (mimeType === 'audio/wav') {
+            encoding = 'LINEAR16'; // WAV é tipicamente PCM linear
+        } else if (mimeType === 'audio/mpeg') {
+            encoding = 'MP3';
+        } else if (mimeType === 'audio/aac') {
+            encoding = 'ENCODING_UNSPECIFIED'; // AAC é melhor com autodetection
+        }
+
+        const request: any = {
             audio: {
                 content: audioBytes,
             },
             config: {
-                encoding: 'MP3' as const, // A API pode auto-detectar para vários formatos, mas especificar ajuda.
-                sampleRateHertz: 16000,   // Ajuste se souber a taxa de amostragem.
+                encoding: encoding,
+                sampleRateHertz: encoding === 'OGG_OPUS' ? 48000 : 16000, 
                 languageCode: 'pt-BR',
-                model: 'default', // ou 'telephony', 'medical_dictation', etc.
+                model: 'default', 
             },
         };
+
+        if (encoding === 'ENCODING_UNSPECIFIED') {
+            request.config.enableAutomaticPunctuation = true;
+        }
 
         const [response] = await speechClient.recognize(request);
         const transcription = response.results
