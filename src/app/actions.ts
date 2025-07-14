@@ -391,7 +391,7 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         // 1. Upload to GCS
         await storage.bucket(gcsBucketName).file(fileName).save(audioBuffer);
 
-        // 2. Transcribe from GCS
+        // 2. Transcribe from GCS using LongRunningRecognize
         const audio = { uri: gcsUri };
         const config = {
             encoding: 'ENCODING_UNSPECIFIED' as const,
@@ -400,6 +400,8 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         const request = { audio, config };
 
         const [operation] = await speechClient.longRunningRecognize(request);
+        
+        // Wait for the operation to complete
         const [response] = await operation.promise();
 
         if (!response.results || response.results.length === 0) {
