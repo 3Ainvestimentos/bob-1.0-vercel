@@ -1416,8 +1416,8 @@ function ChatPageContent() {
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
                 onToggleGroup={handleToggleGroup}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
                 onOpenFaqDialog={() => setIsFaqDialogOpen(true)}
                 isAuthenticated={isAuthenticated}
