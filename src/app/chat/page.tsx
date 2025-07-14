@@ -635,8 +635,15 @@ function ChatPageContent() {
     
     try {
         let assistantMessage: Message;
-        const isTranscriptionRequest = files.length === 1 && files[0].type.startsWith('audio/');
+        let isTranscriptionRequest = false;
 
+        if (files.length > 0) {
+            const firstFile = files[0];
+            if (firstFile.type.startsWith('audio/')) {
+                 isTranscriptionRequest = true;
+            }
+        }
+       
         if (isTranscriptionRequest) {
             const audioFile = files[0];
             const audioData = await readFileAsDataURL(audioFile);
@@ -681,6 +688,8 @@ function ChatPageContent() {
                 );
                 const newFullChat = await getFullConversation(user.uid, newId);
                 setActiveChat(newFullChat);
+                // This is a new chat, so we need to set the currentChatId for the suggestion fetching logic
+                currentChatId = newId; 
             } else {
                 await saveConversation(
                     user.uid,
@@ -1005,7 +1014,11 @@ function ChatPageContent() {
     const userMessage = messages[messageIndex - 1];
 
     if (userMessage.role !== 'user') {
-        console.error("Feedback can only be given for an assistant message that follows a user message.");
+        toast({
+            variant: "destructive",
+            title: "Erro de Feedback",
+            description: "O feedback só pode ser dado a uma resposta do assistente que segue diretamente uma pergunta do usuário.",
+        });
         return;
     }
     
@@ -1455,7 +1468,7 @@ function ChatPageContent() {
                   onRegenerate={handleRegenerate}
                   onCopyToClipboard={handleCopyToClipboard}
                   onReportLegalIssueRequest={handleReportLegalIssueRequest}
-                  onOpenFeedbackDialog={onOpenFeedbackDialog}
+                  onOpenFeedbackDialog={handleOpenFeedbackDialog}
                   onWebSearch={handleWebSearch}
                   onSuggestionClick={handleSuggestionClick}
                   activeChat={activeChat}
