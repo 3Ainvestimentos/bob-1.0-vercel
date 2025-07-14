@@ -5,6 +5,7 @@ import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { DlpServiceClient } from '@google-cloud/dlp';
 import { SpeechClient } from '@google-cloud/speech';
+import { Storage } from '@google-cloud/storage';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import mammoth from 'mammoth';
@@ -363,7 +364,12 @@ export async function askAssistant(
 export async function transcribeAudio(audioDataUri: string): Promise<string> {
     const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
     if (!serviceAccountKeyJson) {
-        throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida.`);
+        throw new Error(`A variável de ambiente SERVICE_ACCOUNT_KEY_INTERNAL não está definida.`);
+    }
+
+    const gcsBucketName = process.env.GCS_BUCKET_NAME;
+    if (!gcsBucketName) {
+        throw new Error(`A variável de ambiente GCS_BUCKET_NAME não está definida. Adicione-a ao seu .env.`);
     }
 
     try {
@@ -372,66 +378,51 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
             serviceAccountCredentials.private_key = serviceAccountCredentials.private_key.replace(/\\n/g, '\n');
         }
 
-        const speechClient = new SpeechClient({
-            credentials: serviceAccountCredentials
-        });
+        const speechClient = new SpeechClient({ credentials: serviceAccountCredentials });
+        const storage = new Storage({ credentials: serviceAccountCredentials });
 
         const [header, base64Data] = audioDataUri.split(',');
         if (!base64Data) throw new Error('Invalid audio data URI.');
-        const mimeType = header.match(/:(.*?);/)?.[1];
-
-        const audioBytes = base64Data;
-        let encoding: any = 'ENCODING_UNSPECIFIED';
-        let sampleRateHertz = 16000;
-
-        if (mimeType === 'audio/ogg' || mimeType === 'audio/opus') {
-            encoding = 'OGG_OPUS';
-            sampleRateHertz = 48000; // Opus files typically have a higher sample rate
-        } else if (mimeType === 'audio/wav') {
-            encoding = 'LINEAR16';
-        } else if (mimeType === 'audio/mpeg') {
-            encoding = 'MP3';
-        } else if (mimeType === 'audio/aac') {
-            // For AAC, Speech-to-Text can often auto-detect from the headers
-            encoding = 'ENCODING_UNSPECIFIED'; 
-        }
-
-        const request: any = {
-            audio: {
-                content: audioBytes,
-            },
-            config: {
-                encoding: encoding,
-                sampleRateHertz: sampleRateHertz, 
-                languageCode: 'pt-BR',
-                model: 'default',
-            },
-        };
-
-        const [response] = await speechClient.recognize(request);
         
-        if (!response.results || response.results.length === 0) {
-            console.warn("Speech-to-Text API returned no results.", response);
-            throw new Error("A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.");
+        const audioBuffer = Buffer.from(base64Data, 'base64');
+        const tempFileName = `audio-to-transcribe-${Date.now()}`;
+        const gcsUri = `gs://${gcsBucketName}/${tempFileName}`;
+
+        // 1. Upload to GCS
+        await storage.bucket(gcsBucketName).file(tempFileName).save(audioBuffer);
+
+        try {
+            // 2. Transcribe from GCS
+            const audio = { uri: gcsUri };
+            const config = {
+                encoding: 'ENCODING_UNSPECIFIED' as const,
+                languageCode: 'pt-BR',
+            };
+            const request = { audio, config };
+
+            const [operation] = await speechClient.longRunningRecognize(request);
+            const [response] = await operation.promise();
+
+            if (!response.results || response.results.length === 0) {
+                throw new Error("A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.");
+            }
+
+            const transcription = response.results
+                .map(result => result.alternatives?.[0].transcript)
+                .join('\n');
+
+            return transcription || "Não foi possível transcrever o áudio.";
+        } finally {
+            // 3. Delete from GCS
+            await storage.bucket(gcsBucketName).file(tempFileName).delete();
         }
 
-        const transcription = response.results
-            ?.map(result => result.alternatives?.[0].transcript)
-            .join('\n');
-            
-        return transcription || "Não foi possível transcrever o áudio.";
     } catch (error: any) {
         console.error("Error calling Speech-to-Text API:", error.message);
-
-        if (error.message.includes('Sync input too long')) {
-            throw new Error('O arquivo de áudio é muito longo (maior que 1 minuto). Por favor, envie um arquivo mais curto.');
+        if (error.message.includes('Could not refresh access token') || error.message.includes('permission')) {
+            throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço tem o papel "Editor da API Cloud Speech" e "Administrador de objetos do Storage".`);
         }
-
-        if (error.message.includes('Could not refresh access token')) {
-            throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço tem o papel "Editor da API Cloud Speech".`);
-        }
-        
-        throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}. Verifique se a API de Speech-to-Text está habilitada no projeto.`);
+        throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}.`);
     }
 }
 
