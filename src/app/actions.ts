@@ -3,7 +3,7 @@
 
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { DlpServiceClient } from '@google-cloud/dlp';
+import { DlpServiceClient } from '@google-cloud-dlp';
 import { SpeechClient } from '@google-cloud/speech';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -363,7 +363,7 @@ export async function askAssistant(
 export async function transcribeAudio(audioDataUri: string): Promise<string> {
     const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
     if (!serviceAccountKeyJson) {
-      throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida.`);
+        throw new Error(`A variável de ambiente necessária (SERVICE_ACCOUNT_KEY_INTERNAL) não está definida.`);
     }
 
     try {
@@ -386,13 +386,14 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
 
         if (mimeType === 'audio/ogg' || mimeType === 'audio/opus') {
             encoding = 'OGG_OPUS';
-            sampleRateHertz = 48000;
+            sampleRateHertz = 48000; // Opus files typically have a higher sample rate
         } else if (mimeType === 'audio/wav') {
             encoding = 'LINEAR16';
         } else if (mimeType === 'audio/mpeg') {
             encoding = 'MP3';
         } else if (mimeType === 'audio/aac') {
-            encoding = 'ENCODING_UNSPECIFIED';
+            // For AAC, Speech-to-Text can often auto-detect from the headers
+            encoding = 'ENCODING_UNSPECIFIED'; 
         }
 
         const request: any = {
@@ -403,13 +404,9 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
                 encoding: encoding,
                 sampleRateHertz: sampleRateHertz, 
                 languageCode: 'pt-BR',
-                model: 'default', 
+                model: 'default',
             },
         };
-
-        if (encoding === 'ENCODING_UNSPECIFIED') {
-            request.config.enableAutomaticPunctuation = true;
-        }
 
         const [response] = await speechClient.recognize(request);
         
@@ -424,7 +421,16 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
             
         return transcription || "Não foi possível transcrever o áudio.";
     } catch (error: any) {
-        console.error("Error calling Speech-to-Text API:", error);
+        console.error("Error calling Speech-to-Text API:", error.message);
+
+        if (error.message.includes('Sync input too long')) {
+            throw new Error('O arquivo de áudio é muito longo (maior que 1 minuto). Por favor, envie um arquivo mais curto.');
+        }
+
+        if (error.message.includes('Could not refresh access token')) {
+            throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço tem o papel "Editor da API Cloud Speech".`);
+        }
+        
         throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}. Verifique se a API de Speech-to-Text está habilitada no projeto.`);
     }
 }
@@ -590,3 +596,5 @@ export async function removeFileFromConversation(
         throw new Error(`Failed to remove file from conversation: ${error.message}`);
     }
 }
+
+    
