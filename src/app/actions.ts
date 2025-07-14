@@ -4,6 +4,7 @@
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { DlpServiceClient } from '@google-cloud/dlp';
+import { SpeechClient } from '@google-cloud/speech';
 import { Storage } from '@google-cloud/storage';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -363,57 +364,57 @@ export async function askAssistant(
   }
 }
 
+
 export async function transcribeAudio(audioDataUri: string): Promise<string> {
     const serviceAccountCredentials = await getServiceAccountCredentials();
     const gcsBucketName = process.env.GCS_BUCKET_NAME;
-    const geminiApiKey = process.env.GEMINI_API_KEY;
 
     if (!gcsBucketName) {
         throw new Error(`A variável de ambiente GCS_BUCKET_NAME não está definida. Adicione-a ao seu .env.`);
     }
-    if (!geminiApiKey) {
-        throw new Error('A variável de ambiente GEMINI_API_KEY não está definida.');
-    }
-    
+
     try {
+        const speech = new SpeechClient({ credentials: serviceAccountCredentials });
         const storage = new Storage({ credentials: serviceAccountCredentials });
 
-        const [header, base64Data] = audioDataUri.split(',');
-        if (!base64Data || !header) throw new Error('Invalid audio data URI.');
-        
-        const mimeType = header.match(/:(.*?);/)?.[1] ?? 'application/octet-stream';
-        const audioBuffer = Buffer.from(base64Data, 'base64');
+        const audioBuffer = Buffer.from(audioDataUri.split(',')[1], 'base64');
         const fileName = `audio-to-transcribe-${Date.now()}`;
         
         await storage.bucket(gcsBucketName).file(fileName).save(audioBuffer);
 
-        const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+        const gcsUri = `gs://${gcsBucketName}/${fileName}`;
+        const audio = { uri: gcsUri };
 
-        const audioFile = {
-            fileData: {
-                mimeType,
-                fileUri: `gs://${gcsBucketName}/${fileName}`
-            }
+        const config = {
+            encoding: 'ENCODING_UNSPECIFIED',
+            sampleRateHertz: 16000, // Defina isso se souber a taxa de amostragem
+            languageCode: 'pt-BR',
+            // Opcional: para maior precisão, considere usar um modelo específico
+            // model: 'video', // 'video' é um modelo de alta qualidade
         };
 
-        const result = await model.generateContent([
-            "Transcreva este áudio em português do Brasil.",
-            audioFile
-        ]);
-        
-        const response = await result.response;
-        const transcription = response.text();
+        const request = {
+            audio: audio,
+            config: config,
+        };
 
+        // Usa o reconhecimento de longa duração, ideal para arquivos no GCS
+        const [operation] = await speech.longRunningRecognize(request);
+        const [response] = await operation.promise();
+
+        const transcription = response.results
+            ?.map(result => result.alternatives?.[0].transcript)
+            .join('\n');
+            
         // Opcional: remover o arquivo após a transcrição para economizar espaço
-        // await storage.bucket(gcsBucketName).file(fileName).delete();
+        await storage.bucket(gcsBucketName).file(fileName).delete();
 
         return transcription || "Não foi possível transcrever o áudio.";
 
     } catch (error: any) {
-        console.error("Detailed Gemini Transcription Error:", JSON.stringify(error, null, 2));
-        if (error.message) {
-            throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}.`);
+        console.error("Detailed Speech-to-Text Error:", JSON.stringify(error, null, 2));
+        if (error.details) {
+            throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.details}.`);
         }
         throw new Error(`An unexpected response was received from the server.`);
     }
@@ -582,4 +583,6 @@ export async function removeFileFromConversation(
     }
 }
     
+    
+
     
