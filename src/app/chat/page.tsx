@@ -1415,7 +1415,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={onToggleGroup}
+                onToggleGroup={handleToggleGroup}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 activeDragItem={activeDragItem}
@@ -1444,7 +1444,7 @@ function ChatPageContent() {
                   onRegenerate={handleRegenerate}
                   onCopyToClipboard={handleCopyToClipboard}
                   onReportLegalIssueRequest={handleReportLegalIssueRequest}
-                  onOpenFeedbackDialog={handleOpenFeedbackDialog}
+                  onOpenFeedbackDialog={onOpenFeedbackDialog}
                   onWebSearch={handleWebSearch}
                   onSuggestionClick={handleSuggestionClick}
                   activeChat={activeChat}
