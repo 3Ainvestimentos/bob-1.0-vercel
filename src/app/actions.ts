@@ -402,12 +402,12 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         const [response] = await operation.promise();
 
         if (!response.results || response.results.length === 0) {
-            throw new Error("A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.");
+            return "A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.";
         }
 
         const transcription = response.results
-            .map(result => result.alternatives && result.alternatives[0] ? result.alternatives[0].transcript : null)
-            .filter(transcript => transcript !== null)
+            .map(result => result.alternatives?.[0]?.transcript)
+            .filter(transcript => !!transcript)
             .join('\n');
 
         return transcription || "Não foi possível transcrever o áudio.";
