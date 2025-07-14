@@ -212,7 +212,7 @@ async function callDiscoveryEngine(
       // Se um ID de pasta do drive for fornecido, adicionamos um filtro estrito.
       // Isso garante que a busca só acontecerá nos arquivos daquele usuário.
       if (userDriveFolderId) {
-        requestBody.params.filter = `uri: INCLUDES("${userDriveFolderId}")`;
+        requestBody.params.filter = `uri: INCLUDES("${userDriveFolderId}")}`;
       }
 
       const apiResponse = await fetch(url, {
@@ -388,6 +388,7 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         const config = {
             encoding: 'ENCODING_UNSPECIFIED' as const,
             languageCode: 'pt-BR',
+            model: 'default',
         };
         const request = { audio, config };
 
