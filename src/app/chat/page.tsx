@@ -435,7 +435,7 @@ async function deleteConversation(userId: string, chatId: string): Promise<void>
 function ChatPageContent() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
+  const { toast } } from useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -606,11 +606,15 @@ function ChatPageContent() {
 
     const fileNames = files.map(f => f.name);
     const allFileNames = [...(activeChat?.attachedFiles.map(f => f.fileName) || []), ...fileNames];
+    
+    // Determine the primary action: transcription or general query
+    const isTranscription = files.length === 1 && files[0].type.startsWith('audio/');
+    const userQuery = isTranscription ? `Transcrição de ${files[0].name}` : query;
 
     const userMessage: Message = {
         id: crypto.randomUUID(),
         role: 'user',
-        content: query,
+        content: userQuery,
         fileNames: allFileNames.length > 0 ? allFileNames : null,
     };
     const newMessages = [...messages, userMessage];
@@ -629,7 +633,7 @@ function ChatPageContent() {
     try {
         let assistantMessage: Message;
 
-        if (files.length > 0 && files[0].type.startsWith('audio/')) {
+        if (isTranscription) {
             const audioFile = files[0];
             const audioData = await readFileAsDataURL(audioFile);
             const transcription = await transcribeAudio(audioData.dataUri);
@@ -685,6 +689,7 @@ function ChatPageContent() {
             }
             
             const fetchSuggestions = async () => {
+                if (assistantResponse.searchFailed) return;
                 setIsSuggestionsLoading(true);
                 try {
                     const newSuggestions = await generateSuggestedQuestions(finalQuery, assistantResponse.summary);
@@ -701,15 +706,13 @@ function ChatPageContent() {
         const finalMessages = [...newMessages, assistantMessage];
         setMessages(finalMessages);
 
-        if (!currentChatId && !files[0]?.type.startsWith('audio/')) {
-            // Already handled for non-audio files
-        } else if (currentChatId) {
-            await saveConversation(user.uid, finalMessages, currentChatId);
-        } else { // New chat for audio transcription
-            const newTitle = await generateTitleForConversation(query, fileNames.join(', '));
+        if (!currentChatId) {
+            const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
             const newId = await saveConversation(user.uid, finalMessages, null, { newChatTitle: newTitle });
             const newFullChat = await getFullConversation(user.uid, newId);
             setActiveChat(newFullChat);
+        } else {
+            await saveConversation(user.uid, finalMessages, currentChatId);
         }
       
         await fetchSidebarData();
@@ -771,7 +774,7 @@ function ChatPageContent() {
         await saveConversation(user.uid, finalMessages, activeChatId);
       }
     } catch (err: any) {
-      const errorMessageContent = `Ocorreu um erro na busca web: ${err.message}`;
+      const errorMessageContent = `Erro ao buscar na web: ${err.message}`;
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -1415,7 +1418,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}

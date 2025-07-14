@@ -3,8 +3,7 @@
 
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { DlpServiceClient } from '@google-cloud/dlp';
-import { SpeechClient } from '@google-cloud/speech';
+import { DlpServiceClient } from '@google-cloud-dlp';
 import { Storage } from '@google-cloud/storage';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -367,49 +366,52 @@ export async function askAssistant(
 export async function transcribeAudio(audioDataUri: string): Promise<string> {
     const serviceAccountCredentials = await getServiceAccountCredentials();
     const gcsBucketName = process.env.GCS_BUCKET_NAME;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+
     if (!gcsBucketName) {
         throw new Error(`A variável de ambiente GCS_BUCKET_NAME não está definida. Adicione-a ao seu .env.`);
     }
-
+    if (!geminiApiKey) {
+        throw new Error('A variável de ambiente GEMINI_API_KEY não está definida.');
+    }
+    
     try {
-        const speechClient = new SpeechClient({ credentials: serviceAccountCredentials });
         const storage = new Storage({ credentials: serviceAccountCredentials });
 
         const [header, base64Data] = audioDataUri.split(',');
-        if (!base64Data) throw new Error('Invalid audio data URI.');
+        if (!base64Data || !header) throw new Error('Invalid audio data URI.');
         
+        const mimeType = header.match(/:(.*?);/)?.[1] ?? 'application/octet-stream';
         const audioBuffer = Buffer.from(base64Data, 'base64');
         const fileName = `audio-to-transcribe-${Date.now()}`;
-        const gcsUri = `gs://${gcsBucketName}/${fileName}`;
-
+        
         await storage.bucket(gcsBucketName).file(fileName).save(audioBuffer);
 
-        const audio = { uri: gcsUri };
-        const config = {
-            encoding: 'ENCODING_UNSPECIFIED' as const,
-            languageCode: 'pt-BR',
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+
+        const audioFile = {
+            fileData: {
+                mimeType,
+                fileUri: `gs://${gcsBucketName}/${fileName}`
+            }
         };
-        const request = { audio, config };
 
-        const [operation] = await speechClient.longRunningRecognize(request);
-        const [response] = await operation.promise();
-
-        if (!response.results || response.results.length === 0) {
-            return "A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.";
-        }
+        const result = await model.generateContent([
+            "Transcreva este áudio em português do Brasil.",
+            audioFile
+        ]);
         
-        const transcription = response.results
-            .map(result => result.alternatives?.[0]?.transcript)
-            .filter(transcript => !!transcript)
-            .join('\n');
+        const response = await result.response;
+        const transcription = response.text();
+
+        // Opcional: remover o arquivo após a transcrição para economizar espaço
+        // await storage.bucket(gcsBucketName).file(fileName).delete();
 
         return transcription || "Não foi possível transcrever o áudio.";
 
     } catch (error: any) {
-        console.error("Detailed Speech-to-Text API Error:", JSON.stringify(error, null, 2));
-        if (error.code === 7 && error.details?.includes('permission')) {
-             throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço tem o papel "Editor da API Cloud Speech" e se o agente de serviço da API Speech tem acesso de "Visualizador de Objetos do Storage" ao bucket.`);
-        }
+        console.error("Detailed Gemini Transcription Error:", JSON.stringify(error, null, 2));
         if (error.message) {
             throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}.`);
         }
