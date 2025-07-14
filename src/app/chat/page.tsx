@@ -647,7 +647,7 @@ function ChatPageContent() {
         if (isTranscriptionRequest) {
             const audioFile = files[0];
             const audioData = await readFileAsDataURL(audioFile);
-            const transcription = await transcribeAudio(audioData.dataUri);
+            const transcription = await transcribeAudio({ dataUri: audioData.dataUri, mimeType: audioData.mimeType });
             assistantMessage = {
                 id: crypto.randomUUID(),
                 role: 'assistant',
@@ -1439,7 +1439,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}

@@ -124,7 +124,7 @@ export function ChatInputForm({
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
-              accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*"
+              accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
               disabled={isLoading}
             />
             <Button

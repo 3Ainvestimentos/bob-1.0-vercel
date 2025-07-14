@@ -365,7 +365,7 @@ export async function askAssistant(
 }
 
 
-export async function transcribeAudio(audioDataUri: string): Promise<string> {
+export async function transcribeAudio(audioData: { dataUri: string; mimeType: string }): Promise<string> {
     const serviceAccountCredentials = await getServiceAccountCredentials();
     const gcsBucketName = process.env.GCS_BUCKET_NAME;
 
@@ -377,7 +377,7 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         const speech = new SpeechClient({ credentials: serviceAccountCredentials });
         const storage = new Storage({ credentials: serviceAccountCredentials });
 
-        const audioBuffer = Buffer.from(audioDataUri.split(',')[1], 'base64');
+        const audioBuffer = Buffer.from(audioData.dataUri.split(',')[1], 'base64');
         const fileName = `audio-to-transcribe-${Date.now()}`;
         
         await storage.bucket(gcsBucketName).file(fileName).save(audioBuffer);
@@ -385,20 +385,24 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         const gcsUri = `gs://${gcsBucketName}/${fileName}`;
         const audio = { uri: gcsUri };
 
-        const config = {
-            encoding: 'ENCODING_UNSPECIFIED',
-            sampleRateHertz: 16000, // Defina isso se souber a taxa de amostragem
+        const config: any = {
+            sampleRateHertz: 16000, 
             languageCode: 'pt-BR',
-            // Opcional: para maior precisão, considere usar um modelo específico
-            // model: 'video', // 'video' é um modelo de alta qualidade
         };
+
+        if (audioData.mimeType === 'audio/ogg' || audioData.mimeType === 'audio/opus') {
+            config.encoding = 'OGG_OPUS';
+            config.sampleRateHertz = 48000;
+        } else {
+            config.encoding = 'ENCODING_UNSPECIFIED';
+        }
+
 
         const request = {
             audio: audio,
             config: config,
         };
 
-        // Usa o reconhecimento de longa duração, ideal para arquivos no GCS
         const [operation] = await speech.longRunningRecognize(request);
         const [response] = await operation.promise();
 
@@ -406,13 +410,15 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
             ?.map(result => result.alternatives?.[0].transcript)
             .join('\n');
             
-        // Opcional: remover o arquivo após a transcrição para economizar espaço
         await storage.bucket(gcsBucketName).file(fileName).delete();
 
         return transcription || "Não foi possível transcrever o áudio.";
 
     } catch (error: any) {
         console.error("Detailed Speech-to-Text Error:", JSON.stringify(error, null, 2));
+        if (error.message.includes('INVALID_ARGUMENT')) {
+           throw new Error(`Ocorreu um erro ao transcrever o áudio: Formato de áudio inválido ou não suportado. Verifique o arquivo. Detalhes: ${error.details}`);
+        }
         if (error.details) {
             throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.details}.`);
         }
