@@ -418,8 +418,8 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         }
 
     } catch (error: any) {
-        console.error("Error calling Speech-to-Text API:", error.message);
-        if (error.message.includes('Could not refresh access token') || error.message.includes('permission')) {
+        console.error("Detailed Speech-to-Text API Error:", JSON.stringify(error, null, 2));
+        if (error.message?.includes('Could not refresh access token') || error.message?.includes('permission')) {
             throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço tem o papel "Editor da API Cloud Speech" e "Administrador de objetos do Storage".`);
         }
         throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}.`);
@@ -587,5 +587,3 @@ export async function removeFileFromConversation(
         throw new Error(`Failed to remove file from conversation: ${error.message}`);
     }
 }
-
-    
