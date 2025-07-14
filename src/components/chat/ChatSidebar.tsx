@@ -60,7 +60,6 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import {
   Tooltip,
   TooltipContent,
@@ -170,7 +169,7 @@ export function ChatSidebar({
                       <GroupItem
                         key={group.id}
                         group={group}
-                        conversations={conversations}
+                        conversations={conversations.filter(c => c.groupId === group.id)}
                         isExpanded={expandedGroups[group.id] ?? false}
                         activeChatId={activeChatId}
                         groups={groups}
@@ -362,9 +361,6 @@ function GroupItem({
     setDroppableNodeRef(node);
   };
   
-  const groupConversations = conversations.filter(
-    (c) => c.groupId === group.id
-  );
   const { state: sidebarState, isMobile } = useSidebar();
 
   return (
@@ -387,7 +383,7 @@ function GroupItem({
                 {...attributes}
                 {...listeners}
               >
-                {groupConversations.length > 0 ? (
+                {conversations.length > 0 ? (
                   <ChevronRight
                     className={cn(
                       'h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=collapsed]:hidden',
@@ -440,10 +436,10 @@ function GroupItem({
               )}
             >
               <SortableContext
-                items={groupConversations.map((c) => `convo-${c.id}`)}
+                items={conversations.map((c) => `convo-${c.id}`)}
                 strategy={verticalListSortingStrategy}
               >
-                {groupConversations.map((convo) => (
+                {conversations.map((convo) => (
                   <ConversationItem
                     key={convo.id}
                     conversation={convo}

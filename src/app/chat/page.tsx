@@ -507,10 +507,15 @@ function ChatPageContent() {
       ]);
       setConversations(userConversations);
       setGroups(userGroups);
-      setExpandedGroups(userGroups.reduce((acc, group) => {
-          acc[group.id] = true;
-          return acc;
-      }, {} as Record<string, boolean>));
+      setExpandedGroups(prev => {
+        const newExpanded = { ...prev };
+        userGroups.forEach(group => {
+            if (!(group.id in newExpanded)) {
+                newExpanded[group.id] = true; // Default to expanded
+            }
+        });
+        return newExpanded;
+      });
     } catch (err: any) {
       setError(`Erro ao carregar o histórico: ${err.message}`);
     } finally {
@@ -607,9 +612,7 @@ function ChatPageContent() {
     const fileNames = files.map(f => f.name);
     const allFileNames = [...(activeChat?.attachedFiles.map(f => f.fileName) || []), ...fileNames];
     
-    // Determine the primary action: transcription or general query
-    const isTranscription = files.length === 1 && files[0].type.startsWith('audio/');
-    const userQuery = isTranscription ? `Transcrição de ${files[0].name}` : query;
+    const userQuery = query || (files.length > 0 ? `Analise os arquivos anexados.` : '');
 
     const userMessage: Message = {
         id: crypto.randomUUID(),
@@ -632,8 +635,9 @@ function ChatPageContent() {
     
     try {
         let assistantMessage: Message;
+        const isTranscriptionRequest = files.length === 1 && files[0].type.startsWith('audio/');
 
-        if (isTranscription) {
+        if (isTranscriptionRequest) {
             const audioFile = files[0];
             const audioData = await readFileAsDataURL(audioFile);
             const transcription = await transcribeAudio(audioData.dataUri);
@@ -648,9 +652,8 @@ function ChatPageContent() {
                 fileDataUris = await Promise.all(files.map(readFileAsDataURL));
             }
             
-            const finalQuery = query || `Analise os arquivos anexados.`;
             const assistantResponse = await askAssistant(
-                finalQuery,
+                userQuery,
                 { fileDataUris, existingAttachments: activeChat?.attachedFiles ?? [] },
                 user.uid
             );
@@ -664,12 +667,12 @@ function ChatPageContent() {
             };
 
             if (assistantResponse.searchFailed) {
-                setLastFailedQuery(finalQuery);
+                setLastFailedQuery(userQuery);
             }
 
             const updatedAttachedFiles = assistantResponse.updatedAttachments;
              if (!currentChatId) {
-                const newTitle = await generateTitleForConversation(finalQuery, fileNames.join(', '));
+                const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
                 const newId = await saveConversation(
                     user.uid,
                     [...newMessages, assistantMessage],
@@ -692,7 +695,7 @@ function ChatPageContent() {
                 if (assistantResponse.searchFailed) return;
                 setIsSuggestionsLoading(true);
                 try {
-                    const newSuggestions = await generateSuggestedQuestions(finalQuery, assistantResponse.summary);
+                    const newSuggestions = await generateSuggestedQuestions(userQuery, assistantResponse.summary);
                     setSuggestions(newSuggestions);
                 } catch (err) {
                     console.error("Failed to fetch suggestions", err);
@@ -999,11 +1002,16 @@ function ChatPageContent() {
   const handleOpenFeedbackDialog = (message: Message) => {
     const messageIndex = messages.findIndex(m => m.id === message.id);
      if (messageIndex < 1) return;
-    const userQuery = messages[messageIndex - 1].content;
+    const userMessage = messages[messageIndex - 1];
+
+    if (userMessage.role !== 'user') {
+        console.error("Feedback can only be given for an assistant message that follows a user message.");
+        return;
+    }
     
     setFeedbackDetails({
         messageId: message.id,
-        userQuery: userQuery,
+        userQuery: userMessage.content,
         assistantResponse: message.content,
     });
     setFeedbackComment('');
@@ -1418,7 +1426,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={onToggleGroup}
+                onToggleGroup={handleToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
