@@ -388,7 +388,6 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         const config = {
             encoding: 'ENCODING_UNSPECIFIED' as const,
             languageCode: 'pt-BR',
-            model: 'video',
         };
         const request = { audio, config };
 
