@@ -385,44 +385,45 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         if (!base64Data) throw new Error('Invalid audio data URI.');
         
         const audioBuffer = Buffer.from(base64Data, 'base64');
-        const tempFileName = `audio-to-transcribe-${Date.now()}`;
-        const gcsUri = `gs://${gcsBucketName}/${tempFileName}`;
+        const fileName = `audio-to-transcribe-${Date.now()}`;
+        const gcsUri = `gs://${gcsBucketName}/${fileName}`;
 
         // 1. Upload to GCS
-        await storage.bucket(gcsBucketName).file(tempFileName).save(audioBuffer);
+        await storage.bucket(gcsBucketName).file(fileName).save(audioBuffer);
 
-        try {
-            // 2. Transcribe from GCS
-            const audio = { uri: gcsUri };
-            const config = {
-                encoding: 'ENCODING_UNSPECIFIED' as const,
-                languageCode: 'pt-BR',
-            };
-            const request = { audio, config };
+        // 2. Transcribe from GCS
+        const audio = { uri: gcsUri };
+        const config = {
+            encoding: 'ENCODING_UNSPECIFIED' as const,
+            languageCode: 'pt-BR',
+        };
+        const request = { audio, config };
 
-            const [operation] = await speechClient.longRunningRecognize(request);
-            const [response] = await operation.promise();
+        const [operation] = await speechClient.longRunningRecognize(request);
+        const [response] = await operation.promise();
 
-            if (!response.results || response.results.length === 0) {
-                throw new Error("A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.");
-            }
-
-            const transcription = response.results
-                .map(result => result.alternatives?.[0].transcript)
-                .join('\n');
-
-            return transcription || "Não foi possível transcrever o áudio.";
-        } finally {
-            // 3. Delete from GCS
-            await storage.bucket(gcsBucketName).file(tempFileName).delete();
+        if (!response.results || response.results.length === 0) {
+            throw new Error("A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.");
         }
+
+        const transcription = response.results
+            .map(result => result.alternatives?.[0].transcript)
+            .join('\n');
+
+        return transcription || "Não foi possível transcrever o áudio.";
 
     } catch (error: any) {
         console.error("Detailed Speech-to-Text API Error:", JSON.stringify(error, null, 2));
         if (error.message?.includes('Could not refresh access token') || error.message?.includes('permission')) {
             throw new Error(`Erro de permissão. Verifique no IAM se a conta de serviço tem o papel "Editor da API Cloud Speech" e "Administrador de objetos do Storage".`);
         }
-        throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}.`);
+        if (error.message?.includes('INVALID_ARGUMENT')) {
+            throw new Error(`Argumento inválido para a API de transcrição. Detalhes: ${error.message}`);
+        }
+        if (error.message) {
+            throw new Error(`Ocorreu um erro ao transcrever o áudio: ${error.message}.`);
+        }
+        throw new Error(`An unexpected response was received from the server.`);
     }
 }
 
