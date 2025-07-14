@@ -272,14 +272,13 @@ async function callDiscoveryEngine(
 
 
 async function callGemini(query: string): Promise<{ summary: string; searchFailed: boolean; promptTokenCount?: number; candidatesTokenCount?: number }> {
-    const credentials = await getServiceAccountCredentials();
-    const auth = new GoogleAuth({
-        credentials,
-        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    });
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    if (!geminiApiKey) {
+        throw new Error('A variável de ambiente GEMINI_API_KEY não está definida.');
+    }
 
     try {
-        const genAI = new GoogleGenerativeAI(credentials.client_email, auth);
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-pro-latest",
             generationConfig: {
@@ -301,8 +300,8 @@ Pergunta: "${query}"`;
 
     } catch (error: any) {
         console.error("Error calling Gemini API:", error);
-        if (error.message.includes('permission')) {
-            throw new Error(`Erro de permissão ao chamar a API Gemini. Verifique se a conta de serviço tem o papel "Usuário de IA generativa do Vertex AI".`);
+        if (error.message.includes('API key not valid')) {
+            throw new Error(`Erro de autenticação com a API Gemini. Verifique se a GEMINI_API_KEY é válida.`);
         }
         throw new Error(`Ocorreu um erro ao se comunicar com o Gemini: ${error.message}`);
     }
@@ -438,11 +437,12 @@ export async function generateSuggestedQuestions(
   query: string,
   answer: string
 ): Promise<string[]> {
-    const credentials = await getServiceAccountCredentials();
-    const auth = new GoogleAuth({
-        credentials,
-        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    });
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    throw new Error(
+      'A variável de ambiente GEMINI_API_KEY não está definida.'
+    );
+  }
 
   const prompt = `Baseado na pergunta do usuário e na resposta do assistente, gere 3 perguntas de acompanhamento curtas e relevantes que o usuário poderia fazer a seguir. Retorne APENAS um array JSON de strings, sem nenhum outro texto ou formatação. As perguntas devem ser concisas e em português.
 
@@ -450,7 +450,7 @@ export async function generateSuggestedQuestions(
   Resposta do Assistente: "${answer}"`;
 
   try {
-    const genAI = new GoogleGenerativeAI(credentials.client_email, auth);
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-pro-latest",
       generationConfig: {
@@ -483,18 +483,18 @@ export async function generateTitleForConversation(
   const baseQuery = fileName ? `${query} (analisando ${fileName})` : query;
   const fallbackTitle = baseQuery.length > 30 ? baseQuery.substring(0, 27) + '...' : baseQuery;
   
-  const credentials = await getServiceAccountCredentials();
-    const auth = new GoogleAuth({
-        credentials,
-        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    });
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    console.error('GEMINI_API_KEY não definida, usando título de fallback.');
+    return fallbackTitle;
+  }
 
   const prompt = `Gere um título curto e descritivo em português com no máximo 5 palavras para a seguinte pergunta. Se a pergunta incluir o nome de um arquivo, o título deve refletir isso. Retorne APENAS o título, sem aspas, marcadores ou qualquer outro texto.
 
 Pergunta: "${baseQuery}"`;
 
   try {
-    const genAI = new GoogleGenerativeAI(credentials.client_email, auth);
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash-latest",
       generationConfig: {
