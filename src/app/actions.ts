@@ -382,15 +382,17 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
 
         const audioBytes = base64Data;
         let encoding: any = 'ENCODING_UNSPECIFIED';
+        let sampleRateHertz = 16000;
 
         if (mimeType === 'audio/ogg' || mimeType === 'audio/opus') {
             encoding = 'OGG_OPUS';
+            sampleRateHertz = 48000;
         } else if (mimeType === 'audio/wav') {
-            encoding = 'LINEAR16'; // WAV é tipicamente PCM linear
+            encoding = 'LINEAR16';
         } else if (mimeType === 'audio/mpeg') {
             encoding = 'MP3';
         } else if (mimeType === 'audio/aac') {
-            encoding = 'ENCODING_UNSPECIFIED'; // AAC é melhor com autodetection
+            encoding = 'ENCODING_UNSPECIFIED';
         }
 
         const request: any = {
@@ -399,7 +401,7 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
             },
             config: {
                 encoding: encoding,
-                sampleRateHertz: encoding === 'OGG_OPUS' ? 48000 : 16000, 
+                sampleRateHertz: sampleRateHertz, 
                 languageCode: 'pt-BR',
                 model: 'default', 
             },
@@ -410,6 +412,12 @@ export async function transcribeAudio(audioDataUri: string): Promise<string> {
         }
 
         const [response] = await speechClient.recognize(request);
+        
+        if (!response.results || response.results.length === 0) {
+            console.warn("Speech-to-Text API returned no results.", response);
+            throw new Error("A API não retornou nenhum resultado. Verifique se o áudio contém fala clara.");
+        }
+
         const transcription = response.results
             ?.map(result => result.alternatives?.[0].transcript)
             .join('\n');
