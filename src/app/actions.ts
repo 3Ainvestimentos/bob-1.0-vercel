@@ -3,7 +3,7 @@
 
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { DlpServiceClient } from '@google-cloud-dlp';
+import { DlpServiceClient } from '@google-cloud/dlp';
 import { SpeechClient } from '@google-cloud/speech';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
