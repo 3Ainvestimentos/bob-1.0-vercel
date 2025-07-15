@@ -9,8 +9,15 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { File, Mic, Paperclip, SendHorizontal, Square, X } from 'lucide-react';
 import React, { FormEvent, useCallback, useRef, useState } from 'react';
-import { LiveAudioVisualizer } from 'react-audio-visualize';
 import TextareaAutosize from 'react-textarea-autosize';
+import dynamic from 'next/dynamic';
+
+const LiveAudioVisualizer = dynamic(
+  () =>
+    import('react-audio-visualize').then((mod) => mod.LiveAudioVisualizer),
+  { ssr: false }
+);
+
 
 interface ChatInputFormProps {
   input: string;
@@ -42,6 +49,9 @@ export function ChatInputForm({
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -73,6 +83,10 @@ export function ChatInputForm({
     if (silenceTimerRef.current) {
         clearInterval(silenceTimerRef.current);
         silenceTimerRef.current = null;
+    }
+    if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
         mediaRecorderRef.current.stop();
@@ -111,6 +125,8 @@ export function ChatInputForm({
         analyser.fftSize = 512;
         source.connect(analyser);
         analyserRef.current = analyser;
+        dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
+
 
         mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
         audioChunksRef.current = [];
@@ -150,29 +166,25 @@ export function ChatInputForm({
         mediaRecorderRef.current.start();
 
         // --- Silence Detection ---
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        silenceTimerRef.current = setInterval(() => {
-            let lastSpoke = Date.now();
-            
-            const checkSilence = () => {
-                if (mediaRecorderRef.current?.state !== 'recording') return;
+        let lastSpoke = Date.now();
+        
+        const checkSilence = () => {
+            if (mediaRecorderRef.current?.state !== 'recording' || !analyserRef.current || !dataArrayRef.current) return;
 
-                analyser.getByteTimeDomainData(dataArray);
-                const isSilent = dataArray.every(v => v === 128);
+            analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
+            const isSilent = dataArrayRef.current.every(v => v === 128);
 
-                if (!isSilent) {
-                    lastSpoke = Date.now();
-                }
+            if (!isSilent) {
+                lastSpoke = Date.now();
+            }
 
-                if (Date.now() - lastSpoke > 2000) { // 2 seconds of silence
-                    stopRecording();
-                } else {
-                    requestAnimationFrame(checkSilence);
-                }
-            };
-            checkSilence();
-        }, 500);
-
+            if (Date.now() - lastSpoke > 2000) { // 2 seconds of silence
+                stopRecording();
+            } else {
+                animationFrameRef.current = requestAnimationFrame(checkSilence);
+            }
+        };
+        checkSilence();
 
     } catch (err) {
         console.error("Error accessing microphone:", err);
