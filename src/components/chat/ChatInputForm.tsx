@@ -162,7 +162,6 @@ export function ChatInputForm({
   
   const processAndTranscribeAudio = async () => {
     if (audioChunksRef.current.length === 0) {
-        toast({ title: "Nenhum áudio gravado", description: "A gravação não capturou nenhum som." });
         setRecordingState('idle');
         cleanupRecording();
         return;
@@ -170,7 +169,6 @@ export function ChatInputForm({
 
     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm; codecs=opus' });
     if (audioBlob.size === 0) {
-        toast({ title: "Nenhum áudio gravado.", description: "A gravação não capturou áudio." });
         setRecordingState('idle');
         cleanupRecording();
         return;
