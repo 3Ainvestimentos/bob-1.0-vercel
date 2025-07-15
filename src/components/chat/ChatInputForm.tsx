@@ -251,7 +251,7 @@ export function ChatInputForm({
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
             
             const checkSilence = () => {
-                if (mediaRecorderRef.current?.state !== 'recording' || !analyserRef.current || recordingState === 'locked') {
+                if (mediaRecorderRef.current?.state !== 'recording' || !analyserRef.current) {
                     if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
                     return;
                 }
@@ -280,7 +280,7 @@ export function ChatInputForm({
           cleanupRecording();
           setRecordingState('idle');
       }
-  }, [toast, cleanupRecording, stopRecording, recordingState]);
+  }, [toast, cleanupRecording, stopRecording]);
 
   const handleSimpleClick = () => {
     if (recordingState === 'recording') {
