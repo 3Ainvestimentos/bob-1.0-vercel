@@ -162,11 +162,12 @@ export function ChatInputForm({
   
   const processAndTranscribeAudio = async () => {
     const recordingEndTime = Date.now();
-    const duration = recordingStartTimeRef.current ? (recordingEndTime - recordingStartTimeRef.current) / 1000 : 0;
+    const duration = recordingStartTimeRef.current ? (recordingEndTime - recordingStartTimeRef.current) : 0;
     
-    if (duration < 1 && audioChunksRef.current.length === 0) { 
+    if (duration < 1000 && audioChunksRef.current.length === 0) {
         toast({ title: "Gravação muito curta", description: "Por favor, grave por pelo menos um segundo." });
         setRecordingState('idle');
+        cleanupRecording();
         return;
     }
 
@@ -174,6 +175,7 @@ export function ChatInputForm({
     if (audioBlob.size === 0) {
         toast({ title: "Nenhum áudio gravado.", description: "A gravação não capturou áudio." });
         setRecordingState('idle');
+        cleanupRecording();
         return;
     }
 
@@ -351,7 +353,7 @@ export function ChatInputForm({
             </div>
           )}
           <div className="relative flex min-h-[60px] items-start">
-            {isRecordingActive && recordingState === 'locked' ? (
+            {recordingState === 'locked' ? (
                  <div className="flex w-full items-center min-h-[inherit] p-4">
                     <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelLockedRecording}>
                         <Trash2 className="h-4 w-4"/>
@@ -364,12 +366,6 @@ export function ChatInputForm({
                         <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
                             <SendHorizontal className="h-4 w-4" />
                         </Button>
-                    </div>
-                 </div>
-            ) : isRecordingActive && recordingState === 'recording' ? (
-                 <div className="flex w-full items-center min-h-[inherit] p-4">
-                    <div className="flex-1 flex items-center justify-center h-full px-4">
-                        <CustomSoundWave analyser={analyserRef.current} isVisible={isRecordingActive} />
                     </div>
                  </div>
             ) : (
@@ -456,8 +452,8 @@ export function ChatInputForm({
               </div>
               
               <div className={cn(
-                  "absolute inset-0 flex items-center p-2 transition-opacity duration-300",
-                  !isRecordingActive || isTranscribing ? "opacity-0 pointer-events-none" : "opacity-100"
+                  "absolute inset-0 flex w-full items-center p-2 transition-opacity duration-300",
+                  recordingState !== 'recording' ? "opacity-0 pointer-events-none" : "opacity-100"
               )}>
                  <Button
                     type="button"
@@ -468,6 +464,9 @@ export function ChatInputForm({
                   >
                     <Square className="h-4 w-4" />
                  </Button>
+                 <div className="flex-1 px-4 h-full">
+                    <CustomSoundWave analyser={analyserRef.current} isVisible={recordingState === 'recording'} />
+                 </div>
               </div>
 
               <div className={cn(
