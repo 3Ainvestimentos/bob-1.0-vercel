@@ -327,6 +327,112 @@ export function ChatInputForm({
   const isRecordingActive = recordingState === 'recording' || recordingState === 'locked';
   const isTranscribing = recordingState === 'transcribing';
 
+  const renderBottomBarContent = () => {
+    if (isTranscribing) {
+        return (
+            <div className="flex h-full w-full items-center justify-start px-2">
+                <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
+            </div>
+        );
+    }
+
+    if (recordingState === 'locked') {
+        return (
+            <div className="flex w-full items-center min-h-[inherit]">
+                <div className="flex items-center gap-2">
+                    <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelLockedRecording}>
+                        <Trash2 className="h-4 w-4"/>
+                    </Button>
+                    <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
+                        <SendHorizontal className="h-4 w-4" />
+                    </Button>
+                </div>
+                <div className="flex-1 flex items-center justify-center h-full px-4">
+                   <CustomSoundWave analyser={analyserRef.current} isVisible={true} />
+                </div>
+                <div className="flex items-center">
+                    <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (recordingState === 'recording') {
+        return (
+            <div className="flex w-full items-center min-h-[inherit]">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-500 bg-red-500/10"
+                    onClick={stopRecording}
+                >
+                    <Square className="h-4 w-4" />
+                </Button>
+                <div className="flex-1 px-2 h-full">
+                    <CustomSoundWave analyser={analyserRef.current} isVisible={true} />
+                </div>
+            </div>
+        );
+    }
+    
+    // Default idle state
+    return (
+        <div className="flex items-center w-full">
+            <input
+                type="file"
+                multiple={true}
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
+                disabled={isLoading}
+            />
+             <div className="flex items-center">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground"
+                    disabled={isLoading}
+                    onClick={handleAttachClick}
+                    title={"Anexar arquivo(s)"}
+                >
+                    <Paperclip className="h-5 w-5" />
+                </Button>
+            </div>
+            <div className="flex-1 flex items-center h-full">
+                <div className="w-full h-full relative flex items-center">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground"
+                        disabled={isLoading}
+                        onClick={handleSimpleClick}
+                        onMouseDown={handleMouseDown}
+                        title={"Gravar áudio (clique) ou segure para travar"}
+                    >
+                        <Mic className="h-5 w-5" />
+                    </Button>
+                    {isDragToLockActive && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground animate-pulse"
+                            onMouseUp={handleMouseUpOnLock}
+                        >
+                           <Lock className="h-5 w-5" />
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+  };
+
+
   return (
     <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
       <form
@@ -383,108 +489,7 @@ export function ChatInputForm({
           </div>
           <Separator />
           <div className="flex h-[40px] items-center p-2 relative">
-              {recordingState === 'locked' ? (
-                 <div className="flex w-full items-center min-h-[inherit]">
-                    <div className="flex items-center gap-2">
-                        <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelLockedRecording}>
-                            <Trash2 className="h-4 w-4"/>
-                        </Button>
-                        <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
-                            <SendHorizontal className="h-4 w-4" />
-                        </Button>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center h-full px-4">
-                       <CustomSoundWave analyser={analyserRef.current} isVisible={isRecordingActive} />
-                    </div>
-                    <div className="flex items-center">
-                        <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
-                    </div>
-                 </div>
-            ) : (
-                <>
-                    <div className={cn(
-                        "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
-                        (isTranscribing || recordingState === 'recording') ? "opacity-0 pointer-events-none" : "opacity-100"
-                    )}>
-                        <input
-                            type="file"
-                            multiple={true}
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="hidden"
-                            accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
-                            disabled={isLoading}
-                        />
-                         <div className="flex items-center">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground"
-                                disabled={isLoading}
-                                onClick={handleAttachClick}
-                                title={"Anexar arquivo(s)"}
-                            >
-                                <Paperclip className="h-5 w-5" />
-                            </Button>
-                        </div>
-                        <div className="flex-1 flex items-center h-full">
-                            <div className="w-full h-full relative flex items-center">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-muted-foreground"
-                                    disabled={isLoading}
-                                    onClick={handleSimpleClick}
-                                    onMouseDown={handleMouseDown}
-                                    title={"Gravar áudio (clique) ou segure para travar"}
-                                >
-                                    <Mic className="h-5 w-5" />
-                                </Button>
-                                {isDragToLockActive && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-muted-foreground animate-pulse"
-                                        onMouseUp={handleMouseUpOnLock}
-                                    >
-                                       <Lock className="h-5 w-5" />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className={cn(
-                        "absolute inset-0 flex w-full items-center p-2 transition-opacity duration-200",
-                        recordingState === 'recording' ? "opacity-100" : "opacity-0 pointer-events-none"
-                    )}>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 bg-red-500/10"
-                            onClick={stopRecording}
-                        >
-                            <Square className="h-4 w-4" />
-                        </Button>
-                        <div className="flex-1 px-2 h-full">
-                            <CustomSoundWave analyser={analyserRef.current} isVisible={recordingState === 'recording'} />
-                        </div>
-                    </div>
-                    
-                    <div className={cn(
-                        "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
-                        isTranscribing ? "opacity-100" : "opacity-0 pointer-events-none"
-                      )}>
-                        <div className="flex h-full w-full items-center justify-start">
-                            <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
-                        </div>
-                    </div>
-                </>
-            )}
+             {renderBottomBarContent()}
           </div>
         </div>
         <p className="pt-2 text-center text-xs text-muted-foreground">
