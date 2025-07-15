@@ -28,14 +28,24 @@ const CustomSoundWave = ({ analyser, isVisible }: { analyser: AnalyserNode | nul
 
         const draw = () => {
             animationFrameRef.current = requestAnimationFrame(draw);
-            analyser.getByteFrequencyData(dataArray);
+            analyser.getByteTimeDomainData(dataArray);
 
             if (canvasRef.current) {
                 const bars = Array.from(canvasRef.current.children) as HTMLDivElement[];
                 
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    sum += Math.abs(dataArray[i] - 128); // 128 is the zero-point for audio data
+                }
+                const avg = sum / bufferLength;
+                
+                // Scale the average amplitude to a percentage for the bar height
+                const barHeight = (avg / 128) * 100 * 2.5; // Multiplier to make it more visible
+
                 for (let i = 0; i < bars.length; i++) {
-                    const barHeight = (dataArray[i] / 255) * 100;
-                    bars[i].style.height = `${Math.max(barHeight, 5)}%`; 
+                     // Distribute the overall energy across bars with some variation
+                    const randomizedHeight = barHeight * (0.8 + Math.random() * 0.4);
+                    bars[i].style.height = `${Math.min(Math.max(randomizedHeight, 2), 100)}%`; 
                 }
             }
         };
@@ -60,7 +70,7 @@ const CustomSoundWave = ({ analyser, isVisible }: { analyser: AnalyserNode | nul
                 <div
                     key={i}
                     className="w-1 bg-primary rounded-full"
-                    style={{ height: '5%', transition: 'height 0.1s ease-out' }}
+                    style={{ height: '2%', transition: 'height 0.1s ease-out' }}
                 />
             ))}
         </div>
@@ -90,7 +100,8 @@ export function ChatInputForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
-  const [recordingState, setRecordingState] = useState<'idle' | 'holding' | 'recording' | 'locked' | 'transcribing'>('idle');
+  const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'locked' | 'transcribing'>('idle');
+  const [isHolding, setIsHolding] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -101,10 +112,10 @@ export function ChatInputForm({
   const recordingStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const holdAndDragRef = useRef({
-      isHolding: false,
+  const interactionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const interactionRef = useRef({
+      isDragging: false,
       startX: 0,
-      isLocked: false
   });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,8 +147,10 @@ export function ChatInputForm({
   const cleanupRecording = useCallback(() => {
     if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current);
     silenceTimerRef.current = null;
     recordingTimerRef.current = null;
+    interactionTimerRef.current = null;
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
@@ -152,16 +165,16 @@ export function ChatInputForm({
     analyserRef.current = null;
     audioChunksRef.current = [];
     recordingStartTimeRef.current = null;
-    holdAndDragRef.current.isHolding = false;
-    holdAndDragRef.current.isLocked = false;
+    interactionRef.current = { isDragging: false, startX: 0 };
     setRecordingTime(0);
+    setIsHolding(false);
   }, []);
   
   const processAndTranscribeAudio = async () => {
     const recordingEndTime = Date.now();
     const duration = recordingStartTimeRef.current ? (recordingEndTime - recordingStartTimeRef.current) / 1000 : 0;
     
-    if (duration < 1 && audioChunksRef.current.length === 0) { // Allow shorter for locked mode, but must have data
+    if (duration < 1 && audioChunksRef.current.length === 0) { 
         toast({ title: "Gravação muito curta", description: "Por favor, grave por pelo menos um segundo." });
         setRecordingState('idle');
         return;
@@ -183,7 +196,7 @@ export function ChatInputForm({
         if (base64Audio) {
             try {
                 const transcribedText = await transcribeLiveAudio(base64Audio);
-                setInput(prev => prev ? `${prev}\n${transcribedText}` : transcribedText);
+                setInput(prev => prev ? `${prev} ${transcribedText}`.trim() : transcribedText);
             } catch (error: any) {
                 toast({ variant: "destructive", title: "Erro na Transcrição", description: error.message });
             } finally {
@@ -202,6 +215,7 @@ export function ChatInputForm({
         processAndTranscribeAudio();
     }
     cleanupRecording();
+    setRecordingState('idle');
   }, [recordingState, cleanupRecording, processAndTranscribeAudio]);
 
 
@@ -210,8 +224,6 @@ export function ChatInputForm({
           toast({ variant: "destructive", title: "Erro", description: "Seu navegador não suporta a gravação de áudio." });
           return;
       }
-
-      holdAndDragRef.current.isLocked = isLockedMode;
 
       try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -233,12 +245,8 @@ export function ChatInputForm({
           mediaRecorderRef.current.ondataavailable = (event) => {
               if (event.data.size > 0) audioChunksRef.current.push(event.data);
           };
-
-          mediaRecorderRef.current.onstop = () => {
-            // Processing is now handled in stopRecording/processAndTranscribeAudio
-          };
           
-          mediaRecorderRef.current.start(1000); // Collect data in chunks
+          mediaRecorderRef.current.start(250); // Collect data in chunks
 
           if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
           recordingTimerRef.current = setInterval(() => {
@@ -252,7 +260,7 @@ export function ChatInputForm({
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
             
             const checkSilence = () => {
-                if (mediaRecorderRef.current?.state !== 'recording' || !analyserRef.current || holdAndDragRef.current.isLocked) {
+                if (mediaRecorderRef.current?.state !== 'recording' || !analyserRef.current || recordingState === 'locked') {
                     if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
                     return;
                 }
@@ -262,7 +270,7 @@ export function ChatInputForm({
                 for(let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i] - 128);
                 const avg = sum / dataArray.length;
 
-                if (avg > 2) lastSpoke = Date.now();
+                if (avg > 2.5) lastSpoke = Date.now();
                 if (Date.now() - lastSpoke > 2000) stopRecording();
             };
             if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
@@ -281,50 +289,55 @@ export function ChatInputForm({
           cleanupRecording();
           setRecordingState('idle');
       }
-  }, [toast, cleanupRecording, stopRecording]);
+  }, [toast, cleanupRecording, stopRecording, recordingState]);
 
 
-  const handleMicInteraction = (event: React.MouseEvent | React.TouchEvent, type: 'start' | 'move' | 'end') => {
-      event.preventDefault();
-
-      const clientX = 'touches' in event ? event.touches[0]?.clientX : event.clientX;
-
-      if (type === 'start') {
-          holdAndDragRef.current.isHolding = true;
-          holdAndDragRef.current.startX = clientX;
-          setTimeout(() => {
-            // If still holding after a short delay, show the holding UI
-            if (holdAndDragRef.current.isHolding && !holdAndDragRef.current.isLocked) {
-                setRecordingState('holding');
-            }
-          }, 200);
-          startRecording(false);
-      }
-
-      if (type === 'move' && holdAndDragRef.current.isHolding) {
-          const deltaX = clientX - holdAndDragRef.current.startX;
-          // You can add visual feedback for slide-to-cancel/lock here if desired
-      }
-      
-      if (type === 'end') {
-          if (!holdAndDragRef.current.isHolding) return;
-          holdAndDragRef.current.isHolding = false;
-
-          const deltaX = clientX - holdAndDragRef.current.startX;
-
-          if (deltaX > 50) { // Dragged right to lock
-              setRecordingState('locked');
-              holdAndDragRef.current.isLocked = true;
-          } else if (deltaX < -50) { // Dragged left to cancel
-              cleanupRecording();
-              setRecordingState('idle');
-          } else { // Simple tap/release
-              stopRecording();
-          }
-      }
+  const handleMicPress = () => {
+    interactionTimerRef.current = setTimeout(() => {
+        setIsHolding(true);
+        startRecording(true); // Start in a mode that can be locked
+        interactionTimerRef.current = null;
+    }, 200); // 200ms delay to differentiate tap from hold
   };
 
-  const handleCancelRecording = () => {
+  const handleMicRelease = () => {
+    if (interactionTimerRef.current) { // It was a tap
+        clearTimeout(interactionTimerRef.current);
+        interactionTimerRef.current = null;
+        if (recordingState === 'recording') {
+            stopRecording();
+        } else {
+            startRecording(false);
+        }
+    } else { // It was a hold
+        if (recordingState !== 'locked') {
+            stopRecording();
+        }
+    }
+    setIsHolding(false);
+  };
+  
+  const handleMicMove = (event: React.MouseEvent | React.TouchEvent) => {
+    if (!isHolding) return;
+
+    const clientX = 'touches' in event ? event.touches[0]?.clientX : event.clientX;
+    if (!interactionRef.current.isDragging) {
+        interactionRef.current.isDragging = true;
+        interactionRef.current.startX = clientX;
+    }
+
+    const deltaX = clientX - interactionRef.current.startX;
+
+    if (deltaX < -50) { // Dragged left to cancel
+        cleanupRecording();
+        setRecordingState('idle');
+    } else if (deltaX > 50) { // Dragged right to lock
+        setRecordingState('locked');
+    }
+  };
+
+
+  const handleCancelLockedRecording = () => {
     cleanupRecording();
     setRecordingState('idle');
   }
@@ -336,7 +349,7 @@ export function ChatInputForm({
   };
   
   const isAudioSelected = selectedFiles.length > 0 && selectedFiles[0].type.startsWith('audio/');
-  const isRecording = recordingState === 'recording' || recordingState === 'holding' || recordingState === 'locked';
+  const isRecordingActive = recordingState === 'recording' || recordingState === 'locked';
 
   return (
     <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
@@ -361,22 +374,24 @@ export function ChatInputForm({
             </div>
           )}
           <div className="relative flex min-h-[60px] items-start">
-            {isRecording ? (
+            {isRecordingActive ? (
                  <div className="flex w-full items-center min-h-[inherit] p-4">
-                     <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelRecording}>
-                         <Trash2 className="h-4 w-4"/>
-                     </Button>
-                     <div className="flex-1 flex items-center justify-center h-full">
-                        <CustomSoundWave analyser={analyserRef.current} isVisible={isRecording} />
+                     {recordingState === 'locked' && (
+                        <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelLockedRecording}>
+                             <Trash2 className="h-4 w-4"/>
+                         </Button>
+                     )}
+                     <div className="flex-1 flex items-center justify-center h-full px-4">
+                        <CustomSoundWave analyser={analyserRef.current} isVisible={isRecordingActive} />
                      </div>
                      <div className="flex items-center gap-2">
                          <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
                          {recordingState === 'locked' ? (
-                            <Button type="button" size="icon" className="h-8 w-8" onClick={stopRecording}>
-                                <Square className="h-4 w-4" />
+                            <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
+                                <SendHorizontal className="h-4 w-4" />
                             </Button>
                          ) : (
-                            <Lock className="h-4 w-4 text-muted-foreground animate-pulse" />
+                            isHolding && <Lock className="h-4 w-4 text-muted-foreground animate-pulse" />
                          )}
                      </div>
                  </div>
@@ -397,7 +412,7 @@ export function ChatInputForm({
                             if (e.currentTarget.form) e.currentTarget.form.requestSubmit();
                         }
                     }}
-                    disabled={isLoading || isAudioSelected || isRecording || recordingState === 'transcribing'}
+                    disabled={isLoading || isAudioSelected || isRecordingActive || recordingState === 'transcribing'}
                     rows={1}
                     maxRows={8}
                     />
@@ -407,7 +422,7 @@ export function ChatInputForm({
               size="icon"
               variant="ghost"
               className="absolute right-3 top-3 h-8 w-8 rounded-full text-muted-foreground"
-              disabled={isLoading || isRecording || recordingState === 'transcribing' || (!input.trim() && selectedFiles.length === 0)}
+              disabled={isLoading || isRecordingActive || recordingState === 'transcribing' || (!input.trim() && selectedFiles.length === 0)}
             >
               <SendHorizontal className="h-5 w-5" />
             </Button>
@@ -416,7 +431,7 @@ export function ChatInputForm({
           <div className="flex h-[40px] items-center p-2 relative">
               <div className={cn(
                   "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
-                  isRecording || recordingState === 'transcribing' ? "opacity-0 pointer-events-none" : "opacity-100"
+                  isRecordingActive || recordingState === 'transcribing' ? "opacity-0 pointer-events-none" : "opacity-100"
                 )}>
                   <input
                       type="file"
@@ -442,25 +457,28 @@ export function ChatInputForm({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground"
+                      className={cn(
+                        "h-8 w-8 text-muted-foreground",
+                        recordingState === 'recording' && 'text-red-500 bg-red-500/10'
+                      )}
                       disabled={isLoading}
-                      onMouseDown={(e) => handleMicInteraction(e, 'start')}
-                      onMouseUp={(e) => handleMicInteraction(e, 'end')}
-                      onMouseMove={(e) => handleMicInteraction(e, 'move')}
-                      onMouseLeave={(e) => handleMicInteraction(e, 'end')}
-                      onTouchStart={(e) => handleMicInteraction(e, 'start')}
-                      onTouchEnd={(e) => handleMicInteraction(e, 'end')}
-                      onTouchMove={(e) => handleMicInteraction(e, 'move')}
-                      title={"Gravar áudio (segure e arraste para travar)"}
+                      onMouseDown={handleMicPress}
+                      onMouseUp={handleMicRelease}
+                      onMouseMove={handleMicMove}
+                      onMouseLeave={handleMicRelease} // Stop if mouse leaves button
+                      onTouchStart={handleMicPress}
+                      onTouchEnd={handleMicRelease}
+                      onTouchMove={handleMicMove}
+                      title={"Gravar áudio"}
                   >
                       <Mic className="h-5 w-5" />
                   </Button>
               </div>
               
-              <div className={cn("absolute inset-0 flex items-center p-2 transition-opacity duration-300", recordingState === 'holding' ? "opacity-100" : "opacity-0 pointer-events-none")}>
+              <div className={cn("absolute inset-0 flex items-center p-2 transition-opacity duration-300", isHolding && recordingState !== 'locked' ? "opacity-100" : "opacity-0 pointer-events-none")}>
                   <div className="flex w-full justify-between items-center text-muted-foreground text-xs">
                     <Trash2 className="h-4 w-4 animate-pulse" />
-                    <span>Arraste para travar</span>
+                    <span className="animate-pulse">Deslize para travar</span>
                     <Lock className="h-4 w-4 animate-pulse" />
                   </div>
               </div>
@@ -482,5 +500,3 @@ export function ChatInputForm({
     </div>
   );
 }
-
-    
