@@ -476,7 +476,3 @@ export function ChatInputForm({
     </div>
   );
 }
-
-  
-
-    
