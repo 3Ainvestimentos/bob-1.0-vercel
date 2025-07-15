@@ -323,49 +323,51 @@ export function ChatInputForm({
             </Button>
           </div>
           <Separator />
-          <div className="flex h-[40px] items-center p-2">
-            {isRecording ? (
-                <CustomSoundWave analyser={analyserRef.current} onClick={stopRecording} />
-            ) : isTranscribing ? (
-                <div className="flex h-full w-full items-center justify-center">
-                    <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
-                </div>
-            ) : (
-                <>
-                    <input
-                        type="file"
-                        multiple={true}
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
-                        disabled={isLoading}
-                    />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground"
-                        disabled={isLoading}
-                        onClick={handleAttachClick}
-                        title={"Anexar arquivo(s)"}
-                    >
-                        <Paperclip className="h-5 w-5" />
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground"
-                        disabled={isLoading}
-                        onClick={handleMicClick}
-                        title={"Gravar áudio"}
-                    >
-                        <Mic className="h-5 w-5" />
-                    </Button>
-                </>
-            )}
-            </div>
+          <div className="flex h-[40px] items-center p-2 relative">
+              <div className={cn("absolute inset-0 flex items-center p-2 transition-opacity duration-300", isRecording || isTranscribing ? "opacity-0" : "opacity-100")}>
+                  <input
+                      type="file"
+                      multiple={true}
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
+                      disabled={isLoading}
+                  />
+                  <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground"
+                      disabled={isLoading}
+                      onClick={handleAttachClick}
+                      title={"Anexar arquivo(s)"}
+                  >
+                      <Paperclip className="h-5 w-5" />
+                  </Button>
+                  <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground"
+                      disabled={isLoading}
+                      onClick={handleMicClick}
+                      title={"Gravar áudio"}
+                  >
+                      <Mic className="h-5 w-5" />
+                  </Button>
+              </div>
+
+              <div className={cn("absolute inset-0 flex items-center p-2 transition-opacity duration-300", isRecording ? "opacity-100" : "opacity-0 pointer-events-none")}>
+                  {isRecording && <CustomSoundWave analyser={analyserRef.current} onClick={stopRecording} />}
+              </div>
+
+              <div className={cn("absolute inset-0 flex items-center p-2 transition-opacity duration-300", isTranscribing ? "opacity-100" : "opacity-0 pointer-events-none")}>
+                  <div className="flex h-full w-full items-center justify-start">
+                      <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
+                  </div>
+              </div>
+          </div>
         </div>
         <p className="pt-2 text-center text-xs text-muted-foreground">
           Sujeito aos Termos de uso 3A RIVA e à Política de Privacidade da 3A RIVA. O modelo Bob 1.0 pode cometer erros. Por isso, é bom checar as respostas.
