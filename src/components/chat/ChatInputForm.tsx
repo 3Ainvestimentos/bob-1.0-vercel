@@ -137,17 +137,6 @@ export function ChatInputForm({
     }
   };
 
-  const stopRecording = useCallback(() => {
-    if (recordingState === 'idle' || recordingState === 'transcribing') return;
-
-    if (mediaRecorderRef.current?.state === 'recording') {
-        processAndTranscribeAudio();
-    }
-    
-    cleanupRecording();
-    setRecordingState('idle');
-  }, [recordingState, cleanupRecording, processAndTranscribeAudio]);
-  
   const cleanupRecording = useCallback(() => {
     if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
@@ -171,7 +160,7 @@ export function ChatInputForm({
     setIsDragToLockActive(false);
   }, []);
   
-  const processAndTranscribeAudio = async () => {
+  const processAndTranscribeAudio = useCallback(async () => {
     if (audioChunksRef.current.length === 0) {
         setRecordingState('idle');
         cleanupRecording();
@@ -204,7 +193,18 @@ export function ChatInputForm({
             setRecordingState('idle');
         }
     };
-  };
+  }, [cleanupRecording, setInput, toast]);
+
+  const stopRecording = useCallback(() => {
+    if (recordingState === 'idle' || recordingState === 'transcribing') return;
+
+    if (mediaRecorderRef.current?.state === 'recording') {
+        processAndTranscribeAudio();
+    }
+    
+    cleanupRecording();
+    setRecordingState('idle');
+  }, [recordingState, cleanupRecording, processAndTranscribeAudio]);
 
   const startRecording = useCallback(async (isLockedMode: boolean) => {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -257,7 +257,9 @@ export function ChatInputForm({
                 const avg = sum / dataArray.length;
 
                 if (avg > 2.5) lastSpoke = Date.now();
-                if (Date.now() - lastSpoke > 2000) stopRecording();
+                if (Date.now() - lastSpoke > 2000) {
+                    stopRecording();
+                }
             };
             if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
             silenceTimerRef.current = setInterval(checkSilence, 200);
@@ -402,7 +404,7 @@ export function ChatInputForm({
                 <>
                     <div className={cn(
                         "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
-                        (recordingState !== 'idle' && recordingState !== 'recording') ? "opacity-0 pointer-events-none" : "opacity-100"
+                        (isTranscribing || recordingState === 'recording') ? "opacity-0 pointer-events-none" : "opacity-100"
                     )}>
                         <input
                             type="file"
@@ -413,7 +415,7 @@ export function ChatInputForm({
                             accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
                             disabled={isLoading}
                         />
-                         <div className={cn("flex items-center transition-opacity duration-200", recordingState === 'recording' ? "opacity-0" : "opacity-100")}>
+                         <div className="flex items-center">
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -427,50 +429,49 @@ export function ChatInputForm({
                             </Button>
                         </div>
                         <div className="flex-1 flex items-center h-full">
-                            <div className="w-full h-full relative">
-                                <div className={cn("absolute inset-0 flex items-center transition-opacity duration-200", recordingState === 'idle' ? 'opacity-100' : 'opacity-0')}>
+                            <div className="w-full h-full relative flex items-center">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground"
+                                    disabled={isLoading}
+                                    onClick={handleSimpleClick}
+                                    onMouseDown={handleMouseDown}
+                                    title={"Gravar áudio (clique) ou segure para travar"}
+                                >
+                                    <Mic className="h-5 w-5" />
+                                </Button>
+                                {isDragToLockActive && (
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 text-muted-foreground"
-                                        disabled={isLoading}
-                                        onClick={handleSimpleClick}
-                                        onMouseDown={handleMouseDown}
-                                        title={"Gravar áudio (clique) ou segure para travar"}
+                                        className="h-8 w-8 text-muted-foreground animate-pulse"
+                                        onMouseUp={handleMouseUpOnLock}
                                     >
-                                        <Mic className="h-5 w-5" />
+                                       <Lock className="h-5 w-5" />
                                     </Button>
-                                    {isDragToLockActive && (
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground animate-pulse"
-                                            onMouseUp={handleMouseUpOnLock}
-                                        >
-                                           <Lock className="h-5 w-5" />
-                                        </Button>
-                                    )}
-                                </div>
-                                <div className={cn(
-                                    "absolute inset-0 flex w-full items-center transition-opacity duration-200",
-                                    recordingState === 'recording' ? "opacity-100" : "opacity-0 pointer-events-none"
-                                )}>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-red-500 bg-red-500/10"
-                                        onClick={stopRecording}
-                                    >
-                                        <Square className="h-4 w-4" />
-                                    </Button>
-                                    <div className="flex-1 px-2 h-full">
-                                        <CustomSoundWave analyser={analyserRef.current} isVisible={recordingState === 'recording'} />
-                                    </div>
-                                </div>
+                                )}
                             </div>
+                        </div>
+                    </div>
+
+                    <div className={cn(
+                        "absolute inset-0 flex w-full items-center p-2 transition-opacity duration-200",
+                        recordingState === 'recording' ? "opacity-100" : "opacity-0 pointer-events-none"
+                    )}>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 bg-red-500/10"
+                            onClick={stopRecording}
+                        >
+                            <Square className="h-4 w-4" />
+                        </Button>
+                        <div className="flex-1 px-2 h-full">
+                            <CustomSoundWave analyser={analyserRef.current} isVisible={recordingState === 'recording'} />
                         </div>
                     </div>
                     
