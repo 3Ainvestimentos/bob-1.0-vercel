@@ -511,7 +511,7 @@ function ChatPageContent() {
         const newExpanded = { ...prev };
         userGroups.forEach(group => {
             if (!(group.id in newExpanded)) {
-                newExpanded[group.id] = true; // Default to expanded
+                newExpanded[group.id] = false; // Default to collapsed
             }
         });
         return newExpanded;
