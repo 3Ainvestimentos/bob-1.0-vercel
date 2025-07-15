@@ -161,11 +161,8 @@ export function ChatInputForm({
   }, []);
   
   const processAndTranscribeAudio = async () => {
-    const recordingEndTime = Date.now();
-    const duration = recordingStartTimeRef.current ? (recordingEndTime - recordingStartTimeRef.current) : 0;
-    
-    if (duration < 1000 && audioChunksRef.current.length === 0) {
-        toast({ title: "Gravação muito curta", description: "Por favor, grave por pelo menos um segundo." });
+    if (audioChunksRef.current.length === 0) {
+        toast({ title: "Nenhum áudio gravado", description: "A gravação não capturou nenhum som." });
         setRecordingState('idle');
         cleanupRecording();
         return;
@@ -404,7 +401,7 @@ export function ChatInputForm({
           <div className="flex h-[40px] items-center p-2 relative">
               <div className={cn(
                   "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
-                  isRecordingActive || isTranscribing ? "opacity-0 pointer-events-none" : "opacity-100"
+                  recordingState !== 'idle' ? "opacity-0 pointer-events-none" : "opacity-100"
                 )}>
                   <input
                       type="file"
