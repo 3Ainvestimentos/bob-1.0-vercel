@@ -69,6 +69,8 @@ import React, {
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { FaqDialog } from '@/components/chat/FaqDialog';
+import { FileUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 
 // ---- Data Types ----
@@ -431,6 +433,15 @@ async function deleteConversation(userId: string, chatId: string): Promise<void>
     }
 }
 
+const FileDropOverlay = () => (
+    <div className="pointer-events-none absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
+        <FileUp className="h-16 w-16 text-primary" />
+        <p className="text-xl font-semibold text-foreground">
+            Arraste e solte os arquivos aqui
+        </p>
+    </div>
+);
+
 
 function ChatPageContent() {
   const router = useRouter();
@@ -478,6 +489,8 @@ function ChatPageContent() {
   const [activeDragItem, setActiveDragItem] = useState<ConversationSidebarItem | Group | null>(null);
   const [isFaqDialogOpen, setIsFaqDialogOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1242,6 +1255,45 @@ function ChatPageContent() {
     }
   };
 
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+        setIsDraggingOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Use relatedTarget to prevent flickering when moving over child elements
+    if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) {
+        setIsDraggingOver(false);
+    } else if (!e.relatedTarget) {
+        // Fallback for when relatedTarget is null (e.g., dragging out of the window)
+        setIsDraggingOver(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      setSelectedFiles(prev => [...prev, ...droppedFiles].filter(
+        (file, index, self) => index === self.findIndex(f => f.name === file.name && f.size === file.size)
+      ));
+      e.dataTransfer.clearData();
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -1261,7 +1313,15 @@ function ChatPageContent() {
       .toUpperCase() ?? 'U';
 
   return (
-        <div className="flex h-screen w-full bg-background text-foreground">
+        <div 
+            className="flex h-screen w-full bg-background text-foreground relative"
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+        >
+        {isDraggingOver && <FileDropOverlay />}
+
         <Dialog
             open={isNewGroupDialogOpen}
             onOpenChange={setIsNewGroupDialogOpen}
