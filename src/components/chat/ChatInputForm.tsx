@@ -7,11 +7,11 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { File, Mic, Paperclip, SendHorizontal, Square, X } from 'lucide-react';
+import { File, Mic, Paperclip, SendHorizontal, X } from 'lucide-react';
 import React, { FormEvent, useCallback, useRef, useState, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
-const CustomSoundWave = ({ analyser }: { analyser: AnalyserNode | null }) => {
+const CustomSoundWave = ({ analyser, onClick }: { analyser: AnalyserNode | null, onClick: () => void }) => {
     const canvasRef = useRef<HTMLDivElement>(null);
     const animationFrameRef = useRef<number>();
 
@@ -27,8 +27,7 @@ const CustomSoundWave = ({ analyser }: { analyser: AnalyserNode | null }) => {
 
             if (canvasRef.current) {
                 const bars = Array.from(canvasRef.current.children) as HTMLDivElement[];
-                const barWidth = (canvasRef.current.clientWidth / bufferLength) * 2.5;
-
+                
                 for (let i = 0; i < bars.length; i++) {
                     const barHeight = (dataArray[i] / 255) * 100;
                     bars[i].style.height = `${Math.max(barHeight, 5)}%`; 
@@ -46,7 +45,11 @@ const CustomSoundWave = ({ analyser }: { analyser: AnalyserNode | null }) => {
     }, [analyser]);
     
     return (
-        <div ref={canvasRef} className="flex items-center justify-center gap-px h-full w-[200px]">
+        <div 
+            ref={canvasRef} 
+            className="flex items-center justify-center gap-px h-full w-full cursor-pointer"
+            onClick={onClick}
+        >
             {Array.from({ length: 32 }).map((_, i) => (
                 <div
                     key={i}
@@ -265,17 +268,7 @@ export function ChatInputForm({
         onSubmit={handleSubmit}
         className="px-4 pb-4 pt-2 sm:px-6 lg:px-8"
       >
-        <div className={cn("rounded-lg border bg-background shadow-sm", selectedFiles.length > 0 && "relative pb-10", (isRecording || isTranscribing) && "pb-12")}>
-          {(isRecording || isTranscribing) && (
-             <div className="flex h-10 items-center justify-center gap-3 px-4 pt-2">
-                {isRecording ? (
-                    <CustomSoundWave analyser={analyserRef.current} />
-                ) : (
-                    <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo áudio...</p>
-                )}
-            </div>
-          )}
-
+        <div className={cn("rounded-lg border bg-background shadow-sm", selectedFiles.length > 0 && "relative pb-10")}>
           {selectedFiles.length > 0 && !isRecording && !isTranscribing && (
             <div className="absolute bottom-11 left-2 w-[calc(100%-1rem)] p-2 space-y-1">
                 {selectedFiles.map(file => (
@@ -295,7 +288,7 @@ export function ChatInputForm({
             <TextareaAutosize
               ref={inputRef}
               placeholder={
-                isRecording ? "Ouvindo..." : 
+                isRecording ? "Ouvindo... Clique na animação para parar." : 
                 isTranscribing ? "Aguarde a transcrição..." :
                 isAudioSelected ? "Opcional: adicione um comando ou pergunta sobre o áudio" : 
                 "Insira aqui um comando ou pergunta"
@@ -330,39 +323,49 @@ export function ChatInputForm({
             </Button>
           </div>
           <Separator />
-          <div className="flex items-center p-2">
-            <input
-              type="file"
-              multiple={true}
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
-              disabled={isLoading || isRecording || isTranscribing}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground"
-              disabled={isLoading || isRecording || isTranscribing}
-              onClick={handleAttachClick}
-              title={"Anexar arquivo(s)"}
-            >
-              <Paperclip className="h-5 w-5" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className={cn("h-8 w-8 text-muted-foreground", isRecording && "bg-destructive/20 text-destructive")}
-              disabled={isLoading || isTranscribing}
-              onClick={handleMicClick}
-              title={isRecording ? "Parar gravação" : "Gravar áudio"}
-            >
-              {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            </Button>
-          </div>
+          <div className="flex h-[40px] items-center p-2">
+            {isRecording ? (
+                <CustomSoundWave analyser={analyserRef.current} onClick={stopRecording} />
+            ) : isTranscribing ? (
+                <div className="flex h-full w-full items-center justify-center">
+                    <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
+                </div>
+            ) : (
+                <>
+                    <input
+                        type="file"
+                        multiple={true}
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
+                        disabled={isLoading}
+                    />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground"
+                        disabled={isLoading}
+                        onClick={handleAttachClick}
+                        title={"Anexar arquivo(s)"}
+                    >
+                        <Paperclip className="h-5 w-5" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground"
+                        disabled={isLoading}
+                        onClick={handleMicClick}
+                        title={"Gravar áudio"}
+                    >
+                        <Mic className="h-5 w-5" />
+                    </Button>
+                </>
+            )}
+            </div>
         </div>
         <p className="pt-2 text-center text-xs text-muted-foreground">
           Sujeito aos Termos de uso 3A RIVA e à Política de Privacidade da 3A RIVA. O modelo Bob 1.0 pode cometer erros. Por isso, é bom checar as respostas.
