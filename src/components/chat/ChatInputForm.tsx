@@ -93,6 +93,7 @@ export function ChatInputForm({
   const audioStreamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const recordingStartTimeRef = useRef<number | null>(null);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,12 +173,26 @@ export function ChatInputForm({
 
         mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
         audioChunksRef.current = [];
+        recordingStartTimeRef.current = Date.now();
 
         mediaRecorderRef.current.ondataavailable = (event) => {
             audioChunksRef.current.push(event.data);
         };
 
         mediaRecorderRef.current.onstop = async () => {
+            const recordingEndTime = Date.now();
+            const duration = recordingStartTimeRef.current ? (recordingEndTime - recordingStartTimeRef.current) / 1000 : 0;
+
+            if (duration < 5) {
+                toast({ 
+                    title: "Gravação muito curta", 
+                    description: "Por favor, grave por pelo menos 5 segundos para que a transcrição funcione." 
+                });
+                setIsTranscribing(false);
+                recordingStartTimeRef.current = null;
+                return;
+            }
+
             const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm; codecs=opus' });
             
             if (audioBlob.size === 0) {
