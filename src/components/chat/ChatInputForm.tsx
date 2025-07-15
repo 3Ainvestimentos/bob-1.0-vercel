@@ -7,16 +7,21 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { File, Mic, Paperclip, SendHorizontal, X } from 'lucide-react';
+import { File, Mic, Paperclip, SendHorizontal, X, Lock, Trash2, Square } from 'lucide-react';
 import React, { FormEvent, useCallback, useRef, useState, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
-const CustomSoundWave = ({ analyser, onClick }: { analyser: AnalyserNode | null, onClick: () => void }) => {
+const CustomSoundWave = ({ analyser, isVisible }: { analyser: AnalyserNode | null, isVisible: boolean }) => {
     const canvasRef = useRef<HTMLDivElement>(null);
     const animationFrameRef = useRef<number>();
 
     useEffect(() => {
-        if (!analyser) return;
+        if (!analyser || !isVisible) {
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+            }
+            return;
+        };
 
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
@@ -42,13 +47,14 @@ const CustomSoundWave = ({ analyser, onClick }: { analyser: AnalyserNode | null,
                 cancelAnimationFrame(animationFrameRef.current);
             }
         };
-    }, [analyser]);
+    }, [analyser, isVisible]);
     
+    if (!isVisible) return null;
+
     return (
         <div 
             ref={canvasRef} 
-            className="flex items-center justify-center gap-px h-full w-full cursor-pointer"
-            onClick={onClick}
+            className="flex items-center justify-center gap-px h-full w-full"
         >
             {Array.from({ length: 32 }).map((_, i) => (
                 <div
@@ -83,18 +89,23 @@ export function ChatInputForm({
 }: ChatInputFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   
+  const [recordingState, setRecordingState] = useState<'idle' | 'holding' | 'recording' | 'locked' | 'transcribing'>('idle');
+  const [recordingTime, setRecordingTime] = useState(0);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const recordingStartTimeRef = useRef<number | null>(null);
 
+  const recordingStartTimeRef = useRef<number | null>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const holdAndDragRef = useRef({
+      isHolding: false,
+      startX: 0,
+      isLocked: false
+  });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -121,161 +132,211 @@ export function ChatInputForm({
         fileInputRef.current.value = '';
     }
   };
-  
-  const stopRecording = useCallback(() => {
-    if (silenceTimerRef.current) {
-        clearInterval(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-    }
-    if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+
+  const cleanupRecording = useCallback(() => {
+    if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    silenceTimerRef.current = null;
+    recordingTimerRef.current = null;
+    
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
     }
+    
     if (audioStreamRef.current) {
         audioStreamRef.current.getTracks().forEach(track => track.stop());
-        audioStreamRef.current = null;
     }
+
+    mediaRecorderRef.current = null;
+    audioStreamRef.current = null;
     analyserRef.current = null;
-    setIsRecording(false);
-    setIsTranscribing(true);
+    audioChunksRef.current = [];
+    recordingStartTimeRef.current = null;
+    holdAndDragRef.current.isHolding = false;
+    holdAndDragRef.current.isLocked = false;
+    setRecordingTime(0);
   }, []);
-
-  const handleMicClick = async () => {
-    if (isRecording) {
-        stopRecording();
+  
+  const processAndTranscribeAudio = async () => {
+    const recordingEndTime = Date.now();
+    const duration = recordingStartTimeRef.current ? (recordingEndTime - recordingStartTimeRef.current) / 1000 : 0;
+    
+    if (duration < 1 && audioChunksRef.current.length === 0) { // Allow shorter for locked mode, but must have data
+        toast({ title: "Gravação muito curta", description: "Por favor, grave por pelo menos um segundo." });
+        setRecordingState('idle');
         return;
     }
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast({
-            variant: "destructive",
-            title: "Erro",
-            description: "Seu navegador não suporta a gravação de áudio.",
-        });
+    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm; codecs=opus' });
+    if (audioBlob.size === 0) {
+        toast({ title: "Nenhum áudio gravado.", description: "A gravação não capturou áudio." });
+        setRecordingState('idle');
         return;
     }
 
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioStreamRef.current = stream;
-        
-        const audioContext = new AudioContext();
-        const source = audioContext.createMediaStreamSource(stream);
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 64;
-        source.connect(analyser);
-        analyserRef.current = analyser;
+    setRecordingState('transcribing');
 
-        setIsRecording(true);
-
-        mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
-        audioChunksRef.current = [];
-        recordingStartTimeRef.current = Date.now();
-
-        mediaRecorderRef.current.ondataavailable = (event) => {
-            audioChunksRef.current.push(event.data);
-        };
-
-        mediaRecorderRef.current.onstop = async () => {
-            const recordingEndTime = Date.now();
-            const duration = recordingStartTimeRef.current ? (recordingEndTime - recordingStartTimeRef.current) / 1000 : 0;
-
-            if (duration < 5) {
-                toast({ 
-                    title: "Gravação muito curta", 
-                    description: "Por favor, grave por pelo menos 5 segundos para que a transcrição funcione." 
-                });
-                setIsTranscribing(false);
-                recordingStartTimeRef.current = null;
-                return;
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onloadend = async () => {
+        const base64Audio = reader.result?.toString().split(',')[1];
+        if (base64Audio) {
+            try {
+                const transcribedText = await transcribeLiveAudio(base64Audio);
+                setInput(prev => prev ? `${prev}\n${transcribedText}` : transcribedText);
+            } catch (error: any) {
+                toast({ variant: "destructive", title: "Erro na Transcrição", description: error.message });
+            } finally {
+                setRecordingState('idle');
             }
-
-            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm; codecs=opus' });
-            
-            if (audioBlob.size === 0) {
-                toast({ title: "Nenhum áudio gravado.", description: "A gravação foi muito curta." });
-                setIsTranscribing(false);
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = async () => {
-                const base64Audio = reader.result?.toString().split(',')[1];
-                if (base64Audio) {
-                    try {
-                        const transcribedText = await transcribeLiveAudio(base64Audio);
-                        setInput(transcribedText);
-                    } catch (error: any) {
-                        toast({ variant: "destructive", title: "Erro na Transcrição", description: error.message });
-                    } finally {
-                        setIsTranscribing(false);
-                    }
-                } else {
-                     setIsTranscribing(false);
-                }
-            };
-        };
-        
-        mediaRecorderRef.current.start();
-
-        // --- Silence Detection ---
-        let lastSpoke = Date.now();
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        
-        const checkSilence = () => {
-            if (mediaRecorderRef.current?.state !== 'recording' || !analyserRef.current) {
-                return;
-            }
-
-            analyserRef.current.getByteTimeDomainData(dataArray);
-            let sum = 0;
-            for(let i = 0; i < dataArray.length; i++) {
-                sum += Math.abs(dataArray[i] - 128);
-            }
-            const avg = sum / dataArray.length;
-
-            if (avg > 2) { // Threshold for speech
-                lastSpoke = Date.now();
-            }
-
-            if (Date.now() - lastSpoke > 2000) { // 2 seconds of silence
-                stopRecording();
-            } else {
-                animationFrameRef.current = requestAnimationFrame(checkSilence);
-            }
-        };
-        checkSilence();
-
-    } catch (err: any) {
-        console.error("Error accessing microphone:", err);
-        if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-            toast({
-                variant: "destructive",
-                title: "Microfone não encontrado",
-                description: "Não foi possível encontrar um microfone. Verifique se ele está conectado e habilitado.",
-            });
-        } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            toast({
-                variant: "destructive",
-                title: "Acesso ao Microfone Negado",
-                description: "Por favor, habilite o acesso ao microfone nas configurações do seu navegador para usar esta funcionalidade.",
-            });
         } else {
-             toast({
-                variant: "destructive",
-                title: "Erro de Microfone",
-                description: `Ocorreu um erro inesperado: ${err.message}`,
-            });
+            setRecordingState('idle');
         }
-        setIsRecording(false);
+    };
+  };
+
+  const stopRecording = useCallback(() => {
+    if (recordingState === 'idle' || recordingState === 'transcribing') return;
+    
+    if (mediaRecorderRef.current?.state === 'recording') {
+        processAndTranscribeAudio();
     }
+    cleanupRecording();
+  }, [recordingState, cleanupRecording, processAndTranscribeAudio]);
+
+
+  const startRecording = useCallback(async (isLockedMode: boolean) => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          toast({ variant: "destructive", title: "Erro", description: "Seu navegador não suporta a gravação de áudio." });
+          return;
+      }
+
+      holdAndDragRef.current.isLocked = isLockedMode;
+
+      try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioStreamRef.current = stream;
+          
+          const audioContext = new AudioContext();
+          const source = audioContext.createMediaStreamSource(stream);
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 64;
+          source.connect(analyser);
+          analyserRef.current = analyser;
+
+          setRecordingState(isLockedMode ? 'locked' : 'recording');
+          
+          mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
+          audioChunksRef.current = [];
+          recordingStartTimeRef.current = Date.now();
+
+          mediaRecorderRef.current.ondataavailable = (event) => {
+              if (event.data.size > 0) audioChunksRef.current.push(event.data);
+          };
+
+          mediaRecorderRef.current.onstop = () => {
+            // Processing is now handled in stopRecording/processAndTranscribeAudio
+          };
+          
+          mediaRecorderRef.current.start(1000); // Collect data in chunks
+
+          if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = setInterval(() => {
+              const seconds = Math.floor((Date.now() - (recordingStartTimeRef.current || 0)) / 1000);
+              setRecordingTime(seconds);
+          }, 1000);
+
+          if (!isLockedMode) {
+            // --- Silence Detection for tap-and-talk mode ---
+            let lastSpoke = Date.now();
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            const checkSilence = () => {
+                if (mediaRecorderRef.current?.state !== 'recording' || !analyserRef.current || holdAndDragRef.current.isLocked) {
+                    if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
+                    return;
+                }
+
+                analyserRef.current.getByteTimeDomainData(dataArray);
+                let sum = 0;
+                for(let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i] - 128);
+                const avg = sum / dataArray.length;
+
+                if (avg > 2) lastSpoke = Date.now();
+                if (Date.now() - lastSpoke > 2000) stopRecording();
+            };
+            if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
+            silenceTimerRef.current = setInterval(checkSilence, 200);
+          }
+
+      } catch (err: any) {
+          console.error("Error accessing microphone:", err);
+          let description = `Ocorreu um erro inesperado: ${err.message}`;
+          if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+              description = "Não foi possível encontrar um microfone. Verifique se ele está conectado e habilitado.";
+          } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+              description = "Por favor, habilite o acesso ao microfone nas configurações do seu navegador para usar esta funcionalidade.";
+          }
+          toast({ variant: "destructive", title: "Erro de Microfone", description });
+          cleanupRecording();
+          setRecordingState('idle');
+      }
+  }, [toast, cleanupRecording, stopRecording]);
+
+
+  const handleMicInteraction = (event: React.MouseEvent | React.TouchEvent, type: 'start' | 'move' | 'end') => {
+      event.preventDefault();
+
+      const clientX = 'touches' in event ? event.touches[0]?.clientX : event.clientX;
+
+      if (type === 'start') {
+          holdAndDragRef.current.isHolding = true;
+          holdAndDragRef.current.startX = clientX;
+          setTimeout(() => {
+            // If still holding after a short delay, show the holding UI
+            if (holdAndDragRef.current.isHolding && !holdAndDragRef.current.isLocked) {
+                setRecordingState('holding');
+            }
+          }, 200);
+          startRecording(false);
+      }
+
+      if (type === 'move' && holdAndDragRef.current.isHolding) {
+          const deltaX = clientX - holdAndDragRef.current.startX;
+          // You can add visual feedback for slide-to-cancel/lock here if desired
+      }
+      
+      if (type === 'end') {
+          if (!holdAndDragRef.current.isHolding) return;
+          holdAndDragRef.current.isHolding = false;
+
+          const deltaX = clientX - holdAndDragRef.current.startX;
+
+          if (deltaX > 50) { // Dragged right to lock
+              setRecordingState('locked');
+              holdAndDragRef.current.isLocked = true;
+          } else if (deltaX < -50) { // Dragged left to cancel
+              cleanupRecording();
+              setRecordingState('idle');
+          } else { // Simple tap/release
+              stopRecording();
+          }
+      }
+  };
+
+  const handleCancelRecording = () => {
+    cleanupRecording();
+    setRecordingState('idle');
+  }
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
   const isAudioSelected = selectedFiles.length > 0 && selectedFiles[0].type.startsWith('audio/');
+  const isRecording = recordingState === 'recording' || recordingState === 'holding' || recordingState === 'locked';
 
   return (
     <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
@@ -284,7 +345,7 @@ export function ChatInputForm({
         className="px-4 pb-4 pt-2 sm:px-6 lg:px-8"
       >
         <div className={cn("rounded-lg border bg-background shadow-sm", selectedFiles.length > 0 && "relative pb-10")}>
-          {selectedFiles.length > 0 && !isRecording && !isTranscribing && (
+          {selectedFiles.length > 0 && recordingState === 'idle' && (
             <div className="absolute bottom-11 left-2 w-[calc(100%-1rem)] p-2 space-y-1">
                 {selectedFiles.map(file => (
                   <Badge key={file.name} variant="secondary" className="flex max-w-full items-center justify-between gap-2 pl-2 pr-1">
@@ -300,46 +361,63 @@ export function ChatInputForm({
             </div>
           )}
           <div className="relative flex min-h-[60px] items-start">
-            <TextareaAutosize
-              ref={inputRef}
-              placeholder={
-                isRecording ? "Ouvindo... Clique na animação para parar." : 
-                isTranscribing ? "Aguarde a transcrição..." :
-                isAudioSelected ? "Opcional: adicione um comando ou pergunta sobre o áudio" : 
-                "Insira aqui um comando ou pergunta"
-              }
-              className="min-h-[inherit] flex-1 resize-none border-0 bg-transparent p-4 pr-12 text-base focus-visible:ring-0"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (
-                  e.key === 'Enter' &&
-                  !e.shiftKey &&
-                  !e.nativeEvent.isComposing
-                ) {
-                  e.preventDefault();
-                  if (e.currentTarget.form) {
-                    e.currentTarget.form.requestSubmit();
-                  }
-                }
-              }}
-              disabled={isLoading || isAudioSelected || isRecording || isTranscribing}
-              rows={1}
-              maxRows={8}
-            />
+            {isRecording ? (
+                 <div className="flex w-full items-center min-h-[inherit] p-4">
+                     <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelRecording}>
+                         <Trash2 className="h-4 w-4"/>
+                     </Button>
+                     <div className="flex-1 flex items-center justify-center h-full">
+                        <CustomSoundWave analyser={analyserRef.current} isVisible={isRecording} />
+                     </div>
+                     <div className="flex items-center gap-2">
+                         <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
+                         {recordingState === 'locked' ? (
+                            <Button type="button" size="icon" className="h-8 w-8" onClick={stopRecording}>
+                                <Square className="h-4 w-4" />
+                            </Button>
+                         ) : (
+                            <Lock className="h-4 w-4 text-muted-foreground animate-pulse" />
+                         )}
+                     </div>
+                 </div>
+            ) : (
+                <TextareaAutosize
+                    ref={inputRef}
+                    placeholder={
+                        recordingState === 'transcribing' ? "Aguarde a transcrição..." :
+                        isAudioSelected ? "Opcional: adicione um comando ou pergunta sobre o áudio" : 
+                        "Insira aqui um comando ou pergunta"
+                    }
+                    className="min-h-[inherit] flex-1 resize-none border-0 bg-transparent p-4 pr-12 text-base focus-visible:ring-0"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                            e.preventDefault();
+                            if (e.currentTarget.form) e.currentTarget.form.requestSubmit();
+                        }
+                    }}
+                    disabled={isLoading || isAudioSelected || isRecording || recordingState === 'transcribing'}
+                    rows={1}
+                    maxRows={8}
+                    />
+            )}
             <Button
               type="submit"
               size="icon"
               variant="ghost"
               className="absolute right-3 top-3 h-8 w-8 rounded-full text-muted-foreground"
-              disabled={isLoading || isRecording || isTranscribing || (!input.trim() && selectedFiles.length === 0)}
+              disabled={isLoading || isRecording || recordingState === 'transcribing' || (!input.trim() && selectedFiles.length === 0)}
             >
               <SendHorizontal className="h-5 w-5" />
             </Button>
           </div>
           <Separator />
           <div className="flex h-[40px] items-center p-2 relative">
-              <div className={cn("absolute inset-0 flex items-center p-2 transition-opacity duration-300", isRecording || isTranscribing ? "opacity-0" : "opacity-100")}>
+              <div className={cn(
+                  "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
+                  isRecording || recordingState === 'transcribing' ? "opacity-0 pointer-events-none" : "opacity-100"
+                )}>
                   <input
                       type="file"
                       multiple={true}
@@ -366,18 +444,31 @@ export function ChatInputForm({
                       size="icon"
                       className="h-8 w-8 text-muted-foreground"
                       disabled={isLoading}
-                      onClick={handleMicClick}
-                      title={"Gravar áudio"}
+                      onMouseDown={(e) => handleMicInteraction(e, 'start')}
+                      onMouseUp={(e) => handleMicInteraction(e, 'end')}
+                      onMouseMove={(e) => handleMicInteraction(e, 'move')}
+                      onMouseLeave={(e) => handleMicInteraction(e, 'end')}
+                      onTouchStart={(e) => handleMicInteraction(e, 'start')}
+                      onTouchEnd={(e) => handleMicInteraction(e, 'end')}
+                      onTouchMove={(e) => handleMicInteraction(e, 'move')}
+                      title={"Gravar áudio (segure e arraste para travar)"}
                   >
                       <Mic className="h-5 w-5" />
                   </Button>
               </div>
-
-              <div className={cn("absolute inset-0 flex items-center p-2 transition-opacity duration-300", isRecording ? "opacity-100" : "opacity-0 pointer-events-none")}>
-                  {isRecording && <CustomSoundWave analyser={analyserRef.current} onClick={stopRecording} />}
+              
+              <div className={cn("absolute inset-0 flex items-center p-2 transition-opacity duration-300", recordingState === 'holding' ? "opacity-100" : "opacity-0 pointer-events-none")}>
+                  <div className="flex w-full justify-between items-center text-muted-foreground text-xs">
+                    <Trash2 className="h-4 w-4 animate-pulse" />
+                    <span>Arraste para travar</span>
+                    <Lock className="h-4 w-4 animate-pulse" />
+                  </div>
               </div>
 
-              <div className={cn("absolute inset-0 flex items-center p-2 transition-opacity duration-300", isTranscribing ? "opacity-100" : "opacity-0 pointer-events-none")}>
+              <div className={cn(
+                  "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
+                  recordingState === 'transcribing' ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}>
                   <div className="flex h-full w-full items-center justify-start">
                       <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
                   </div>
@@ -391,3 +482,5 @@ export function ChatInputForm({
     </div>
   );
 }
+
+    
