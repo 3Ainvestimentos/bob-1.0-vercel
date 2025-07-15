@@ -10,13 +10,53 @@ import { cn } from '@/lib/utils';
 import { File, Mic, Paperclip, SendHorizontal, Square, X } from 'lucide-react';
 import React, { FormEvent, useCallback, useRef, useState, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import dynamic from 'next/dynamic';
 
-const LiveAudioVisualizer = dynamic(
-  () =>
-    import('react-audio-visualize').then((mod) => mod.LiveAudioVisualizer),
-  { ssr: false }
-);
+const CustomSoundWave = ({ analyser }: { analyser: AnalyserNode | null }) => {
+    const canvasRef = useRef<HTMLDivElement>(null);
+    const animationFrameRef = useRef<number>();
+
+    useEffect(() => {
+        if (!analyser) return;
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        const draw = () => {
+            animationFrameRef.current = requestAnimationFrame(draw);
+            analyser.getByteFrequencyData(dataArray);
+
+            if (canvasRef.current) {
+                const bars = Array.from(canvasRef.current.children) as HTMLDivElement[];
+                const barWidth = (canvasRef.current.clientWidth / bufferLength) * 2.5;
+
+                for (let i = 0; i < bars.length; i++) {
+                    const barHeight = (dataArray[i] / 255) * 100;
+                    bars[i].style.height = `${Math.max(barHeight, 5)}%`; 
+                }
+            }
+        };
+
+        draw();
+
+        return () => {
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+            }
+        };
+    }, [analyser]);
+    
+    return (
+        <div ref={canvasRef} className="flex items-center justify-center gap-px h-full w-[200px]">
+            {Array.from({ length: 32 }).map((_, i) => (
+                <div
+                    key={i}
+                    className="w-1 bg-primary rounded-full"
+                    style={{ height: '5%', transition: 'height 0.1s ease-out' }}
+                />
+            ))}
+        </div>
+    );
+};
 
 
 interface ChatInputFormProps {
@@ -43,19 +83,13 @@ export function ChatInputForm({
 
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,6 +134,7 @@ export function ChatInputForm({
         audioStreamRef.current.getTracks().forEach(track => track.stop());
         audioStreamRef.current = null;
     }
+    analyserRef.current = null;
     setIsRecording(false);
     setIsTranscribing(true);
   }, []);
@@ -122,16 +157,15 @@ export function ChatInputForm({
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioStreamRef.current = stream;
-        setIsRecording(true);
-
+        
         const audioContext = new AudioContext();
         const source = audioContext.createMediaStreamSource(stream);
         const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 512;
+        analyser.fftSize = 64;
         source.connect(analyser);
         analyserRef.current = analyser;
-        dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
 
+        setIsRecording(true);
 
         mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
         audioChunksRef.current = [];
@@ -172,14 +206,21 @@ export function ChatInputForm({
 
         // --- Silence Detection ---
         let lastSpoke = Date.now();
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
         
         const checkSilence = () => {
-            if (mediaRecorderRef.current?.state !== 'recording' || !analyserRef.current || !dataArrayRef.current) return;
+            if (mediaRecorderRef.current?.state !== 'recording' || !analyserRef.current) {
+                return;
+            }
 
-            analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
-            const isSilent = dataArrayRef.current.every(v => v === 128);
+            analyserRef.current.getByteTimeDomainData(dataArray);
+            let sum = 0;
+            for(let i = 0; i < dataArray.length; i++) {
+                sum += Math.abs(dataArray[i] - 128);
+            }
+            const avg = sum / dataArray.length;
 
-            if (!isSilent) {
+            if (avg > 2) { // Threshold for speech
                 lastSpoke = Date.now();
             }
 
@@ -193,17 +234,23 @@ export function ChatInputForm({
 
     } catch (err: any) {
         console.error("Error accessing microphone:", err);
-        if (err.name === 'NotFoundError') {
+        if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
             toast({
                 variant: "destructive",
                 title: "Microfone não encontrado",
                 description: "Não foi possível encontrar um microfone. Verifique se ele está conectado e habilitado.",
             });
-        } else {
+        } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
             toast({
                 variant: "destructive",
                 title: "Acesso ao Microfone Negado",
                 description: "Por favor, habilite o acesso ao microfone nas configurações do seu navegador para usar esta funcionalidade.",
+            });
+        } else {
+             toast({
+                variant: "destructive",
+                title: "Erro de Microfone",
+                description: `Ocorreu um erro inesperado: ${err.message}`,
             });
         }
         setIsRecording(false);
@@ -221,17 +268,9 @@ export function ChatInputForm({
         <div className={cn("rounded-lg border bg-background shadow-sm", selectedFiles.length > 0 && "relative pb-10", (isRecording || isTranscribing) && "pb-12")}>
           {(isRecording || isTranscribing) && (
              <div className="flex h-10 items-center justify-center gap-3 px-4 pt-2">
-                {isClient && isRecording && mediaRecorderRef.current && (
-                    <LiveAudioVisualizer
-                        mediaRecorder={mediaRecorderRef.current}
-                        width={200}
-                        height={35}
-                        barWidth={2}
-                        gap={2}
-                        barColor={'hsl(var(--primary))'}
-                    />
-                )}
-                {isTranscribing && (
+                {isRecording ? (
+                    <CustomSoundWave analyser={analyserRef.current} />
+                ) : (
                     <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo áudio...</p>
                 )}
             </div>
