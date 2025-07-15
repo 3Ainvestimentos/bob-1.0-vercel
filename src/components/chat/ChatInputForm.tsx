@@ -326,6 +326,7 @@ export function ChatInputForm({
   
   const isAudioSelected = selectedFiles.length > 0 && selectedFiles[0].type.startsWith('audio/');
   const isRecordingActive = recordingState === 'recording' || recordingState === 'locked';
+  const isTranscribing = recordingState === 'transcribing';
 
   return (
     <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
@@ -350,34 +351,32 @@ export function ChatInputForm({
             </div>
           )}
           <div className="relative flex min-h-[60px] items-start">
-            {isRecordingActive ? (
+            {isRecordingActive && recordingState === 'locked' ? (
                  <div className="flex w-full items-center min-h-[inherit] p-4">
-                     {recordingState === 'locked' && (
-                        <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelLockedRecording}>
-                             <Trash2 className="h-4 w-4"/>
-                         </Button>
-                     )}
-                     <div className="flex-1 flex items-center justify-center h-full px-4" onClick={stopRecording}>
+                    <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelLockedRecording}>
+                        <Trash2 className="h-4 w-4"/>
+                    </Button>
+                    <div className="flex-1 flex items-center justify-center h-full px-4">
+                       <CustomSoundWave analyser={analyserRef.current} isVisible={isRecordingActive} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
+                        <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
+                            <SendHorizontal className="h-4 w-4" />
+                        </Button>
+                    </div>
+                 </div>
+            ) : isRecordingActive && recordingState === 'recording' ? (
+                 <div className="flex w-full items-center min-h-[inherit] p-4">
+                    <div className="flex-1 flex items-center justify-center h-full px-4">
                         <CustomSoundWave analyser={analyserRef.current} isVisible={isRecordingActive} />
-                     </div>
-                     <div className="flex items-center gap-2">
-                         {recordingState === 'locked' && <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>}
-                         {recordingState === 'locked' ? (
-                            <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
-                                <SendHorizontal className="h-4 w-4" />
-                            </Button>
-                         ) : (
-                           <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500 bg-red-500/10" onClick={stopRecording}>
-                                <Square className="h-4 w-4" />
-                           </Button>
-                         )}
-                     </div>
+                    </div>
                  </div>
             ) : (
                 <TextareaAutosize
                     ref={inputRef}
                     placeholder={
-                        recordingState === 'transcribing' ? "Aguarde a transcrição..." :
+                        isTranscribing ? "Aguarde a transcrição..." :
                         isAudioSelected ? "Opcional: adicione um comando ou pergunta sobre o áudio" : 
                         "Insira aqui um comando ou pergunta"
                     }
@@ -390,7 +389,7 @@ export function ChatInputForm({
                             if (e.currentTarget.form) e.currentTarget.form.requestSubmit();
                         }
                     }}
-                    disabled={isLoading || isAudioSelected || isRecordingActive || recordingState === 'transcribing'}
+                    disabled={isLoading || isAudioSelected || isRecordingActive || isTranscribing}
                     rows={1}
                     maxRows={8}
                     />
@@ -400,7 +399,7 @@ export function ChatInputForm({
               size="icon"
               variant="ghost"
               className="absolute right-3 top-3 h-8 w-8 rounded-full text-muted-foreground"
-              disabled={isLoading || isRecordingActive || recordingState === 'transcribing' || (!input.trim() && selectedFiles.length === 0)}
+              disabled={isLoading || isRecordingActive || isTranscribing || (!input.trim() && selectedFiles.length === 0)}
             >
               <SendHorizontal className="h-5 w-5" />
             </Button>
@@ -409,7 +408,7 @@ export function ChatInputForm({
           <div className="flex h-[40px] items-center p-2 relative">
               <div className={cn(
                   "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
-                  isRecordingActive || recordingState === 'transcribing' ? "opacity-0 pointer-events-none" : "opacity-100"
+                  isRecordingActive || isTranscribing ? "opacity-0 pointer-events-none" : "opacity-100"
                 )}>
                   <input
                       type="file"
@@ -435,10 +434,7 @@ export function ChatInputForm({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className={cn(
-                        "h-8 w-8 text-muted-foreground",
-                        recordingState === 'recording' && 'text-red-500 bg-red-500/10'
-                      )}
+                      className={cn( "h-8 w-8 text-muted-foreground")}
                       disabled={isLoading}
                       onClick={handleSimpleClick}
                       onMouseDown={handleMouseDown}
@@ -460,8 +456,23 @@ export function ChatInputForm({
               </div>
               
               <div className={cn(
+                  "absolute inset-0 flex items-center p-2 transition-opacity duration-300",
+                  !isRecordingActive || isTranscribing ? "opacity-0 pointer-events-none" : "opacity-100"
+              )}>
+                 <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-500 bg-red-500/10"
+                    onClick={stopRecording}
+                  >
+                    <Square className="h-4 w-4" />
+                 </Button>
+              </div>
+
+              <div className={cn(
                   "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
-                  recordingState === 'transcribing' ? "opacity-100" : "opacity-0 pointer-events-none"
+                  isTranscribing ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}>
                   <div className="flex h-full w-full items-center justify-start">
                       <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
