@@ -4,6 +4,7 @@
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { DlpServiceClient } from '@google-cloud/dlp';
+import { SpeechClient } from '@google-cloud/speech';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import mammoth from 'mammoth';
@@ -393,14 +394,13 @@ function convertAudioToMp3(inputBuffer: Buffer): Promise<Buffer> {
 }
 
 
-export async function transcribeAudio(audioData: { dataUri: string; mimeType: string }): Promise<string> {
+export async function transcribeFileAudio(audioData: { dataUri: string; mimeType: string }): Promise<string> {
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
         
         let audioBuffer = Buffer.from(audioData.dataUri.split(',')[1], 'base64');
         let finalMimeType = audioData.mimeType;
 
-        // Converte para MP3 se não for um formato diretamente suportado pelo Gemini
         if (!['audio/mpeg', 'audio/wav', 'audio/mp3'].includes(audioData.mimeType)) {
              try {
                 audioBuffer = await convertAudioToMp3(audioBuffer);
@@ -443,6 +443,42 @@ export async function transcribeAudio(audioData: { dataUri: string; mimeType: st
     }
 }
 
+export async function transcribeLiveAudio(audioBase64: string): Promise<string> {
+    try {
+        const credentials = await getServiceAccountCredentials();
+        const speechClient = new SpeechClient({ credentials });
+
+        const audio = {
+            content: audioBase64,
+        };
+        const config = {
+            encoding: 'WEBM_OPUS' as const,
+            sampleRateHertz: 48000,
+            languageCode: 'pt-BR',
+            enableAutomaticPunctuation: true,
+        };
+        const request = {
+            audio: audio,
+            config: config,
+        };
+
+        const [response] = await speechClient.recognize(request);
+        const transcription = response.results
+            ?.map(result => result.alternatives?.[0].transcript)
+            .join('\n');
+            
+        return transcription || "Não foi possível transcrever o áudio.";
+    } catch (error: any) {
+        console.error("Error calling Google Speech-to-Text API:", error);
+        if (error.code === 7 && error.details?.includes('requires billing')) {
+          throw new Error('A API Speech-to-Text não está ativada ou a fatura não está configurada para este projeto.');
+        }
+        if (error.code === 3) {
+            throw new Error(`Formato de áudio inválido. Detalhes: ${error.details}`);
+        }
+        throw new Error(`Ocorreu um erro inesperado durante a transcrição com a API Speech-to-Text: ${error.message}`);
+    }
+}
 
 
 export async function regenerateAnswer(
@@ -606,12 +642,3 @@ export async function removeFileFromConversation(
         throw new Error(`Failed to remove file from conversation: ${error.message}`);
     }
 }
-    
-    
-
-    
-
-    
-
-    
-

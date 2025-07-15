@@ -14,7 +14,7 @@ import {
   generateTitleForConversation,
   regenerateAnswer,
   removeFileFromConversation,
-  transcribeAudio
+  transcribeFileAudio
 } from '@/app/actions';
 import {
   AlertDialog,
@@ -647,7 +647,7 @@ function ChatPageContent() {
         if (isTranscriptionRequest) {
             const audioFile = files[0];
             const audioData = await readFileAsDataURL(audioFile);
-            const transcription = await transcribeAudio({ dataUri: audioData.dataUri, mimeType: audioData.mimeType });
+            const transcription = await transcribeFileAudio({ dataUri: audioData.dataUri, mimeType: audioData.mimeType });
             assistantMessage = {
                 id: crypto.randomUUID(),
                 role: 'assistant',
@@ -1497,5 +1497,3 @@ export default function ChatPage() {
         </SidebarProvider>
     )
 }
-
-    
