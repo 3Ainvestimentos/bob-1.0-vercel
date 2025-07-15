@@ -277,7 +277,7 @@ export function ChatInputForm({
           cleanupRecording();
           setRecordingState('idle');
       }
-  }, [toast, cleanupRecording, stopRecording]);
+  }, [toast, stopRecording, cleanupRecording]);
 
   const handleSimpleClick = () => {
     if (recordingState === 'recording') {
@@ -325,7 +325,7 @@ export function ChatInputForm({
   const renderBottomBarContent = () => {
     if (isTranscribing) {
         return (
-            <div className="flex h-full w-full items-center justify-start px-2">
+            <div className="flex h-full w-full items-center justify-center px-2">
                 <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
             </div>
         );
@@ -354,7 +354,10 @@ export function ChatInputForm({
 
     if (recordingState === 'recording') {
         return (
-            <div className="flex w-full items-center min-h-[inherit]">
+            <div className="flex h-full w-full items-center justify-between px-2">
+                 <div className="flex-1 px-2 h-full">
+                    <CustomSoundWave analyser={analyserRef.current} isVisible={true} />
+                </div>
                 <Button
                     type="button"
                     variant="ghost"
@@ -364,9 +367,6 @@ export function ChatInputForm({
                 >
                     <Square className="h-4 w-4" />
                 </Button>
-                <div className="flex-1 px-2 h-full">
-                    <CustomSoundWave analyser={analyserRef.current} isVisible={true} />
-                </div>
             </div>
         );
     }
@@ -434,22 +434,28 @@ export function ChatInputForm({
         onSubmit={handleSubmit}
         className="px-4 pb-4 pt-2 sm:px-6 lg:px-8"
       >
-        <div className={cn("rounded-lg border bg-background shadow-sm", selectedFiles.length > 0 && "relative pb-10")}>
-          {selectedFiles.length > 0 && recordingState === 'idle' && (
-            <div className="absolute bottom-11 left-2 w-[calc(100%-1rem)] p-2 space-y-1">
-                {selectedFiles.map(file => (
-                  <Badge key={file.name} variant="secondary" className="flex max-w-full items-center justify-between gap-2 pl-2 pr-1">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                          <File className="h-4 w-4 shrink-0"/>
-                          <span className="truncate text-xs">{file.name}</span>
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-5 w-5 shrink-0 rounded-full" onClick={() => handleRemoveFile(file.name)}>
-                          <X className="h-3 w-3" />
-                      </Button>
-                  </Badge>
-                ))}
+        <div className={cn("rounded-lg border bg-background shadow-sm")}>
+           <div className={cn("grid transition-all duration-300 ease-in-out", 
+                selectedFiles.length > 0 && recordingState === 'idle' 
+                ? 'grid-rows-[1fr] opacity-100' 
+                : 'grid-rows-[0fr] opacity-0'
+            )}>
+                <div className="overflow-hidden">
+                    <div className="p-2 space-y-1">
+                        {selectedFiles.map(file => (
+                          <Badge key={file.name} variant="secondary" className="flex max-w-full items-center justify-between gap-2 pl-2 pr-1">
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                  <File className="h-4 w-4 shrink-0"/>
+                                  <span className="truncate text-xs">{file.name}</span>
+                              </div>
+                              <Button type="button" variant="ghost" size="icon" className="h-5 w-5 shrink-0 rounded-full" onClick={() => handleRemoveFile(file.name)}>
+                                  <X className="h-3 w-3" />
+                              </Button>
+                          </Badge>
+                        ))}
+                    </div>
+                </div>
             </div>
-          )}
           <div className="relative flex min-h-[60px] items-start">
             <TextareaAutosize
                 ref={inputRef}
