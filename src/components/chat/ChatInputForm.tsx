@@ -136,6 +136,17 @@ export function ChatInputForm({
         fileInputRef.current.value = '';
     }
   };
+
+  const stopRecording = useCallback(() => {
+    if (recordingState === 'idle' || recordingState === 'transcribing') return;
+
+    if (mediaRecorderRef.current?.state === 'recording') {
+        processAndTranscribeAudio();
+    }
+    
+    cleanupRecording();
+    setRecordingState('idle');
+  }, [recordingState, cleanupRecording, processAndTranscribeAudio]);
   
   const cleanupRecording = useCallback(() => {
     if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
@@ -194,17 +205,6 @@ export function ChatInputForm({
         }
     };
   };
-
-  const stopRecording = useCallback(() => {
-    if (recordingState === 'idle' || recordingState === 'transcribing') return;
-    
-    if (mediaRecorderRef.current?.state === 'recording') {
-        processAndTranscribeAudio();
-    }
-    cleanupRecording();
-    setRecordingState('idle');
-  }, [recordingState, cleanupRecording, processAndTranscribeAudio]);
-
 
   const startRecording = useCallback(async (isLockedMode: boolean) => {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -348,43 +348,27 @@ export function ChatInputForm({
             </div>
           )}
           <div className="relative flex min-h-[60px] items-start">
-            {recordingState === 'locked' ? (
-                 <div className="flex w-full items-center min-h-[inherit] p-4">
-                    <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelLockedRecording}>
-                        <Trash2 className="h-4 w-4"/>
-                    </Button>
-                    <div className="flex-1 flex items-center justify-center h-full px-4">
-                       <CustomSoundWave analyser={analyserRef.current} isVisible={isRecordingActive} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
-                        <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
-                            <SendHorizontal className="h-4 w-4" />
-                        </Button>
-                    </div>
-                 </div>
-            ) : (
-                <TextareaAutosize
-                    ref={inputRef}
-                    placeholder={
-                        isTranscribing ? "Aguarde a transcrição..." :
-                        isAudioSelected ? "Opcional: adicione um comando ou pergunta sobre o áudio" : 
-                        "Insira aqui um comando ou pergunta"
+            <TextareaAutosize
+                ref={inputRef}
+                placeholder={
+                    isRecordingActive ? "Gravando..." :
+                    isTranscribing ? "Aguarde a transcrição..." :
+                    isAudioSelected ? "Opcional: adicione um comando ou pergunta sobre o áudio" : 
+                    "Insira aqui um comando ou pergunta"
+                }
+                className="min-h-[inherit] flex-1 resize-none border-0 bg-transparent p-4 pr-12 text-base focus-visible:ring-0"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        if (e.currentTarget.form) e.currentTarget.form.requestSubmit();
                     }
-                    className="min-h-[inherit] flex-1 resize-none border-0 bg-transparent p-4 pr-12 text-base focus-visible:ring-0"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                            e.preventDefault();
-                            if (e.currentTarget.form) e.currentTarget.form.requestSubmit();
-                        }
-                    }}
-                    disabled={isLoading || isAudioSelected || isRecordingActive || isTranscribing}
-                    rows={1}
-                    maxRows={8}
-                    />
-            )}
+                }}
+                disabled={isLoading || isAudioSelected || isRecordingActive || isTranscribing}
+                rows={1}
+                maxRows={8}
+                />
             <Button
               type="submit"
               size="icon"
@@ -397,81 +381,109 @@ export function ChatInputForm({
           </div>
           <Separator />
           <div className="flex h-[40px] items-center p-2 relative">
-              <div className={cn(
-                  "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
-                  recordingState !== 'idle' ? "opacity-0 pointer-events-none" : "opacity-100"
-                )}>
-                  <input
-                      type="file"
-                      multiple={true}
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      className="hidden"
-                      accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
-                      disabled={isLoading}
-                  />
-                  <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground"
-                      disabled={isLoading}
-                      onClick={handleAttachClick}
-                      title={"Anexar arquivo(s)"}
-                  >
-                      <Paperclip className="h-5 w-5" />
-                  </Button>
-                  <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className={cn( "h-8 w-8 text-muted-foreground")}
-                      disabled={isLoading}
-                      onClick={handleSimpleClick}
-                      onMouseDown={handleMouseDown}
-                      title={"Gravar áudio (clique) ou segure para travar"}
-                  >
-                      <Mic className="h-5 w-5" />
-                  </Button>
-                  {isDragToLockActive && (
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground animate-pulse"
-                        onMouseUp={handleMouseUpOnLock}
-                    >
-                       <Lock className="h-5 w-5" />
-                    </Button>
-                  )}
-              </div>
-              
-              <div className={cn(
-                  "absolute inset-0 flex w-full items-center p-2 transition-opacity duration-300",
-                  recordingState !== 'recording' ? "opacity-0 pointer-events-none" : "opacity-100"
-              )}>
-                 <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-red-500 bg-red-500/10"
-                    onClick={stopRecording}
-                  >
-                    <Square className="h-4 w-4" />
-                 </Button>
-                 <div className="flex-1 px-4 h-full">
-                    <CustomSoundWave analyser={analyserRef.current} isVisible={recordingState === 'recording'} />
+              {recordingState === 'locked' ? (
+                 <div className="flex w-full items-center min-h-[inherit]">
+                    <div className="flex items-center gap-2">
+                        <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelLockedRecording}>
+                            <Trash2 className="h-4 w-4"/>
+                        </Button>
+                        <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
+                            <SendHorizontal className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center h-full px-4">
+                       <CustomSoundWave analyser={analyserRef.current} isVisible={isRecordingActive} />
+                    </div>
+                    <div className="flex items-center">
+                        <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
+                    </div>
                  </div>
-              </div>
-
-              <div className={cn(
-                  "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
-                  isTranscribing ? "opacity-100" : "opacity-0 pointer-events-none"
-                )}>
-                  <div className="flex h-full w-full items-center justify-start">
-                      <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
-                  </div>
-              </div>
+            ) : (
+                <>
+                    <div className={cn(
+                        "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
+                        (recordingState !== 'idle' && recordingState !== 'recording') ? "opacity-0 pointer-events-none" : "opacity-100"
+                    )}>
+                        <input
+                            type="file"
+                            multiple={true}
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,text/plain,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,.ogg,.opus"
+                            disabled={isLoading}
+                        />
+                         <div className={cn("flex items-center transition-opacity duration-200", recordingState === 'recording' ? "opacity-0" : "opacity-100")}>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground"
+                                disabled={isLoading}
+                                onClick={handleAttachClick}
+                                title={"Anexar arquivo(s)"}
+                            >
+                                <Paperclip className="h-5 w-5" />
+                            </Button>
+                        </div>
+                        <div className="flex-1 flex items-center h-full">
+                            <div className="w-full h-full relative">
+                                <div className={cn("absolute inset-0 flex items-center transition-opacity duration-200", recordingState === 'idle' ? 'opacity-100' : 'opacity-0')}>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-muted-foreground"
+                                        disabled={isLoading}
+                                        onClick={handleSimpleClick}
+                                        onMouseDown={handleMouseDown}
+                                        title={"Gravar áudio (clique) ou segure para travar"}
+                                    >
+                                        <Mic className="h-5 w-5" />
+                                    </Button>
+                                    {isDragToLockActive && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground animate-pulse"
+                                            onMouseUp={handleMouseUpOnLock}
+                                        >
+                                           <Lock className="h-5 w-5" />
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className={cn(
+                                    "absolute inset-0 flex w-full items-center transition-opacity duration-200",
+                                    recordingState === 'recording' ? "opacity-100" : "opacity-0 pointer-events-none"
+                                )}>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-red-500 bg-red-500/10"
+                                        onClick={stopRecording}
+                                    >
+                                        <Square className="h-4 w-4" />
+                                    </Button>
+                                    <div className="flex-1 px-2 h-full">
+                                        <CustomSoundWave analyser={analyserRef.current} isVisible={recordingState === 'recording'} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className={cn(
+                        "absolute inset-0 flex items-center p-2 transition-opacity duration-300", 
+                        isTranscribing ? "opacity-100" : "opacity-0 pointer-events-none"
+                      )}>
+                        <div className="flex h-full w-full items-center justify-start">
+                            <p className="text-sm text-muted-foreground animate-pulse">Transcrevendo...</p>
+                        </div>
+                    </div>
+                </>
+            )}
           </div>
         </div>
         <p className="pt-2 text-center text-xs text-muted-foreground">
