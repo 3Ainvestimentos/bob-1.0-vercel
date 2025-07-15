@@ -312,11 +312,6 @@ export function ChatInputForm({
     };
   }, [isDragToLockActive]);
 
-  const handleCancelLockedRecording = () => {
-    cleanupRecording();
-    setRecordingState('idle');
-  }
-
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -340,7 +335,7 @@ export function ChatInputForm({
         return (
             <div className="flex w-full items-center min-h-[inherit]">
                 <div className="flex items-center gap-2">
-                    <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleCancelLockedRecording}>
+                    <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={stopRecording}>
                         <Trash2 className="h-4 w-4"/>
                     </Button>
                     <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
