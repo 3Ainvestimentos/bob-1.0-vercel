@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { File, Mic, Paperclip, SendHorizontal, Square, X } from 'lucide-react';
-import React, { FormEvent, useCallback, useRef, useState } from 'react';
+import React, { FormEvent, useCallback, useRef, useState, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import dynamic from 'next/dynamic';
 
@@ -43,6 +43,7 @@ export function ChatInputForm({
 
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -51,6 +52,10 @@ export function ChatInputForm({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,7 +221,7 @@ export function ChatInputForm({
         <div className={cn("rounded-lg border bg-background shadow-sm", selectedFiles.length > 0 && "relative pb-10", (isRecording || isTranscribing) && "pb-12")}>
           {(isRecording || isTranscribing) && (
              <div className="flex h-10 items-center justify-center gap-3 px-4 pt-2">
-                {isRecording && mediaRecorderRef.current && (
+                {isClient && isRecording && mediaRecorderRef.current && (
                     <LiveAudioVisualizer
                         mediaRecorder={mediaRecorderRef.current}
                         width={200}
