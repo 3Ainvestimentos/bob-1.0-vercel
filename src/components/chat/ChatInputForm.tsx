@@ -186,13 +186,21 @@ export function ChatInputForm({
         };
         checkSilence();
 
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error accessing microphone:", err);
-        toast({
-            variant: "destructive",
-            title: "Acesso ao Microfone Negado",
-            description: "Por favor, habilite o acesso ao microfone nas configurações do seu navegador.",
-        });
+        if (err.name === 'NotFoundError') {
+            toast({
+                variant: "destructive",
+                title: "Microfone não encontrado",
+                description: "Não foi possível encontrar um microfone. Verifique se ele está conectado e habilitado.",
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Acesso ao Microfone Negado",
+                description: "Por favor, habilite o acesso ao microfone nas configurações do seu navegador para usar esta funcionalidade.",
+            });
+        }
         setIsRecording(false);
     }
   };
