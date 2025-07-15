@@ -303,7 +303,6 @@ export function ChatInputForm({
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
-      // If the user releases the mouse anywhere other than the lock, cancel the drag
       if (isDragToLockActive) {
         setIsDragToLockActive(false);
       }
@@ -362,11 +361,15 @@ export function ChatInputForm({
                         <CustomSoundWave analyser={analyserRef.current} isVisible={isRecordingActive} />
                      </div>
                      <div className="flex items-center gap-2">
-                         <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
-                         {recordingState === 'locked' && (
+                         {recordingState === 'locked' && <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>}
+                         {recordingState === 'locked' ? (
                             <Button type="button" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={stopRecording}>
                                 <SendHorizontal className="h-4 w-4" />
                             </Button>
+                         ) : (
+                           <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500 bg-red-500/10" onClick={stopRecording}>
+                                <Square className="h-4 w-4" />
+                           </Button>
                          )}
                      </div>
                  </div>
@@ -475,3 +478,5 @@ export function ChatInputForm({
 }
 
   
+
+    
