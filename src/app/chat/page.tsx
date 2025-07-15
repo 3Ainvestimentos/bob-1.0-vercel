@@ -1267,12 +1267,11 @@ function ChatPageContent() {
     e.preventDefault();
     e.stopPropagation();
     // Use relatedTarget to prevent flickering when moving over child elements
-    if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) {
-        setIsDraggingOver(false);
-    } else if (!e.relatedTarget) {
-        // Fallback for when relatedTarget is null (e.g., dragging out of the window)
-        setIsDraggingOver(false);
+    // This ensures the overlay doesn't disappear when dragging over child elements of the drop zone.
+    if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget as Node)) {
+        return;
     }
+    setIsDraggingOver(false);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -1499,7 +1498,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
