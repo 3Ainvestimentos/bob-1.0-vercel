@@ -1,6 +1,6 @@
 
 
-export const ADMIN_UID = "iv852h1732hHl5HwWEh2fChh23n1";
+export const ADMIN_UID = "A2zB0EC9FsMvVAdzFJaFcQsfewh1";
 
 export interface AttachedFile {
     id: string;

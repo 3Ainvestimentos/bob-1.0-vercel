@@ -9,6 +9,7 @@ import { signInWithPopup, signOut } from 'firebase/auth';
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BobIcon } from '@/components/icons/BobIcon';
+import { ADMIN_UID } from '@/types';
 
 
 export default function LoginPage() {
@@ -24,8 +25,9 @@ export default function LoginPage() {
         if (user) {
             const allowedDomains = ['3ainvestimentos.com.br', '3ariva.com.br'];
             const isEmailValid = user.email && allowedDomains.some(domain => user.email!.endsWith(`@${domain}`));
+            const isUserAdmin = user.uid === ADMIN_UID;
 
-            if (isEmailValid) {
+            if (isEmailValid || isUserAdmin) {
                 router.push('/chat');
             } else {
                 signOut(auth);
