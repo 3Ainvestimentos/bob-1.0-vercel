@@ -10,6 +10,7 @@ import { AttachedFile } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { google } from 'googleapis';
 import pdf from 'pdf-parse';
+import mammoth from 'mammoth';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
@@ -230,6 +231,17 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
         } catch (error: any) {
             console.error("Error parsing PDF:", error);
             throw new Error(`Falha ao processar o arquivo PDF: ${error.message}`);
+        }
+    } else if (
+        mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || // .docx
+        mimeType === 'application/msword' // .doc
+    ) {
+        try {
+            const result = await mammoth.extractRawText({ buffer: fileBuffer });
+            return result.value;
+        } catch (error: any) {
+            console.error("Error parsing Word document:", error);
+            throw new Error(`Falha ao processar o arquivo Word: ${error.message}`);
         }
     }
     
