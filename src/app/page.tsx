@@ -45,15 +45,17 @@ export default function LoginPage() {
         if (user) {
             const isUserAdmin = user.uid === ADMIN_UID;
             
-            // Allow admin to bypass maintenance mode
-            if (isMaintenanceMode && !isUserAdmin) {
-                 signOut(auth);
-                 toast({
-                    variant: 'destructive',
-                    title: 'Sistema em Manutenção',
-                    description: 'O sistema está temporariamente indisponível. Tente novamente mais tarde.',
-                });
-                router.push('/');
+            if (isMaintenanceMode) {
+                if (isUserAdmin) {
+                    router.push('/chat');
+                } else {
+                    signOut(auth);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Acesso Negado',
+                        description: 'O sistema está em manutenção. Apenas administradores podem acessar.',
+                    });
+                }
                 return;
             }
 
@@ -89,15 +91,13 @@ export default function LoginPage() {
         }
     };
     
-    if (loading || isCheckingMaintenance || user) {
+    if (loading || isCheckingMaintenance) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
                 <p>Carregando...</p>
             </div>
         );
     }
-    
-    const canAttemptLogin = !isMaintenanceMode;
 
     return (
         <div className="flex h-screen w-full flex-col bg-background text-foreground">
@@ -113,9 +113,9 @@ export default function LoginPage() {
                     )}
 
                     <div className="mt-8 flex flex-col gap-4">
-                         <Button onClick={handleGoogleSignIn} disabled={isMaintenanceMode}>
+                         <Button onClick={handleGoogleSignIn}>
                             <LogIn className="mr-2 h-4 w-4" />
-                            Entrar com conta 3A RIVA
+                            {isMaintenanceMode ? 'Entrar como admin' : 'Entrar com conta 3A RIVA'}
                         </Button>
                     </div>
                 </div>
@@ -127,4 +127,3 @@ export default function LoginPage() {
         </div>
     );
 }
-
