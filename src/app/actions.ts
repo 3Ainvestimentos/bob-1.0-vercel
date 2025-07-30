@@ -976,3 +976,64 @@ export async function setMaintenanceMode(isMaintenanceMode: boolean): Promise<an
         return { error: error.message };
     }
 }
+
+export async function runApiHealthCheck(): Promise<any> {
+    const results = [];
+    
+    // Test DLP API
+    let dlpStartTime = Date.now();
+    try {
+        await deidentifyQuery("test query");
+        results.push({
+            api: 'Google Cloud DLP',
+            status: 'OK',
+            latency: Date.now() - dlpStartTime,
+        });
+    } catch (e: any) {
+        results.push({
+            api: 'Google Cloud DLP',
+            status: 'Erro',
+            latency: Date.now() - dlpStartTime,
+            error: e.message,
+        });
+    }
+
+    // Test Discovery Engine (RAG)
+    let ragStartTime = Date.now();
+    try {
+        await callDiscoveryEngine("teste", []);
+        results.push({
+            api: 'Vertex AI Search (RAG)',
+            status: 'OK',
+            latency: Date.now() - ragStartTime,
+        });
+    } catch (e: any) {
+        results.push({
+            api: 'Vertex AI Search (RAG)',
+            status: 'Erro',
+            latency: Date.now() - ragStartTime,
+            error: e.message,
+        });
+    }
+    
+    // Test Gemini API (Web Search)
+    let geminiStartTime = Date.now();
+    try {
+        const res = await callGemini("teste");
+        if (res.error) throw new Error(res.error);
+        results.push({
+            api: 'Google Gemini API',
+            status: 'OK',
+            latency: Date.now() - geminiStartTime,
+        });
+    } catch (e: any) {
+        results.push({
+            api: 'Google Gemini API',
+            status: 'Erro',
+            latency: Date.now() - geminiStartTime,
+            error: e.message,
+        });
+    }
+
+    return { results };
+}

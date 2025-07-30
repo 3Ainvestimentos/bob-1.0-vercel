@@ -4,17 +4,19 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode } from '@/app/actions';
+import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench } from 'lucide-react';
+import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ADMIN_UID } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
 
 interface AdminInsights {
     totalQuestions: number;
@@ -56,6 +58,13 @@ interface AdminCosts {
     costByService: { service: string; cost: number }[];
 }
 
+interface ApiHealthResult {
+    api: string;
+    status: 'OK' | 'Erro';
+    latency: number;
+    error?: string;
+}
+
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -68,6 +77,10 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  
+  const [apiHealthResults, setApiHealthResults] = useState<ApiHealthResult[]>([]);
+  const [isCheckingApiHealth, setIsCheckingApiHealth] = useState(false);
+
 
   useEffect(() => {
     if (authLoading) {
@@ -130,6 +143,26 @@ export default function AdminPage() {
         });
         // Revert UI on error
         setIsMaintenanceMode(!checked);
+    }
+  };
+
+  const handleRunApiHealthCheck = async () => {
+    setIsCheckingApiHealth(true);
+    setApiHealthResults([]);
+    try {
+        const result = await runApiHealthCheck();
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        setApiHealthResults(result.results);
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Erro no Diagnóstico",
+            description: `Não foi possível executar o teste de API: ${error.message}`,
+        });
+    } finally {
+        setIsCheckingApiHealth(false);
     }
   };
 
@@ -760,7 +793,7 @@ export default function AdminPage() {
                      </div>
                 </div>
             </TabsContent>
-             <TabsContent value="system" className="mt-4">
+            <TabsContent value="system" className="mt-4">
                 <div className="grid gap-4 md:grid-cols-2 md:gap-8">
                     <Card>
                         <CardHeader>
@@ -786,6 +819,52 @@ export default function AdminPage() {
                                     onCheckedChange={handleMaintenanceModeToggle}
                                 />
                             </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <Beaker className="h-5 w-5 text-muted-foreground" />
+                                <CardTitle>Diagnóstico de APIs</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Verifique a saúde e a latência das APIs essenciais.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Button onClick={handleRunApiHealthCheck} disabled={isCheckingApiHealth}>
+                                {isCheckingApiHealth ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Beaker className="mr-2 h-4 w-4" />
+                                )}
+                                Executar Testes
+                            </Button>
+                            {apiHealthResults.length > 0 && (
+                                <Table className="mt-4">
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>API</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Latência</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {apiHealthResults.map((result) => (
+                                            <TableRow key={result.api}>
+                                                <TableCell className="font-medium">{result.api}</TableCell>
+                                                <TableCell>
+                                                    <div className={cn("flex items-center gap-2", result.status === 'OK' ? 'text-green-600' : 'text-destructive')}>
+                                                        {result.status === 'OK' ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                                                        <span>{result.status}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right">{result.latency}ms</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
