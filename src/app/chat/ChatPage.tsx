@@ -97,6 +97,7 @@ export interface Message {
   candidatesTokenCount?: number | null;
   latencyMs?: number | null;
   originalContent?: string;
+  isStandardAnalysis?: boolean;
 }
 
 export interface Conversation {
@@ -366,6 +367,7 @@ async function saveConversation(
     candidatesTokenCount: msg.candidatesTokenCount ?? null,
     latencyMs: msg.latencyMs ?? null,
     originalContent: msg.originalContent ?? null,
+    isStandardAnalysis: msg.isStandardAnalysis ?? false,
   }));
 
   const totalTokens = sanitizedMessages.reduce((acc, msg) => {
@@ -641,6 +643,8 @@ function ChatPageContent() {
     if (!query.trim() && files.length === 0) return;
     if (isLoading || !user) return;
 
+    const useStandardAnalysis = query.toLowerCase().includes("análise com nosso padrão");
+
     const fileNames = files.map(f => f.name);
     
     const userQuery = query || (files.length > 0 ? `Analise os arquivos anexados.` : '');
@@ -650,6 +654,7 @@ function ChatPageContent() {
         role: 'user',
         content: userQuery,
         fileNames: fileNames.length > 0 ? fileNames : null,
+        isStandardAnalysis: useStandardAnalysis,
     };
     const newMessages = [...messages, userMessage];
 
@@ -674,6 +679,7 @@ function ChatPageContent() {
                 fileDataUris,
                 chatId: currentChatId,
                 messageId: assistantMessageId,
+                useStandardAnalysis,
             },
             user.uid
         );
@@ -979,7 +985,9 @@ function ChatPageContent() {
       return;
     }
 
-    const userQuery = messages[messageIndex - 1].originalContent || messages[messageIndex - 1].content;
+    const userMessage = messages[messageIndex - 1];
+    const userQuery = userMessage.originalContent || userMessage.content;
+    const isStandardAnalysis = userMessage.isStandardAnalysis || false;
     const originalAssistantResponse = messages[messageIndex].content;
     const newAssistantMessageId = crypto.randomUUID();
 
@@ -994,7 +1002,8 @@ function ChatPageContent() {
         userQuery,
         activeChat.attachedFiles,
         user.uid,
-        activeChatId
+        activeChatId,
+        { useStandardAnalysis }
       );
 
       if (result.error) {
@@ -1021,9 +1030,9 @@ function ChatPageContent() {
       };
 
       if (result.deidentifiedQuery) {
-          const userMessage = messages[messageIndex - 1];
-          userMessage.originalContent = userMessage.originalContent ?? userMessage.content;
-          userMessage.content = result.deidentifiedQuery;
+          const userMsg = messages[messageIndex - 1];
+          userMsg.originalContent = userMsg.originalContent ?? userMsg.content;
+          userMsg.content = result.deidentifiedQuery;
       }
 
       if (result.searchFailed) {
@@ -1554,7 +1563,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}

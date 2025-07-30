@@ -33,6 +33,22 @@ Sua resposta deve seguir esta hierarquia de fontes de informação:
 
 5.  **LINKS:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).`;
 
+const POSICAO_CONSOLIDADA_PREAMBLE = `## Análise de Posição Consolidada (PADRÃO)
+
+Siga estritamente este formato para a análise. Comece com um resumo geral e depois detalhe cada ponto.
+
+1.  **Resumo da Carteira:**
+    *   **Rentabilidade (Mês):** XX,XX% (YY,YY% do CDI) - Ganho Bruto de R$ ZZ.ZZZ,ZZ.
+    *   **Rentabilidade (Ano):** XX,XX% (YY,YY% do CDI) - Ganho Bruto de R$ ZZ.ZZZ,ZZ.
+
+2.  **Alertas e Recomendações:**
+    *   (Use bullet points para destacar pontos de atenção, como concentração de risco, vencimentos próximos, ou oportunidades de realocação).
+
+3.  **Composição da Carteira:**
+    *   (Liste as classes de ativos e seu percentual na carteira, por exemplo: Renda Fixa: XX%, Ações: YY%, Fundos: ZZ%).
+
+Seja conciso e direto ao ponto.`;
+
 
 let adminApp: App | null = null;
 
@@ -411,6 +427,7 @@ export async function askAssistant(
   query: string,
   options: {
     useWebSearch?: boolean;
+    useStandardAnalysis?: boolean;
     fileDataUris?: { name: string; dataUri: string, mimeType: string }[];
     chatId?: string | null;
     messageId?: string | null;
@@ -427,14 +444,19 @@ export async function askAssistant(
   deidentifiedQuery?: string;
   error?: string;
 }> {
-  const { useWebSearch = false, fileDataUris = [], chatId, messageId } = options;
+  const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [], chatId, messageId } = options;
   const startTime = Date.now();
   
   try {
     let result;
     let source: 'rag' | 'web' | 'transcription';
     
-    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(query);
+    let finalQuery = query;
+    if (useStandardAnalysis) {
+        finalQuery = `${POSICAO_CONSOLIDADA_PREAMBLE}\n\n${query}`;
+    }
+
+    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(finalQuery);
 
     if (userId && chatId && foundInfoTypes.length > 0) {
         await logDlpAlert(userId, chatId, foundInfoTypes);
@@ -481,7 +503,7 @@ export async function askAssistant(
         promptTokenCount: result.promptTokenCount,
         candidatesTokenCount: result.candidatesTokenCount,
         latencyMs: latencyMs,
-        deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
+        deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
     };
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
@@ -503,6 +525,9 @@ export async function regenerateAnswer(
   attachments: AttachedFile[],
   userId?: string,
   chatId?: string,
+  options: {
+      useStandardAnalysis?: boolean;
+  } = {}
 ): Promise<{ 
   summary?: string; 
   searchFailed?: boolean; 
@@ -516,7 +541,12 @@ export async function regenerateAnswer(
   try {
     const startTime = Date.now();
     
-    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(originalQuery);
+    let finalQuery = originalQuery;
+    if (options.useStandardAnalysis) {
+        finalQuery = `${POSICAO_CONSOLIDADA_PREAMBLE}\n\n${originalQuery}`;
+    }
+
+    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(finalQuery);
 
     if (userId && chatId && foundInfoTypes.length > 0) {
         await logDlpAlert(userId, chatId, foundInfoTypes);
@@ -538,7 +568,7 @@ export async function regenerateAnswer(
         promptTokenCount: result.promptTokenCount, 
         candidatesTokenCount: result.candidatesTokenCount,
         latencyMs: latencyMs,
-        deidentifiedQuery: originalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
+        deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
     };
   } catch (error: any) {
     console.error("Error in regenerateAnswer (internal):", error.message);
