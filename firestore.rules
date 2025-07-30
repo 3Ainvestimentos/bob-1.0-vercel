@@ -1,39 +1,33 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permite que usuários leiam apenas seus próprios dados.
-    // A escrita é permitida se o usuário estiver autenticado,
-    // o que cobre tanto o cliente quanto o servidor (via service account).
-    // A lógica da aplicação garante que um usuário só escreva em seu próprio path.
+
+    // Regra Geral: Bloqueia todo o acesso por padrão.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Permite que usuários autenticados leiam e modifiquem APENAS seus próprios dados.
     match /users/{userId}/{document=**} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Regra para a nova coleção de arquivo morto
-    match /archived_chats/{chatId} {
-      // Ninguém pode ler, atualizar ou excluir o arquivo morto pelo cliente.
-      allow read, update, delete: if false;
-
-      // Um usuário autenticado pode CRIAR (arquivar) um chat se o campo
-      // 'deletedBy' corresponder ao seu próprio ID de usuário.
-      allow create: if request.auth != null && request.resource.data.deletedBy == request.auth.uid;
+    // Permite que usuários autenticados criem logs de alerta, mas não os leiam ou modifiquem.
+    match /dlp_alerts/{alertId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false; // Apenas o backend/admins devem ler.
     }
-
-    // Permite que qualquer usuário autenticado crie um alerta jurídico.
     match /legal_issue_alerts/{alertId} {
       allow create: if request.auth != null;
-
-      // Nega explicitamente que usuários possam ler, atualizar ou deletar alertas.
-      // Isso garante que apenas seu backend ou administradores possam ver os alertas.
-      allow read, update, delete: if false;
+      allow read, update, delete: if false; // Apenas o backend/admins devem ler.
     }
-
-    // Permite que qualquer usuário autenticado crie um alerta de DLP.
-    match /dlp_alerts/{alertId} {
-        allow create: if request.auth != null;
-        allow read, update, delete: if false;
+    
+    // Ninguém pode ler ou escrever na coleção de chats arquivados diretamente.
+    match /archived_chats/{chatId} {
+        allow read, write: if false;
     }
   }
 }
+
+    
