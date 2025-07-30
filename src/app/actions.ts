@@ -11,6 +11,7 @@ import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { google } from 'googleapis';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
+import {v2 as speech} from '@google-cloud/speech';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
@@ -390,7 +391,7 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
         const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
-        const result = await model.generateContent(query);
+        const result = await model.generateContent("teste");
         const response = await result.response;
         const text = response.text();
         
@@ -530,7 +531,42 @@ export async function askAssistant(
 }
 
 export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
-    throw new Error("A transcrição de áudio ao vivo está temporariamente desabilitada para testes.");
+    const credentials = getServiceAccountCredentials();
+    const projectId = credentials.project_id;
+    if (!projectId) {
+        throw new Error("O 'project_id' não foi encontrado nas credenciais da conta de serviço.");
+    }
+
+    const speechClient = new speech.SpeechClient({ credentials });
+
+    const audio = {
+        content: base64Audio,
+    };
+    const config = {
+        encoding: 'WEBM_OPUS' as const,
+        sampleRateHertz: 48000,
+        languageCode: 'pt-BR',
+        model: 'telephony', 
+    };
+    const request = {
+        audio: audio,
+        config: config,
+        recognizer: `projects/${projectId}/locations/global/recognizers/_`,
+    };
+
+    try {
+        const [response] = await speechClient.recognize(request);
+        const transcription = response.results
+            ?.map(result => result.alternatives?.[0].transcript)
+            .join('\n');
+        return transcription || '';
+    } catch (error: any) {
+        console.error('ERROR T-200: Falha ao transcrever o áudio:', error);
+        if (error.message.includes('permission') || error.message.includes('denied')) {
+            throw new Error(`Erro de permissão com a API Speech-to-Text. Verifique se a conta de serviço tem o papel "Editor de Projeto" ou "Usuário de API Cloud Speech".`);
+        }
+        throw new Error(`Não foi possível processar o áudio. Detalhes: ${error.message}`);
+    }
 }
 
 export async function transcribeFileAudio(audioData: { dataUri: string; mimeType: string }): Promise<string> {
