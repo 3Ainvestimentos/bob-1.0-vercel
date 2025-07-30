@@ -4,14 +4,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getAdminUsers, getAdminCosts } from '@/app/actions';
+import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle } from 'lucide-react';
+import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ADMIN_UID } from '@/types';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 interface AdminInsights {
     totalQuestions: number;
@@ -56,6 +59,7 @@ interface AdminCosts {
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   
   const [insights, setInsights] = useState<AdminInsights | null>(null);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
@@ -63,6 +67,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
 
   useEffect(() => {
     if (authLoading) {
@@ -80,10 +85,17 @@ export default function AdminPage() {
             getAdminInsights(),
             getAdminUsers(),
             getAdminCosts(),
-        ]).then(([insightsData, usersData, costsData]) => {
+            getMaintenanceMode(),
+        ]).then(([insightsData, usersData, costsData, maintenanceData]) => {
+            if (insightsData.error) throw new Error(insightsData.error);
+            if (usersData.error) throw new Error(usersData.error);
+            if (costsData.error) throw new Error(costsData.error);
+            if (maintenanceData.error) throw new Error(maintenanceData.error);
+
             setInsights(insightsData);
             setAdminUsers(usersData);
             setCosts(costsData);
+            setIsMaintenanceMode(maintenanceData.isMaintenanceMode);
         }).catch(err => {
             console.error('Erro ao buscar dados do painel:', err);
             setError(err.message || 'Não foi possível carregar os dados do painel.');
@@ -97,6 +109,30 @@ export default function AdminPage() {
     }
       
   }, [user, authLoading, router]);
+
+  const handleMaintenanceModeToggle = async (checked: boolean) => {
+    setIsMaintenanceMode(checked);
+    try {
+        const result = await setMaintenanceMode(checked);
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        toast({
+            title: "Modo de Manutenção Atualizado",
+            description: `O sistema está agora ${checked ? 'em manutenção' : 'operacional para todos os usuários'}.`,
+        });
+    } catch (error: any) {
+        console.error("Erro ao atualizar modo de manutenção:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro",
+            description: `Não foi possível atualizar o modo de manutenção: ${error.message}`,
+        });
+        // Revert UI on error
+        setIsMaintenanceMode(!checked);
+    }
+  };
+
 
   const formatLatency = (ms: number) => {
     if (ms === 0) return 'N/A';
@@ -159,12 +195,13 @@ export default function AdminPage() {
             </div>
         )}
         <Tabs defaultValue="analytics" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="analytics">Análise Geral</TabsTrigger>
                 <TabsTrigger value="rag">Análise RAG</TabsTrigger>
                 <TabsTrigger value="latency">Latência</TabsTrigger>
                 <TabsTrigger value="feedback">Feedbacks</TabsTrigger>
                 <TabsTrigger value="costs">Custos</TabsTrigger>
+                <TabsTrigger value="system">Sistema</TabsTrigger>
             </TabsList>
             <TabsContent value="analytics" className="mt-4">
                 <div className="flex flex-1 flex-col gap-4 md:gap-8">
@@ -723,12 +760,38 @@ export default function AdminPage() {
                      </div>
                 </div>
             </TabsContent>
+             <TabsContent value="system" className="mt-4">
+                <div className="grid gap-4 md:grid-cols-2 md:gap-8">
+                    <Card>
+                        <CardHeader>
+                             <div className="flex items-center gap-2">
+                                <Wrench className="h-5 w-5 text-muted-foreground" />
+                                <CardTitle>Configurações do Sistema</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Controles globais para o comportamento do aplicativo.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between rounded-lg border p-4">
+                                <div>
+                                    <Label htmlFor="maintenance-mode" className="font-semibold">Modo de Manutenção</Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        Quando ativado, apenas administradores podem logar.
+                                    </p>
+                                </div>
+                                <Switch
+                                    id="maintenance-mode"
+                                    checked={isMaintenanceMode}
+                                    onCheckedChange={handleMaintenanceModeToggle}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </TabsContent>
         </Tabs>
       </main>
     </div>
   );
 }
-
-    
-
-    

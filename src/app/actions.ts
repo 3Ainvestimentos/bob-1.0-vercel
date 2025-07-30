@@ -1,3 +1,4 @@
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -33,21 +34,28 @@ Sua resposta deve seguir esta hierarquia de fontes de informação:
 
 5.  **LINKS:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).`;
 
-const POSICAO_CONSOLIDADA_PREAMBLE = `## Análise de Posição Consolidada (PADRÃO)
-
-Siga estritamente este formato para a análise. Comece com um resumo geral e depois detalhe cada ponto.
-
-1.  **Resumo da Carteira:**
-    *   **Rentabilidade (Mês):** XX,XX% (YY,YY% do CDI) - Ganho Bruto de R$ ZZ.ZZZ,ZZ.
-    *   **Rentabilidade (Ano):** XX,XX% (YY,YY% do CDI) - Ganho Bruto de R$ ZZ.ZZZ,ZZ.
-
-2.  **Alertas e Recomendações:**
-    *   (Use bullet points para destacar pontos de atenção, como concentração de risco, vencimentos próximos, ou oportunidades de realocação).
-
-3.  **Composição da Carteira:**
-    *   (Liste as classes de ativos e seu percentual na carteira, por exemplo: Renda Fixa: XX%, Ações: YY%, Fundos: ZZ%).
-
-Seja conciso e direto ao ponto.`;
+const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanças. Com base em um relatório de investimentos em PDF da XP, extraia:
+:pino: Da página 2:
+[RENTABILIDADE PERCENTUAL DO MÊS]
+[RENTABILIDADE EM %CDI DO MÊS]
+[GANHO FINANCEIRO DO MÊS]
+[RENTABILIDADE PERCENTUAL DO ANO]
+[RENTABILIDADE EM %CDI DO ANO]
+[GANHO FINANCEIRO DO ANO]
+:pino: Da página 5:
+Duas classes com maior rentabilidade no mês, com seus respectivos percentuais e uma breve justificativa baseada nos ativos da carteira
+Duas classes com rentabilidade inferior ao CDI no mês, apenas com nome e percentual. Caso a classe Inflação aparecer na lista, justificar a baixa rentabilidade à baixa inflação do mês anterior
+:balão_de_fala: Monte uma mensagem personalizada com esse modelo, usando asteriscos para a formatação de WhatsApp e sem formatação automática do chat:
+Olá, [NOME]!
+Em maio sua carteira rendeu [RENTABILIDADE PERCENTUAL DO MÊS], o que equivale a [RENTABILIDADE EM %CDI DO MÊS], um ganho bruto de [GANHO FINANCEIRO DO MÊS]! No ano, estamos com uma rentabilidade de [RENTABILIDADE PERCENTUAL DO ANO], o que equivale a uma performance de [RENTABILIDADE EM %CDI DO ANO] e um ganho financeiro de [GANHO FINANCEIRO DO ANO]!
+Os principais destaques foram:
+[Classe 1], com [rentabilidade], [justificativa]
+[Classe 2], com [rentabilidade], [justificativa]
+Os principais detratores foram:
+[Classe 1]: [rentabilidade]
+[Classe 2]: [rentabilidade]
+O cenário global em junho foi marcado por movimentos significativos, especialmente nos Estados Unidos, onde o avanço do pacote fiscal americano impulsionou as bolsas. Paralelamente, observamos um enfraquecimento do dólar frente às principais moedas, reflexo da precificação de uma potencial queda de juros nos EUA em futuro próximo e deteriorização da percepção fiscal do país. Na Ásia, a economia chinesa demonstrou aquecimento, com dados indicando recuperação e contribuindo para um panorama mais favorável para os mercados emergentes.
+No Brasil, O COPOM colocou a taxa SELIC em 15%, no mesmo mês que dados mostraram um arrefecimento da economia e da inflação, já resultado do ciclo de alta que já vivemos desde o ano passado. Agora, já começa a se especular quando começarão as quedas. Esse cenário contribuiu para a boa performance da bolsa brasileira, que registrou resultados positivos. A valorização também foi impulsionada, em parte, pela entrada de capital estrangeiro, resultado de um rebalanceamento global para mercados emergentes.`;
 
 
 let adminApp: App | null = null;
@@ -698,229 +706,209 @@ function calculatePercentile(arr: number[], percentile: number): number {
     return arr[lower] * (1 - weight) + arr[upper] * weight;
 }
 
-export async function getAdminInsights(): Promise<{
-    totalQuestions: number;
-    totalUsers: number;
-    questionsPerUser: number;
-    engagementRate: number;
-    totalRegenerations: number;
-    webSearchCount: number;
-    ragSearchCount: number;
-    ragSearchFailureCount: number;
-    ragSearchFailureRate: number;
-    webSearchRate: number;
-    topQuestions: any[];
-    positiveFeedbacks: number;
-    negativeFeedbacks: number;
-    interactionsByDay: { date: string; formattedDate: string; count: number }[];
-    interactionsByHour: { hour: string; count: number }[];
-    latencyByDay: { date: string, formattedDate: string, latency: number }[];
-    totalLegalIssues: number;
-    mostUsedSources: { title: string, uri: string, count: number }[];
-    avgLatency: number;
-    avgLatencyRag: number;
-    avgLatencyWeb: number;
-    p95Latency: number;
-    p99Latency: number;
-}> {
-    const adminDb = getAuthenticatedFirestoreAdmin();
+export async function getAdminInsights(): Promise<any> {
+    try {
+        const adminDb = getAuthenticatedFirestoreAdmin();
 
-    const listUsersResult = await getAuthenticatedAuthAdmin().listUsers();
-    const totalUsers = listUsersResult.users.length;
+        const listUsersResult = await getAuthenticatedAuthAdmin().listUsers();
+        const totalUsers = listUsersResult.users.length;
 
-    const chatsCollectionGroup = adminDb.collectionGroup('chats');
-    const chatsSnapshot = await chatsCollectionGroup.get();
+        const chatsCollectionGroup = adminDb.collectionGroup('chats');
+        const chatsSnapshot = await chatsCollectionGroup.get();
 
-    let totalQuestions = 0;
-    let ragSearchCount = 0;
-    let webSearchCount = 0;
-    let ragSearchFailureCount = 0;
+        let totalQuestions = 0;
+        let ragSearchCount = 0;
+        let webSearchCount = 0;
+        let ragSearchFailureCount = 0;
 
-    const userQuestionCounts: { [key: string]: number } = {};
-    const interactionsByDayMap: { [key: string]: number } = {};
-    const interactionsByHourMap: { [key: string]: number } = {};
-    const sourceUsageMap: { [key: string]: { title: string; uri: string; count: number } } = {};
+        const userQuestionCounts: { [key: string]: number } = {};
+        const interactionsByDayMap: { [key: string]: number } = {};
+        const interactionsByHourMap: { [key: string]: number } = {};
+        const sourceUsageMap: { [key: string]: { title: string; uri: string; count: number } } = {};
 
-    const allLatencies: number[] = [];
-    const ragLatencies: number[] = [];
-    const webLatencies: number[] = [];
-    const latencyByDayMap: { [key: string]: { totalLatency: number, count: number } } = {};
+        const allLatencies: number[] = [];
+        const ragLatencies: number[] = [];
+        const webLatencies: number[] = [];
+        const latencyByDayMap: { [key: string]: { totalLatency: number, count: number } } = {};
 
-    chatsSnapshot.forEach(doc => {
-        const messages = (doc.data().messages || []) as Message[];
-        const userId = doc.ref.parent.parent?.id; 
-        
-        const chatCreatedAt = (doc.data().createdAt as AdminTimestamp).toDate();
-        const gmtMinus3Offset = 3 * 60 * 60 * 1000;
-        
-        messages.forEach((m: Message) => {
-            const interactionDate = new Date(chatCreatedAt.getTime() - gmtMinus3Offset);
-            const dayKey = interactionDate.toISOString().split('T')[0];
+        chatsSnapshot.forEach(doc => {
+            const messages = (doc.data().messages || []) as Message[];
+            const userId = doc.ref.parent.parent?.id; 
+            
+            const chatCreatedAt = (doc.data().createdAt as AdminTimestamp).toDate();
+            const gmtMinus3Offset = 3 * 60 * 60 * 1000;
+            
+            messages.forEach((m: Message) => {
+                const interactionDate = new Date(chatCreatedAt.getTime() - gmtMinus3Offset);
+                const dayKey = interactionDate.toISOString().split('T')[0];
 
-            if (m.role === 'user') {
-                totalQuestions++;
-                if (userId) {
-                    userQuestionCounts[userId] = (userQuestionCounts[userId] || 0) + 1;
-                }
-                
-                interactionsByDayMap[dayKey] = (interactionsByDayMap[dayKey] || 0) + 1;
-                
-                const hourKey = interactionDate.getUTCHours().toString().padStart(2, '0') + ':00';
-                interactionsByHourMap[hourKey] = (interactionsByHourMap[hourKey] || 0) + 1;
-            }
-            if (m.role === 'assistant') {
-                if (m.latencyMs && m.latencyMs > 0) {
-                    allLatencies.push(m.latencyMs);
-
-                    if (!latencyByDayMap[dayKey]) {
-                        latencyByDayMap[dayKey] = { totalLatency: 0, count: 0 };
+                if (m.role === 'user') {
+                    totalQuestions++;
+                    if (userId) {
+                        userQuestionCounts[userId] = (userQuestionCounts[userId] || 0) + 1;
                     }
-                    latencyByDayMap[dayKey].totalLatency += m.latencyMs;
-                    latencyByDayMap[dayKey].count++;
+                    
+                    interactionsByDayMap[dayKey] = (interactionsByDayMap[dayKey] || 0) + 1;
+                    
+                    const hourKey = interactionDate.getUTCHours().toString().padStart(2, '0') + ':00';
+                    interactionsByHourMap[hourKey] = (interactionsByHourMap[hourKey] || 0) + 1;
                 }
+                if (m.role === 'assistant') {
+                    if (m.latencyMs && m.latencyMs > 0) {
+                        allLatencies.push(m.latencyMs);
 
-                if (m.source === 'web') {
-                    webSearchCount++;
-                    if (m.latencyMs) webLatencies.push(m.latencyMs);
-                } else if (m.source === 'rag') {
-                    ragSearchCount++;
-                    if (m.latencyMs) ragLatencies.push(m.latencyMs);
-                    if (m.content === "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?") {
-                        ragSearchFailureCount++;
+                        if (!latencyByDayMap[dayKey]) {
+                            latencyByDayMap[dayKey] = { totalLatency: 0, count: 0 };
+                        }
+                        latencyByDayMap[dayKey].totalLatency += m.latencyMs;
+                        latencyByDayMap[dayKey].count++;
                     }
 
-                    if (m.sources && m.sources.length > 0) {
-                        m.sources.forEach(source => {
-                            if (source.uri) {
-                                if (sourceUsageMap[source.uri]) {
-                                    sourceUsageMap[source.uri].count++;
-                                } else {
-                                    sourceUsageMap[source.uri] = {
-                                        title: source.title,
-                                        uri: source.uri,
-                                        count: 1,
-                                    };
+                    if (m.source === 'web') {
+                        webSearchCount++;
+                        if (m.latencyMs) webLatencies.push(m.latencyMs);
+                    } else if (m.source === 'rag') {
+                        ragSearchCount++;
+                        if (m.latencyMs) ragLatencies.push(m.latencyMs);
+                        if (m.content === "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?") {
+                            ragSearchFailureCount++;
+                        }
+
+                        if (m.sources && m.sources.length > 0) {
+                            m.sources.forEach(source => {
+                                if (source.uri) {
+                                    if (sourceUsageMap[source.uri]) {
+                                        sourceUsageMap[source.uri].count++;
+                                    } else {
+                                        sourceUsageMap[source.uri] = {
+                                            title: source.title,
+                                            uri: source.uri,
+                                            count: 1,
+                                        };
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
                 }
-            }
+            });
         });
-    });
 
-    const interactionsByDay = Object.entries(interactionsByDayMap)
-        .map(([date, count]) => {
-            const [year, month, day] = date.split('-');
+        const interactionsByDay = Object.entries(interactionsByDayMap)
+            .map(([date, count]) => {
+                const [year, month, day] = date.split('-');
+                return {
+                    date, 
+                    formattedDate: `${day}/${month}/${year}`, 
+                    count,
+                };
+            })
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        const interactionsByHour = Object.entries(interactionsByHourMap)
+            .map(([hour, count]) => ({ hour, count }))
+            .sort((a, b) => a.hour.localeCompare(b.hour));
+        
+        const latencyByDay = Object.entries(latencyByDayMap)
+            .map(([date, data]) => {
+                const [year, month, day] = date.split('-');
+                return {
+                    date,
+                    formattedDate: `${day}/${month}`,
+                    latency: data.totalLatency / data.count,
+                };
+            })
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+
+        const questionsPerUser = totalUsers > 0 ? totalQuestions / totalUsers : 0;
+        const usersWithMoreThanOneQuestion = Object.values(userQuestionCounts).filter(count => count > 1).length;
+        const engagementRate = totalUsers > 0 ? (usersWithMoreThanOneQuestion / totalUsers) * 100 : 0;
+        const totalSearches = ragSearchCount + webSearchCount;
+        const webSearchRate = totalSearches > 0 ? (webSearchCount / totalSearches) * 100 : 0;
+        const ragSearchFailureRate = ragSearchCount > 0 ? (ragSearchFailureCount / ragSearchCount) * 100 : 0;
+
+        const analyticsCollection = adminDb.collection('question_analytics');
+        const topQuestionsSnapshot = await analyticsCollection.orderBy('count', 'desc').limit(10).get();
+        const topQuestions = topQuestionsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const lastAsked = data.lastAsked as AdminTimestamp;
             return {
-                date, 
-                formattedDate: `${day}/${month}/${year}`, 
-                count,
+                ...data,
+                lastAsked: lastAsked.toDate().toLocaleString('pt-BR', {
+                    timeZone: 'America/Sao_Paulo',
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                }),
             };
-        })
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    const interactionsByHour = Object.entries(interactionsByHourMap)
-        .map(([hour, count]) => ({ hour, count }))
-        .sort((a, b) => a.hour.localeCompare(b.hour));
-    
-    const latencyByDay = Object.entries(latencyByDayMap)
-        .map(([date, data]) => {
-            const [year, month, day] = date.split('-');
-            return {
-                date,
-                formattedDate: `${day}/${month}`,
-                latency: data.totalLatency / data.count,
-            };
-        })
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        });
+
+        const feedbacksCollectionGroup = adminDb.collectionGroup('feedbacks');
+        const feedbacksSnapshot = await feedbacksCollectionGroup.get();
+        let positiveFeedbacks = 0;
+        let negativeFeedbacks = 0;
+        feedbacksSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.rating === 'positive') positiveFeedbacks++;
+            else if (data.rating === 'negative') negativeFeedbacks++;
+        });
+
+        const regenerationsCollectionGroup = adminDb.collectionGroup('regenerated_answers');
+        const regenerationsSnapshot = await regenerationsCollectionGroup.get();
+        const totalRegenerations = regenerationsSnapshot.size;
+
+        const legalAlertsCollection = adminDb.collection('legal_issue_alerts');
+        const legalAlertsSnapshot = await legalAlertsCollection.get();
+        const totalLegalIssues = legalAlertsSnapshot.size;
+
+        const mostUsedSources = Object.values(sourceUsageMap)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+        
+        const calculateAverage = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
+        const avgLatency = calculateAverage(allLatencies);
+        const avgLatencyRag = calculateAverage(ragLatencies);
+        const avgLatencyWeb = calculateAverage(webLatencies);
+        const p95Latency = calculatePercentile(allLatencies, 95);
+        const p99Latency = calculatePercentile(allLatencies, 99);
 
 
-    const questionsPerUser = totalUsers > 0 ? totalQuestions / totalUsers : 0;
-    const usersWithMoreThanOneQuestion = Object.values(userQuestionCounts).filter(count => count > 1).length;
-    const engagementRate = totalUsers > 0 ? (usersWithMoreThanOneQuestion / totalUsers) * 100 : 0;
-    const totalSearches = ragSearchCount + webSearchCount;
-    const webSearchRate = totalSearches > 0 ? (webSearchCount / totalSearches) * 100 : 0;
-    const ragSearchFailureRate = ragSearchCount > 0 ? (ragSearchFailureCount / ragSearchCount) * 100 : 0;
-
-    const analyticsCollection = adminDb.collection('question_analytics');
-    const topQuestionsSnapshot = await analyticsCollection.orderBy('count', 'desc').limit(10).get();
-    const topQuestions = topQuestionsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        const lastAsked = data.lastAsked as AdminTimestamp;
-        return {
-            ...data,
-            lastAsked: lastAsked.toDate().toLocaleString('pt-BR', {
-                timeZone: 'America/Sao_Paulo',
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit',
-            }),
+        return { 
+            totalQuestions, 
+            totalUsers, 
+            questionsPerUser,
+            engagementRate,
+            totalRegenerations,
+            webSearchCount,
+            ragSearchCount,
+            ragSearchFailureCount,
+            ragSearchFailureRate,
+            webSearchRate,
+            topQuestions,
+            positiveFeedbacks,
+            negativeFeedbacks,
+            interactionsByDay,
+            interactionsByHour,
+            latencyByDay,
+            totalLegalIssues,
+            mostUsedSources,
+            avgLatency,
+            avgLatencyRag,
+            avgLatencyWeb,
+            p95Latency,
+            p99Latency,
         };
-    });
-
-    const feedbacksCollectionGroup = adminDb.collectionGroup('feedbacks');
-    const feedbacksSnapshot = await feedbacksCollectionGroup.get();
-    let positiveFeedbacks = 0;
-    let negativeFeedbacks = 0;
-    feedbacksSnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.rating === 'positive') positiveFeedbacks++;
-        else if (data.rating === 'negative') negativeFeedbacks++;
-    });
-
-    const regenerationsCollectionGroup = adminDb.collectionGroup('regenerated_answers');
-    const regenerationsSnapshot = await regenerationsCollectionGroup.get();
-    const totalRegenerations = regenerationsSnapshot.size;
-
-    const legalAlertsCollection = adminDb.collection('legal_issue_alerts');
-    const legalAlertsSnapshot = await legalAlertsCollection.get();
-    const totalLegalIssues = legalAlertsSnapshot.size;
-
-    const mostUsedSources = Object.values(sourceUsageMap)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
-    
-    const calculateAverage = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-
-    const avgLatency = calculateAverage(allLatencies);
-    const avgLatencyRag = calculateAverage(ragLatencies);
-    const avgLatencyWeb = calculateAverage(webLatencies);
-    const p95Latency = calculatePercentile(allLatencies, 95);
-    const p99Latency = calculatePercentile(allLatencies, 99);
-
-
-    return { 
-        totalQuestions, 
-        totalUsers, 
-        questionsPerUser,
-        engagementRate,
-        totalRegenerations,
-        webSearchCount,
-        ragSearchCount,
-        ragSearchFailureCount,
-        ragSearchFailureRate,
-        webSearchRate,
-        topQuestions,
-        positiveFeedbacks,
-        negativeFeedbacks,
-        interactionsByDay,
-        interactionsByHour,
-        latencyByDay,
-        totalLegalIssues,
-        mostUsedSources,
-        avgLatency,
-        avgLatencyRag,
-        avgLatencyWeb,
-        p95Latency,
-        p99Latency,
-    };
+    } catch (error: any) {
+        console.error("Error fetching admin insights:", error.message);
+        return { error: `Não foi possível carregar os insights: ${error.message}` };
+    }
 }
 
 
-export async function getAdminUsers(): Promise<{uid: string, email?: string, displayName?: string}[]> {
-    const authAdmin = getAuthenticatedAuthAdmin();
-
+export async function getAdminUsers(): Promise<any> {
     try {
+        const authAdmin = getAuthenticatedAuthAdmin();
         const listUsersResult = await authAdmin.listUsers();
         
         const allUsers = listUsersResult.users.map(userRecord => ({
@@ -933,19 +921,14 @@ export async function getAdminUsers(): Promise<{uid: string, email?: string, dis
 
     } catch (error: any) {
         console.error('Error fetching admin users:', error);
-        throw new Error(`Não foi possível buscar a lista de usuários: ${error.message}`);
+        return { error: `Não foi possível buscar a lista de usuários: ${error.message}` };
     }
 }
 
-export async function getAdminCosts(): Promise<{
-    currentMonthCost: number;
-    costPerMillionInputTokens: number;
-    costPerMillionOutputTokens: number;
-    monthlyCostForecast: number;
-    costByService: { service: string; cost: number }[];
-}> {
+export async function getAdminCosts(): Promise<any> {
     await new Promise(resolve => setTimeout(resolve, 500)); 
     
+    // This is mock data. In a real scenario, you would fetch this from a billing API.
     const mockData = {
         currentMonthCost: 125.40,
         costPerMillionInputTokens: 0.50,
@@ -960,4 +943,36 @@ export async function getAdminCosts(): Promise<{
     };
 
     return mockData;
+}
+
+
+// ---- System Settings ----
+
+export async function getMaintenanceMode(): Promise<any> {
+    try {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const settingsRef = adminDb.collection('system_settings').doc('config');
+        const docSnap = await settingsRef.get();
+
+        if (docSnap.exists) {
+            return { isMaintenanceMode: docSnap.data()?.isMaintenanceMode || false };
+        }
+        // Default to not in maintenance if the document doesn't exist
+        return { isMaintenanceMode: false };
+    } catch (error: any) {
+        console.error("Error getting maintenance mode:", error);
+        return { error: error.message, isMaintenanceMode: false };
+    }
+}
+
+export async function setMaintenanceMode(isMaintenanceMode: boolean): Promise<any> {
+    try {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const settingsRef = adminDb.collection('system_settings').doc('config');
+        await settingsRef.set({ isMaintenanceMode }, { merge: true });
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error setting maintenance mode:", error);
+        return { error: error.message };
+    }
 }

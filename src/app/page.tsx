@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -6,27 +7,59 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
 import { auth, googleProvider } from '@/lib/firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BobIcon } from '@/components/icons/BobIcon';
 import { ADMIN_UID } from '@/types';
+import { getMaintenanceMode } from './actions';
 
 
 export default function LoginPage() {
     const router = useRouter();
     const { user, loading } = useAuth();
     const { toast } = useToast();
+    const [isMaintenanceMode, setIsMaintenanceMode] = useState(true);
+    const [isCheckingMaintenance, setIsCheckingMaintenance] = useState(true);
 
     useEffect(() => {
-        if (loading) {
+        const checkMaintenance = async () => {
+            try {
+                const maintenanceStatus = await getMaintenanceMode();
+                setIsMaintenanceMode(maintenanceStatus.isMaintenanceMode);
+            } catch (error) {
+                console.error("Failed to check maintenance mode:", error);
+                // Assume system is NOT in maintenance if check fails, to avoid locking everyone out.
+                setIsMaintenanceMode(false);
+            } finally {
+                setIsCheckingMaintenance(false);
+            }
+        };
+        checkMaintenance();
+    }, []);
+
+    useEffect(() => {
+        if (loading || isCheckingMaintenance) {
             return;
         }
 
         if (user) {
+            const isUserAdmin = user.uid === ADMIN_UID;
+            
+            // Allow admin to bypass maintenance mode
+            if (isMaintenanceMode && !isUserAdmin) {
+                 signOut(auth);
+                 toast({
+                    variant: 'destructive',
+                    title: 'Sistema em Manutenção',
+                    description: 'O sistema está temporariamente indisponível. Tente novamente mais tarde.',
+                });
+                router.push('/');
+                return;
+            }
+
             const allowedDomains = ['3ainvestimentos.com.br', '3ariva.com.br'];
             const isEmailValid = user.email && allowedDomains.some(domain => user.email!.endsWith(`@${domain}`));
-            const isUserAdmin = user.uid === ADMIN_UID;
-
+            
             if (isEmailValid || isUserAdmin) {
                 router.push('/chat');
             } else {
@@ -38,7 +71,7 @@ export default function LoginPage() {
                 });
             }
         }
-    }, [user, loading, router, toast]);
+    }, [user, loading, router, toast, isMaintenanceMode, isCheckingMaintenance]);
 
     const handleGoogleSignIn = async () => {
         try {
@@ -56,13 +89,15 @@ export default function LoginPage() {
         }
     };
     
-    if (loading || user) {
+    if (loading || isCheckingMaintenance || user) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
                 <p>Carregando...</p>
             </div>
         );
     }
+    
+    const canAttemptLogin = !isMaintenanceMode;
 
     return (
         <div className="flex h-screen w-full flex-col bg-background text-foreground">
@@ -70,9 +105,15 @@ export default function LoginPage() {
                 <div className="flex flex-col items-center text-center">
                     <BobIcon className="mb-4 h-16 w-16" />
                     <h1 className="text-4xl font-bold tracking-tight">Bem-vindo ao Bob</h1>
-                    <p className="mt-2 text-lg text-muted-foreground">Assistente de IA Generativa da 3A RIVA</p>
+                    
+                    {isMaintenanceMode ? (
+                        <p className="mt-2 text-lg text-destructive">O sistema está em manutenção e retorna em breve.</p>
+                    ) : (
+                         <p className="mt-2 text-lg text-muted-foreground">Assistente de IA Generativa da 3A RIVA</p>
+                    )}
+
                     <div className="mt-8 flex flex-col gap-4">
-                         <Button onClick={handleGoogleSignIn}>
+                         <Button onClick={handleGoogleSignIn} disabled={isMaintenanceMode}>
                             <LogIn className="mr-2 h-4 w-4" />
                             Entrar com conta 3A RIVA
                         </Button>
@@ -86,3 +127,4 @@ export default function LoginPage() {
         </div>
     );
 }
+
