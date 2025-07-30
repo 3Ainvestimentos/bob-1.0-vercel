@@ -11,7 +11,7 @@ import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { google } from 'googleapis';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
-import {v2 as speech} from '@google-cloud/speech';
+import {v1 as speech} from '@google-cloud/speech';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
@@ -532,29 +532,25 @@ export async function askAssistant(
 
 export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
     const credentials = getServiceAccountCredentials();
-    const projectId = credentials.project_id;
-    if (!projectId) {
-        throw new Error("O 'project_id' não foi encontrado nas credenciais da conta de serviço.");
-    }
-
     const speechClient = new speech.SpeechClient({ credentials });
 
-    const request = {
-        config: {
-            decodingConfig: {
-                encoding: 'WEBM_OPUS',
-            },
-            model: 'long',
-            languageCodes: ['pt-BR'],
-            features: {
-                enableAutomaticPunctuation: true,
-            },
-        },
+    const audio = {
         content: base64Audio,
+    };
+    const config = {
+        encoding: 'WEBM_OPUS' as const,
+        sampleRateHertz: 48000, // Common for webm opus
+        languageCode: 'pt-BR',
+        enableAutomaticPunctuation: true,
+    };
+
+    const request = {
+        audio: audio,
+        config: config,
     };
 
     try {
-        const [response] = await speechClient.recognize(request as any);
+        const [response] = await speechClient.recognize(request);
         const transcription = response.results
             ?.map(result => result.alternatives?.[0].transcript)
             .join('\n');
@@ -566,10 +562,6 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
         }
         throw new Error(`Não foi possível processar o áudio. Detalhes: ${error.message}`);
     }
-}
-
-export async function transcribeFileAudio(audioData: { dataUri: string; mimeType: string }): Promise<string> {
-    throw new Error("A transcrição de áudio está temporariamente desabilitada para testes.");
 }
 
 
@@ -1173,5 +1165,7 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+    
 
     
