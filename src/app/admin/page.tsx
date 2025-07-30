@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck } from '@/app/actions';
+import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
 interface AdminInsights {
@@ -65,6 +66,16 @@ interface ApiHealthResult {
     error?: string;
 }
 
+interface LegalIssueAlert {
+    id: string;
+    user: { email?: string; displayName?: string };
+    reportedAt: string;
+    userQuery: string;
+    assistantResponse: string;
+    comment?: string;
+}
+
+
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -73,6 +84,7 @@ export default function AdminPage() {
   const [insights, setInsights] = useState<AdminInsights | null>(null);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [costs, setCosts] = useState<AdminCosts | null>(null);
+  const [legalAlerts, setLegalAlerts] = useState<LegalIssueAlert[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -99,16 +111,19 @@ export default function AdminPage() {
             getAdminUsers(),
             getAdminCosts(),
             getMaintenanceMode(),
-        ]).then(([insightsData, usersData, costsData, maintenanceData]) => {
+            getLegalIssueAlerts(),
+        ]).then(([insightsData, usersData, costsData, maintenanceData, alertsData]) => {
             if (insightsData.error) throw new Error(insightsData.error);
             if (usersData.error) throw new Error(usersData.error);
             if (costsData.error) throw new Error(costsData.error);
             if (maintenanceData.error) throw new Error(maintenanceData.error);
+            if (alertsData.error) throw new Error(alertsData.error);
 
             setInsights(insightsData);
             setAdminUsers(usersData);
             setCosts(costsData);
             setIsMaintenanceMode(maintenanceData.isMaintenanceMode);
+            setLegalAlerts(alertsData);
         }).catch(err => {
             console.error('Erro ao buscar dados do painel:', err);
             setError(err.message || 'Não foi possível carregar os dados do painel.');
@@ -228,11 +243,12 @@ export default function AdminPage() {
             </div>
         )}
         <Tabs defaultValue="analytics" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="analytics">Análise Geral</TabsTrigger>
                 <TabsTrigger value="rag">Análise RAG</TabsTrigger>
                 <TabsTrigger value="latency">Latência</TabsTrigger>
                 <TabsTrigger value="feedback">Feedbacks</TabsTrigger>
+                <TabsTrigger value="legal">Alertas Jurídicos</TabsTrigger>
                 <TabsTrigger value="costs">Custos</TabsTrigger>
                 <TabsTrigger value="system">Sistema</TabsTrigger>
             </TabsList>
@@ -700,21 +716,65 @@ export default function AdminPage() {
                             </p>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Problemas Jurídicos</CardTitle>
-                            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                             <div className="text-2xl font-bold">
-                                {insights?.totalLegalIssues.toLocaleString() ?? '...'}
-                            </div>
-                            <p className="text-xs text-muted-foreground pt-1">
-                                Total de problemas jurídicos reportados.
-                            </p>
-                        </CardContent>
-                    </Card>
                 </div>
+            </TabsContent>
+            <TabsContent value="legal" className="mt-4">
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+                            <CardTitle>Alertas Jurídicos Reportados ({legalAlerts.length})</CardTitle>
+                        </div>
+                        <CardDescription>
+                            Análise detalhada de todos os problemas jurídicos reportados pelos usuários.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {legalAlerts.length > 0 ? (
+                            <Accordion type="single" collapsible className="w-full">
+                                {legalAlerts.map(alert => (
+                                    <AccordionItem value={alert.id} key={alert.id}>
+                                        <AccordionTrigger>
+                                            <div className="flex w-full items-center justify-between pr-4 text-sm">
+                                                <div className='text-left'>
+                                                    <p className='font-semibold'>{alert.user.displayName || alert.user.email}</p>
+                                                    <p className='text-xs text-muted-foreground'>{alert.user.email}</p>
+                                                </div>
+                                                <span className="text-xs text-muted-foreground">{alert.reportedAt}</span>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent>
+                                            <div className="space-y-4 rounded-md border bg-muted/50 p-4">
+                                                <div>
+                                                    <h4 className="font-semibold text-xs uppercase text-muted-foreground">Consulta do Usuário</h4>
+                                                    <p className="mt-1 text-sm">{alert.userQuery}</p>
+                                                </div>
+                                                <div className='h-px bg-border'></div>
+                                                <div>
+                                                    <h4 className="font-semibold text-xs uppercase text-muted-foreground">Resposta da IA</h4>
+                                                    <p className="mt-1 text-sm">{alert.assistantResponse}</p>
+                                                </div>
+                                                {alert.comment && (
+                                                     <>
+                                                        <div className='h-px bg-border'></div>
+                                                        <div>
+                                                            <h4 className="font-semibold text-xs uppercase text-muted-foreground">Comentário do Usuário</h4>
+                                                            <p className="mt-1 text-sm italic">"{alert.comment}"</p>
+                                                        </div>
+                                                     </>
+                                                )}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </Accordion>
+                        ) : (
+                            <div className="text-center text-muted-foreground py-10">
+                                Nenhum alerta jurídico reportado.
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </TabsContent>
             <TabsContent value="costs" className="mt-4">
                 <div className="flex flex-1 flex-col gap-4 md:gap-8">

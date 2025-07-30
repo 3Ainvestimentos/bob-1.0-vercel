@@ -925,6 +925,58 @@ export async function getAdminUsers(): Promise<any> {
     }
 }
 
+export async function getLegalIssueAlerts(): Promise<any> {
+    try {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const authAdmin = getAuthenticatedAuthAdmin();
+        
+        const alertsSnapshot = await adminDb.collection('legal_issue_alerts')
+            .orderBy('reportedAt', 'desc')
+            .get();
+
+        if (alertsSnapshot.empty) {
+            return [];
+        }
+
+        const userIds = [...new Set(alertsSnapshot.docs.map(doc => doc.data().userId))];
+        const userPromises = userIds.map(uid => authAdmin.getUser(uid).catch(() => null));
+        const userResults = await Promise.all(userPromises);
+        
+        const userMap = new Map<string, any>();
+        userResults.forEach(user => {
+            if (user) {
+                userMap.set(user.uid, {
+                    email: user.email,
+                    displayName: user.displayName,
+                });
+            }
+        });
+
+        const alerts = alertsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const reportedAt = data.reportedAt as AdminTimestamp;
+            const userInfo = userMap.get(data.userId);
+
+            return {
+                id: doc.id,
+                ...data,
+                user: userInfo || { email: 'Usuário não encontrado', displayName: data.userId },
+                reportedAt: reportedAt.toDate().toLocaleString('pt-BR', {
+                    timeZone: 'America/Sao_Paulo',
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                }),
+            };
+        });
+
+        return alerts;
+    } catch (error: any) {
+        console.error('Error fetching legal issue alerts:', error);
+        return { error: `Não foi possível buscar os alertas jurídicos: ${error.message}` };
+    }
+}
+
+
 export async function getAdminCosts(): Promise<any> {
     await new Promise(resolve => setTimeout(resolve, 500)); 
     
