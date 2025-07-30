@@ -35,7 +35,6 @@ Sua resposta deve seguir esta hierarquia de fontes de informação:
 
 
 let adminApp: App | null = null;
-export const ADMIN_UID = "iv852h1732hHl5HwWEh2fChh23n1";
 
 
 function getServiceAccountCredentials() {
@@ -893,3 +892,5 @@ export async function getAdminCosts(): Promise<{
 
     return mockData;
 }
+
+    

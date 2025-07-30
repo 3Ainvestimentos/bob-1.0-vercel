@@ -4,13 +4,14 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getAdminUsers, getAdminCosts, ADMIN_UID } from '@/app/actions';
+import { getAdminInsights, getAdminUsers, getAdminCosts } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { ADMIN_UID } from '@/types';
 
 interface AdminInsights {
     totalQuestions: number;
@@ -727,5 +728,7 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
 
     

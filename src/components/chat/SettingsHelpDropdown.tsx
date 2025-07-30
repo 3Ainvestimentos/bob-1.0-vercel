@@ -14,7 +14,7 @@ import { HelpCircle, LogIn, LogOut, Moon, Settings, Sun, Shield } from 'lucide-r
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { ADMIN_UID } from '@/app/actions';
+import { ADMIN_UID } from '@/types';
 
 interface SettingsHelpDropdownProps {
   isAuthenticated: boolean;
@@ -94,3 +94,5 @@ export function SettingsHelpDropdown({
     </DropdownMenu>
   );
 }
+
+    
