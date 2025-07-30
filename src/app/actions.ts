@@ -117,13 +117,19 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
 
 async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
     const credentials = getServiceAccountCredentials();
-    const auth = new GoogleAuth({
-      credentials,
-      scopes: 'https://www.googleapis.com/auth/cloud-platform',
-    });
+    const projectId = credentials.project_id;
     
-    const projectId = await auth.getProjectId();
-    const dlp = google.dlp({ version: 'v2', auth });
+    if (!projectId) {
+        throw new Error("O 'project_id' não foi encontrado nas credenciais da conta de serviço.");
+    }
+    
+    const dlp = google.dlp({
+        version: 'v2',
+        auth: new GoogleAuth({
+            credentials,
+            scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+        })
+    });
 
     const parent = `projects/${projectId}/locations/global`;
 
@@ -172,7 +178,7 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
         if (error.response && error.response.data && error.response.data.error) {
             console.error('DLP API Error Details:', JSON.stringify(error.response.data.error, null, 2));
         }
-        if (error.message && error.message.includes('permission')) {
+        if (error.message && (error.message.includes('permission') || error.message.includes('denied'))) {
              throw new Error(`Erro de permissão com a API DLP. Verifique se a conta de serviço tem o papel "Usuário de DLP".`);
         }
         console.error("DLP Error: Returning original query.");
@@ -892,5 +898,3 @@ export async function getAdminCosts(): Promise<{
 
     return mockData;
 }
-
-    
