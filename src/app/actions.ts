@@ -918,9 +918,7 @@ export async function getLegalIssueAlerts(): Promise<any> {
         const adminDb = getAuthenticatedFirestoreAdmin();
         const authAdmin = getAuthenticatedAuthAdmin();
         
-        const alertsSnapshot = await adminDb.collection('legal_issue_alerts')
-            .orderBy('reportedAt', 'desc')
-            .get();
+        const alertsSnapshot = await adminDb.collection('legal_issue_alerts').get();
 
         if (alertsSnapshot.empty) {
             return [];
@@ -970,9 +968,7 @@ export async function getFeedbacks(): Promise<any> {
         const adminDb = getAuthenticatedFirestoreAdmin();
         const authAdmin = getAuthenticatedAuthAdmin();
         
-        const feedbacksSnapshot = await adminDb.collectionGroup('feedbacks')
-            .orderBy('updatedAt', 'desc')
-            .get();
+        const feedbacksSnapshot = await adminDb.collectionGroup('feedbacks').get();
 
         if (feedbacksSnapshot.empty) {
             return { positive: [], negative: [] };
