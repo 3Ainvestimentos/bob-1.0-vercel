@@ -11,6 +11,7 @@ import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { google } from 'googleapis';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
+import * as xlsx from 'xlsx';
 import {v1 as speech} from '@google-cloud/speech';
 
 
@@ -244,7 +245,27 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             console.error("Error parsing Word document:", error);
             throw new Error(`Falha ao processar o arquivo Word: ${error.message}`);
         }
+    } else if (
+        mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || // .xlsx
+        mimeType === 'application/vnd.ms-excel' // .xls
+    ) {
+        try {
+            const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
+            let fullText = '';
+            workbook.SheetNames.forEach(sheetName => {
+                fullText += `\n\n### Início da Planilha: ${sheetName} ###\n\n`;
+                const worksheet = workbook.Sheets[sheetName];
+                const sheetData = xlsx.utils.sheet_to_csv(worksheet, { header: 1 });
+                fullText += sheetData;
+                fullText += `\n\n### Fim da Planilha: ${sheetName} ###\n`;
+            });
+            return fullText;
+        } catch (error: any) {
+            console.error("Error parsing Excel file:", error);
+            throw new Error(`Falha ao processar o arquivo Excel: ${error.message}`);
+        }
     }
+
     
     throw new Error(`O processamento de arquivos do tipo '${mimeType}' não é suportado.`);
 }
@@ -532,14 +553,14 @@ export async function askAssistant(
 
 export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
     const credentials = getServiceAccountCredentials();
-    const speechClient = new speech.SpeechClient({ credentials });
+    const speechClient = new speech.v1.SpeechClient({ credentials });
 
     const audio = {
         content: base64Audio,
     };
     const config = {
         encoding: 'WEBM_OPUS' as const,
-        sampleRateHertz: 48000, // Common for webm opus
+        sampleRateHertz: 48000,
         languageCode: 'pt-BR',
         enableAutomaticPunctuation: true,
     };
