@@ -376,15 +376,12 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
 
     try {
         const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
         const result = await model.generateContent(query);
         const response = await result.response;
         const text = response.text();
         
-        // As contagens de tokens não estão disponíveis diretamente em generateContent da mesma forma que em startChat.
-        // Se forem cruciais, podemos fazer uma estimativa ou investigar a API do `usageMetadata` para esta chamada.
-        // Por simplicidade, vamos omiti-los ou estimá-los por enquanto.
         const promptTokenCount = undefined;
         const candidatesTokenCount = undefined;
 
