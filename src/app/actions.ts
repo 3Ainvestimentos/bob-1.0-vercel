@@ -7,7 +7,6 @@ import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore as getFirestoreAdmin, FieldValue, DocumentData, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
 import { AttachedFile } from '@/types';
-import { ADMIN_UID } from '@/components/chat/SettingsHelpDropdown';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { google } from 'googleapis';
 
@@ -36,6 +35,8 @@ Sua resposta deve seguir esta hierarquia de fontes de informação:
 
 
 let adminApp: App | null = null;
+export const ADMIN_UID = "iv852h1732hHl5HwWEh2fChh23n1";
+
 
 function getServiceAccountCredentials() {
     const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
