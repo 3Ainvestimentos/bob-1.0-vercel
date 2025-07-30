@@ -48,16 +48,28 @@ Sua resposta deve seguir esta hierarquia de fontes de informação:
 
 
 async function getServiceAccountCredentials() {
-    const serviceAccountKeyJson = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
-    if (!serviceAccountKeyJson) {
+    const serviceAccountKey = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
+    if (!serviceAccountKey) {
         throw new Error('A variável de ambiente SERVICE_ACCOUNT_KEY_INTERNAL não está definida.');
     }
     try {
-        const credentials = JSON.parse(serviceAccountKeyJson);
-        if (credentials.private_key) {
-            credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+        // Verifica se a chave é uma string JSON ou Base64
+        if (serviceAccountKey.trim().startsWith('{')) {
+            // É uma string JSON, faz o parse diretamente
+            const credentials = JSON.parse(serviceAccountKey);
+             if (credentials.private_key) {
+                credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+            }
+            return credentials;
+        } else {
+            // Assume que é Base64 e decodifica
+            const decodedKey = Buffer.from(serviceAccountKey, 'base64').toString('utf-8');
+            const credentials = JSON.parse(decodedKey);
+             if (credentials.private_key) {
+                credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+            }
+            return credentials;
         }
-        return credentials;
     } catch (e: any) {
         console.error('Falha ao analisar SERVICE_ACCOUNT_KEY_INTERNAL:', e.message);
         throw new Error('Falha ao analisar a chave da conta de serviço (SERVICE_ACCOUNT_KEY_INTERNAL). Verifique o formato do JSON.');
