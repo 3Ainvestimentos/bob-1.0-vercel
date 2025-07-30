@@ -412,7 +412,6 @@ export async function askAssistant(
   options: {
     useWebSearch?: boolean;
     fileDataUris?: { name: string; dataUri: string, mimeType: string }[];
-    existingAttachments?: AttachedFile[];
     chatId?: string | null;
     messageId?: string | null;
   } = {},
@@ -425,11 +424,10 @@ export async function askAssistant(
   promptTokenCount?: number;
   candidatesTokenCount?: number;
   latencyMs?: number;
-  updatedAttachments?: AttachedFile[];
   deidentifiedQuery?: string;
   error?: string;
 }> {
-  const { useWebSearch = false, fileDataUris = [], existingAttachments = [], chatId, messageId } = options;
+  const { useWebSearch = false, fileDataUris = [], chatId, messageId } = options;
   const startTime = Date.now();
   
   try {
@@ -442,12 +440,12 @@ export async function askAssistant(
         await logDlpAlert(userId, chatId, foundInfoTypes);
     }
     
-    const newAttachments: AttachedFile[] = [];
+    const attachments: AttachedFile[] = [];
     if (fileDataUris.length > 0) {
         for (const file of fileDataUris) {
             const content = await getFileContent(file.dataUri, file.mimeType);
             const { deidentifiedQuery: deidentifiedContent } = await deidentifyQuery(content);
-            newAttachments.push({
+            attachments.push({
                 id: crypto.randomUUID(),
                 fileName: file.name,
                 mimeType: file.mimeType,
@@ -456,8 +454,6 @@ export async function askAssistant(
         }
     }
 
-    const allAttachments = [...existingAttachments, ...newAttachments];
-
     if (useWebSearch) {
       result = await callGemini(deidentifiedQuery);
       source = 'web';
@@ -465,7 +461,7 @@ export async function askAssistant(
         await logQuestionForAnalytics(deidentifiedQuery);
         result = await callDiscoveryEngine(
             deidentifiedQuery,
-            allAttachments
+            attachments
         );
         source = 'rag';
     }
@@ -485,7 +481,6 @@ export async function askAssistant(
         promptTokenCount: result.promptTokenCount,
         candidatesTokenCount: result.candidatesTokenCount,
         latencyMs: latencyMs,
-        updatedAttachments: allAttachments,
         deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
     };
   } catch (error: any) {

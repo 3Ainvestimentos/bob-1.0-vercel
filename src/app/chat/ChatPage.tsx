@@ -347,7 +347,6 @@ async function saveConversation(
   chatId?: string | null,
   options: {
     newChatTitle?: string;
-    updatedAttachedFiles?: AttachedFile[];
   } = {}
 ): Promise<string> {
   if (!userId) throw new Error('User ID is required.');
@@ -381,9 +380,6 @@ async function saveConversation(
       messages: sanitizedMessages,
       totalTokens 
     };
-    if (options.updatedAttachedFiles) {
-      updatePayload.attachedFiles = options.updatedAttachedFiles.map(({ deidentifiedContent, ...rest }) => rest);
-    }
     await updateDoc(chatRef, updatePayload);
     return chatId;
   } else {
@@ -396,7 +392,7 @@ async function saveConversation(
         totalTokens,
         createdAt: serverTimestamp(),
         groupId: null,
-        attachedFiles: options.updatedAttachedFiles ? options.updatedAttachedFiles.map(({ deidentifiedContent, ...rest }) => rest) : [],
+        attachedFiles: [],
     };
 
     const newChatRef = await addDoc(conversationsRef, newChatPayload);
@@ -646,7 +642,6 @@ function ChatPageContent() {
     if (isLoading || !user) return;
 
     const fileNames = files.map(f => f.name);
-    const allFileNames = [...(activeChat?.attachedFiles.map(f => f.fileName) || []), ...fileNames];
     
     const userQuery = query || (files.length > 0 ? `Analise os arquivos anexados.` : '');
 
@@ -654,7 +649,7 @@ function ChatPageContent() {
         id: crypto.randomUUID(),
         role: 'user',
         content: userQuery,
-        fileNames: allFileNames.length > 0 ? allFileNames : null,
+        fileNames: fileNames.length > 0 ? fileNames : null,
     };
     const newMessages = [...messages, userMessage];
 
@@ -677,7 +672,6 @@ function ChatPageContent() {
             userQuery,
             { 
                 fileDataUris,
-                existingAttachments: activeChat?.attachedFiles,
                 chatId: currentChatId,
                 messageId: assistantMessageId,
             },
@@ -715,14 +709,13 @@ function ChatPageContent() {
             setLastFailedQuery(userQuery);
         }
 
-        const updatedAttachedFiles = assistantResponse.updatedAttachments || [];
          if (!currentChatId) {
             const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
             const newId = await saveConversation(
                 user.uid,
                 [...newMessages, assistantMessage],
                 null,
-                { newChatTitle: newTitle, updatedAttachedFiles }
+                { newChatTitle: newTitle }
             );
             const newFullChat = await getFullConversation(user.uid, newId);
             setActiveChat(newFullChat);
@@ -731,10 +724,8 @@ function ChatPageContent() {
             await saveConversation(
                 user.uid,
                 [...newMessages, assistantMessage],
-                currentChatId,
-                { updatedAttachedFiles }
+                currentChatId
             );
-            setActiveChat(prev => prev ? { ...prev, attachedFiles: updatedAttachedFiles.map(({ deidentifiedContent, ...rest }) => rest) } : null);
         }
         
         const fetchSuggestions = async () => {
@@ -754,7 +745,9 @@ function ChatPageContent() {
         const finalMessages = [...newMessages, assistantMessage];
         setMessages(finalMessages);
         
-        await fetchSidebarData();
+        if (!activeChatId) {
+            await fetchSidebarData();
+        }
 
     } catch (err: any) {
         const errorMessageContent = `Ocorreu um erro: ${err.message}`;
