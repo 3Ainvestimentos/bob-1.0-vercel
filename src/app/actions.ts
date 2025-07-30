@@ -377,7 +377,7 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
     try {
         const genAI = new GoogleGenerativeAI(geminiApiKey);
         
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
         const chat = model.startChat();
         const result = await chat.sendMessage(query);
