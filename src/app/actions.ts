@@ -539,23 +539,20 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
 
     const speechClient = new speech.SpeechClient({ credentials });
 
-    const audio = {
-        content: base64Audio,
-    };
-    const config = {
-        encoding: 'WEBM_OPUS' as const,
-        sampleRateHertz: 48000,
-        languageCode: 'pt-BR',
-        model: 'telephony', 
-    };
     const request = {
-        audio: audio,
-        config: config,
         recognizer: `projects/${projectId}/locations/global/recognizers/_`,
+        config: {
+            features: {
+                enableAutomaticPunctuation: true,
+            },
+            model: 'long',
+            languageCodes: ['pt-BR'],
+        },
+        content: base64Audio,
     };
 
     try {
-        const [response] = await speechClient.recognize(request);
+        const [response] = await speechClient.recognize(request as any);
         const transcription = response.results
             ?.map(result => result.alternatives?.[0].transcript)
             .join('\n');
