@@ -9,6 +9,7 @@ import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
 import { AttachedFile } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { google } from 'googleapis';
+import pdf from 'pdf-parse';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
@@ -192,7 +193,24 @@ function estimateTokens(text: string): number {
 }
 
 async function getFileContent(fileDataUri: string, mimeType: string): Promise<string> {
-    throw new Error(`O processamento de arquivos (${mimeType}) está temporariamente desabilitado para testes.`);
+    const base64Data = fileDataUri.split(',')[1];
+    if (!base64Data) {
+        throw new Error('Formato de Data URI inválido.');
+    }
+
+    const fileBuffer = Buffer.from(base64Data, 'base64');
+
+    if (mimeType === 'application/pdf') {
+        try {
+            const data = await pdf(fileBuffer);
+            return data.text;
+        } catch (error: any) {
+            console.error("Error parsing PDF:", error);
+            throw new Error(`Falha ao processar o arquivo PDF: ${error.message}`);
+        }
+    }
+    
+    throw new Error(`O processamento de arquivos do tipo '${mimeType}' não é suportado.`);
 }
 
 async function callDiscoveryEngine(
@@ -228,8 +246,15 @@ async function callDiscoveryEngine(
       if (!accessToken) {
         throw new Error(`Falha ao obter o token de acesso.`);
       }
+
+      let fileContextPreamble = '';
+      if (attachments.length > 0) {
+          fileContextPreamble = attachments.map(file => 
+              `\n\n### INÍCIO DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###\n${file.deidentifiedContent}\n### FIM DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###`
+          ).join('');
+      }
       
-      const modelPrompt = ASSISTENTE_CORPORATIVO_PREAMBLE;
+      const modelPrompt = `${ASSISTENTE_CORPORATIVO_PREAMBLE}${fileContextPreamble}`;
 
       const requestBody: any = {
         query: query, 
@@ -405,8 +430,7 @@ export async function askAssistant(
   deidentifiedQuery?: string;
   error?: string;
 }> {
-  const { useWebSearch = false, chatId, messageId } = options;
-  const existingAttachments: AttachedFile[] = [];
+  const { useWebSearch = false, fileDataUris = [], existingAttachments = [], chatId, messageId } = options;
   const startTime = Date.now();
   
   try {
@@ -418,13 +442,28 @@ export async function askAssistant(
     if (userId && chatId && foundInfoTypes.length > 0) {
         await logDlpAlert(userId, chatId, foundInfoTypes);
     }
+    
+    const newAttachments: AttachedFile[] = [];
+    if (fileDataUris.length > 0) {
+        for (const file of fileDataUris) {
+            const content = await getFileContent(file.dataUri, file.mimeType);
+            const { deidentifiedQuery: deidentifiedContent } = await deidentifyQuery(content);
+            newAttachments.push({
+                id: crypto.randomUUID(),
+                fileName: file.name,
+                mimeType: file.mimeType,
+                deidentifiedContent: deidentifiedContent,
+            });
+        }
+    }
+
+    const allAttachments = [...existingAttachments, ...newAttachments];
 
     if (useWebSearch) {
       result = await callGemini(deidentifiedQuery);
       source = 'web';
     } else {
         await logQuestionForAnalytics(deidentifiedQuery);
-        const allAttachments: AttachedFile[] = [];
         result = await callDiscoveryEngine(
             deidentifiedQuery,
             allAttachments
@@ -447,7 +486,7 @@ export async function askAssistant(
         promptTokenCount: result.promptTokenCount,
         candidatesTokenCount: result.candidatesTokenCount,
         latencyMs: latencyMs,
-        updatedAttachments: existingAttachments,
+        updatedAttachments: allAttachments,
         deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
     };
   } catch (error: any) {
@@ -491,7 +530,7 @@ export async function regenerateAnswer(
 
     const result = await callDiscoveryEngine(
         deidentifiedQuery,
-        []
+        attachments
     );
     const latencyMs = Date.now() - startTime;
 

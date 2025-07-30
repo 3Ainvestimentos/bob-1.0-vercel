@@ -671,9 +671,13 @@ function ChatPageContent() {
     let assistantMessageId = crypto.randomUUID();
     
     try {
+        const fileDataUris = await Promise.all(files.map(readFileAsDataURL));
+
         const assistantResponse = await askAssistant(
             userQuery,
             { 
+                fileDataUris,
+                existingAttachments: activeChat?.attachedFiles,
                 chatId: currentChatId,
                 messageId: assistantMessageId,
             },
@@ -1557,7 +1561,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={onToggleGroup}
+                onToggleGroup={handleToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
