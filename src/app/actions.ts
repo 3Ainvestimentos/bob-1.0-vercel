@@ -450,6 +450,10 @@ export async function askAssistant(
   }
 }
 
+export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
+    throw new Error("A transcrição de áudio ao vivo está temporariamente desabilitada para testes.");
+}
+
 export async function transcribeFileAudio(audioData: { dataUri: string; mimeType: string }): Promise<string> {
     throw new Error("A transcrição de áudio está temporariamente desabilitada para testes.");
 }
