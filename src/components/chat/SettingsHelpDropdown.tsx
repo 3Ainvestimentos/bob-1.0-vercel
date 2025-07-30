@@ -15,11 +15,13 @@ import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
 import { ADMIN_UID } from '@/types';
+import { User } from 'firebase/auth';
 
 interface SettingsHelpDropdownProps {
   isAuthenticated: boolean;
   handleSignOut: () => void;
   onOpenFaqDialog: () => void;
+  user: User | null;
 }
 
 
@@ -27,10 +29,10 @@ export function SettingsHelpDropdown({
   isAuthenticated,
   handleSignOut,
   onOpenFaqDialog,
+  user,
 }: SettingsHelpDropdownProps) {
   const { setTheme } = useTheme();
   const router = useRouter();
-  const { user } = useAuth();
 
   const isUserAdmin = user?.uid === ADMIN_UID;
 
@@ -94,5 +96,3 @@ export function SettingsHelpDropdown({
     </DropdownMenu>
   );
 }
-
-    

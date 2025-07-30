@@ -15,6 +15,7 @@ import {
   regenerateAnswer,
   removeFileFromConversation,
   transcribeFileAudio,
+  transcribeLiveAudio,
 } from '@/app/actions';
 import {
   AlertDialog,
@@ -1556,13 +1557,14 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
                 onOpenFaqDialog={() => setIsFaqDialogOpen(true)}
                 isAuthenticated={isAuthenticated}
                 handleSignOut={handleSignOut}
+                user={user}
             />
         </Sidebar>
 

@@ -70,6 +70,7 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip';
 import { CSS } from '@dnd-kit/utilities';
+import { User } from 'firebase/auth';
 
 
 interface ChatSidebarProps {
@@ -96,6 +97,7 @@ interface ChatSidebarProps {
   onOpenFaqDialog: () => void;
   isAuthenticated: boolean;
   handleSignOut: () => void;
+  user: User | null;
 }
 
 export function ChatSidebar({
@@ -118,6 +120,7 @@ export function ChatSidebar({
   onOpenFaqDialog,
   isAuthenticated,
   handleSignOut,
+  user,
 }: ChatSidebarProps) {
   const { state: sidebarState, toggleSidebar } = useSidebar();
   
@@ -290,6 +293,7 @@ export function ChatSidebar({
             isAuthenticated={isAuthenticated}
             handleSignOut={handleSignOut}
             onOpenFaqDialog={onOpenFaqDialog}
+            user={user}
           />
         </SidebarMenu>
       </SidebarFooter>
