@@ -843,16 +843,6 @@ export async function getAdminInsights(): Promise<any> {
             };
         });
 
-        const feedbacksCollectionGroup = adminDb.collectionGroup('feedbacks');
-        const feedbacksSnapshot = await feedbacksCollectionGroup.get();
-        let positiveFeedbacks = 0;
-        let negativeFeedbacks = 0;
-        feedbacksSnapshot.forEach(doc => {
-            const data = doc.data();
-            if (data.rating === 'positive') positiveFeedbacks++;
-            else if (data.rating === 'negative') negativeFeedbacks++;
-        });
-
         const regenerationsCollectionGroup = adminDb.collectionGroup('regenerated_answers');
         const regenerationsSnapshot = await regenerationsCollectionGroup.get();
         const totalRegenerations = regenerationsSnapshot.size;
@@ -886,8 +876,6 @@ export async function getAdminInsights(): Promise<any> {
             ragSearchFailureRate,
             webSearchRate,
             topQuestions,
-            positiveFeedbacks,
-            negativeFeedbacks,
             interactionsByDay,
             interactionsByHour,
             latencyByDay,
@@ -976,6 +964,61 @@ export async function getLegalIssueAlerts(): Promise<any> {
     }
 }
 
+
+export async function getFeedbacks(): Promise<any> {
+    try {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const authAdmin = getAuthenticatedAuthAdmin();
+        
+        const feedbacksSnapshot = await adminDb.collectionGroup('feedbacks')
+            .orderBy('updatedAt', 'desc')
+            .get();
+
+        if (feedbacksSnapshot.empty) {
+            return { positive: [], negative: [] };
+        }
+
+        const userIds = [...new Set(feedbacksSnapshot.docs.map(doc => doc.data().userId))];
+        const userPromises = userIds.map(uid => authAdmin.getUser(uid).catch(() => null));
+        const userResults = await Promise.all(userPromises);
+        
+        const userMap = new Map<string, any>();
+        userResults.forEach(user => {
+            if (user) {
+                userMap.set(user.uid, {
+                    email: user.email,
+                    displayName: user.displayName,
+                });
+            }
+        });
+
+        const allFeedbacks = feedbacksSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const updatedAt = data.updatedAt as AdminTimestamp;
+            const userInfo = userMap.get(data.userId);
+
+            return {
+                id: doc.id,
+                ...data,
+                user: userInfo || { email: 'Usuário não encontrado', displayName: data.userId },
+                updatedAt: updatedAt.toDate().toLocaleString('pt-BR', {
+                    timeZone: 'America/Sao_Paulo',
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                }),
+            };
+        });
+
+        const positive = allFeedbacks.filter(f => f.rating === 'positive');
+        const negative = allFeedbacks.filter(f => f.rating === 'negative');
+
+        return { positive, negative };
+
+    } catch (error: any) {
+        console.error('Error fetching feedbacks:', error);
+        return { error: `Não foi possível buscar os feedbacks: ${error.message}` };
+    }
+}
 
 export async function getAdminCosts(): Promise<any> {
     await new Promise(resolve => setTimeout(resolve, 500)); 

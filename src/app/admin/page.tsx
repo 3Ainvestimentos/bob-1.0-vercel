@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts } from '@/app/actions';
+import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,8 +31,6 @@ interface AdminInsights {
     ragSearchFailureRate: number;
     webSearchRate: number;
     topQuestions: any[];
-    positiveFeedbacks: number;
-    negativeFeedbacks: number;
     interactionsByDay: { date: string, formattedDate: string, count: number }[];
     interactionsByHour: { hour: string, count: number }[];
     latencyByDay: { date: string, formattedDate: string, latency: number }[];
@@ -75,6 +73,16 @@ interface LegalIssueAlert {
     comment?: string;
 }
 
+interface Feedback {
+    id: string;
+    user: { email?: string; displayName?: string };
+    updatedAt: string;
+    rating: 'positive' | 'negative';
+    userQuery: string;
+    assistantResponse: string;
+    comment?: string;
+}
+
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
@@ -85,6 +93,7 @@ export default function AdminPage() {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [costs, setCosts] = useState<AdminCosts | null>(null);
   const [legalAlerts, setLegalAlerts] = useState<LegalIssueAlert[]>([]);
+  const [feedbacks, setFeedbacks] = useState<{positive: Feedback[], negative: Feedback[]}>({ positive: [], negative: [] });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -112,18 +121,21 @@ export default function AdminPage() {
             getAdminCosts(),
             getMaintenanceMode(),
             getLegalIssueAlerts(),
-        ]).then(([insightsData, usersData, costsData, maintenanceData, alertsData]) => {
+            getFeedbacks(),
+        ]).then(([insightsData, usersData, costsData, maintenanceData, alertsData, feedbacksData]) => {
             if (insightsData.error) throw new Error(insightsData.error);
             if (usersData.error) throw new Error(usersData.error);
             if (costsData.error) throw new Error(costsData.error);
             if (maintenanceData.error) throw new Error(maintenanceData.error);
             if (alertsData.error) throw new Error(alertsData.error);
+            if (feedbacksData.error) throw new Error(feedbacksData.error);
 
             setInsights(insightsData);
             setAdminUsers(usersData);
             setCosts(costsData);
             setIsMaintenanceMode(maintenanceData.isMaintenanceMode);
             setLegalAlerts(alertsData);
+            setFeedbacks(feedbacksData);
         }).catch(err => {
             console.error('Erro ao buscar dados do painel:', err);
             setError(err.message || 'Não foi possível carregar os dados do painel.');
@@ -202,6 +214,54 @@ export default function AdminPage() {
       ...d,
       latency: formatLatencyForChart(d.latency)
   })) : [];
+
+  const FeedbackAccordion = ({ feedbacks, type }: { feedbacks: Feedback[], type: 'positive' | 'negative' }) => (
+    <>
+        {feedbacks.length > 0 ? (
+            <Accordion type="single" collapsible className="w-full">
+                {feedbacks.map(feedback => (
+                    <AccordionItem value={feedback.id} key={feedback.id}>
+                        <AccordionTrigger>
+                            <div className="flex w-full items-center justify-between pr-4 text-sm">
+                                <div className='text-left'>
+                                    <p className='font-semibold'>{feedback.user.displayName || feedback.user.email}</p>
+                                    <p className='text-xs text-muted-foreground'>{feedback.user.email}</p>
+                                </div>
+                                <span className="text-xs text-muted-foreground">{feedback.updatedAt}</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <div className="space-y-4 rounded-md border bg-muted/50 p-4">
+                                <div>
+                                    <h4 className="font-semibold text-xs uppercase text-muted-foreground">Consulta do Usuário</h4>
+                                    <p className="mt-1 text-sm">{feedback.userQuery}</p>
+                                </div>
+                                <div className='h-px bg-border'></div>
+                                <div>
+                                    <h4 className="font-semibold text-xs uppercase text-muted-foreground">Resposta da IA</h4>
+                                    <p className="mt-1 text-sm">{feedback.assistantResponse}</p>
+                                </div>
+                                {feedback.comment && (
+                                     <>
+                                        <div className='h-px bg-border'></div>
+                                        <div>
+                                            <h4 className="font-semibold text-xs uppercase text-muted-foreground">Comentário do Usuário</h4>
+                                            <p className="mt-1 text-sm italic">"{feedback.comment}"</p>
+                                        </div>
+                                     </>
+                                )}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                ))}
+            </Accordion>
+        ) : (
+            <div className="text-center text-muted-foreground py-10">
+                Nenhum feedback {type === 'positive' ? 'positivo' : 'negativo'} encontrado.
+            </div>
+        )}
+    </>
+  );
 
   if (authLoading || isLoading) {
     return (
@@ -680,28 +740,37 @@ export default function AdminPage() {
                 </div>
             </TabsContent>
             <TabsContent value="feedback" className="mt-4">
-                 <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Feedbacks</CardTitle>
-                            <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+                 <div className="grid gap-4 md:grid-cols-2 md:gap-8">
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                            <div className="flex items-center gap-2">
+                                <ThumbsUp className="h-5 w-5 text-green-500" />
+                                <CardTitle>Feedbacks Positivos ({feedbacks.positive.length})</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Respostas avaliadas como úteis.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <ThumbsUp className="h-5 w-5 text-green-500" />
-                                    <span className="text-2xl font-bold">{insights?.positiveFeedbacks.toLocaleString() ?? '...'}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <ThumbsDown className="h-5 w-5 text-red-500" />
-                                    <span className="text-2xl font-bold">{insights?.negativeFeedbacks.toLocaleString() ?? '...'}</span>
-                                </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground pt-1">
-                                Total de avaliações positivas e negativas.
-                            </p>
+                           <FeedbackAccordion feedbacks={feedbacks.positive} type="positive" />
                         </CardContent>
                     </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                            <div className="flex items-center gap-2">
+                                <ThumbsDown className="h-5 w-5 text-red-500" />
+                                <CardTitle>Feedbacks Negativos ({feedbacks.negative.length})</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Respostas que precisam de revisão.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <FeedbackAccordion feedbacks={feedbacks.negative} type="negative" />
+                        </CardContent>
+                    </Card>
+                </div>
+                 <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4 mt-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Respostas Regeneradas</CardTitle>
