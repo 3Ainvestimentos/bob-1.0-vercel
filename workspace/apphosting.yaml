@@ -1,0 +1,18 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  # Increase this value if you'd like to automatically spin up
+  # more instances in response to increased traffic.
+  maxInstances: 1
+
+# Environment variables are used to configure your application's behavior.
+# App Hosting uses Google Cloud Secret Manager to securely store and manage
+# secrets for your application.
+# To use these variables, you need to create the secrets in Secret Manager.
+# https://firebase.google.com/docs/app-hosting/configure-backend#environment-variables
+env:
+  - variable: GEMINI_API_KEY
+    secret: projects/629342546806/secrets/GEMINI_API_KEY_SECRET/versions/latest
+  - variable: GOOGLE_BILLING_ACCOUNT_ID
+    secret: projects/629342546806/secrets/GOOGLE_BILLING_ACCOUNT_ID/versions/latest
