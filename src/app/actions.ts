@@ -540,13 +540,15 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
     const speechClient = new speech.SpeechClient({ credentials });
 
     const request = {
-        recognizer: `projects/${projectId}/locations/global/recognizers/_`,
         config: {
-            features: {
-                enableAutomaticPunctuation: true,
+            decodingConfig: {
+                encoding: 'WEBM_OPUS',
             },
             model: 'long',
             languageCodes: ['pt-BR'],
+            features: {
+                enableAutomaticPunctuation: true,
+            },
         },
         content: base64Audio,
     };
@@ -1171,3 +1173,5 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+    
