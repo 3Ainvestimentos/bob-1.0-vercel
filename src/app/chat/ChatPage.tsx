@@ -999,6 +999,7 @@ function ChatPageContent() {
       const result = await regenerateAnswer(
         userQuery,
         originalAssistantResponse,
+        activeChat.attachedFiles,
         user.uid,
         activeChatId
       );
@@ -1007,19 +1008,21 @@ function ChatPageContent() {
         throw new Error(result.error);
       }
       
-      await logRegeneratedQuestion(
+      if (result.summary) {
+        await logRegeneratedQuestion(
           user.uid,
           activeChatId,
           userQuery,
           originalAssistantResponse,
-          result.summary!
-      );
+          result.summary
+        );
+      }
       
       const newAssistantMessage: Message = {
         id: newAssistantMessageId,
         role: 'assistant',
         content: result.summary!,
-        source: 'rag',
+        source: result.source,
         sources: result.sources,
         promptTokenCount: result.promptTokenCount,
         candidatesTokenCount: result.candidatesTokenCount,

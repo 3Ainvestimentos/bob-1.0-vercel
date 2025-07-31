@@ -60,6 +60,15 @@ Os principais detratores foram:
 O cenário global em junho foi marcado por movimentos significativos, especialmente nos Estados Unidos, onde o avanço do pacote fiscal americano impulsionou as bolsas. Paralelamente, observamos um enfraquecimento do dólar frente às principais moedas, reflexo da precificação de uma potencial queda de juros nos EUA em futuro próximo e deteriorização da percepção fiscal do país. Na Ásia, a economia chinesa demonstrou aquecimento, com dados indicando recuperação e contribuindo para um panorama mais favorável para os mercados emergentes.
 No Brasil, O COPOM colocou a taxa SELIC em 15%, no mesmo mês que dados mostraram um arrefecimento da economia e da inflação, já resultado do ciclo de alta que já vivemos desde o ano passado. Agora, já começa a se especular quando começarão as quedas. Esse cenário contribuiu para a boa performance da bolsa brasileira, que registrou resultados positivos. A valorização também foi impulsionada, em parte, pela entrada de capital estrangeiro, resultado de um rebalanceamento global para mercados emergentes.`;
 
+const REGENERATION_PREAMBLE = `A resposta anterior para a pergunta de um usuário foi insatisfatória. Sua tarefa é gerar uma nova resposta, melhor e mais completa, usando as mesmas fontes de dados.
+
+## Pergunta Original do Usuário:
+"{{originalQuery}}"
+
+## Resposta Anterior (Insatisfatória):
+"{{previousAnswer}}"
+
+Siga o `ASSISTENTE_CORPORATIVO_PREAMBLE` e use as fontes de dados para gerar uma nova resposta aprimorada para a pergunta original.`;
 
 let adminApp: App | null = null;
 
@@ -272,7 +281,8 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
 
 async function callDiscoveryEngine(
     query: string,
-    attachments: AttachedFile[]
+    attachments: AttachedFile[],
+    preamble: string = ASSISTENTE_CORPORATIVO_PREAMBLE
 ): Promise<{ 
     summary: string; 
     searchFailed: boolean; 
@@ -311,7 +321,7 @@ async function callDiscoveryEngine(
           ).join('');
       }
       
-      const modelPrompt = `${ASSISTENTE_CORPORATIVO_PREAMBLE}${fileContextPreamble}`;
+      const modelPrompt = `${preamble}${fileContextPreamble}`;
 
       const requestBody: any = {
         query: query, 
@@ -492,9 +502,7 @@ export async function askAssistant(
     let source: 'rag' | 'web' | 'transcription';
     
     let finalQuery = query;
-    if (useStandardAnalysis) {
-        finalQuery = `${POSICAO_CONSOLIDADA_PREAMBLE}\n\n${query}`;
-    }
+    let preamble = useStandardAnalysis ? POSICAO_CONSOLIDADA_PREAMBLE : ASSISTENTE_CORPORATIVO_PREAMBLE;
 
     const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(finalQuery);
 
@@ -523,7 +531,8 @@ export async function askAssistant(
         await logQuestionForAnalytics(deidentifiedQuery);
         result = await callDiscoveryEngine(
             deidentifiedQuery,
-            attachments
+            attachments,
+            preamble
         );
         source = 'rag';
     }
@@ -585,50 +594,16 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
     }
 }
 
-
-async function callGeminiForRegeneration(
-    originalQuery: string,
-    previousAnswer: string
-): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; }> {
-    const geminiApiKey = await getGeminiApiKey();
-
-    const prompt = `A resposta anterior para a pergunta de um usuário foi insatisfatória. Sua tarefa é gerar uma nova resposta, melhor e mais completa.
-    
-    ## Pergunta Original do Usuário:
-    "${originalQuery}"
-    
-    ## Resposta Anterior (Insatisfatória):
-    "${previousAnswer}"
-    
-    ## Nova Resposta (Aprimorada):`;
-
-    try {
-        const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        return { summary: text, searchFailed: false, sources: [] };
-
-    } catch (error: any) {
-        console.error("Error calling Gemini API for regeneration:", error);
-        if (error.message.includes('API key not valid')) {
-            throw new Error(`Erro de autenticação com a API Gemini. Verifique se a GEMINI_API_KEY é válida.`);
-        }
-        throw new Error(error.message);
-    }
-}
-
 export async function regenerateAnswer(
   originalQuery: string,
   previousAnswer: string,
+  attachments: AttachedFile[],
   userId?: string,
-  chatId?: string
+  chatId?: string,
 ): Promise<{ 
   summary?: string; 
   searchFailed?: boolean; 
+  source?: 'rag' | 'web';
   sources?: ClientRagSource[]; 
   promptTokenCount?: number; 
   candidatesTokenCount?: number; 
@@ -639,33 +614,40 @@ export async function regenerateAnswer(
   try {
     const startTime = Date.now();
     
-    // De-identification is still a good practice, even for regeneration
     const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(originalQuery);
     const { deidentifiedQuery: deidentifiedPreviousAnswer } = await deidentifyQuery(previousAnswer);
 
     if (userId && chatId && foundInfoTypes.length > 0) {
         await logDlpAlert(userId, chatId, foundInfoTypes);
     }
+    
+    if (userId && chatId) {
+        await logRegeneratedQuestion(userId, chatId, deidentifiedQuery, deidentifiedPreviousAnswer, ''); // Log attempt
+    }
 
-    const result = await callGeminiForRegeneration(
+    const regenerationPreamble = REGENERATION_PREAMBLE
+        .replace('{{originalQuery}}', deidentifiedQuery)
+        .replace('{{previousAnswer}}', deidentifiedPreviousAnswer);
+
+    const result = await callDiscoveryEngine(
         deidentifiedQuery,
-        deidentifiedPreviousAnswer
+        attachments,
+        regenerationPreamble
     );
+    
     const latencyMs = Date.now() - startTime;
 
     if (!result) {
         throw new Error("A chamada para regenerar a resposta retornou uma resposta vazia.");
     }
-
-    const promptTokenCount = estimateTokens(deidentifiedQuery + deidentifiedPreviousAnswer);
-    const candidatesTokenCount = estimateTokens(result.summary);
-
+    
     return { 
         summary: result.summary, 
         searchFailed: result.searchFailed, 
+        source: 'rag',
         sources: result.sources || [], 
-        promptTokenCount,
-        candidatesTokenCount,
+        promptTokenCount: result.promptTokenCount,
+        candidatesTokenCount: result.candidatesTokenCount,
         latencyMs: latencyMs,
         deidentifiedQuery: originalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
     };
@@ -673,6 +655,32 @@ export async function regenerateAnswer(
     console.error("Error in regenerateAnswer (internal):", error.message);
     return { error: error.message };
   }
+}
+
+async function logRegeneratedQuestion(
+    userId: string,
+    chatId: string,
+    originalQuery: string,
+    originalResponse: string,
+    newResponse: string
+) {
+    if (!userId || !chatId) {
+        console.error("User ID or Chat ID is missing, cannot log regenerated answer.");
+        return;
+    };
+    try {
+        const regeneratedRef = collection(db, 'users', userId, 'regenerated_answers');
+        await addDoc(regeneratedRef, {
+            userId,
+            chatId,
+            originalQuery,
+            originalResponse,
+            newResponse: newResponse, 
+            regeneratedAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error("Error logging regenerated question to Firestore:", error);
+    }
 }
 
 
