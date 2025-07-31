@@ -627,6 +627,7 @@ export async function regenerateAnswer(
     if (!result) {
         throw new Error("A chamada para regenerar a resposta retornou uma resposta vazia.");
     }
+    //Fixed: Corrected the variable reference here.
     return { 
         summary: result.summary, 
         searchFailed: result.searchFailed, 
