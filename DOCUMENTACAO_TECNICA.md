@@ -17,6 +17,7 @@ O "Assistente Corporativo Bob" é uma aplicação de chat com Inteligência Arti
     -   Google Vertex AI Search (para busca em base de conhecimento interna - RAG)
     -   Google Gemini API (para busca na web, geração de títulos e sugestões)
     -   Google Cloud DLP API (para anonimização de dados sensíveis)
+    -   Google Cloud Speech-to-Text API (para transcrição de áudio)
 -   **Hospedagem:** Firebase App Hosting
 
 ---
@@ -25,149 +26,125 @@ O "Assistente Corporativo Bob" é uma aplicação de chat com Inteligência Arti
 
 A aplicação segue uma arquitetura moderna baseada em componentes React no frontend e Server Actions no backend para comunicação com os serviços de IA.
 
-1.  **Frontend (`src/app/chat/page.tsx`):** O usuário interage com a interface de chat. Todas as ações (enviar mensagem, criar grupo, dar feedback) são capturadas e enviadas para o backend.
-2.  **Backend (Server Actions - `src/app/actions.ts`):** Este arquivo centraliza a lógica de negócio. Ele recebe as requisições do frontend, processa-as e chama os serviços externos necessários (Firestore, DLP, Vertex AI, Gemini).
+1.  **Frontend (`src/app/chat/page.tsx`):** O usuário interage com a interface de chat. Todas as ações (enviar mensagem, criar grupo, dar feedback, anexar arquivos) são capturadas e enviadas para o backend.
+2.  **Backend (Server Actions - `src/app/actions.ts`):** Este arquivo centraliza a lógica de negócio. Ele recebe as requisições do frontend, processa-as e chama os serviços externos necessários (Firestore, DLP, Vertex AI, Gemini, Speech-to-Text).
 3.  **Banco de Dados (Firestore):** Armazena de forma persistente os dados do usuário, como histórico de conversas, grupos, feedbacks e logs de alertas.
 4.  **Serviços de IA:**
-    -   **Cloud DLP API:** Atua como a primeira linha de defesa de segurança. A função `deidentifyQuery` intercepta a pergunta do usuário e a envia para a API de DLP, que remove dados sensíveis (PII) antes que qualquer outro processamento ocorra.
-    -   **Vertex AI Search:** É a principal fonte de respostas. A `callDiscoveryEngine` envia a pergunta *já anonimizada* do usuário para o motor de busca, que retorna uma resposta contextualizada com base nos documentos internos.
-    -   **Gemini API:** Atua como um serviço de apoio para tarefas que não dependem do conhecimento interno, como busca na web, geração de títulos para as conversas e sugestão de novas perguntas.
+    -   **Cloud DLP API:** Atua como a primeira linha de defesa de segurança. A função `deidentifyQuery` intercepta a pergunta do usuário e o conteúdo dos arquivos, removendo dados sensíveis (PII) antes de qualquer outro processamento.
+    -   **Vertex AI Search:** É a principal fonte de respostas. A `callDiscoveryEngine` envia a pergunta *já anonimizada* do usuário (e o conteúdo de arquivos) para o motor de busca, que retorna uma resposta contextualizada.
+    -   **Gemini API:** Atua como um serviço de apoio para tarefas como busca na web, geração de títulos para as conversas e sugestão de novas perguntas.
+    -   **Speech-to-Text API:** A função `transcribeLiveAudio` envia o áudio gravado pelo usuário para a API, que retorna o texto transcrito, permitindo a entrada de comandos por voz.
 
 ---
 
-## 3. Configuração do Ambiente
+## 3. Funcionalidades Detalhadas
 
-As chaves de API e credenciais de serviço são gerenciadas por meio de variáveis de ambiente em um arquivo `.env` na raiz do projeto.
+### 3.1. Interação e Consulta
+
+-   **Entrada Multimodal:** O usuário pode fazer perguntas de três formas:
+    1.  **Texto:** Digitando diretamente na caixa de chat.
+    2.  **Voz:** Gravando um áudio pelo microfone, que é transcrito em tempo real para texto.
+    3.  **Arquivos:** Anexando documentos para análise. Os formatos suportados são:
+        -   PDF (`.pdf`)
+        -   Microsoft Word (`.doc`, `.docx`)
+        -   Microsoft Excel (`.xls`, `.xlsx`)
+-   **Análise Padrão de Posição Consolidada:** Ao incluir a frase "análise com nosso padrão", o sistema utiliza um *preamble* específico (`POSICAO_CONSOLIDADA_PREAMBLE`) para instruir a IA a extrair e formatar dados de relatórios de investimento da XP de maneira padronizada.
+
+### 3.2. Organização da Interface (Sidebar)
+
+A barra lateral (`ChatSidebar.tsx`) é o centro de organização do usuário.
+-   **Projetos (Pastas):** Os usuários podem criar "Projetos" para agrupar conversas relacionadas. É possível criar, renomear e excluir projetos.
+-   **Conversas:** Cada chat é listado na barra lateral. Conversas podem estar dentro de um projeto ou serem "avulsas" (não agrupadas).
+-   **Arrastar e Soltar (Drag and Drop):** A biblioteca `dnd-kit` é utilizada para permitir que o usuário:
+    -   Mova uma conversa para dentro de um projeto.
+    -   Mova uma conversa de um projeto para outro.
+    -   Remova uma conversa de um projeto (tornando-a avulsa).
+    -   Reordene os projetos na lista.
+
+### 3.3. Painel Administrativo (`/admin`)
+
+O acesso ao painel é restrito e verificado no frontend (`src/app/admin/page.tsx`), que confere se o `uid` do usuário logado corresponde ao `ADMIN_UID` definido em `src/types/index.ts`. O painel é dividido em abas:
+
+-   **Análise Geral:** Métricas de uso como total de perguntas, usuários, engajamento, interações por dia/hora e as perguntas mais frequentes.
+-   **Análise RAG:** Dados sobre o uso da busca interna vs. busca web, taxa de falha da busca interna e os documentos mais utilizados como fonte.
+-   **Latência:** Gráficos e métricas sobre o tempo de resposta da IA (média geral, por tipo de busca, e percentis P95/P99).
+-   **Feedbacks:** Tabelas detalhadas com todos os feedbacks (positivos e negativos), permitindo a revisão da pergunta do usuário, da resposta da IA e de comentários adicionais.
+-   **Alertas Jurídicos:** Lista todos os alertas de problemas jurídicos reportados pelos usuários, com detalhes da conversa para análise da equipe de conformidade.
+-   **Custos:** Apresenta dados (atualmente mockados) sobre os custos da API, com previsão mensal e distribuição por serviço.
+-   **Sistema:**
+    -   **Modo de Manutenção:** Permite ativar um modo onde apenas o administrador pode logar.
+    -   **Diagnóstico de APIs:** Executa um teste em tempo real nas APIs (DLP, Vertex AI, Gemini) para verificar seu status e latência.
+
+---
+
+## 4. Configuração do Ambiente e Chaves
+
+As chaves de API e credenciais são gerenciadas via variáveis de ambiente.
 
 ```bash
 # Credenciais do Projeto Firebase (usadas no cliente)
 NEXT_PUBLIC_FIREBASE_API_KEY="..."
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="..."
 NEXT_PUBLIC_FIREBASE_PROJECT_ID="..."
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="..."
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="..."
-NEXT_PUBLIC_FIREBASE_APP_ID="..."
+# ... (demais chaves do Firebase)
 
 # Chave de API do Google Gemini (usada no servidor)
-# Propósito: Geração de títulos, sugestões de perguntas, busca na web.
 GEMINI_API_KEY="..."
 
-# Conta de Serviço para Vertex AI Search e Cloud DLP (usada no servidor)
-# Propósito: Autenticar para realizar buscas na base de conhecimento interna (RAG) e para anonimizar dados com a DLP API.
+# Conta de Serviço para Vertex AI, DLP e Speech-to-Text (usada no servidor)
 # Formato: JSON completo da chave da conta de serviço, em uma única linha.
 SERVICE_ACCOUNT_KEY_INTERNAL="..."
 ```
+---
+
+## 5. Segurança e Permissões
+
+### 5.1. Autenticação e Autorização
+
+-   **Provedor:** Autenticação via **Firebase Authentication** com o Provedor Google.
+-   **Restrição de Domínio:** Acesso restrito a e-mails `@3ainvestimentos.com.br` e `@3ariva.com.br`, verificado no frontend.
+
+### 5.2. Conta de Serviço (`SERVICE_ACCOUNT_KEY_INTERNAL`)
+
+Esta conta de serviço precisa ter os seguintes papéis no Google Cloud IAM:
+-   `Discovery Engine User` (`roles/discoveryengine.user`)
+-   `DLP User` (`roles/dlp.user`)
+-   `Cloud Speech-to-Text User` (ou um papel mais abrangente como `Editor`)
+
+### 5.3. Regras de Segurança do Firestore
+
+As regras em `firestore.rules` garantem que os usuários só possam ler e escrever seus próprios dados, e que logs de alerta só possam ser criados, mas não lidos ou alterados pelo cliente.
+
+### 5.4. Prevenção de Perda de Dados (DLP)
+
+-   **Anonimização Ativa:** A função `deidentifyQuery` em `src/app/actions.ts` usa a API de DLP para remover PII de todas as consultas e conteúdos de arquivos antes de serem processados pela IA ou salvos.
+-   **Preamble de Segurança:** A instrução `ASSISTENTE_CORPORATIVO_PREAMBLE` e `POSICAO_CONSOLIDADA_PREAMBLE` proíbem explicitamente o modelo de processar PII, atuando como uma segunda camada de defesa.
 
 ---
 
-## 4. Segurança e Permissões
-
-A segurança é um pilar central da aplicação, implementada em várias camadas.
-
-### 4.1. Autenticação e Autorização
-
--   **Provedor:** A autenticação é feita exclusivamente via **Firebase Authentication** com o Provedor Google.
--   **Restrição de Domínio:** O acesso à aplicação é estritamente controlado no frontend (`src/app/page.tsx`). Apenas usuários com e-mails dos domínios `@3ainvestimentos.com.br` e `@3ariva.com.br` podem acessar a página de chat. Qualquer outra conta do Google será desconectada após o login.
-
-### 4.2. Conta de Serviço (`SERVICE_ACCOUNT_KEY_INTERNAL`)
-
-Esta conta de serviço é usada para autenticar as chamadas às APIs do **Vertex AI Search** e **Cloud DLP**.
-
--   **Propósito:** Permitir que o backend da aplicação consulte o motor de busca e anonimize os dados.
--   **Permissões IAM Essenciais:** Para que a conta de serviço funcione, ela **DEVE** ter os seguintes papéis (roles) no Google Cloud IAM:
-    -   `Discovery Engine User` (`roles/discoveryengine.user`)
-    -   `DLP User` (`roles/dlp.user`)
-
-### 4.3. Regras de Segurança do Firestore
-
-Para proteger os dados no Firestore, as seguintes regras de segurança são aplicadas através do arquivo `firestore.rules`. Elas são essenciais para blindar o acesso direto ao banco de dados:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    // Regra Geral: Bloqueia todo o acesso por padrão.
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Permite que usuários autenticados leiam e modifiquem APENAS seus próprios dados.
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Permite que usuários autenticados criem logs de alerta, mas não os leiam ou modifiquem.
-    match /dlp_alerts/{alertId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if false; // Apenas o backend/admins devem ler.
-    }
-    match /legal_issue_alerts/{alertId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if false; // Apenas o backend/admins devem ler.
-    }
-    
-    // Ninguém pode ler ou escrever na coleção de chats arquivados diretamente.
-    match /archived_chats/{chatId} {
-        allow read, write: if false;
-    }
-  }
-}
-```
-**Implantação:**
-As regras são implantadas automaticamente com o restante da configuração do Firebase. Para atualizações manuais, use a Firebase CLI: `firebase deploy --only firestore:rules`.
-
-### 4.4. Prevenção de Perda de Dados (DLP)
-- **Anonimização Ativa:** A função `deidentifyQuery` em `src/app/actions.ts` utiliza a API de DLP do Google Cloud para remover dados sensíveis (PII) de todas as consultas do usuário antes de serem enviadas para qualquer modelo de IA. Apenas a consulta anonimizada é processada e salva.
-- **Preamble de Segurança:** A instrução `ASSISTENTE_CORPORATIVO_PREAMBLE` proíbe explicitamente o modelo de processar ou solicitar PII, atuando como uma segunda camada de defesa.
-- **Log de Alertas:** A função `logDlpAlert` registra os *tipos* de PII detectados para fins de auditoria, sem nunca armazenar o dado sensível original.
-
----
-
-## 5. Estrutura do Banco de Dados (Firestore)
-
-A estrutura do Firestore foi projetada para ser escalável e segura, centrada no usuário.
+## 6. Estrutura do Banco de Dados (Firestore)
 
 -   `users/{userId}`: Documento principal para cada usuário.
-    -   `chats/{chatId}`: Sub-coleção para armazenar o histórico de conversas.
-        -   `title`: Título da conversa (gerado por IA).
-        -   `messages`: Array de objetos, cada um representando uma mensagem. As mensagens do usuário são **armazenadas em seu formato anonimizado**.
-        -   `groupId`: ID do projeto ao qual a conversa pertence.
-        -   `createdAt`: Timestamp de criação.
-    -   `groups/{groupId}`: Sub-coleção para os projetos (pastas) criados pelo usuário.
-        -   `name`: Nome do projeto.
-        -   `createdAt`: Timestamp de criação.
-    -   `feedbacks/{messageId}`: Sub-coleção para armazenar os feedbacks (positivo/negativo) das respostas da IA.
-    -   `regenerated_answers/{logId}`: Sub-coleção para registrar quando um usuário pede para regenerar uma resposta, para fins de análise.
-
--   `dlp_alerts/{alertId}`: Coleção na raiz para registrar alertas de segurança (DLP). **Não armazena os dados sensíveis originais**.
--   `legal_issue_alerts/{alertId}`: Coleção na raiz para registrar alertas de conformidade jurídica.
--   `archived_chats/{chatId}`: Coleção na raiz onde as conversas excluídas são movidas como backup antes da exclusão final.
+    -   `chats/{chatId}`: Sub-coleção com o histórico de conversas (mensagens, título, etc.). As mensagens do usuário são **armazenadas em seu formato anonimizado**.
+    -   `groups/{groupId}`: Sub-coleção para os projetos (pastas).
+    -   `feedbacks/{messageId}`: Sub-coleção para feedbacks.
+    -   `regenerated_answers/{logId}`: Sub-coleção para logs de regeneração.
+-   `dlp_alerts/{alertId}`: Coleção na raiz para alertas de segurança.
+-   `legal_issue_alerts/{alertId}`: Coleção na raiz para alertas de conformidade.
+-   `archived_chats/{chatId}`: Coleção para backup de conversas excluídas.
 
 ---
+## 7. Preambles e Lógica de Negócio Específica
 
-## 6. Histórico de Evolução e Decisões de Design
+### 7.1. Preamble Padrão
+O `ASSISTENTE_CORPORATIVO_PREAMBLE` define a identidade base do "Bob", suas regras de tom de voz, hierarquia de fontes de conhecimento (arquivos do usuário > RAG) e o procedimento padrão em caso de falha.
 
-A aplicação evoluiu significativamente desde sua concepção inicial.
+### 7.2. Preamble de Posição Consolidada
+O `POSICAO_CONSOLIDADA_PREAMBLE` é um conjunto de instruções altamente específico que é ativado quando o usuário menciona "análise com nosso padrão". Ele guia a IA para:
+-   Atuar como um especialista em finanças.
+-   Extrair dados específicos de páginas exatas de um relatório de investimentos em PDF da XP.
+-   Analisar as classes de ativos com melhor e pior performance.
+-   Montar uma mensagem formatada para WhatsApp com os dados extraídos e um texto padrão sobre o cenário econômico.
 
-1.  **Fundação:** Começou como um chat simples, com um histórico linear de conversas.
-2.  **Organização:** Foram introduzidos "Projetos" (pastas) para permitir que os usuários agrupassem conversas por tema, com funcionalidade de arrastar e soltar (`dnd-kit`).
-3.  **Títulos Inteligentes:** A geração de títulos de conversa evoluiu de um simples corte de texto (`substring`) para uma chamada à API Gemini, resultando em títulos contextuais e concisos.
-4.  **Segurança (DLP):** A estratégia de DLP evoluiu de um planejamento com regex para uma implementação robusta utilizando a **API de DLP do Google Cloud**, garantindo que dados sensíveis sejam anonimizados antes do processamento pela IA e do armazenamento no histórico.
-5.  **Interatividade com Respostas:** Foram adicionados recursos como:
-    -   Feedback (positivo/negativo).
-    -   Regeneração de resposta.
-    -   Cópia para a área de transferência.
-    -   Reporte de problemas jurídicos.
-6.  **Refinamentos de UI/UX:**
-    -   Implementação de um popup de "Guias e FAQ" para autoatendimento.
-    -   Ajustes de espaçamento e consistência visual nos botões da barra lateral.
-    -   Tematização dinâmica que adapta as cores primárias com base no domínio do e-mail do usuário (`@3ariva.com.br` ou `@3ainvestimentos.com.br`).
-
----
-## 7. Recomendações e Próximos Passos
-
--   **Manter e Auditar Regras do Firestore:** É crucial garantir que as regras de segurança do Firestore (descritas na seção 4.3) estejam sempre atualizadas e corretas para proteger os dados.
--   **Rotação de Chaves:** Estabelecer uma política para rotacionar `GEMINI_API_KEY` e as chaves da `SERVICE_ACCOUNT_KEY_INTERNAL` periodicamente.
--   **Auditoria de Permissões:** Revisar regularmente as permissões IAM da conta de serviço para garantir que ela siga o princípio de privilégio mínimo.
--   **Análise de Arquivos:** Para implementar a análise de arquivos com dados sensíveis, a API de DLP deve ser configurada para usar **tokenização com preservação de contexto**, permitindo que a IA diferencie entidades sem ter acesso aos dados reais.
+Este preamble demonstra a capacidade do sistema de alternar para um "modo de especialista" com base em uma palavra-chave, aplicando uma lógica de negócio bem definida a um tipo de documento específico.
+```
