@@ -14,7 +14,6 @@ import {
   generateTitleForConversation,
   regenerateAnswer,
   removeFileFromConversation,
-  transcribeFileAudio,
   transcribeLiveAudio,
 } from '@/app/actions';
 import {
@@ -1617,3 +1616,5 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
+
+    
