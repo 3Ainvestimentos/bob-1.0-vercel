@@ -986,7 +986,6 @@ function ChatPageContent() {
 
     const userMessage = messages[messageIndex - 1];
     const userQuery = userMessage.originalContent || userMessage.content;
-    const isStandardAnalysis = userMessage.isStandardAnalysis ?? false;
     const originalAssistantResponse = messages[messageIndex].content;
     const newAssistantMessageId = crypto.randomUUID();
 
@@ -999,10 +998,9 @@ function ChatPageContent() {
     try {
       const result = await regenerateAnswer(
         userQuery,
-        activeChat.attachedFiles,
+        originalAssistantResponse,
         user.uid,
-        activeChatId,
-        { useStandardAnalysis }
+        activeChatId
       );
 
       if (result.error) {
@@ -1390,13 +1388,13 @@ function ChatPageContent() {
             onOpenChange={setIsNewGroupDialogOpen}
         >
             <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-                <DialogTitle>Criar Novo Projeto</DialogTitle>
-                <DialogDescription>
-                Dê um nome ao seu novo projeto de conversas.
-                </DialogDescription>
-            </DialogHeader>
             <form onSubmit={handleCreateGroup}>
+                <DialogHeader>
+                    <DialogTitle>Criar Novo Projeto</DialogTitle>
+                    <DialogDescription>
+                    Dê um nome ao seu novo projeto de conversas.
+                    </DialogDescription>
+                </DialogHeader>
                 <div className="grid gap-4 py-4">
                 <Input
                     id="name"
@@ -1422,13 +1420,13 @@ function ChatPageContent() {
             }
         }}>
             <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-                <DialogTitle>Renomear {itemToRename?.type === 'group' ? 'Projeto' : 'Conversa'}</DialogTitle>
-                <DialogDescription>
-                Digite o novo nome para "{itemToRename?.currentName}".
-                </DialogDescription>
-            </DialogHeader>
             <form onSubmit={handleRenameSubmit}>
+                <DialogHeader>
+                    <DialogTitle>Renomear {itemToRename?.type === 'group' ? 'Projeto' : 'Conversa'}</DialogTitle>
+                    <DialogDescription>
+                    Digite o novo nome para "{itemToRename?.currentName}".
+                    </DialogDescription>
+                </DialogHeader>
                 <div className="grid gap-4 py-4">
                 <Input
                     id="newName"
@@ -1616,5 +1614,7 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
+
+    
 
     

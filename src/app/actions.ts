@@ -586,14 +586,46 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
 }
 
 
+async function callGeminiForRegeneration(
+    originalQuery: string,
+    previousAnswer: string
+): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; }> {
+    const geminiApiKey = await getGeminiApiKey();
+
+    const prompt = `A resposta anterior para a pergunta de um usuário foi insatisfatória. Sua tarefa é gerar uma nova resposta, melhor e mais completa.
+    
+    ## Pergunta Original do Usuário:
+    "${originalQuery}"
+    
+    ## Resposta Anterior (Insatisfatória):
+    "${previousAnswer}"
+    
+    ## Nova Resposta (Aprimorada):`;
+
+    try {
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        return { summary: text, searchFailed: false, sources: [] };
+
+    } catch (error: any) {
+        console.error("Error calling Gemini API for regeneration:", error);
+        if (error.message.includes('API key not valid')) {
+            throw new Error(`Erro de autenticação com a API Gemini. Verifique se a GEMINI_API_KEY é válida.`);
+        }
+        throw new Error(error.message);
+    }
+}
+
 export async function regenerateAnswer(
   originalQuery: string,
-  attachments: AttachedFile[],
+  previousAnswer: string,
   userId?: string,
-  chatId?: string,
-  options: {
-      useStandardAnalysis?: boolean;
-  } = {}
+  chatId?: string
 ): Promise<{ 
   summary?: string; 
   searchFailed?: boolean; 
@@ -607,35 +639,35 @@ export async function regenerateAnswer(
   try {
     const startTime = Date.now();
     
-    let finalQuery = originalQuery;
-    if (options.useStandardAnalysis) {
-        finalQuery = `${POSICAO_CONSOLIDADA_PREAMBLE}\n\n${originalQuery}`;
-    }
-
-    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(finalQuery);
+    // De-identification is still a good practice, even for regeneration
+    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(originalQuery);
+    const { deidentifiedQuery: deidentifiedPreviousAnswer } = await deidentifyQuery(previousAnswer);
 
     if (userId && chatId && foundInfoTypes.length > 0) {
         await logDlpAlert(userId, chatId, foundInfoTypes);
     }
 
-    const result = await callDiscoveryEngine(
+    const result = await callGeminiForRegeneration(
         deidentifiedQuery,
-        attachments
+        deidentifiedPreviousAnswer
     );
     const latencyMs = Date.now() - startTime;
 
     if (!result) {
         throw new Error("A chamada para regenerar a resposta retornou uma resposta vazia.");
     }
-    //Fixed: Corrected the variable reference here.
+
+    const promptTokenCount = estimateTokens(deidentifiedQuery + deidentifiedPreviousAnswer);
+    const candidatesTokenCount = estimateTokens(result.summary);
+
     return { 
         summary: result.summary, 
         searchFailed: result.searchFailed, 
         sources: result.sources || [], 
-        promptTokenCount: result.promptTokenCount, 
-        candidatesTokenCount: result.candidatesTokenCount,
+        promptTokenCount,
+        candidatesTokenCount,
         latencyMs: latencyMs,
-        deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
+        deidentifiedQuery: originalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
     };
   } catch (error: any) {
     console.error("Error in regenerateAnswer (internal):", error.message);
@@ -1187,6 +1219,8 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+    
 
     
 
