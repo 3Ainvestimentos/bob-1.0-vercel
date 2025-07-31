@@ -20,6 +20,13 @@ O "Assistente Corporativo Bob" é uma aplicação de chat com Inteligência Arti
     -   Google Cloud Speech-to-Text API (para transcrição de áudio)
 -   **Hospedagem:** Firebase App Hosting
 
+### 1.3. Principais Bibliotecas e Finalidades
+-   `dnd-kit`: Utilizada para implementar a funcionalidade de arrastar e soltar (drag and drop) na barra lateral, permitindo a organização de conversas e projetos.
+-   `recharts`: Biblioteca de gráficos utilizada para renderizar as visualizações de dados no painel administrativo (ex: interações por dia, latência, custos).
+-   `lucide-react`: Fornece o conjunto de ícones utilizado em toda a interface da aplicação, garantindo consistência visual.
+-   `pdf-parse`, `mammoth`, `xlsx`: Conjunto de bibliotecas para processamento de arquivos no backend, responsáveis por extrair o conteúdo de documentos PDF, Word e Excel, respectivamente.
+-   `firebase` e `firebase-admin`: SDKs do Firebase para interação do lado do cliente (autenticação, Firestore) e do lado do servidor (operações administrativas).
+
 ---
 
 ## 2. Arquitetura e Fluxo de Dados
@@ -147,4 +154,3 @@ O `POSICAO_CONSOLIDADA_PREAMBLE` é um conjunto de instruções altamente espec�
 -   Montar uma mensagem formatada para WhatsApp com os dados extraídos e um texto padrão sobre o cenário econômico.
 
 Este preamble demonstra a capacidade do sistema de alternar para um "modo de especialista" com base em uma palavra-chave, aplicando uma lógica de negócio bem definida a um tipo de documento específico.
-```
