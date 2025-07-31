@@ -986,7 +986,7 @@ function ChatPageContent() {
 
     const userMessage = messages[messageIndex - 1];
     const userQuery = userMessage.originalContent || userMessage.content;
-    const isStandardAnalysis = userMessage.isStandardAnalysis || false;
+    const isStandardAnalysis = userMessage.isStandardAnalysis ?? false;
     const originalAssistantResponse = messages[messageIndex].content;
     const newAssistantMessageId = crypto.randomUUID();
 
@@ -1562,7 +1562,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
