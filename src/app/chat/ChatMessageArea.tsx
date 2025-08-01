@@ -116,21 +116,21 @@ export function ChatMessageArea({
               <div className="text-left">
                 <h1 className="flex items-center gap-3 text-4xl font-bold">
                   <span>Olá, {userName.split(' ')[0]}!</span>
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-10 w-10 text-amber-500 animate-wave origin-[70%_70%]"
-                    >
-                        <path d="M17.6 21.2V8.2c0-2-1.6-3.6-3.6-3.6s-3.6 1.6-3.6 3.6v5.8" />
-                        <path d="M14 8.2V4.6C14 2.6 12.4 1 10.4 1S6.8 2.6 6.8 4.6v4.6" />
-                        <path d="M10.4 8.2V6.4c0-1-.8-1.8-1.8-1.8S6.8 5.4 6.8 6.4v5.4" />
-                        <path d="M6.8 11.8v2.8c0 1.1-.9 2-2 2s-2-.9-2-2V9.8c0-1.1.9-2 2-2s2 .9 2 2" />
-                    </svg>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-10 w-10 text-amber-500"
+                  >
+                    <path d="M8 10V7a1 1 0 011-1h2a1 1 0 011 1v5" />
+                    <path d="M12 12V7a1 1 0 011-1h2a1 1 0 011 1v5" />
+                    <path d="M16 12V8a1 1 0 011-1h2a1 1 0 011 1v4" />
+                    <path d="M7 10a3 3 0 01-3 3v2a3 3 0 003 3h11a3 3 0 003-3v-2a3 3 0 01-3-3" />
+                  </svg>
                 </h1>
                 <p className="mt-2 text-lg text-muted-foreground">
                   Como posso te ajudar hoje?
