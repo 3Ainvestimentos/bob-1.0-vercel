@@ -496,6 +496,11 @@ function ChatPageContent() {
     }
   }, [theme]);
 
+  const handleSignOut = useCallback(async () => {
+    await signOut(auth);
+    router.push('/');
+  }, [router]);
+
   const fetchSidebarData = useCallback(async () => {
     if (!user) return;
     setIsSidebarLoading(true);
@@ -552,26 +557,31 @@ function ChatPageContent() {
       return;
     }
     if (!user) {
-      toast({
-        variant: 'destructive',
-        title: 'Acesso Negado',
-        description: 'Você precisa estar logado para acessar esta página.',
-      });
       router.push('/');
       return;
     }
 
-    const checkTerms = async () => {
+    const checkTermsAndCreateUser = async () => {
         setIsCheckingTerms(true);
         try {
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
-            if (userDocSnap.exists() && userDocSnap.data().termsAccepted === true) {
-                // User has accepted terms, proceed to load data
-                fetchSidebarData();
-            } else {
-                // User needs to accept terms
+
+            if (!userDocSnap.exists()) {
+                await setDoc(userDocRef, {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    createdAt: serverTimestamp(),
+                    termsAccepted: false
+                });
                 setShowTermsDialog(true);
+            } else {
+                if (userDocSnap.data().termsAccepted === true) {
+                    fetchSidebarData();
+                } else {
+                    setShowTermsDialog(true);
+                }
             }
         } catch (err: any) {
             toast({
@@ -579,18 +589,14 @@ function ChatPageContent() {
                 title: 'Erro ao verificar termos',
                 description: err.message,
             });
-            await handleSignOut(); // Sign out on error
+            await handleSignOut();
         } finally {
             setIsCheckingTerms(false);
         }
     };
-    checkTerms();
-  }, [user, authLoading, router, toast, fetchSidebarData]);
-
-  const handleSignOut = async () => {
-    await signOut(auth);
-    router.push('/');
-  };
+    
+    checkTermsAndCreateUser();
+  }, [user, authLoading, router, toast, fetchSidebarData, handleSignOut]);
 
   const handleSelectConversation = async (chatId: string) => {
     if (isLoading || !user) return;
@@ -1345,7 +1351,7 @@ function ChatPageContent() {
         const userDocRef = doc(db, 'users', user.uid);
         await updateDoc(userDocRef, { termsAccepted: true });
         setShowTermsDialog(false);
-        fetchSidebarData(); // Now load the main app data
+        fetchSidebarData();
     } catch (error: any) {
         toast({
             variant: "destructive",
