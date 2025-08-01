@@ -30,7 +30,8 @@ import {
   X,
   TrendingUp,
   Briefcase,
-  BookOpen
+  BookOpen,
+  Hand,
 } from 'lucide-react';
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -116,21 +117,7 @@ export function ChatMessageArea({
               <div className="text-left">
                 <h1 className="flex items-center gap-3 text-4xl font-bold">
                   <span>Olá, {userName.split(' ')[0]}!</span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-10 w-10 text-amber-500"
-                  >
-                    <path d="M8 10V7a1 1 0 011-1h2a1 1 0 011 1v5" />
-                    <path d="M12 12V7a1 1 0 011-1h2a1 1 0 011 1v5" />
-                    <path d="M16 12V8a1 1 0 011-1h2a1 1 0 011 1v4" />
-                    <path d="M7 10a3 3 0 01-3 3v2a3 3 0 003 3h11a3 3 0 003-3v-2a3 3 0 01-3-3" />
-                  </svg>
+                  <Hand className="h-10 w-10 text-amber-500" />
                 </h1>
                 <p className="mt-2 text-lg text-muted-foreground">
                   Como posso te ajudar hoje?
