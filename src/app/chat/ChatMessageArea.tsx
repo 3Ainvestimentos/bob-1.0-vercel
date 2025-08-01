@@ -46,8 +46,6 @@ interface ChatMessageAreaProps {
   userInitials: string;
   lastFailedQuery: string | null;
   feedbacks: Record<string, 'positive' | 'negative'>;
-  suggestions: string[];
-  isSuggestionsLoading: boolean;
   regeneratingMessageId: string | null;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   onFeedback: (message: Message, rating: 'positive' | 'negative') => void;
@@ -93,8 +91,6 @@ export function ChatMessageArea({
   userInitials,
   lastFailedQuery,
   feedbacks,
-  suggestions,
-  isSuggestionsLoading,
   regeneratingMessageId,
   messagesEndRef,
   onFeedback,
@@ -231,11 +227,6 @@ export function ChatMessageArea({
                                 </Button>
                               )}
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {typeof msg.promptTokenCount === 'number' && typeof msg.candidatesTokenCount === 'number'
-                                ? `Tokens usados: ${msg.promptTokenCount + msg.candidatesTokenCount}`
-                                : ''}
-                            </div>
                           </div>
                         )}
                       </>
@@ -303,33 +294,6 @@ export function ChatMessageArea({
                 </div>
               </div>
             )}
-            {/* {(isSuggestionsLoading || suggestions.length > 0) && !isLoading && (
-              <div className="mt-6 flex flex-col items-start gap-3">
-                <p className="text-sm text-muted-foreground">Sugestões:</p>
-                <div className="flex flex-wrap gap-2">
-                  {isSuggestionsLoading ? (
-                    <>
-                      <Skeleton className="h-9 w-48 rounded-full" />
-                      <Skeleton className="h-9 w-40 rounded-full" />
-                      <Skeleton className="h-9 w-52 rounded-full" />
-                    </>
-                  ) : (
-                    suggestions.map((s, i) => (
-                      <Button
-                        key={i}
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full"
-                        onClick={() => onSuggestionClick(s)}
-                        disabled={isLoading}
-                      >
-                        {s}
-                      </Button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )} */}
             <div ref={messagesEndRef} />
           </div>
         )}
