@@ -12,7 +12,7 @@ import { google } from 'googleapis';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 import * as xlsx from 'xlsx';
-import {v1 as speech} from '@google-cloud/speech';
+import { SpeechClient } from '@google-cloud/speech';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
@@ -561,7 +561,7 @@ export async function askAssistant(
 
 export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
     const credentials = getServiceAccountCredentials();
-    const speechClient = new speech.v1.SpeechClient({ credentials });
+    const speechClient = new SpeechClient({ credentials });
 
     const audio = {
         content: base64Audio,
