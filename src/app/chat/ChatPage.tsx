@@ -543,23 +543,30 @@ function ChatPageContent() {
   };
 
   useEffect(() => {
-    if (user) {
-        try {
-            fetchSidebarData();
-        } catch (err: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Erro ao carregar dados',
-                description: err.message,
-            });
-            setError(err.message);
-        }
-    } else {
-      setConversations([]);
-      setGroups([]);
-      handleNewChat();
+    if (authLoading) {
+      return; 
     }
-  }, [user, fetchSidebarData, toast]);
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Acesso Negado',
+        description: 'Você precisa estar logado para acessar esta página.',
+      });
+      router.push('/');
+      return;
+    }
+    
+    try {
+        fetchSidebarData();
+    } catch (err: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Erro ao carregar dados',
+            description: err.message,
+        });
+        setError(err.message);
+    }
+  }, [user, authLoading, router, toast, fetchSidebarData]);
 
   const handleSignOut = async () => {
     await signOut(auth);
