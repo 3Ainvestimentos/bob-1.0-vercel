@@ -6,7 +6,7 @@ import {
 } from '@/components/chat/ChatInputForm';
 import {
   ChatMessageArea
-} from '@/components/chat/ChatMessageArea';
+} from './ChatMessageArea';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import {
   askAssistant,
@@ -84,6 +84,7 @@ export interface RagSource {
 export interface Group {
   id: string;
   name: string;
+  createdAt: Timestamp;
 }
 
 export interface Message {
@@ -974,7 +975,7 @@ function ChatPageContent() {
       const result = await regenerateAnswer(
         userQuery,
         activeChat.attachedFiles,
-        { isStandardAnalysis: userMessage.isStandardAnalysis },
+        { useStandardAnalysis: userMessage.isStandardAnalysis },
         user.uid,
         activeChatId
       );
@@ -1589,9 +1590,3 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
-
-    
-
-    
-
-    
