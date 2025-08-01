@@ -116,7 +116,25 @@ export function ChatMessageArea({
               <div className="text-left">
                 <h1 className="flex items-center gap-3 text-4xl font-bold">
                   <span>Olá, {userName.split(' ')[0]}!</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-wave"><path d="M8 8a3.5 3.5 0 0 1 3.5-3.5h1A3.5 3.5 0 0 1 16 8a3 3 0 0 1-3 3h-1.5a3.5 3.5 0 0 1-3.5-3.5V8z"></path><path d="M12.5 11.5a3 3 0 0 1-3-3V8a3.5 3.5 0 0 1 3.5-3.5h1A3.5 3.5 0 0 1 16 8v.5a3 3 0 0 1-3 3-3 3 0 0 1-3-3"></path><path d="M12 11h.01"></path><path d="M12 14h.01"></path><path d="M12 17h.01"></path></svg>
+                   <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="36"
+                    height="36"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="animate-wave"
+                  >
+                    <path d="M18 18.5a1.5 1.5 0 0 1-3 0v-6a1.5 1.5 0 0 1 3 0v6Z" />
+                    <path d="M12 18.5a1.5 1.5 0 0 1-3 0v-4a1.5 1.5 0 0 1 3 0v4Z" />
+                    <path d="M6 18.5a1.5 1.5 0 0 1-3 0v-4a1.5 1.5 0 0 1 3 0v4Z" />
+                    <path d="M21 16.5a1.5 1.5 0 0 1-3 0v-2.5a1.5 1.5 0 0 1 3 0v2.5Z" />
+                    <path d="M3.5 10.5a1.5 1.5 0 0 1 0-3h1a1.5 1.5 0 0 1 0 3h-1Z" />
+                    <path d="M9 10.5a1.5 1.5 0 0 1-3 0V6a1.5 1.5 0 0 1 3 0v4.5Z" />
+                  </svg>
                 </h1>
                 <p className="mt-2 text-lg text-muted-foreground">
                   Como posso te ajudar hoje?
