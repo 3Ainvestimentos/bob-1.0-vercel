@@ -460,8 +460,6 @@ function ChatPageContent() {
   const [feedbackDetails, setFeedbackDetails] = useState<FeedbackDetails | null>(null);
   const [feedbackComment, setFeedbackComment] = useState('');
 
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
   const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
 
   const [isLegalReportDialogOpen, setIsLegalReportDialogOpen] = useState(false);
@@ -547,8 +545,6 @@ function ChatPageContent() {
     setError(null);
     setLastFailedQuery(null);
     setFeedbacks({});
-    setSuggestions([]);
-    setIsSuggestionsLoading(false);
     setSelectedFiles([]);
   };
 
@@ -605,8 +601,6 @@ function ChatPageContent() {
     setLastFailedQuery(null);
     setMessages([]); 
     setFeedbacks({});
-    setSuggestions([]);
-    setIsSuggestionsLoading(false);
     setSelectedFiles([]);
     try {
         const fullChat = await getFullConversation(user.uid, chatId);
@@ -670,8 +664,6 @@ function ChatPageContent() {
     setIsLoading(true);
     setError(null);
     setLastFailedQuery(null);
-    setSuggestions([]);
-    setIsSuggestionsLoading(false);
 
     let currentChatId = activeChatId;
     let assistantMessageId = crypto.randomUUID();
@@ -739,20 +731,6 @@ function ChatPageContent() {
                 currentChatId
             );
         }
-        
-        const fetchSuggestions = async () => {
-            if (assistantResponse.searchFailed || !assistantResponse.summary) return;
-            setIsSuggestionsLoading(true);
-            try {
-                const newSuggestions = await generateSuggestedQuestions(userQuery, assistantResponse.summary);
-                setSuggestions(newSuggestions);
-            } catch (err) {
-                console.error("Failed to fetch suggestions", err);
-            } finally {
-                setIsSuggestionsLoading(false);
-            }
-        };
-        // fetchSuggestions(); // Temporarily disabled
 
         const finalMessages = [...newMessages, assistantMessage];
         setMessages(finalMessages);
@@ -795,8 +773,6 @@ function ChatPageContent() {
     setIsLoading(true);
     setError(null);
     setMessages(messagesWithUserQuery);
-    setSuggestions([]);
-    setIsSuggestionsLoading(false);
 
     try {
       const assistantResponse = await askAssistant(
@@ -999,8 +975,6 @@ function ChatPageContent() {
     setRegeneratingMessageId(assistantMessageId);
     setError(null);
     setLastFailedQuery(null);
-    setSuggestions([]);
-    setIsSuggestionsLoading(false);
 
     try {
       const result = await regenerateAnswer(
@@ -1631,8 +1605,8 @@ function ChatPageContent() {
                   userInitials={userInitials}
                   lastFailedQuery={lastFailedQuery}
                   feedbacks={feedbacks}
-                  suggestions={suggestions}
-                  isSuggestionsLoading={isSuggestionsLoading}
+                  suggestions={[]}
+                  isSuggestionsLoading={false}
                   regeneratingMessageId={regeneratingMessageId}
                   messagesEndRef={messagesEndRef}
                   onFeedback={handleFeedback}
