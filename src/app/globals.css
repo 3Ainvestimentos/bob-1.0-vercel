@@ -23,7 +23,6 @@
     --border: 220 20% 88%;
     --input: 220 20% 88%;
     --ring: 240 5.9% 10%;
-    --radius: 0.5rem;
     --chart-1: 45 93% 58%;
     --user-bubble: 220 20% 93%;
     --user-bubble-foreground: 240 5.9% 10%;
@@ -60,7 +59,7 @@
     --input: 220 13% 30%;
     --ring: 210 40% 98%;
     --chart-1: 45 93% 58%;
-    --user-bubble: 221.2 83.2% 53.3%;
+    --user-bubble: 220 13% 28%;
     --user-bubble-foreground: 210 40% 98%;
 
     /* Sidebar Variables */
