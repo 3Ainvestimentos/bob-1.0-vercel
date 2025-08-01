@@ -63,35 +63,25 @@ interface ChatMessageAreaProps {
 
 const webSearchSuggestions = [
     {
-        Icon: TrendingUp,
-        title: "Quais as últimas notícias sobre o mercado de ações brasileiro?",
-        description: "Explorar os acontecimentos recentes no Ibovespa.",
-    },
-    {
-        Icon: Briefcase,
-        title: "Resuma as tendências de contratação para o setor de tecnologia em 2025.",
-        description: "Obter um panorama sobre o mercado de trabalho de TI.",
-    },
-    {
         Icon: Newspaper,
-        title: "Quais foram os principais resultados dos jogos da rodada de ontem?",
-        description: "Ficar por dentro dos placares esportivos.",
-    },
-    {
-        Icon: BookOpen,
-        title: "Faça um resumo do livro 'O Poder do Hábito'.",
-        description: "Entender as ideias centrais do best-seller.",
-    },
-     {
-        Icon: Lightbulb,
-        title: "Me dê ideias para um roteiro de viagem de 7 dias pela Itália.",
-        description: "Planejar uma viagem com sugestões de cidades e passeios.",
+        title: "Buscar notícias sobre IA",
+        description: "Explorar os últimos acontecimentos no mundo da IA",
     },
     {
         Icon: Mail,
-        title: "Crie um texto para um post de LinkedIn sobre liderança.",
-        description: "Gerar conteúdo profissional para redes sociais.",
+        title: "Criar campanha de e-mail",
+        description: "para vendas de fim de ano",
     },
+    {
+        Icon: Lightbulb,
+        title: "Preparar tópicos",
+        description: "para uma entrevista sobre vida de nômade digital",
+    },
+    {
+        Icon: FileText,
+        title: "Analisar um novo artigo",
+        description: "Resumir e destacar pontos chave de um artigo científico",
+    }
 ];
 
 export function ChatMessageArea({
@@ -151,9 +141,9 @@ export function ChatMessageArea({
                     <div className="flex items-start gap-4">
                       <FileText className="h-6 w-6 text-chart-1" />
                       <div>
-                        <p className="font-semibold">Mensagem de Posição Consolidada</p>
+                        <p className="font-semibold">Análise de Posição Consolidada</p>
                         <p className="text-sm text-muted-foreground">
-                          Criar uma mensagem para o cliente com o padrão 3A RIVA.
+                          Analisar um relatório de investimentos com o padrão 3A RIVA.
                         </p>
                       </div>
                     </div>
