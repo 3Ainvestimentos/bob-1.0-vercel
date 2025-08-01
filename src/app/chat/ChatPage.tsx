@@ -12,6 +12,7 @@ import {
   askAssistant,
   generateSuggestedQuestions,
   generateTitleForConversation,
+  logRegeneratedQuestion,
   regenerateAnswer,
   removeFileFromConversation,
   transcribeLiveAudio,
@@ -148,32 +149,6 @@ async function reportLegalIssue(
   }
 
   await addDoc(reportRef, payload);
-}
-
-
-async function logRegeneratedQuestion(
-    userId: string,
-    chatId: string,
-    originalQuery: string,
-    newResponse: string
-) {
-    if (!userId || !chatId) {
-        console.error("User ID or Chat ID is missing, cannot log regenerated answer.");
-        return;
-    };
-    try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
-        const regeneratedRef = adminDb.collection('users').doc(userId).collection('regenerated_answers').doc();
-        await regeneratedRef.set({
-            userId,
-            chatId,
-            originalQuery,
-            newResponse: newResponse, 
-            regeneratedAt: serverTimestamp(),
-        });
-    } catch (error) {
-        console.error("Error logging regenerated question to Firestore:", error);
-    }
 }
 
 
@@ -1560,7 +1535,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}

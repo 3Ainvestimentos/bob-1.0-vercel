@@ -646,7 +646,7 @@ export async function regenerateAnswer(
   }
 }
 
-async function logRegeneratedQuestion(
+export async function logRegeneratedQuestion(
     userId: string,
     chatId: string,
     originalQuery: string,
