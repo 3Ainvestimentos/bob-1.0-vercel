@@ -5,13 +5,35 @@ import { Button } from '@/components/ui/button';
 import { LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { auth, googleProvider } from '@/lib/firebase';
+import { auth, googleProvider, db } from '@/lib/firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BobIcon } from '@/components/icons/BobIcon';
 import { ADMIN_UID } from '@/types';
 import { getMaintenanceMode } from './actions';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+
+
+async function createUserDocumentIfNotExists(user: import('firebase/auth').User) {
+    const userDocRef = doc(db, "users", user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists()) {
+        try {
+            await setDoc(userDocRef, {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                createdAt: serverTimestamp(),
+                termsAccepted: false // Initialize with terms not accepted
+            });
+        } catch (error) {
+            console.error("Error creating user document:", error);
+            throw new Error("Failed to initialize user account.");
+        }
+    }
+}
 
 
 export default function LoginPage() {
@@ -28,7 +50,6 @@ export default function LoginPage() {
                 setIsMaintenanceMode(maintenanceStatus.isMaintenanceMode);
             } catch (error) {
                 console.error("Failed to check maintenance mode:", error);
-                // Assume system is NOT in maintenance if check fails, to avoid locking everyone out.
                 setIsMaintenanceMode(false);
             } finally {
                 setIsCheckingMaintenance(false);
@@ -63,7 +84,17 @@ export default function LoginPage() {
             const isEmailValid = user.email && allowedDomains.some(domain => user.email!.endsWith(`@${domain}`));
             
             if (isEmailValid || isUserAdmin) {
-                router.push('/chat');
+                 createUserDocumentIfNotExists(user).then(() => {
+                    router.push('/chat');
+                }).catch(error => {
+                    console.error(error);
+                    signOut(auth);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Erro de Inicialização',
+                        description: error.message,
+                    });
+                });
             } else {
                 signOut(auth);
                 toast({

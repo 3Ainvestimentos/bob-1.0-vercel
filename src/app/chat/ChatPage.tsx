@@ -73,6 +73,8 @@ import { FaqDialog } from '@/components/chat/FaqDialog';
 import { FileUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AttachedFile } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 
 // ---- Data Types ----
@@ -471,7 +473,10 @@ function ChatPageContent() {
   const [isFaqDialogOpen, setIsFaqDialogOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-
+  
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isCheckingTerms, setIsCheckingTerms] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -544,7 +549,7 @@ function ChatPageContent() {
 
   useEffect(() => {
     if (authLoading) {
-      return; 
+      return;
     }
     if (!user) {
       toast({
@@ -555,17 +560,31 @@ function ChatPageContent() {
       router.push('/');
       return;
     }
-    
-    try {
-        fetchSidebarData();
-    } catch (err: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Erro ao carregar dados',
-            description: err.message,
-        });
-        setError(err.message);
-    }
+
+    const checkTerms = async () => {
+        setIsCheckingTerms(true);
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists() && userDocSnap.data().termsAccepted === true) {
+                // User has accepted terms, proceed to load data
+                fetchSidebarData();
+            } else {
+                // User needs to accept terms
+                setShowTermsDialog(true);
+            }
+        } catch (err: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao verificar termos',
+                description: err.message,
+            });
+            await handleSignOut(); // Sign out on error
+        } finally {
+            setIsCheckingTerms(false);
+        }
+    };
+    checkTerms();
   }, [user, authLoading, router, toast, fetchSidebarData]);
 
   const handleSignOut = async () => {
@@ -1295,8 +1314,6 @@ function ChatPageContent() {
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    // Use relatedTarget to prevent flickering when moving over child elements
-    // This ensures the overlay doesn't disappear when moving over child elements of the drop zone.
     if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget as Node)) {
         return;
     }
@@ -1322,7 +1339,30 @@ function ChatPageContent() {
     }
   };
 
-  if (authLoading) {
+  const handleAcceptTerms = async () => {
+    if (!user) return;
+    try {
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, { termsAccepted: true });
+        setShowTermsDialog(false);
+        fetchSidebarData(); // Now load the main app data
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Erro",
+            description: `Não foi possível salvar sua preferência: ${error.message}`
+        });
+        await handleSignOut();
+    }
+  };
+
+  const handleDeclineTerms = async () => {
+    setShowTermsDialog(false);
+    await handleSignOut();
+  };
+
+
+  if (authLoading || isCheckingTerms) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <p className="text-lg text-muted-foreground">Carregando...</p>
@@ -1525,6 +1565,27 @@ function ChatPageContent() {
             </DialogContent>
         </Dialog>
         
+        <AlertDialog open={showTermsDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Termos de Uso e Política de Privacidade</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Para continuar, você deve concordar com os Termos de Uso e a Política de Privacidade. O Bob pode cometer erros, por isso é importante checar as informações. Suas conversas podem ser revisadas para melhorar nossos serviços e não devem conter dados sensíveis.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="flex items-center space-x-2 my-4">
+                  <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(!!checked)} />
+                  <Label htmlFor="terms" className="cursor-pointer">Eu li e aceito os Termos de Uso</Label>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={handleDeclineTerms}>Recusar e Sair</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleAcceptTerms} disabled={!termsAccepted}>
+                        Continuar
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         <FaqDialog open={isFaqDialogOpen} onOpenChange={setIsFaqDialogOpen} />
 
 
@@ -1542,7 +1603,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
