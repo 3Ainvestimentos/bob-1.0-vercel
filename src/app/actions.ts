@@ -412,7 +412,7 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
         const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
-        const result = await model.generateContent("teste");
+        const result = await model.generateContent(query);
         const response = await result.response;
         const text = response.text();
         
@@ -1215,6 +1215,8 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+    
 
     
 
