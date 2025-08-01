@@ -15,7 +15,7 @@ import * as xlsx from 'xlsx';
 import { SpeechClient } from '@google-cloud/speech';
 
 
-const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
+const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em a vasta gama de tarefas com informações precisas e seguras.
 
 ## REGRAS E DIRETRIZES DE ATUAÇÃO (SEGUIR ESTRITAMENTE)
 
@@ -420,8 +420,10 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
     try {
         const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        
+        const finalQuery = `Responda em português do Brasil, a menos que seja solicitado o contrário na pergunta. Pergunta do usuário: "${query}"`;
 
-        const result = await model.generateContent(query);
+        const result = await model.generateContent(finalQuery);
         const response = await result.response;
         const text = response.text();
         
@@ -1095,7 +1097,7 @@ export async function getFeedbacks(): Promise<any> {
                 user: userInfo || { email: 'Usuário não encontrado', displayName: data.userId },
                 updatedAt: updatedAt.toDate().toLocaleString('pt-BR', {
                     timeZone: 'America/Sao_Paulo',
-                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    day: '2-digit', month: '2-digit',
                     hour: '2-digit', minute: '2-digit',
                 }),
             };
@@ -1224,6 +1226,8 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+    
 
     
 
