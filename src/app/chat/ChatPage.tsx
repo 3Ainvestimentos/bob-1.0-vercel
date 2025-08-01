@@ -155,7 +155,6 @@ async function logRegeneratedQuestion(
     userId: string,
     chatId: string,
     originalQuery: string,
-    originalResponse: string,
     newResponse: string
 ) {
     if (!userId || !chatId) {
@@ -163,13 +162,13 @@ async function logRegeneratedQuestion(
         return;
     };
     try {
-        const regeneratedRef = collection(db, 'users', userId, 'regenerated_answers');
-        await addDoc(regeneratedRef, {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const regeneratedRef = adminDb.collection('users').doc(userId).collection('regenerated_answers').doc();
+        await regeneratedRef.set({
             userId,
             chatId,
             originalQuery,
-            originalResponse,
-            newResponse,
+            newResponse: newResponse, 
             regeneratedAt: serverTimestamp(),
         });
     } catch (error) {
@@ -986,7 +985,6 @@ function ChatPageContent() {
 
     const userMessage = messages[messageIndex - 1];
     const userQuery = userMessage.originalContent || userMessage.content;
-    const originalAssistantResponse = messages[messageIndex].content;
     const newAssistantMessageId = crypto.randomUUID();
 
     setRegeneratingMessageId(assistantMessageId);
@@ -998,8 +996,8 @@ function ChatPageContent() {
     try {
       const result = await regenerateAnswer(
         userQuery,
-        originalAssistantResponse,
         activeChat.attachedFiles,
+        { isStandardAnalysis: userMessage.isStandardAnalysis },
         user.uid,
         activeChatId
       );
@@ -1013,7 +1011,6 @@ function ChatPageContent() {
           user.uid,
           activeChatId,
           userQuery,
-          originalAssistantResponse,
           result.summary
         );
       }
@@ -1617,6 +1614,8 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
+
+    
 
     
 

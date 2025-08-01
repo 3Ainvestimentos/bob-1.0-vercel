@@ -60,16 +60,6 @@ Os principais detratores foram:
 O cenário global em junho foi marcado por movimentos significativos, especialmente nos Estados Unidos, onde o avanço do pacote fiscal americano impulsionou as bolsas. Paralelamente, observamos um enfraquecimento do dólar frente às principais moedas, reflexo da precificação de uma potencial queda de juros nos EUA em futuro próximo e deteriorização da percepção fiscal do país. Na Ásia, a economia chinesa demonstrou aquecimento, com dados indicando recuperação e contribuindo para um panorama mais favorável para os mercados emergentes.
 No Brasil, O COPOM colocou a taxa SELIC em 15%, no mesmo mês que dados mostraram um arrefecimento da economia e da inflação, já resultado do ciclo de alta que já vivemos desde o ano passado. Agora, já começa a se especular quando começarão as quedas. Esse cenário contribuiu para a boa performance da bolsa brasileira, que registrou resultados positivos. A valorização também foi impulsionada, em parte, pela entrada de capital estrangeiro, resultado de um rebalanceamento global para mercados emergentes.`;
 
-const REGENERATION_PREAMBLE = `A resposta anterior para a pergunta de um usuário foi insatisfatória. Sua tarefa é gerar uma nova resposta, melhor e mais completa, usando as mesmas fontes de dados.
-
-## Pergunta Original do Usuário:
-"{{originalQuery}}"
-
-## Resposta Anterior (Insatisfatória):
-"{{previousAnswer}}"
-
-Siga o `ASSISTENTE_CORPORATIVO_PREAMBLE` e use as fontes de dados para gerar uma nova resposta aprimorada para a pergunta original.`;
-
 let adminApp: App | null = null;
 
 
@@ -596,8 +586,10 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
 
 export async function regenerateAnswer(
   originalQuery: string,
-  previousAnswer: string,
   attachments: AttachedFile[],
+  options: {
+    isStandardAnalysis?: boolean;
+  } = {},
   userId?: string,
   chatId?: string,
 ): Promise<{ 
@@ -615,24 +607,21 @@ export async function regenerateAnswer(
     const startTime = Date.now();
     
     const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(originalQuery);
-    const { deidentifiedQuery: deidentifiedPreviousAnswer } = await deidentifyQuery(previousAnswer);
 
     if (userId && chatId && foundInfoTypes.length > 0) {
         await logDlpAlert(userId, chatId, foundInfoTypes);
     }
     
     if (userId && chatId) {
-        await logRegeneratedQuestion(userId, chatId, deidentifiedQuery, deidentifiedPreviousAnswer, ''); // Log attempt
+        await logRegeneratedQuestion(userId, chatId, deidentifiedQuery, '');
     }
 
-    const regenerationPreamble = REGENERATION_PREAMBLE
-        .replace('{{originalQuery}}', deidentifiedQuery)
-        .replace('{{previousAnswer}}', deidentifiedPreviousAnswer);
+    const preamble = options.isStandardAnalysis ? POSICAO_CONSOLIDADA_PREAMBLE : ASSISTENTE_CORPORATIVO_PREAMBLE;
 
     const result = await callDiscoveryEngine(
         deidentifiedQuery,
         attachments,
-        regenerationPreamble
+        preamble
     );
     
     const latencyMs = Date.now() - startTime;
@@ -661,7 +650,6 @@ async function logRegeneratedQuestion(
     userId: string,
     chatId: string,
     originalQuery: string,
-    originalResponse: string,
     newResponse: string
 ) {
     if (!userId || !chatId) {
@@ -669,14 +657,14 @@ async function logRegeneratedQuestion(
         return;
     };
     try {
-        const regeneratedRef = collection(db, 'users', userId, 'regenerated_answers');
-        await addDoc(regeneratedRef, {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const regeneratedRef = adminDb.collection('users').doc(userId).collection('regenerated_answers').doc();
+        await regeneratedRef.set({
             userId,
             chatId,
             originalQuery,
-            originalResponse,
             newResponse: newResponse, 
-            regeneratedAt: serverTimestamp(),
+            regeneratedAt: FieldValue.serverTimestamp(),
         });
     } catch (error) {
         console.error("Error logging regenerated question to Firestore:", error);
@@ -1227,6 +1215,8 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+    
 
     
 
