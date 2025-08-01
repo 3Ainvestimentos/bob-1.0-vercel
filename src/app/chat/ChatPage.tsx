@@ -752,7 +752,7 @@ function ChatPageContent() {
                 setIsSuggestionsLoading(false);
             }
         };
-        fetchSuggestions();
+        // fetchSuggestions(); // Temporarily disabled
 
         const finalMessages = [...newMessages, assistantMessage];
         setMessages(finalMessages);

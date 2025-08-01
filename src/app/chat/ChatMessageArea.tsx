@@ -303,7 +303,7 @@ export function ChatMessageArea({
                 </div>
               </div>
             )}
-            {(isSuggestionsLoading || suggestions.length > 0) && !isLoading && (
+            {/* {(isSuggestionsLoading || suggestions.length > 0) && !isLoading && (
               <div className="mt-6 flex flex-col items-start gap-3">
                 <p className="text-sm text-muted-foreground">Sugestões:</p>
                 <div className="flex flex-wrap gap-2">
@@ -329,7 +329,7 @@ export function ChatMessageArea({
                   )}
                 </div>
               </div>
-            )}
+            )} */}
             <div ref={messagesEndRef} />
           </div>
         )}
