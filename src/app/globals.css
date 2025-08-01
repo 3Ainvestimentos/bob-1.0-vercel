@@ -76,28 +76,24 @@
   .theme-blue {
     --primary: 210 89% 55%;
     --primary-foreground: 210 40% 98%;
-    --user-bubble: 210 89% 55%;
     --user-bubble-foreground: 210 40% 98%;
   }
 
   .dark.theme-blue {
     --primary: 210 89% 65%;
     --primary-foreground: 220 10% 10%;
-    --user-bubble: 210 89% 65%;
     --user-bubble-foreground: 220 10% 10%;
   }
 
   .theme-green {
     --primary: 142 76% 36%;
     --primary-foreground: 142 76% 96%;
-    --user-bubble: 142 76% 36%;
     --user-bubble-foreground: 142 76% 96%;
   }
 
   .dark.theme-green {
     --primary: 142 66% 46%;
     --primary-foreground: 142 76% 96%;
-    --user-bubble: 142 66% 46%;
     --user-bubble-foreground: 142 76% 96%;
   }
 
