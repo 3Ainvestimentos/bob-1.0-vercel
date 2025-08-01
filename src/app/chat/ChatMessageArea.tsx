@@ -147,13 +147,13 @@ export function ChatMessageArea({
                   </p>
                 </div>
                 <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent" onClick={() => onSuggestionClick("faça a análise com nosso padrão")}>
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent" onClick={() => onSuggestionClick("Faça uma mensagem e uma análise com o nosso padrão")}>
                     <div className="flex items-start gap-4">
                       <FileText className="h-6 w-6 text-chart-1" />
                       <div>
-                        <p className="font-semibold">Análise de Posição Consolidada</p>
+                        <p className="font-semibold">Mensagem de Posição Consolidada</p>
                         <p className="text-sm text-muted-foreground">
-                          Analisar um relatório de investimentos com o padrão 3A RIVA.
+                          Criar uma mensagem para o cliente com o padrão 3A RIVA.
                         </p>
                       </div>
                     </div>

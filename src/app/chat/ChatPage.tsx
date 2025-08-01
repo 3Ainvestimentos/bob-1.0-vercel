@@ -617,7 +617,7 @@ function ChatPageContent() {
     if (!query.trim() && files.length === 0) return;
     if (isLoading || !user) return;
 
-    const useStandardAnalysis = query.toLowerCase().includes("análise com nosso padrão");
+    const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
 
     const fileNames = files.map(f => f.name);
     
@@ -974,6 +974,7 @@ function ChatPageContent() {
       const result = await regenerateAnswer(
         userQuery,
         activeChat.attachedFiles,
+        { isStandardAnalysis: userMessage.isStandardAnalysis },
         user.uid,
         activeChatId
       );
