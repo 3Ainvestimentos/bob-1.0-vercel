@@ -743,7 +743,8 @@ function ChatPageContent() {
   };
   
   const handleSuggestionClick = (suggestion: string) => {
-    submitQuery(suggestion, []);
+    setInput(suggestion);
+    inputRef.current?.focus();
   };
   
   const handleSubmit = async (e: FormEvent) => {
@@ -960,6 +961,7 @@ function ChatPageContent() {
 
     const userMessage = messages[messageIndex - 1];
     const userQuery = userMessage.originalContent || userMessage.content;
+    const assistantMessage = messages[messageIndex];
     const newAssistantMessageId = crypto.randomUUID();
 
     setRegeneratingMessageId(assistantMessageId);
@@ -981,15 +983,6 @@ function ChatPageContent() {
         throw new Error(result.error);
       }
       
-      if (result.summary) {
-        await logRegeneratedQuestion(
-          user.uid,
-          activeChatId,
-          userQuery,
-          result.summary
-        );
-      }
-      
       const newAssistantMessage: Message = {
         id: newAssistantMessageId,
         role: 'assistant',
@@ -1006,6 +999,13 @@ function ChatPageContent() {
           userMsg.originalContent = userMsg.originalContent ?? userMsg.content;
           userMsg.content = result.deidentifiedQuery;
       }
+      
+      await logRegeneratedQuestion(
+        user.uid,
+        activeChatId,
+        userQuery,
+        result.summary!
+      );
 
       if (result.searchFailed) {
         setLastFailedQuery(userQuery);
