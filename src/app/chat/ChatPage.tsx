@@ -475,6 +475,7 @@ function ChatPageContent() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const activeChatId = activeChat?.id ?? null;
 
@@ -744,8 +745,24 @@ function ChatPageContent() {
   };
   
   const handleSuggestionClick = (suggestion: string) => {
-    setInput(suggestion);
+    if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current);
+    }
+    
+    setInput('');
     inputRef.current?.focus();
+    
+    let i = 0;
+    typingIntervalRef.current = setInterval(() => {
+        if (i < suggestion.length) {
+            setInput(prev => prev + suggestion.charAt(i));
+            i++;
+        } else {
+            if (typingIntervalRef.current) {
+                clearInterval(typingIntervalRef.current);
+            }
+        }
+    }, 30); // Velocidade de digitação em ms
   };
   
   const handleSubmit = async (e: FormEvent) => {
@@ -962,7 +979,6 @@ function ChatPageContent() {
 
     const userMessage = messages[messageIndex - 1];
     const userQuery = userMessage.originalContent || userMessage.content;
-    const assistantMessage = messages[messageIndex];
     const newAssistantMessageId = crypto.randomUUID();
 
     setRegeneratingMessageId(assistantMessageId);
@@ -975,7 +991,7 @@ function ChatPageContent() {
       const result = await regenerateAnswer(
         userQuery,
         activeChat.attachedFiles,
-        { useStandardAnalysis: userMessage.isStandardAnalysis },
+        { isStandardAnalysis: userMessage.isStandardAnalysis },
         user.uid,
         activeChatId
       );
