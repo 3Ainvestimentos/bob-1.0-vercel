@@ -61,11 +61,6 @@ interface ChatMessageAreaProps {
 
 const webSearchSuggestions = [
     {
-        Icon: Newspaper,
-        title: "Buscar notícias sobre IA",
-        description: "Explorar os últimos acontecimentos no mundo da IA",
-    },
-    {
         Icon: Mail,
         title: "Criar campanha de e-mail",
         description: "para vendas de fim de ano",
@@ -119,8 +114,9 @@ export function ChatMessageArea({
             {/* <BobIcon className="mb-6 h-24 w-24" isGreeting={true} /> */}
             <div>
               <div className="text-left">
-                <h1 className="text-4xl font-bold">
-                  Olá, {userName.split(' ')[0]}! 👋
+                <h1 className="flex items-center gap-3 text-4xl font-bold">
+                  <span>Olá, {userName.split(' ')[0]}!</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-wave"><path d="M8 8a3.5 3.5 0 0 1 3.5-3.5h1A3.5 3.5 0 0 1 16 8a3 3 0 0 1-3 3h-1.5a3.5 3.5 0 0 1-3.5-3.5V8z"></path><path d="M12.5 11.5a3 3 0 0 1-3-3V8a3.5 3.5 0 0 1 3.5-3.5h1A3.5 3.5 0 0 1 16 8v.5a3 3 0 0 1-3 3-3 3 0 0 1-3-3"></path><path d="M12 11h.01"></path><path d="M12 14h.01"></path><path d="M12 17h.01"></path></svg>
                 </h1>
                 <p className="mt-2 text-lg text-muted-foreground">
                   Como posso te ajudar hoje?
