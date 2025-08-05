@@ -136,7 +136,7 @@ export function ChatSidebar({
 
   return (
     <>
-      <div className="flex h-14 items-center border-b border-sidebar-border p-2 group-data-[state=expanded]:justify-start group-data-[state=collapsed]:justify-center">
+      <div className="flex h-14 items-center p-2 group-data-[state=expanded]:justify-start group-data-[state=collapsed]:justify-center">
         <TooltipProvider>
           <SidebarMenuButton
             onClick={toggleSidebar}
@@ -256,7 +256,7 @@ export function ChatSidebar({
         </DragOverlay>
       </DndContext>
 
-      <SidebarFooter className="border-t border-sidebar-border/80">
+      <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
