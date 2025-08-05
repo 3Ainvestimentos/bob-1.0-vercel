@@ -273,7 +273,7 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
-              className="h-9 w-full justify-start rounded-full bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
+              className="h-9 w-full justify-start bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
             >
               <Pencil className="h-4 w-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
@@ -283,7 +283,7 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
-              className="h-9 w-full justify-start rounded-full bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
+              className="h-9 w-full justify-start bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
             >
               <FolderPlus className="h-4 w-4" />
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
