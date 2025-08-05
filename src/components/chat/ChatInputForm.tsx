@@ -388,7 +388,7 @@ export function ChatInputForm({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-primary sm:h-8 sm:w-8"
+                    className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"
                     disabled={isLoading}
                     onClick={handleAttachClick}
                     aria-label="Adicionar anexo"
@@ -402,7 +402,7 @@ export function ChatInputForm({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-primary sm:h-8 sm:w-8"
+                        className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"
                         disabled={isLoading}
                         onClick={handleSimpleClick}
                         onMouseDown={handleMouseDown}
@@ -456,7 +456,7 @@ export function ChatInputForm({
                     </div>
                 </div>
             </div>
-          <div className="relative flex min-h-[100px] items-start">
+          <div className="relative flex items-start min-h-[100px]">
             <TextareaAutosize
                 ref={inputRef}
                 placeholder={
@@ -504,5 +504,3 @@ export function ChatInputForm({
     </div>
   );
 }
-
-    
