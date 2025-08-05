@@ -233,7 +233,7 @@ export function ChatMessageArea({
                   <div className="flex items-start justify-end gap-4">
                     <div className="max-w-[80%] rounded-xl bg-user-bubble p-3 text-user-bubble-foreground shadow-sm">
                       {msg.fileNames && (
-                          <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-background/50 p-2 text-xs">
+                          <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-background/50 p-2 text-xs text-muted-foreground">
                               <Paperclip className="h-4 w-4 shrink-0" />
                               <span className="truncate">{msg.fileNames.join(', ')}</span>
                           </div>
@@ -298,4 +298,3 @@ export function ChatMessageArea({
     </div>
   );
 }
-
