@@ -434,7 +434,7 @@ export function ChatInputForm({
         onSubmit={handleSubmit}
         className="px-4 pb-4 pt-2 sm:px-6 lg:px-8"
       >
-        <div className={cn("rounded-lg border bg-background shadow-sm focus-within:ring-0")}>
+        <div className={cn("rounded-xl border bg-background shadow-md focus-within:ring-0")}>
            <div className={cn("grid transition-all duration-300 ease-in-out", 
                 selectedFiles.length > 0 && recordingState === 'idle' 
                 ? 'grid-rows-[1fr] opacity-100' 
