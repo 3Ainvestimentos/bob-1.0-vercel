@@ -428,17 +428,14 @@ const FileDropOverlay = () => (
     </div>
 );
 
-const GreetingPopoverContent = ({ onOpen }: { onOpen: boolean }) => {
+const GreetingPopoverContent = () => {
     const [greeting, setGreeting] = useState('Carregando...');
     
     useEffect(() => {
-        if (onOpen) {
-            setGreeting('Carregando...');
-            getGreetingMessage()
-                .then(data => setGreeting(data.greetingMessage))
-                .catch(() => setGreeting('Não foi possível carregar a saudação.'));
-        }
-    }, [onOpen]);
+        getGreetingMessage()
+            .then(data => setGreeting(data.greetingMessage))
+            .catch(() => setGreeting('Não foi possível carregar a saudação.'));
+    }, []);
 
     return <>{greeting}</>;
 };
@@ -494,8 +491,6 @@ function ChatPageContent() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isCheckingTerms, setIsCheckingTerms] = useState(true);
   
-  const [isGreetingPopoverOpen, setIsGreetingPopoverOpen] = useState(false);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -1620,7 +1615,7 @@ function ChatPageContent() {
                   "absolute top-4 right-4 z-10 transition-opacity duration-500",
                   messages.length > 0 ? "opacity-0 pointer-events-none" : "opacity-100"
                 )}>
-                    <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
+                    <Popover>
                         <PopoverTrigger asChild>
                             <button 
                               className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
@@ -1630,7 +1625,7 @@ function ChatPageContent() {
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto max-w-xs text-sm" side="bottom" align="end">
-                            <GreetingPopoverContent onOpen={isGreetingPopoverOpen} />
+                           <GreetingPopoverContent />
                         </PopoverContent>
                     </Popover>
                 </div>
