@@ -58,7 +58,7 @@ const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanças. Com
 Duas classes com maior rentabilidade no mês, com seus respectivos percentuais e uma breve justificativa baseada nos ativos da carteira
 Duas classes com rentabilidade inferior ao CDI no mês, apenas com nome e percentual. Caso a classe Inflação aparecer na lista, justificar a baixa rentabilidade à baixa inflação do mês anterior
 :balão_de_fala: Monte uma mensagem personalizada com esse modelo, usando asteriscos para a formatação de WhatsApp e sem formatação automática do chat:
-Olá, [NOME]!
+Olá!
 Em maio sua carteira rendeu [RENTABILIDADE PERCENTUAL DO MÊS], o que equivale a [RENTABILIDADE EM %CDI DO MÊS], um ganho bruto de [GANHO FINANCEIRO DO MÊS]! No ano, estamos com uma rentabilidade de [RENTABILIDADE PERCENTUAL DO ANO], o que equivale a uma performance de [RENTABILIDADE EM %CDI DO ANO] e um ganho financeiro de [GANHO FINANCEIRO DO ANO]!
 Os principais destaques foram:
 [Classe 1], com [rentabilidade], [justificativa]
@@ -323,7 +323,7 @@ async function callDiscoveryEngine(
       const modelPrompt = `${preamble}${fileContextPreamble}`;
 
       const requestBody: any = {
-        query: query, 
+        query: preamble === POSICAO_CONSOLIDADA_PREAMBLE ? "faça a análise deste relatório" : query,
         pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
@@ -1251,6 +1251,8 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+    
 
     
 
