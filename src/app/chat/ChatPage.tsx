@@ -75,6 +75,7 @@ import { cn } from '@/lib/utils';
 import { AttachedFile } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { RobotIdeaIcon } from '@/components/icons/RobotIdeaIcon';
 
 
 // ---- Data Types ----
@@ -1602,7 +1603,14 @@ function ChatPageContent() {
         </Sidebar>
 
         <SidebarInset>
-            <main className="flex flex-1 flex-col bg-background">
+            <main className="flex flex-1 flex-col bg-background relative">
+                <button 
+                  onClick={handleGreeting}
+                  className="absolute top-4 right-4 z-10 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+                  aria-label="Iniciar saudação do Bob"
+                >
+                    <RobotIdeaIcon className="h-10 w-10" />
+                </button>
                 <ChatMessageArea
                   messages={messages}
                   isLoading={isLoading}
@@ -1642,5 +1650,3 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
-
-    
