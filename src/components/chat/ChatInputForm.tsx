@@ -465,7 +465,7 @@ export function ChatInputForm({
                     isAudioSelected ? "Opcional: adicione um comando ou pergunta sobre o áudio" : 
                     "Insira aqui um comando ou pergunta"
                 }
-                className="min-h-[inherit] flex-1 resize-none border-0 bg-transparent p-3 pr-12 text-base focus-visible:ring-0"
+                className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-3 pr-12 text-base focus-visible:ring-0"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
