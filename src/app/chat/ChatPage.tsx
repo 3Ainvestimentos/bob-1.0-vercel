@@ -76,6 +76,7 @@ import { AttachedFile } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RobotIdeaIcon } from '@/components/icons/RobotIdeaIcon';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 
 // ---- Data Types ----
@@ -1341,13 +1342,6 @@ function ChatPageContent() {
     setShowTermsDialog(false);
     await handleSignOut();
   };
-  
-  const handleGreeting = () => {
-      if (messages.length > 0) {
-        handleNewChat();
-      }
-      submitQuery('Olá', []);
-  };
 
 
   if (authLoading || isCheckingTerms) {
@@ -1604,13 +1598,19 @@ function ChatPageContent() {
 
         <SidebarInset>
             <main className="flex flex-1 flex-col bg-background relative">
-                <button 
-                  onClick={handleGreeting}
-                  className="absolute top-4 right-4 z-10 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
-                  aria-label="Iniciar saudação do Bob"
-                >
-                    <RobotIdeaIcon className="h-10 w-10" />
-                </button>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <button 
+                          className="absolute top-4 right-4 z-10 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+                          aria-label="Saudação do Bob"
+                        >
+                            <RobotIdeaIcon className="h-10 w-10" />
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto max-w-xs text-sm" side="bottom" align="end">
+                        Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA.
+                    </PopoverContent>
+                </Popover>
                 <ChatMessageArea
                   messages={messages}
                   isLoading={isLoading}
