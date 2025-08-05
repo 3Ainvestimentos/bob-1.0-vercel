@@ -278,7 +278,7 @@ export function ChatSidebar({
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem className="mt-2">
+          {/* <SidebarMenuItem className="mt-2">
             <SidebarMenuButton
               onClick={() => {}}
               tooltip="Pesquisar"
@@ -288,7 +288,7 @@ export function ChatSidebar({
               <Search className="h-5 w-5" />
               <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
             </SidebarMenuButton>
-          </SidebarMenuItem>
+          </SidebarMenuItem> */}
           <SettingsHelpDropdown
             isAuthenticated={isAuthenticated}
             handleSignOut={handleSignOut}
