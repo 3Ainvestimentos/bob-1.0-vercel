@@ -1345,7 +1345,7 @@ function ChatPageContent() {
   if (authLoading || isCheckingTerms) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <p className="text-lg text-muted-foreground">Carregando...</p>
+        <p className="text-lg text-muted-foreground">Carregando Bob 1.0...</p>
       </div>
     );
   }

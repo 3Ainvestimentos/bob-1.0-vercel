@@ -114,7 +114,7 @@ export default {
         },
         'pulse-slow': {
             '50%': {
-                opacity: '.5',
+                opacity: '0.5',
             },
         },
       },

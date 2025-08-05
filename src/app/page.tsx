@@ -93,7 +93,7 @@ export default function LoginPage() {
     if (loading || isCheckingMaintenance) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
-                <p>Carregando...</p>
+                <p>Carregando Bob 1.0...</p>
             </div>
         );
     }
