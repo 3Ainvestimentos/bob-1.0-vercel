@@ -428,6 +428,18 @@ const FileDropOverlay = () => (
     </div>
 );
 
+const GreetingPopoverContent = () => {
+    const [greeting, setGreeting] = useState('Carregando...');
+    
+    useEffect(() => {
+        getGreetingMessage()
+            .then(data => setGreeting(data.greetingMessage))
+            .catch(() => setGreeting('Não foi possível carregar a saudação.'));
+    }, []);
+
+    return <>{greeting}</>;
+};
+
 
 function ChatPageContent() {
   const router = useRouter();
@@ -444,8 +456,7 @@ function ChatPageContent() {
   const [isSidebarLoading, setIsSidebarLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<Conversation | null>(null);
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
-  const [greetingMessage, setGreetingMessage] = useState('');
-
+  
   const [isNewGroupDialogOpen, setIsNewGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
 
@@ -507,14 +518,12 @@ function ChatPageContent() {
     if (!user) return;
     setIsSidebarLoading(true);
     try {
-      const [userConversations, userGroups, greetingData] = await Promise.all([
+      const [userConversations, userGroups] = await Promise.all([
         getConversations(user.uid),
         getGroups(user.uid),
-        getGreetingMessage(),
       ]);
       setConversations(userConversations);
       setGroups(userGroups);
-      setGreetingMessage(greetingData.greetingMessage);
       setExpandedGroups(prev => {
         const newExpanded = { ...prev };
         userGroups.forEach(group => {
@@ -1616,7 +1625,7 @@ function ChatPageContent() {
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto max-w-xs text-sm" side="bottom" align="end">
-                            {greetingMessage}
+                            <GreetingPopoverContent />
                         </PopoverContent>
                     </Popover>
                 </div>
