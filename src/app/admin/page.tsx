@@ -132,15 +132,14 @@ export default function AdminPage() {
             if (costsData?.error) throw new Error(costsData.error);
             if (alertsData?.error) throw new Error(alertsData.error);
             if (feedbacksData?.error) throw new Error(feedbacksData.error);
-            if (greetingData?.error) throw new Error(greetingData.error);
-
+            
             setInsights(insightsData);
             setAdminUsers(usersData);
             setCosts(costsData);
             setIsMaintenanceMode(maintenanceData.isMaintenanceMode);
             setLegalAlerts(alertsData);
             setFeedbacks(feedbacksData);
-            setGreetingMessage(greetingData.greetingMessage);
+            setGreetingMessage(greetingData);
         }).catch(err => {
             console.error('Erro ao buscar dados do painel:', err);
             setError(err.message || 'Não foi possível carregar os dados do painel.');

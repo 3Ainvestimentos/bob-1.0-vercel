@@ -433,7 +433,7 @@ const GreetingPopoverContent = () => {
     
     useEffect(() => {
         getGreetingMessage()
-            .then(data => setGreeting(data.greetingMessage))
+            .then(message => setGreeting(message))
             .catch(() => setGreeting('Não foi possível carregar a saudação.'));
     }, []);
 
@@ -1598,9 +1598,9 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={onToggleGroup}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
+                onToggleGroup={handleToggleGroup}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
                 activeDragItem={activeDragItem}
                 onOpenFaqDialog={() => setIsFaqDialogOpen(true)}
                 isAuthenticated={isAuthenticated}

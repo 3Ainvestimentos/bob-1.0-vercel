@@ -1191,7 +1191,7 @@ export async function setMaintenanceMode(isMaintenanceMode: boolean): Promise<an
     }
 }
 
-export async function getGreetingMessage(): Promise<{ greetingMessage: string, error?: string }> {
+export async function getGreetingMessage(): Promise<string> {
     const defaultMessage = 'Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA.';
     try {
         const adminDb = getAuthenticatedFirestoreAdmin();
@@ -1199,12 +1199,12 @@ export async function getGreetingMessage(): Promise<{ greetingMessage: string, e
         const docSnap = await contentRef.get();
 
         if (docSnap.exists) {
-            return { greetingMessage: docSnap.data()?.greetingMessage || defaultMessage };
+            return docSnap.data()?.greetingMessage || defaultMessage;
         }
-        return { greetingMessage: defaultMessage };
+        return defaultMessage;
     } catch (error: any) {
         console.error("Error getting greeting message:", error);
-        return { greetingMessage: defaultMessage, error: error.message };
+        return defaultMessage;
     }
 }
 
@@ -1295,3 +1295,4 @@ export async function runApiHealthCheck(): Promise<any> {
     
 
     
+
