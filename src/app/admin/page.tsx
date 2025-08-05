@@ -130,7 +130,6 @@ export default function AdminPage() {
             if (insightsData.error) throw new Error(insightsData.error);
             if (usersData.error) throw new Error(usersData.error);
             if (costsData.error) throw new Error(costsData.error);
-            if (maintenanceData.error) throw new Error(maintenanceData.error);
             if (alertsData.error) throw new Error(alertsData.error);
             if (feedbacksData.error) throw new Error(feedbacksData.error);
 
@@ -1067,3 +1066,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
