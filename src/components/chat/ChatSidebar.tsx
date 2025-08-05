@@ -161,6 +161,17 @@ export function ChatSidebar({
         <SidebarContent>
           <ScrollArea className="flex-1">
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={onOpenFaqDialog}
+                  tooltip="Guias e FAQ"
+                  variant="ghost"
+                  className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                  <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               {isSidebarLoading ? (
                 <div className="space-y-2 px-2">
                   <Skeleton className="h-8 w-full" />
@@ -262,7 +273,7 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
-              className="h-9 w-full justify-start bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
+              className="h-9 w-full justify-start rounded-full bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
             >
               <Pencil className="h-4 w-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
@@ -272,21 +283,10 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
-              className="h-9 w-full justify-start bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
+              className="h-9 w-full justify-start rounded-full bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
             >
               <FolderPlus className="h-4 w-4" />
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-           <SidebarMenuItem className="mt-2">
-            <SidebarMenuButton
-              onClick={onOpenFaqDialog}
-              tooltip="Guias e FAQ"
-              variant="ghost"
-              className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
-            >
-              <HelpCircle className="h-5 w-5" />
-              <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SettingsHelpDropdown
