@@ -161,17 +161,6 @@ export function ChatSidebar({
         <SidebarContent>
           <ScrollArea className="flex-1">
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={onOpenFaqDialog}
-                  tooltip="Guias e FAQ"
-                  variant="ghost"
-                  className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
-                >
-                  <HelpCircle className="h-5 w-5" />
-                  <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               {isSidebarLoading ? (
                 <div className="space-y-2 px-2">
                   <Skeleton className="h-8 w-full" />
@@ -269,6 +258,17 @@ export function ChatSidebar({
 
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={onOpenFaqDialog}
+                  tooltip="Guias e FAQ"
+                  variant="ghost"
+                  className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                  <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onNewChat}
