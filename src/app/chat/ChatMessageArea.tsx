@@ -117,7 +117,7 @@ export function ChatMessageArea({
               <div className="text-left">
                 <h1 className="flex items-center gap-3 text-4xl font-bold">
                   <span>Olá, {userName.split(' ')[0]}!</span>
-                  <Hand className="h-10 w-10 text-amber-500 animate-wave" />
+                  <Hand className="h-10 w-10 animate-wave" style={{ color: '#DFB87F' }} />
                 </h1>
                 <p className="mt-2 text-lg text-muted-foreground">
                   Como posso te ajudar hoje?
