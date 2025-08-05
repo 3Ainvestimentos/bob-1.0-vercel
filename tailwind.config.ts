@@ -111,7 +111,12 @@ export default {
           '50%': { transform: 'rotate(10deg)' },
           '60%': { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(0deg)' },
-        }
+        },
+        'pulse-slow': {
+            '50%': {
+                opacity: '.5',
+            },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -119,6 +124,7 @@ export default {
         'shake': 'shake 0.82s cubic-bezier(.36,.07,.19,.97) both',
         'lamp-fade-in': 'lamp-fade-in 1.5s ease-in-out',
         'wave': 'wave 2.5s ease-in-out infinite',
+        'pulse-slow': 'pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },
