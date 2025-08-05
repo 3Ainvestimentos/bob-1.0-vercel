@@ -127,11 +127,12 @@ export default function AdminPage() {
             getFeedbacks(),
             getGreetingMessage(),
         ]).then(([insightsData, usersData, costsData, maintenanceData, alertsData, feedbacksData, greetingData]) => {
-            if (insightsData.error) throw new Error(insightsData.error);
-            if (usersData.error) throw new Error(usersData.error);
-            if (costsData.error) throw new Error(costsData.error);
-            if (alertsData.error) throw new Error(alertsData.error);
-            if (feedbacksData.error) throw new Error(feedbacksData.error);
+            if (insightsData?.error) throw new Error(insightsData.error);
+            if (usersData?.error) throw new Error(usersData.error);
+            if (costsData?.error) throw new Error(costsData.error);
+            if (alertsData?.error) throw new Error(alertsData.error);
+            if (feedbacksData?.error) throw new Error(feedbacksData.error);
+            if (greetingData?.error) throw new Error(greetingData.error);
 
             setInsights(insightsData);
             setAdminUsers(usersData);
@@ -158,7 +159,7 @@ export default function AdminPage() {
     setIsMaintenanceMode(checked);
     try {
         const result = await setMaintenanceMode(checked);
-        if (result.error) {
+        if (result?.error) {
             throw new Error(result.error);
         }
         toast({
@@ -181,7 +182,7 @@ export default function AdminPage() {
     setIsSavingGreeting(true);
     try {
         const result = await setGreetingMessage(greetingMessage);
-        if (result.error) {
+        if (result?.error) {
             throw new Error(result.error);
         }
         toast({

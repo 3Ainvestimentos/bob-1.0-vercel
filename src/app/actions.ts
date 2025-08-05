@@ -1191,7 +1191,7 @@ export async function setMaintenanceMode(isMaintenanceMode: boolean): Promise<an
     }
 }
 
-export async function getGreetingMessage(): Promise<{ greetingMessage: string }> {
+export async function getGreetingMessage(): Promise<{ greetingMessage: string, error?: string }> {
     const defaultMessage = 'Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA.';
     try {
         const adminDb = getAuthenticatedFirestoreAdmin();
@@ -1204,16 +1204,16 @@ export async function getGreetingMessage(): Promise<{ greetingMessage: string }>
         return { greetingMessage: defaultMessage };
     } catch (error: any) {
         console.error("Error getting greeting message:", error);
-        return { greetingMessage: defaultMessage };
+        return { greetingMessage: defaultMessage, error: error.message };
     }
 }
 
-export async function setGreetingMessage(greetingMessage: string): Promise<any> {
+export async function setGreetingMessage(greetingMessage: string): Promise<{ error: string | null }> {
     try {
         const adminDb = getAuthenticatedFirestoreAdmin();
         const contentRef = adminDb.collection('system_settings').doc('content');
         await contentRef.set({ greetingMessage }, { merge: true });
-        return { success: true };
+        return { error: null };
     } catch (error: any) {
         console.error("Error setting greeting message:", error);
         return { error: error.message };
