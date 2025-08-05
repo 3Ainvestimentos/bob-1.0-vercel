@@ -643,7 +643,7 @@ function ChatPageContent() {
     if (!query.trim() && files.length === 0) return;
     if (isLoading || !user) return;
 
-    const useStandardAnalysis = query.toLowerCase().includes("Faça uma mensagem e uma análise com o nosso padrão");
+    const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
 
     const fileNames = files.map(f => f.name);
     
@@ -1605,8 +1605,6 @@ function ChatPageContent() {
                   userInitials={userInitials}
                   lastFailedQuery={lastFailedQuery}
                   feedbacks={feedbacks}
-                  suggestions={[]}
-                  isSuggestionsLoading={false}
                   regeneratingMessageId={regeneratingMessageId}
                   messagesEndRef={messagesEndRef}
                   onFeedback={handleFeedback}
