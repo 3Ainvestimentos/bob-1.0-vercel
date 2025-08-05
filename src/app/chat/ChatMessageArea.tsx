@@ -270,7 +270,7 @@ export function ChatMessageArea({
             )}
             {lastFailedQuery && !isLoading && (
               <div className="flex justify-center pt-4">
-                <Button onClick={onWebSearch} disabled={isLoading}>
+                <Button variant="secondary" onClick={onWebSearch} disabled={isLoading}>
                   <Search className="mr-2 h-4 w-4" />
                   Pesquisar na Web
                 </Button>
