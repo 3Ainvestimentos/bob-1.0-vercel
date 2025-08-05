@@ -414,16 +414,32 @@ async function callDiscoveryEngine(
 }
 
 
-async function callGemini(query: string): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; promptTokenCount?: number; candidatesTokenCount?: number; }> {
+async function callGemini(
+    query: string,
+    attachments: AttachedFile[] = [],
+    preamble: string | null = null
+): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; promptTokenCount?: number; candidatesTokenCount?: number; }> {
     const geminiApiKey = await getGeminiApiKey();
 
     try {
         const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         
-        const finalQuery = `Responda em português do Brasil, a menos que seja solicitado o contrário na pergunta. Pergunta do usuário: "${query}"`;
+        let fileContextPreamble = '';
+        if (attachments.length > 0) {
+            fileContextPreamble = attachments.map(file => 
+                `\n\n### INÍCIO DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###\n${file.deidentifiedContent}\n### FIM DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###`
+            ).join('');
+        }
 
-        const result = await model.generateContent(finalQuery);
+        const finalPrompt = `
+            ${preamble || 'Responda em português do Brasil, a menos que seja solicitado o contrário na pergunta.'}
+            ${fileContextPreamble}
+            
+            Pergunta do usuário: "${query}"
+        `;
+
+        const result = await model.generateContent(finalPrompt);
         const response = await result.response;
         const text = response.text();
         
@@ -440,6 +456,7 @@ async function callGemini(query: string): Promise<{ summary: string; searchFaile
         throw new Error(error.message);
     }
 }
+
 
 export async function logQuestionForAnalytics(query: string): Promise<void> {
     const adminDb = getAuthenticatedFirestoreAdmin();
@@ -487,7 +504,7 @@ export async function askAssistant(
 ): Promise<{
   summary?: string;
   searchFailed?: boolean;
-  source?: 'rag' | 'web' | 'transcription';
+  source?: 'rag' | 'web' | 'transcription' | 'gemini';
   sources?: ClientRagSource[];
   promptTokenCount?: number;
   candidatesTokenCount?: number;
@@ -500,10 +517,9 @@ export async function askAssistant(
   
   try {
     let result;
-    let source: 'rag' | 'web' | 'transcription';
+    let source: 'rag' | 'web' | 'transcription' | 'gemini';
     
     let finalQuery = query;
-    let preamble = useStandardAnalysis ? POSICAO_CONSOLIDADA_PREAMBLE : ASSISTENTE_CORPORATIVO_PREAMBLE;
 
     const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(finalQuery);
 
@@ -525,7 +541,10 @@ export async function askAssistant(
         }
     }
 
-    if (useWebSearch) {
+    if (useStandardAnalysis) {
+        result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
+        source = 'gemini';
+    } else if (useWebSearch) {
       result = await callGemini(deidentifiedQuery);
       source = 'web';
     } else {
@@ -533,7 +552,7 @@ export async function askAssistant(
         result = await callDiscoveryEngine(
             deidentifiedQuery,
             attachments,
-            preamble
+            ASSISTENTE_CORPORATIVO_PREAMBLE
         );
         source = 'rag';
     }
@@ -606,7 +625,7 @@ export async function regenerateAnswer(
 ): Promise<{ 
   summary?: string; 
   searchFailed?: boolean; 
-  source?: 'rag' | 'web';
+  source?: 'rag' | 'web' | 'gemini';
   sources?: ClientRagSource[]; 
   promptTokenCount?: number; 
   candidatesTokenCount?: number; 
@@ -616,7 +635,9 @@ export async function regenerateAnswer(
 }> {
   try {
     const startTime = Date.now();
-    
+    let result;
+    let source: 'rag' | 'web' | 'gemini';
+
     const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(originalQuery);
 
     if (userId && chatId && foundInfoTypes.length > 0) {
@@ -627,13 +648,17 @@ export async function regenerateAnswer(
         await logRegeneratedQuestion(userId, chatId, deidentifiedQuery, '');
     }
 
-    const preamble = options.isStandardAnalysis ? POSICAO_CONSOLIDADA_PREAMBLE : ASSISTENTE_CORPORATIVO_PREAMBLE;
-
-    const result = await callDiscoveryEngine(
-        deidentifiedQuery,
-        attachments,
-        preamble
-    );
+    if (options.isStandardAnalysis) {
+        result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
+        source = 'gemini';
+    } else {
+        result = await callDiscoveryEngine(
+            deidentifiedQuery,
+            attachments,
+            ASSISTENTE_CORPORATIVO_PREAMBLE
+        );
+        source = 'rag';
+    }
     
     const latencyMs = Date.now() - startTime;
 
@@ -644,7 +669,7 @@ export async function regenerateAnswer(
     return { 
         summary: result.summary, 
         searchFailed: result.searchFailed, 
-        source: 'rag',
+        source: source,
         sources: result.sources || [], 
         promptTokenCount: result.promptTokenCount,
         candidatesTokenCount: result.candidatesTokenCount,

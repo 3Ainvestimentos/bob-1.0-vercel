@@ -94,7 +94,7 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   fileNames?: string[] | null;
-  source?: 'rag' | 'web' | 'transcription' | null;
+  source?: 'rag' | 'web' | 'transcription' | 'gemini' | null;
   sources?: RagSource[] | null;
   promptTokenCount?: number | null;
   candidatesTokenCount?: number | null;
