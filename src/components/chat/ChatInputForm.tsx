@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { File, Mic, Paperclip, SendHorizontal, X, Lock, Trash2, Square } from 'lucide-react';
+import { File, Mic, Paperclip, SendHorizontal, X, Lock, Trash2, Square, Loader2 } from 'lucide-react';
 import React, { FormEvent, useCallback, useRef, useState, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
@@ -485,7 +485,11 @@ export function ChatInputForm({
               className="absolute right-3 top-3 h-8 w-8 rounded-full text-muted-foreground"
               disabled={isLoading || isRecordingActive || isTranscribing || (!input.trim() && selectedFiles.length === 0)}
             >
-              <SendHorizontal className="h-5 w-5" />
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <SendHorizontal className="h-5 w-5 -rotate-45 transform" />
+              )}
             </Button>
           </div>
           <Separator />
