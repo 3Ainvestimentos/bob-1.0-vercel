@@ -259,17 +259,6 @@ export function ChatSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={onOpenFaqDialog}
-                  tooltip="Guias e FAQ"
-                  variant="ghost"
-                  className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
-                >
-                  <HelpCircle className="h-5 w-5" />
-                  <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-          <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
@@ -287,6 +276,17 @@ export function ChatSidebar({
             >
               <FolderPlus className="h-4 w-4" />
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={onOpenFaqDialog}
+              tooltip="Guias e FAQ"
+              variant="ghost"
+              className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
+            >
+              <HelpCircle className="h-5 w-5" />
+              <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SettingsHelpDropdown
@@ -369,7 +369,7 @@ function GroupItem({
             ref={setNodeRef}
             style={style}
             className={cn(
-              'rounded-md transition-colors',
+              'transition-colors',
               isOver && 'bg-sidebar-accent/50'
             )}
           >
@@ -475,7 +475,7 @@ function UngroupedArea({ children }: { children: React.ReactNode }) {
     <div
       ref={setNodeRef}
       className={cn(
-        'rounded-md transition-colors',
+        'transition-colors',
         isOver && 'bg-sidebar-accent/50'
       )}
     >
