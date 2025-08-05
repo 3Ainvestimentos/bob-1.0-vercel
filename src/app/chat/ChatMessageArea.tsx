@@ -132,7 +132,7 @@ export function ChatMessageArea({
                 <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                    <Card className="cursor-pointer p-4 transition-colors hover:bg-accent" onClick={() => onSuggestionClick("Faça uma mensagem e uma análise com o nosso padrão")}>
                     <div className="flex items-start gap-4">
-                      <FileText className="h-6 w-6 text-chart-1" />
+                      <FileText className="h-6 w-6 text-muted-foreground" />
                       <div>
                         <p className="font-semibold">Análise de Posição Consolidada</p>
                         <p className="text-sm text-muted-foreground">
@@ -144,7 +144,7 @@ export function ChatMessageArea({
                    {initialSuggestions.map((suggestion, index) => (
                       <Card key={index} className="cursor-pointer p-4 transition-colors hover:bg-accent" onClick={() => onSuggestionClick(suggestion.title)}>
                         <div className="flex items-start gap-4">
-                          <suggestion.Icon className="h-6 w-6 text-chart-1" />
+                          <suggestion.Icon className="h-6 w-6 text-muted-foreground" />
                           <div>
                             <p className="font-semibold">{suggestion.title}</p>
                             <p className="text-sm text-muted-foreground">
