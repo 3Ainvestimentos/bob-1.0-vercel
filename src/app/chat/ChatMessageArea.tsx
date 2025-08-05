@@ -130,7 +130,7 @@ export function ChatMessageArea({
                   </p>
                 </div>
                 <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md" onClick={() => onSuggestionClick("Faça uma mensagem e uma análise com o nosso padrão")}>
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick("Faça uma mensagem e uma análise com o nosso padrão")}>
                     <div className="flex items-start gap-4">
                       <FileText className="h-6 w-6 text-muted-foreground" />
                       <div>
@@ -142,7 +142,7 @@ export function ChatMessageArea({
                     </div>
                   </Card>
                    {initialSuggestions.map((suggestion, index) => (
-                      <Card key={index} className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md" onClick={() => onSuggestionClick(suggestion.title)}>
+                      <Card key={index} className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick(suggestion.title)}>
                         <div className="flex items-start gap-4">
                           <suggestion.Icon className="h-6 w-6 text-muted-foreground" />
                           <div>
