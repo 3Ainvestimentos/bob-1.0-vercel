@@ -75,6 +75,7 @@ import { cn } from '@/lib/utils';
 import { AttachedFile } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { RobotIdeaIcon } from '@/components/icons/RobotIdeaIcon';
 
 
 // ---- Data Types ----
@@ -1583,7 +1584,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
@@ -1596,6 +1597,9 @@ function ChatPageContent() {
 
         <SidebarInset>
             <main className="flex flex-1 flex-col bg-background">
+                <header className="flex h-16 items-center justify-end p-4">
+                    <RobotIdeaIcon className="h-10 w-10" />
+                </header>
                 <ChatMessageArea
                   messages={messages}
                   isLoading={isLoading}
