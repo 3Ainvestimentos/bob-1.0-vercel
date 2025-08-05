@@ -20,7 +20,6 @@ import { User } from 'firebase/auth';
 interface SettingsHelpDropdownProps {
   isAuthenticated: boolean;
   handleSignOut: () => void;
-  onOpenFaqDialog: () => void;
   user: User | null;
 }
 
@@ -28,7 +27,6 @@ interface SettingsHelpDropdownProps {
 export function SettingsHelpDropdown({
   isAuthenticated,
   handleSignOut,
-  onOpenFaqDialog,
   user,
 }: SettingsHelpDropdownProps) {
   const { setTheme } = useTheme();

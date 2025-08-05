@@ -161,17 +161,6 @@ export function ChatSidebar({
         <SidebarContent>
           <ScrollArea className="flex-1">
             <SidebarMenu>
-              {/* <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => {}}
-                  tooltip="Pesquisar"
-                  variant="ghost"
-                  className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
-                >
-                  <Search className="h-5 w-5" />
-                  <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
-                </SidebarMenuButton>
-              </SidebarMenuItem> */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={onOpenFaqDialog}
@@ -284,7 +273,7 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
-              className="h-9 w-full justify-start font-semibold text-sidebar-foreground"
+              className="h-9 w-full justify-start font-semibold bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80"
             >
               <Pencil className="h-4 w-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
@@ -294,7 +283,7 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
-              className="h-9 w-full justify-start font-semibold text-sidebar-foreground"
+              className="h-9 w-full justify-start font-semibold bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80"
             >
               <FolderPlus className="h-4 w-4" />
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
@@ -303,7 +292,6 @@ export function ChatSidebar({
           <SettingsHelpDropdown
             isAuthenticated={isAuthenticated}
             handleSignOut={handleSignOut}
-            onOpenFaqDialog={onOpenFaqDialog}
             user={user}
           />
         </SidebarMenu>
