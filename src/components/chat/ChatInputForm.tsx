@@ -456,7 +456,7 @@ export function ChatInputForm({
                     </div>
                 </div>
             </div>
-          <div className="relative flex min-h-[60px] items-start">
+          <div className="relative flex min-h-[120px] items-start">
             <TextareaAutosize
                 ref={inputRef}
                 placeholder={
@@ -465,7 +465,7 @@ export function ChatInputForm({
                     isAudioSelected ? "Opcional: adicione um comando ou pergunta sobre o áudio" : 
                     "Insira aqui um comando ou pergunta"
                 }
-                className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-3 pr-12 text-base focus-visible:ring-0"
+                className="flex-1 resize-none border-0 bg-transparent p-3 pr-12 text-sm focus-visible:ring-0 sm:text-base"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
