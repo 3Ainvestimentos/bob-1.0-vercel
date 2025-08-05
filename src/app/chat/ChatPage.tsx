@@ -428,14 +428,17 @@ const FileDropOverlay = () => (
     </div>
 );
 
-const GreetingPopoverContent = () => {
+const GreetingPopoverContent = ({ onOpen }: { onOpen: boolean }) => {
     const [greeting, setGreeting] = useState('Carregando...');
     
     useEffect(() => {
-        getGreetingMessage()
-            .then(data => setGreeting(data.greetingMessage))
-            .catch(() => setGreeting('Não foi possível carregar a saudação.'));
-    }, []);
+        if (onOpen) {
+            setGreeting('Carregando...');
+            getGreetingMessage()
+                .then(data => setGreeting(data.greetingMessage))
+                .catch(() => setGreeting('Não foi possível carregar a saudação.'));
+        }
+    }, [onOpen]);
 
     return <>{greeting}</>;
 };
@@ -490,6 +493,8 @@ function ChatPageContent() {
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isCheckingTerms, setIsCheckingTerms] = useState(true);
+  
+  const [isGreetingPopoverOpen, setIsGreetingPopoverOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1598,7 +1603,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
@@ -1615,7 +1620,7 @@ function ChatPageContent() {
                   "absolute top-4 right-4 z-10 transition-opacity duration-500",
                   messages.length > 0 ? "opacity-0 pointer-events-none" : "opacity-100"
                 )}>
-                    <Popover>
+                    <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                         <PopoverTrigger asChild>
                             <button 
                               className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
@@ -1625,7 +1630,7 @@ function ChatPageContent() {
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto max-w-xs text-sm" side="bottom" align="end">
-                            <GreetingPopoverContent />
+                            <GreetingPopoverContent onOpen={isGreetingPopoverOpen} />
                         </PopoverContent>
                     </Popover>
                 </div>
