@@ -1341,6 +1341,13 @@ function ChatPageContent() {
     setShowTermsDialog(false);
     await handleSignOut();
   };
+  
+  const handleGreeting = () => {
+      if (messages.length > 0) {
+        handleNewChat();
+      }
+      submitQuery('Olá', []);
+  };
 
 
   if (authLoading || isCheckingTerms) {
@@ -1584,7 +1591,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={onToggleGroup}
+                onToggleGroup={handleToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
@@ -1598,7 +1605,13 @@ function ChatPageContent() {
         <SidebarInset>
             <main className="flex flex-1 flex-col bg-background">
                 <header className="flex h-16 items-center justify-end p-4">
-                    <RobotIdeaIcon className="h-10 w-10" />
+                    <button
+                        onClick={handleGreeting}
+                        className="cursor-pointer transition-transform duration-200 hover:scale-110"
+                        aria-label="Apresentação do Bob"
+                    >
+                      <RobotIdeaIcon className="h-10 w-10" />
+                    </button>
                 </header>
                 <ChatMessageArea
                   messages={messages}
