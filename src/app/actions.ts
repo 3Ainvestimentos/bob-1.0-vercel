@@ -42,7 +42,7 @@ Sua resposta deve seguir esta hierarquia de fontes de informação:
 
 3.  **PROIBIÇÃO DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado geral ou qualquer informação externa que não seja fornecida no contexto (arquivos ou RAG). Não invente, não infira, não adivinhe.
 
-4.  **PROCEDIMENTO de FALHA:** Se a resposta não puder ser encontrada em nenhuma das fontes fornecidas, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?"
+4.  **PROCEDIMENTO de FALHA:** Se a resposta não puder ser encontrada em nenhuma das fontes fornecidas, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web"
 
 5.  **LINKS:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).`;
 
@@ -366,7 +366,7 @@ async function callDiscoveryEngine(
 
       const promptForTokenCount = modelPrompt + query;
       const promptTokenCount = estimateTokens(promptForTokenCount);
-      const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?";
+      const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
       
       let sources: ClientRagSource[] = [];
       if (!data.summary || !data.summary.summaryText || !data.results || data.results.length === 0) {
@@ -893,7 +893,7 @@ export async function getAdminInsights(): Promise<any> {
                     } else if (m.source === 'rag') {
                         ragSearchCount++;
                         if (m.latencyMs) ragLatencies.push(m.latencyMs);
-                        if (m.content === "Com base nos dados internos não consigo realizar essa resposta. Deseja procurar na web?") {
+                        if (m.content === "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web") {
                             ragSearchFailureCount++;
                         }
 
@@ -1190,6 +1190,36 @@ export async function setMaintenanceMode(isMaintenanceMode: boolean): Promise<an
         return { error: error.message };
     }
 }
+
+export async function getGreetingMessage(): Promise<{ greetingMessage: string }> {
+    const defaultMessage = 'Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA.';
+    try {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const contentRef = adminDb.collection('system_settings').doc('content');
+        const docSnap = await contentRef.get();
+
+        if (docSnap.exists) {
+            return { greetingMessage: docSnap.data()?.greetingMessage || defaultMessage };
+        }
+        return { greetingMessage: defaultMessage };
+    } catch (error: any) {
+        console.error("Error getting greeting message:", error);
+        return { greetingMessage: defaultMessage };
+    }
+}
+
+export async function setGreetingMessage(greetingMessage: string): Promise<any> {
+    try {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const contentRef = adminDb.collection('system_settings').doc('content');
+        await contentRef.set({ greetingMessage }, { merge: true });
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error setting greeting message:", error);
+        return { error: error.message };
+    }
+}
+
 
 export async function runApiHealthCheck(): Promise<any> {
     const results = [];

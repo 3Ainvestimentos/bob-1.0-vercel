@@ -12,6 +12,7 @@ import {
   askAssistant,
   generateSuggestedQuestions,
   generateTitleForConversation,
+  getGreetingMessage,
   logRegeneratedQuestion,
   regenerateAnswer,
   removeFileFromConversation,
@@ -443,6 +444,7 @@ function ChatPageContent() {
   const [isSidebarLoading, setIsSidebarLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<Conversation | null>(null);
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
+  const [greetingMessage, setGreetingMessage] = useState('');
 
   const [isNewGroupDialogOpen, setIsNewGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -505,12 +507,14 @@ function ChatPageContent() {
     if (!user) return;
     setIsSidebarLoading(true);
     try {
-      const [userConversations, userGroups] = await Promise.all([
+      const [userConversations, userGroups, greetingData] = await Promise.all([
         getConversations(user.uid),
         getGroups(user.uid),
+        getGreetingMessage(),
       ]);
       setConversations(userConversations);
       setGroups(userGroups);
+      setGreetingMessage(greetingData.greetingMessage);
       setExpandedGroups(prev => {
         const newExpanded = { ...prev };
         userGroups.forEach(group => {
@@ -1612,7 +1616,7 @@ function ChatPageContent() {
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto max-w-xs text-sm" side="bottom" align="end">
-                            Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA.
+                            {greetingMessage}
                         </PopoverContent>
                     </Popover>
                 </div>
@@ -1655,5 +1659,3 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
-
-    

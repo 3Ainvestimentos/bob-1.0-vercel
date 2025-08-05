@@ -4,11 +4,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks } from '@/app/actions';
+import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2, MessageSquare, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ADMIN_UID } from '@/types';
@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Textarea } from '@/components/ui/textarea';
 
 
 interface AdminInsights {
@@ -98,9 +99,11 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [greetingMessage, setGreetingMessage] = useState('');
   
   const [apiHealthResults, setApiHealthResults] = useState<ApiHealthResult[]>([]);
   const [isCheckingApiHealth, setIsCheckingApiHealth] = useState(false);
+  const [isSavingGreeting, setIsSavingGreeting] = useState(false);
 
 
   useEffect(() => {
@@ -122,7 +125,8 @@ export default function AdminPage() {
             getMaintenanceMode(),
             getLegalIssueAlerts(),
             getFeedbacks(),
-        ]).then(([insightsData, usersData, costsData, maintenanceData, alertsData, feedbacksData]) => {
+            getGreetingMessage(),
+        ]).then(([insightsData, usersData, costsData, maintenanceData, alertsData, feedbacksData, greetingData]) => {
             if (insightsData.error) throw new Error(insightsData.error);
             if (usersData.error) throw new Error(usersData.error);
             if (costsData.error) throw new Error(costsData.error);
@@ -136,6 +140,7 @@ export default function AdminPage() {
             setIsMaintenanceMode(maintenanceData.isMaintenanceMode);
             setLegalAlerts(alertsData);
             setFeedbacks(feedbacksData);
+            setGreetingMessage(greetingData.greetingMessage);
         }).catch(err => {
             console.error('Erro ao buscar dados do painel:', err);
             setError(err.message || 'Não foi possível carregar os dados do painel.');
@@ -170,6 +175,28 @@ export default function AdminPage() {
         });
         // Revert UI on error
         setIsMaintenanceMode(!checked);
+    }
+  };
+  
+  const handleSaveGreetingMessage = async () => {
+    setIsSavingGreeting(true);
+    try {
+        const result = await setGreetingMessage(greetingMessage);
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        toast({
+            title: "Mensagem Salva",
+            description: "A mensagem de saudação do Bob foi atualizada com sucesso.",
+        });
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Erro",
+            description: `Não foi possível salvar a mensagem: ${error.message}`,
+        });
+    } finally {
+        setIsSavingGreeting(false);
     }
   };
 
@@ -303,13 +330,14 @@ export default function AdminPage() {
             </div>
         )}
         <Tabs defaultValue="analytics" className="w-full">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
                 <TabsTrigger value="analytics">Análise Geral</TabsTrigger>
                 <TabsTrigger value="rag">Análise RAG</TabsTrigger>
                 <TabsTrigger value="latency">Latência</TabsTrigger>
                 <TabsTrigger value="feedback">Feedbacks</TabsTrigger>
                 <TabsTrigger value="legal">Alertas Jurídicos</TabsTrigger>
                 <TabsTrigger value="costs">Custos</TabsTrigger>
+                <TabsTrigger value="content">Conteúdo</TabsTrigger>
                 <TabsTrigger value="system">Sistema</TabsTrigger>
             </TabsList>
             <TabsContent value="analytics" className="mt-4">
@@ -921,6 +949,42 @@ export default function AdminPage() {
                         </Card>
                      </div>
                 </div>
+            </TabsContent>
+            <TabsContent value="content" className="mt-4">
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                            <CardTitle>Conteúdo Dinâmico</CardTitle>
+                        </div>
+                        <CardDescription>
+                            Gerencie os textos exibidos em partes específicas da aplicação.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="greeting-message" className="font-semibold">Mensagem de Saudação do Robô</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Este texto aparece no balão de diálogo quando o usuário clica no ícone do robô na tela de chat vazia.
+                            </p>
+                            <Textarea
+                                id="greeting-message"
+                                value={greetingMessage}
+                                onChange={(e) => setGreetingMessage(e.target.value)}
+                                placeholder="Digite a mensagem de saudação aqui..."
+                                className="min-h-[100px]"
+                            />
+                        </div>
+                        <Button onClick={handleSaveGreetingMessage} disabled={isSavingGreeting}>
+                            {isSavingGreeting ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Save className="mr-2 h-4 w-4" />
+                            )}
+                            Salvar Mensagem
+                        </Button>
+                    </CardContent>
+                </Card>
             </TabsContent>
             <TabsContent value="system" className="mt-4">
                 <div className="grid gap-4 md:grid-cols-2 md:gap-8">
