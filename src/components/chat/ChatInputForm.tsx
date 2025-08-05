@@ -497,7 +497,7 @@ export function ChatInputForm({
              {renderBottomBarContent()}
           </div>
         </div>
-        <p className="pt-2 text-center text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground text-center px-6 py-2 pb-3">
           Sujeito aos Termos de uso 3A RIVA e à Política de Privacidade da 3A RIVA. O modelo Bob 1.0 pode cometer erros. Por isso, é bom checar as respostas.
         </p>
       </form>
