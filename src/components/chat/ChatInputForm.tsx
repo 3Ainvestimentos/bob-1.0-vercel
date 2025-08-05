@@ -388,10 +388,10 @@ export function ChatInputForm({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground"
+                    className="h-7 w-7 text-muted-foreground hover:text-primary sm:h-8 sm:w-8"
                     disabled={isLoading}
                     onClick={handleAttachClick}
-                    title={"Anexar arquivo(s)"}
+                    aria-label="Adicionar anexo"
                 >
                     <Paperclip className="h-5 w-5" />
                 </Button>
@@ -402,11 +402,11 @@ export function ChatInputForm({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground"
+                        className="h-7 w-7 text-muted-foreground hover:text-primary sm:h-8 sm:w-8"
                         disabled={isLoading}
                         onClick={handleSimpleClick}
                         onMouseDown={handleMouseDown}
-                        title={"Gravar áudio (clique) ou segure para travar"}
+                        aria-label="Gravar áudio"
                     >
                         <Mic className="h-5 w-5" />
                     </Button>
@@ -465,7 +465,7 @@ export function ChatInputForm({
                     isAudioSelected ? "Opcional: adicione um comando ou pergunta sobre o áudio" : 
                     "Insira aqui um comando ou pergunta"
                 }
-                className="flex-1 resize-none border-0 bg-transparent p-3 pr-12 text-sm focus-visible:ring-0 sm:text-base"
+                className="flex-1 resize-none border-0 bg-transparent p-3 pr-12 text-sm focus-visible:outline-none sm:text-base"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -504,3 +504,5 @@ export function ChatInputForm({
     </div>
   );
 }
+
+    
