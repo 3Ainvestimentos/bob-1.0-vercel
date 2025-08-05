@@ -1598,19 +1598,24 @@ function ChatPageContent() {
 
         <SidebarInset>
             <main className="flex flex-1 flex-col bg-background relative">
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <button 
-                          className="absolute top-4 right-4 z-10 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
-                          aria-label="Saudação do Bob"
-                        >
-                            <RobotIdeaIcon className="h-10 w-10" />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto max-w-xs text-sm" side="bottom" align="end">
-                        Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA.
-                    </PopoverContent>
-                </Popover>
+                <div className={cn(
+                  "absolute top-4 right-4 z-10 transition-opacity duration-500",
+                  messages.length > 0 ? "opacity-0 pointer-events-none" : "opacity-100"
+                )}>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button 
+                              className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+                              aria-label="Saudação do Bob"
+                            >
+                                <RobotIdeaIcon className="h-10 w-10" />
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto max-w-xs text-sm" side="bottom" align="end">
+                            Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA.
+                        </PopoverContent>
+                    </Popover>
+                </div>
                 <ChatMessageArea
                   messages={messages}
                   isLoading={isLoading}
@@ -1650,3 +1655,5 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
+
+    
