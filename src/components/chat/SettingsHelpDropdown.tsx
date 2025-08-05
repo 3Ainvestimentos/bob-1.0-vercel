@@ -61,11 +61,6 @@ export function SettingsHelpDropdown({
           <Settings className="mr-2 h-4 w-4" />
           <span>Sistema</span>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onOpenFaqDialog}>
-          <HelpCircle className="mr-2 h-4 w-4" />
-          <span>Guias e FAQ</span>
-        </DropdownMenuItem>
         
         {isUserAdmin && (
             <>

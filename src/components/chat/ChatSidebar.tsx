@@ -278,17 +278,17 @@ export function ChatSidebar({
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          {/* <SidebarMenuItem className="mt-2">
+           <SidebarMenuItem className="mt-2">
             <SidebarMenuButton
-              onClick={() => {}}
-              tooltip="Pesquisar"
+              onClick={onOpenFaqDialog}
+              tooltip="Guias e FAQ"
               variant="ghost"
               className="h-8 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
             >
-              <Search className="h-5 w-5" />
-              <SidebarMenuButton.Text>Pesquisar</SidebarMenuButton.Text>
+              <HelpCircle className="h-5 w-5" />
+              <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
             </SidebarMenuButton>
-          </SidebarMenuItem> */}
+          </SidebarMenuItem>
           <SettingsHelpDropdown
             isAuthenticated={isAuthenticated}
             handleSignOut={handleSignOut}
