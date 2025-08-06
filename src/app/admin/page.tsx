@@ -291,7 +291,7 @@ export default function AdminPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="dark flex h-screen w-full items-center justify-center bg-background">
+      <div className="flex h-screen w-full items-center justify-center bg-background">
         <p className="text-lg text-muted-foreground">Carregando painel...</p>
       </div>
     );
