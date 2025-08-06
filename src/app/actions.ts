@@ -2,7 +2,7 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore as getFirestoreAdmin, FieldValue, DocumentData, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
@@ -433,12 +433,21 @@ async function callGemini(
     attachments: AttachedFile[] = [],
     preamble: string | null = null
 ): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; promptTokenCount?: number; candidatesTokenCount?: number; }> {
-    const geminiApiKey = await getGeminiApiKey();
-
     try {
+        const geminiApiKey = await getGeminiApiKey();
         const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash-latest",
+            safetySettings: [
+                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            ]
+        });
+
+        const defaultPreamble = 'Responda em português do Brasil, a menos que seja solicitado o contrário na pergunta.';
         let fileContextPreamble = '';
         if (attachments.length > 0) {
             fileContextPreamble = attachments.map(file => 
@@ -446,21 +455,27 @@ async function callGemini(
             ).join('');
         }
 
-        const finalPrompt = `
-            ${preamble || 'Responda em português do Brasil, a menos que seja solicitado o contrário na pergunta.'}
-            ${fileContextPreamble}
-            
-            Pergunta do usuário: "${query}"
-        `;
-
+        const finalPrompt = `${preamble || defaultPreamble}${fileContextPreamble}\n\nPergunta do usuário: "${query}"`;
+        
         const result = await model.generateContent(finalPrompt);
         const response = await result.response;
         const text = response.text();
-        
-        const promptTokenCount = undefined;
-        const candidatesTokenCount = undefined;
 
-        return { summary: text, searchFailed: false, sources: [], promptTokenCount, candidatesTokenCount };
+        const [promptTokens, candidatesTokens] = await Promise.all([
+            model.countTokens(finalPrompt),
+            model.countTokens(text),
+        ]);
+        
+        const promptTokenCount = promptTokens?.totalTokens;
+        const candidatesTokenCount = candidatesTokens?.totalTokens;
+
+        return { 
+            summary: text, 
+            searchFailed: false, 
+            sources: [], 
+            promptTokenCount, 
+            candidatesTokenCount 
+        };
 
     } catch (error: any) {
         console.error("Error calling Gemini API:", error);
@@ -1296,5 +1311,7 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+    
 
     
