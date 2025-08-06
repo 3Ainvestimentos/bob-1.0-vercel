@@ -134,7 +134,7 @@ export function ChatMessageArea({
                     <div className="flex items-start gap-4">
                       <FileText className="h-6 w-6 text-muted-foreground" />
                       <div>
-                        <p className="font-semibold">Análise de Posição Consolidada</p>
+                        <p className="font-semibold">Análise de Relatório XP</p>
                         <p className="text-sm text-muted-foreground">
                           Analisar um relatório de investimentos com o padrão 3A RIVA.
                         </p>
