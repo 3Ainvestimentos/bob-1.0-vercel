@@ -410,7 +410,7 @@ const SidebarMenuButtonText = React.forwardRef<
     <span
       ref={ref}
       className={cn(
-        "truncate transition-all duration-200",
+        "truncate transition-all duration-200 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0",
         className
       )}
       {...props}
