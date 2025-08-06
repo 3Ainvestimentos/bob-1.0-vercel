@@ -337,7 +337,7 @@ async function callDiscoveryEngine(
       const modelPrompt = `${preamble}${fileContextPreamble}`;
 
       const requestBody: any = {
-        query: preamble === POSICAO_CONSOLIDADA_PREAMBLE ? "faça a análise deste relatório" : query,
+        query: query,
         pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
