@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ConversationSidebarItem, Group } from '@/app/chat/page';
