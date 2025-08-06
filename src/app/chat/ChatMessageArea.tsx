@@ -136,7 +136,7 @@ export function ChatMessageArea({
                       <div>
                         <p className="font-semibold">Análise de Relatório XP</p>
                         <p className="text-sm text-muted-foreground">
-                          Analisar um relatório de investimentos com o padrão 3A RIVA.
+                          Mensagem de investimentos com o padrão 3A RIVA.
                         </p>
                       </div>
                     </div>
