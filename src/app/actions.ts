@@ -630,12 +630,10 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
 
 export async function regenerateAnswer(
   originalQuery: string,
+  isStandardAnalysis: boolean,
   attachments: AttachedFile[],
-  options: {
-    isStandardAnalysis?: boolean;
-  } = {},
   userId?: string,
-  chatId?: string,
+  chatId?: string
 ): Promise<{ 
   summary?: string; 
   searchFailed?: boolean; 
@@ -662,7 +660,7 @@ export async function regenerateAnswer(
         await logRegeneratedQuestion(userId, chatId, deidentifiedQuery, '');
     }
 
-    if (options.isStandardAnalysis) {
+    if (isStandardAnalysis) {
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else {

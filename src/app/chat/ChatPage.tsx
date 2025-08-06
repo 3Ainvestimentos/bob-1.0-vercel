@@ -662,7 +662,7 @@ function ChatPageContent() {
     if (!query.trim() && files.length === 0) return;
     if (isLoading || !user) return;
 
-    const useStandardAnalysis = query.toLowerCase().includes("faça a análise com nosso padrão");
+    const useStandardAnalysis = query.toLowerCase().includes("análise com nosso padrão");
 
     const fileNames = files.map(f => f.name);
     
@@ -998,8 +998,8 @@ function ChatPageContent() {
     try {
       const result = await regenerateAnswer(
         userQuery,
+        userMessage.isStandardAnalysis ?? false,
         activeChat.attachedFiles,
-        { isStandardAnalysis: userMessage.isStandardAnalysis },
         user.uid,
         activeChatId
       );
@@ -1692,5 +1692,3 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
-
-    
