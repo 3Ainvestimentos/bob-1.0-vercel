@@ -437,7 +437,7 @@ const GreetingPopoverContent = ({ onOpen }: { onOpen: boolean }) => {
                 .then(message => setGreeting(message))
                 .catch(() => setGreeting('Não foi possível carregar a saudação.'));
         }
-    }, []);
+    }, [onOpen]);
 
     return <>{greeting}</>;
 };
@@ -662,7 +662,7 @@ function ChatPageContent() {
     if (!query.trim() && files.length === 0) return;
     if (isLoading || !user) return;
 
-    const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
+    const useStandardAnalysis = query.toLowerCase().includes("faça a análise com nosso padrão");
 
     const fileNames = files.map(f => f.name);
     
@@ -1126,13 +1126,25 @@ function ChatPageContent() {
       return;
     }
     try {
-      let cleanedText = text.trim();
+      let cleanedText = text;
+      
+      // Remove ```markdown block
       if (cleanedText.startsWith('```markdown')) {
-          cleanedText = cleanedText.substring('```markdown'.length).trim();
+          cleanedText = cleanedText.substring('```markdown'.length);
       }
       if (cleanedText.endsWith('```')) {
-          cleanedText = cleanedText.substring(0, cleanedText.length - '```'.length).trim();
+          cleanedText = cleanedText.substring(0, cleanedText.length - '```'.length);
       }
+      
+      // Remove --- separators
+      if (cleanedText.startsWith('---\n')) {
+          cleanedText = cleanedText.substring(4);
+      }
+      if (cleanedText.endsWith('\n---')) {
+          cleanedText = cleanedText.substring(0, cleanedText.length - 4);
+      }
+
+      cleanedText = cleanedText.trim();
       
       await navigator.clipboard.writeText(cleanedText);
       toast({
@@ -1680,3 +1692,5 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
+
+    
