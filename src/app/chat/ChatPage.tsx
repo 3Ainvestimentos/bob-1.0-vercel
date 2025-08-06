@@ -1127,14 +1127,14 @@ function ChatPageContent() {
     }
     try {
       let cleanedText = text;
-      if (cleanedText.startsWith('```markdown\n')) {
-          cleanedText = cleanedText.substring('```markdown\n'.length);
+      if (cleanedText.startsWith('```markdown')) {
+          cleanedText = cleanedText.substring(cleanedText.indexOf('\n') + 1);
       }
-      if (cleanedText.endsWith('\n```')) {
-          cleanedText = cleanedText.substring(0, cleanedText.length - '\n```'.length);
+      if (cleanedText.endsWith('```')) {
+          cleanedText = cleanedText.substring(0, cleanedText.length - 3);
       }
       
-      await navigator.clipboard.writeText(cleanedText);
+      await navigator.clipboard.writeText(cleanedText.trim());
       toast({
         title: 'Copiado!',
         description:
@@ -1610,7 +1610,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
