@@ -482,7 +482,7 @@ async function callGemini(
         if (error.message.includes('API key not valid')) {
             throw new Error(`Erro de autenticação com a API Gemini. Verifique se a GEMINI_API_KEY é válida.`);
         }
-        throw new Error(error.message);
+        throw new Error(`Erro ao chamar a API Gemini: ${error.message}`);
     }
 }
 
@@ -577,7 +577,7 @@ export async function askAssistant(
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else if (useWebSearch) {
-      result = await callGemini(deidentifiedQuery);
+      result = await callGemini(deidentifiedQuery, [], null);
       source = 'web';
     } else {
         await logQuestionForAnalytics(deidentifiedQuery);
@@ -1293,8 +1293,7 @@ export async function runApiHealthCheck(): Promise<any> {
     // Test Gemini API (Web Search)
     let geminiStartTime = Date.now();
     try {
-        const res = await callGemini("teste", [], "Responda 'ok'");
-        if (res.error) throw new Error(res.error);
+        await callGemini("teste", [], "Responda 'ok'");
         results.push({
             api: 'Google Gemini API',
             status: 'OK',
