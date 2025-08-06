@@ -1126,7 +1126,15 @@ function ChatPageContent() {
       return;
     }
     try {
-      await navigator.clipboard.writeText(text);
+      let cleanedText = text;
+      if (cleanedText.startsWith('```markdown\n')) {
+          cleanedText = cleanedText.substring('```markdown\n'.length);
+      }
+      if (cleanedText.endsWith('\n```')) {
+          cleanedText = cleanedText.substring(0, cleanedText.length - '\n```'.length);
+      }
+      
+      await navigator.clipboard.writeText(cleanedText);
       toast({
         title: 'Copiado!',
         description:
