@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ConversationSidebarItem, Group } from '@/app/chat/page';
@@ -282,7 +283,7 @@ export function ChatSidebar({
               onClick={onOpenFaqDialog}
               tooltip="Guias e FAQ"
               variant="ghost"
-              className="h-9 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground"
+              className="h-9 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground group-data-[state=collapsed]:w-full group-data-[state=collapsed]:justify-center"
             >
               <HelpCircle className="h-5 w-5" />
               <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
