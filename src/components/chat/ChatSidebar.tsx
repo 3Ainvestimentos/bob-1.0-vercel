@@ -262,7 +262,7 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
-              className="h-9 w-full justify-start font-semibold rounded-md bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80"
+              className="h-9 w-full justify-start font-semibold rounded-md bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80 group-data-[state=collapsed]:justify-start"
             >
               <Pencil className="h-4 w-4" />
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
@@ -272,7 +272,7 @@ export function ChatSidebar({
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
-              className="h-9 w-full justify-start font-semibold rounded-md bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80"
+              className="h-9 w-full justify-start font-semibold rounded-md bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80 group-data-[state=collapsed]:justify-start"
             >
               <FolderPlus className="h-4 w-4" />
               <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
@@ -283,7 +283,7 @@ export function ChatSidebar({
               onClick={onOpenFaqDialog}
               tooltip="Guias e FAQ"
               variant="ghost"
-              className="h-9 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground group-data-[state=collapsed]:justify-center"
+              className="h-9 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground group-data-[state=collapsed]:justify-start"
             >
               <HelpCircle className="h-5 w-5" />
               <SidebarMenuButton.Text>Guias e FAQ</SidebarMenuButton.Text>
