@@ -54,7 +54,7 @@ Você é um especialista em finanças. Com base em um relatório de investimento
 [RENTABILIDADE EM %CDI DO MÊS]
 [GANHO FINANCEIRO DO MÊS]
 [RENTABILIDADE PERCENTUAL DO ANO]
-[RENTABILIDADE EM %CDI DO ANO]
+[RENTABILidade EM %CDI DO ANO]
 [GANHO FINANCEIRO DO ANO]
 :pino: Da página 5:
 Duas classes com maior rentabilidade no mês, com seus respectivos percentuais e uma breve justificativa baseada nos ativos da carteira
@@ -1285,3 +1285,4 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
