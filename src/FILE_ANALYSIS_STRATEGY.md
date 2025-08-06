@@ -58,26 +58,3 @@ A solução é uma arquitetura de **criptografia do lado do cliente (Client-Side
     -   Um modelo de permissões (IAM) rigoroso para controlar o acesso ao KMS e à interface de auditoria.
 
 **Conclusão:** Embora complexa, esta é a arquitetura correta e padrão da indústria para construir sistemas que equilibram funcionalidades de negócio avançadas (auditoria, CRM) com segurança de dados de "confiança zero". É um investimento estratégico em engenharia para o futuro do produto.
-
----
-
-## 4. Alinhamento com a LGPD (Lei Geral de Proteção de Dados)
-
-*Isenção de responsabilidade: Esta é uma análise técnica, não uma opinião legal. A validação formal com um consultor jurídico especializado em LGPD é recomendada.*
-
-A estratégia de criptografia do lado do cliente está fortemente alinhada com os princípios e as melhores práticas da LGPD, sendo uma das medidas técnicas mais eficazes para a proteção de dados pessoais.
-
-### 4.1. Segurança e Prevenção (Art. 6º, VII e Art. 46)
-A LGPD exige a adoção de medidas de segurança para proteger os dados. Nossa abordagem implementa o conceito de **"Privacidade desde a Concepção" (Privacy by Design)**:
--   **Dados Criptografados por Padrão:** Os dados sensíveis são criptografados *antes* de saírem do navegador do usuário. Em trânsito e em repouso (no banco de dados), eles estão sempre ilegíveis.
--   **Arquitetura "Zero-Trust":** Nossos próprios servidores e administradores de banco de dados não conseguem ler o conteúdo das conversas, minimizando drasticamente o risco de vazamentos ou acessos não autorizados.
-
-### 4.2. Acesso Controlado (Art. 46)
-A lei determina que o acesso aos dados deve ser restrito a pessoal autorizado.
--   **Interface de Auditoria Segura:** O plano prevê uma interface de auditoria separada com controle de acesso rigoroso (via Google Cloud IAM). Apenas usuários com permissões específicas poderão solicitar a descriptografia dos dados, e todas essas solicitações podem ser registradas.
-
-### 4.3. Direitos dos Titulares (Art. 18)
-A LGPD garante aos titulares o direito de acessar, corrigir e eliminar seus dados.
--   **Viabilidade de Atendimento:** Como os dados podem ser descriptografados por pessoal autorizado, a empresa pode atender a solicitações de clientes para ver, corrigir ou apagar seu histórico, cumprindo as exigências da lei.
-
-**Conclusão Técnica:** A arquitetura proposta não é apenas compatível, mas é um exemplo robusto de implementação dos requisitos de segurança da LGPD. Ela cria uma base tecnológica sólida para a governança de dados da empresa, que deve ser complementada por políticas, processos internos e validação jurídica.
