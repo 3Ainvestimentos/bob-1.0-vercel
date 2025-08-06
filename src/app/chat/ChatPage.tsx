@@ -437,7 +437,7 @@ const GreetingPopoverContent = ({ onOpen }: { onOpen: boolean }) => {
                 .then(message => setGreeting(message))
                 .catch(() => setGreeting('Não foi possível carregar a saudação.'));
         }
-    }, [onOpen]);
+    }, []);
 
     return <>{greeting}</>;
 };
@@ -1126,15 +1126,15 @@ function ChatPageContent() {
       return;
     }
     try {
-      let cleanedText = text;
+      let cleanedText = text.trim();
       if (cleanedText.startsWith('```markdown')) {
-          cleanedText = cleanedText.substring(cleanedText.indexOf('\n') + 1);
+          cleanedText = cleanedText.substring('```markdown'.length).trim();
       }
       if (cleanedText.endsWith('```')) {
-          cleanedText = cleanedText.substring(0, cleanedText.length - 3);
+          cleanedText = cleanedText.substring(0, cleanedText.length - '```'.length).trim();
       }
       
-      await navigator.clipboard.writeText(cleanedText.trim());
+      await navigator.clipboard.writeText(cleanedText);
       toast({
         title: 'Copiado!',
         description:
@@ -1610,7 +1610,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={onToggleGroup}
+                onToggleGroup={handleToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
