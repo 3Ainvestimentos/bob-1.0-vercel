@@ -446,8 +446,10 @@ async function callGemini(
         const response = await result.response;
         const text = response.text();
         
-        const promptTokenCount = undefined;
-        const candidatesTokenCount = undefined;
+        const { totalTokens } = await model.countTokens(finalPrompt);
+        const promptTokenCount = totalTokens;
+        const candidatesTokenCount = estimateTokens(text);
+
 
         return { summary: text, searchFailed: false, sources: [], promptTokenCount, candidatesTokenCount };
 
@@ -515,7 +517,7 @@ export async function askAssistant(
   deidentifiedQuery?: string;
   error?: string;
 }> {
-  const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [], chatId, messageId } = options;
+  const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [], chatId = null, messageId = null } = options;
   const startTime = Date.now();
   
   try {
@@ -548,7 +550,7 @@ export async function askAssistant(
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else if (useWebSearch) {
-      result = await callGemini(deidentifiedQuery);
+      result = await callGemini(deidentifiedQuery, [], "Você é um assistente de busca. Responda à pergunta do usuário com base em informações da web. Responda em português do Brasil.");
       source = 'web';
     } else {
         await logQuestionForAnalytics(deidentifiedQuery);
@@ -1266,8 +1268,7 @@ export async function runApiHealthCheck(): Promise<any> {
     // Test Gemini API (Web Search)
     let geminiStartTime = Date.now();
     try {
-        const res = await callGemini("teste");
-        if (res.error) throw new Error(res.error);
+        await callGemini("teste", [], "teste");
         results.push({
             api: 'Google Gemini API',
             status: 'OK',
