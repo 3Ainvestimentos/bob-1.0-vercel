@@ -429,7 +429,7 @@ export function ChatInputForm({
 
 
   return (
-    <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm">
+    <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm pt-1">
       <form
         onSubmit={handleSubmit}
         className="px-4 pt-2 sm:px-6 lg:px-8"
