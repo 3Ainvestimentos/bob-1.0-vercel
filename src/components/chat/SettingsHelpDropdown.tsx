@@ -39,7 +39,7 @@ export function SettingsHelpDropdown({
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip="Configurações e Ajuda" variant="ghost" className="h-9 w-full justify-start !bg-transparent text-sidebar-foreground hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground">
           <DropdownMenuTrigger>
-            <Settings className="size-5" />
+            <Settings className="size-5 group-data-[state=collapsed]:h-8 group-data-[state=collapsed]:w-8" />
             <SidebarMenuButton.Text>Configurações e Ajuda</SidebarMenuButton.Text>
           </DropdownMenuTrigger>
         </SidebarMenuButton>
