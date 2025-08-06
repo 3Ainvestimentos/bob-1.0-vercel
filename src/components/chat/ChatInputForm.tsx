@@ -432,9 +432,9 @@ export function ChatInputForm({
     <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm pt-1">
       <form
         onSubmit={handleSubmit}
-        className="px-4 pt-2 sm:px-6 lg:px-8"
+        className="pt-2"
       >
-        <div className={cn("rounded-xl border bg-background shadow-md focus-within:ring-0")}>
+        <div className={cn("rounded-xl border bg-background shadow-md focus-within:ring-0 mx-4")}>
            <div className={cn("grid transition-all duration-300 ease-in-out", 
                 selectedFiles.length > 0 && recordingState === 'idle' 
                 ? 'grid-rows-[1fr] opacity-100' 
@@ -497,7 +497,7 @@ export function ChatInputForm({
              {renderBottomBarContent()}
           </div>
         </div>
-        <p className="text-xs text-muted-foreground/70 text-center px-6 pb-3">
+        <p className="text-xs text-muted-foreground/70 text-center px-4 pb-3 pt-3">
           Sujeito aos Termos de uso 3A RIVA e à Política de Privacidade da 3A RIVA. O modelo Bob 1.0 pode cometer erros. Por isso, é bom checar as respostas.
         </p>
       </form>
