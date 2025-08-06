@@ -662,7 +662,7 @@ function ChatPageContent() {
     if (!query.trim() && files.length === 0) return;
     if (isLoading || !user) return;
 
-    const useStandardAnalysis = query.toLowerCase().includes("análise com nosso padrão");
+    const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
 
     const fileNames = files.map(f => f.name);
     
@@ -998,8 +998,8 @@ function ChatPageContent() {
     try {
       const result = await regenerateAnswer(
         userQuery,
-        userMessage.isStandardAnalysis ?? false,
         activeChat.attachedFiles,
+        { isStandardAnalysis: userMessage.isStandardAnalysis },
         user.uid,
         activeChatId
       );
@@ -1126,27 +1126,7 @@ function ChatPageContent() {
       return;
     }
     try {
-      let cleanedText = text;
-      
-      // Remove ```markdown block
-      if (cleanedText.startsWith('```markdown')) {
-          cleanedText = cleanedText.substring('```markdown'.length);
-      }
-      if (cleanedText.endsWith('```')) {
-          cleanedText = cleanedText.substring(0, cleanedText.length - '```'.length);
-      }
-      
-      // Remove --- separators
-      if (cleanedText.startsWith('---\n')) {
-          cleanedText = cleanedText.substring(4);
-      }
-      if (cleanedText.endsWith('\n---')) {
-          cleanedText = cleanedText.substring(0, cleanedText.length - 4);
-      }
-
-      cleanedText = cleanedText.trim();
-      
-      await navigator.clipboard.writeText(cleanedText);
+      await navigator.clipboard.writeText(text);
       toast({
         title: 'Copiado!',
         description:

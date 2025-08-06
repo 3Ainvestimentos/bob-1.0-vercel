@@ -102,6 +102,10 @@ export default {
           from: { opacity: '0.1' },
           to: { opacity: '1' },
         },
+        'lamp-on-off': {
+            '0%, 100%': { opacity: '1' },
+            '50%': { opacity: '0.3' },
+        },
         'wave': {
           '0%': { transform: 'rotate(0deg)' },
           '10%': { transform: 'rotate(14deg)' },
@@ -123,6 +127,7 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         'shake': 'shake 0.82s cubic-bezier(.36,.07,.19,.97) both',
         'lamp-fade-in': 'lamp-fade-in 1.5s ease-in-out',
+        'lamp-on-off': 'lamp-on-off 2s ease-in-out infinite',
         'wave': 'wave 2.5s ease-in-out infinite',
         'pulse-slow': 'pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },

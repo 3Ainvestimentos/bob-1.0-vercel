@@ -14,7 +14,7 @@ export function RobotIdeaIcon({ animateLamp = true, className, ...props }: Robot
       className={className}
       {...props}
     >
-      <g transform="translate(0, 1.5)">
+      <g className={cn({ 'animate-lamp-on-off': animateLamp })} transform="translate(0, 1.5)">
         <circle cx="12" cy="6.5" r="5.5" fill="#FFFFE0" opacity="0.3"/>
         <circle cx="12" cy="6.5" r="4.5" fill="#FFFFE0" opacity="0.5"/>
 

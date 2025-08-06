@@ -2,7 +2,7 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore as getFirestoreAdmin, FieldValue, DocumentData, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
@@ -40,49 +40,38 @@ Sua resposta deve seguir esta hierarquia de fontes de informação:
 
 2.  **FONTE SECUNDÁRIA - BASE DE CONHECIMENTO (RAG):** Se a pergunta do usuário requer conhecimento interno da 3A RIVA (ex: "quais são nossos produtos?", "me fale sobre o procedimento X") e **também** faz referência a um arquivo anexado (ex: "compare o arquivo com nossos produtos"), você deve **sintetizar** as informações de AMBAS as fontes (arquivos do usuário e resultados do RAG) para criar uma resposta completa.
 
-3.  **PROIBIÇÃO DE CONHECimento EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado geral ou qualquer informação externa que não seja fornecida no contexto (arquivos ou RAG). Não invente, não infira, não adivinhe.
+3.  **PROIBIÇÃO DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado geral ou qualquer informação externa que não seja fornecida no contexto (arquivos ou RAG). Não invente, não infira, não adivinhe.
 
 4.  **PROCEDIMENTO de FALHA:** Se a resposta não puder ser encontrada em nenhuma das fontes fornecidas, sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web"
 
 5.  **LINKS:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).`;
 
-const POSICAO_CONSOLIDADA_PREAMBLE = `**REGRA OBRIGATÓRIA: Sua resposta final DEVE ser formatada estritamente como um único bloco de código Markdown.**
-
-Você é um especialista em finanças. Com base em um relatório de investimentos em PDF da XP, extraia as seguintes informações do documento e retorne uma mensagem formatada em MARKDOWN:
-
-:pino: **Da página 2, extraia:**
-- Rentabilidade percentual do mês
-- Rentabilidade em %CDI do mês
-- Ganho financeiro do mês
-- Rentabilidade percentual do ano
-- Rentabilidade em %CDI do ano
-- Ganho financeiro do ano
-
-:pino: **Da página 5, extraia:**
-- As duas classes de ativos com **maior rentabilidade** no mês, incluindo seus respectivos percentuais e uma breve justificativa para o desempenho, baseada nos ativos da carteira.
-- As duas classes de ativos com **rentabilidade inferior ao CDI** no mês, informando apenas o nome da classe e o percentual.
-  - *Regra especial:* Se a classe "Inflação" estiver entre as de menor rendimento, justifique o resultado mencionando a baixa inflação do mês anterior.
-
-:balão_de_fala: **Monte a mensagem final usando EXATAMENTE o modelo abaixo.** Formate o texto em negrito usando asteriscos (*) para compatibilidade com o WhatsApp e não adicione nenhuma formatação de chat (como cabeçalhos ou citações).
-
----
+const POSICAO_CONSOLIDADA_PREAMBLE = 
+`REGRA_OBRIGATÓRIA: Preciso que a resposta seja em MARKDOWN
+Você é um especialista em finanças. Com base em um relatório de investimentos em PDF da XP, extraia:
+:pino: Da página 2:
+[RENTABILIDADE PERCENTUAL DO MÊS]
+[RENTABILIDADE EM %CDI DO MÊS]
+[GANHO FINANCEIRO DO MÊS]
+[RENTABILIDADE PERCENTUAL DO ANO]
+[RENTABILIDADE EM %CDI DO ANO]
+[GANHO FINANCEIRO DO ANO]
+:pino: Da página 5:
+Duas classes com maior rentabilidade no mês, com seus respectivos percentuais e uma breve justificativa baseada nos ativos da carteira
+Duas classes com rentabilidade inferior ao CDI no mês, apenas com nome e percentual. Caso a classe Inflação aparecer na lista, justificar a baixa rentabilidade à baixa inflação do mês anterior
+:balão_de_fala: Monte uma mensagem personalizada com esse modelo, usando asteriscos para a formatação de WhatsApp e sem formatação automática do chat:
 Olá!
-
-Em [Mês] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]*, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* e um ganho financeiro de *[GANHO FINANCEIRO DO ANO]*!
-
+Em maio sua carteira rendeu [RENTABILIDADE PERCENTUAL DO MÊS], o que equivale a [RENTABILIDADE EM %CDI DO MÊS], um ganho bruto de [GANHO FINANCEIRO DO MÊS]! No ano, estamos com uma rentabilidade de [RENTABILIDADE PERCENTUAL DO ANO], o que equivale a uma performance de [RENTABILIDADE EM %CDI DO ANO] e um ganho financeiro de [GANHO FINANCEIRO DO ANO]!
 Os principais destaques foram:
-- *[Classe 1 com maior rentabilidade]*, com *[rentabilidade]*, [justificativa].
-- *[Classe 2 com maior rentabilidade]*, com *[rentabilidade]*, [justificativa].
-
+[Classe 1], com [rentabilidade], [justificativa]
+[Classe 2], com [rentabilidade], [justificativa]
 Os principais detratores foram:
-- [Classe 1 com menor rentabilidade]: [rentabilidade]
-- [Classe 2 com menor rentabilidade]: [rentabilidade]
-
+[Classe 1]: [rentabilidade]
+[Classe 2]: [rentabilidade]
 Em julho de 2025, o assunto da vez no mercado brasileiro foram as imposições de tarifas de 50% por parte dos Estados Unidos sobre uma série de produtos nacionais. A incerteza inicial sobre o alcance dessas medidas afetou negativamente o sentimento dos investidores, pressionando o Ibovespa, que recuou 4,17% no mês. Ao final do mês, a divulgação de uma lista de quase 700 itens isentos trouxe algum alívio, com destaque para os setores de aviação e laranja. Contudo, setores como o de carne bovina seguiram pressionados. No campo monetário, o Copom manteve a taxa Selic em 15%, como esperado, diante das persistentes incertezas inflacionárias. Por outro lado, tivemos bons dados econômicos: o IGP-M registrou nova deflação, o IPCA-15 avançou 0,33% (abaixo da expectativa) e a taxa de desemprego caiu para 5,8%, o menor patamar da série. O FMI também revisou para cima a projeção de crescimento do PIB brasileiro para 2,3% em 2025.
-
 No cenário internacional, as tensões comerciais continuaram no centro das atenções. Além das tarifas direcionadas ao Brasil, os Estados Unidos mantiveram postura rígida nas negociações com a União Europeia e a China, o que gerou receios quanto ao impacto sobre o comércio global. O Federal Reserve optou por manter a taxa de juros no intervalo de 4,25% a 4,5% ao ano, em linha com as expectativas, reforçando um discurso de cautela diante do cenário externo desafiador. Apesar das incertezas, o S&P 500 avançou 2,17% no mês, refletindo a resiliência dos mercados americanos frente ao ambiente de maior aversão ao risco e reação aos bons resultados divulgados pelas empresas.
----
 `;
+
 let adminApp: App | null = null;
 
 
@@ -337,7 +326,7 @@ async function callDiscoveryEngine(
       const modelPrompt = `${preamble}${fileContextPreamble}`;
 
       const requestBody: any = {
-        query: query,
+        query: preamble === POSICAO_CONSOLIDADA_PREAMBLE ? "faça a análise deste relatório" : query,
         pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
@@ -433,21 +422,12 @@ async function callGemini(
     attachments: AttachedFile[] = [],
     preamble: string | null = null
 ): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; promptTokenCount?: number; candidatesTokenCount?: number; }> {
-    try {
-        const geminiApiKey = await getGeminiApiKey();
-        const genAI = new GoogleGenerativeAI(geminiApiKey);
-        
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash-latest",
-            safetySettings: [
-                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-            ]
-        });
+    const geminiApiKey = await getGeminiApiKey();
 
-        const defaultPreamble = 'Responda em português do Brasil, a menos que seja solicitado o contrário na pergunta.';
+    try {
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        
         let fileContextPreamble = '';
         if (attachments.length > 0) {
             fileContextPreamble = attachments.map(file => 
@@ -455,34 +435,28 @@ async function callGemini(
             ).join('');
         }
 
-        const finalPrompt = `${preamble || defaultPreamble}${fileContextPreamble}\n\nPergunta do usuário: "${query}"`;
-        
+        const finalPrompt = `
+            ${preamble || 'Responda em português do Brasil, a menos que seja solicitado o contrário na pergunta.'}
+            ${fileContextPreamble}
+            
+            Pergunta do usuário: "${query}"
+        `;
+
         const result = await model.generateContent(finalPrompt);
         const response = await result.response;
         const text = response.text();
-
-        const [promptTokens, candidatesTokens] = await Promise.all([
-            model.countTokens(finalPrompt),
-            model.countTokens(text),
-        ]);
         
-        const promptTokenCount = promptTokens?.totalTokens;
-        const candidatesTokenCount = candidatesTokens?.totalTokens;
+        const promptTokenCount = undefined;
+        const candidatesTokenCount = undefined;
 
-        return { 
-            summary: text, 
-            searchFailed: false, 
-            sources: [], 
-            promptTokenCount, 
-            candidatesTokenCount 
-        };
+        return { summary: text, searchFailed: false, sources: [], promptTokenCount, candidatesTokenCount };
 
     } catch (error: any) {
         console.error("Error calling Gemini API:", error);
         if (error.message.includes('API key not valid')) {
             throw new Error(`Erro de autenticação com a API Gemini. Verifique se a GEMINI_API_KEY é válida.`);
         }
-        throw new Error(`Erro ao chamar a API Gemini: ${error.message}`);
+        throw new Error(error.message);
     }
 }
 
@@ -570,14 +544,11 @@ export async function askAssistant(
         }
     }
 
-    // AVISO: O fluxo abaixo para 'useStandardAnalysis' é CRÍTICO para o negócio.
-    // Ele garante que a análise de Posição Consolidada seja sempre feita pelo Gemini com o preamble correto.
-    // NÃO ALTERE ESTE FLUXO SEM A DEVIDA VALIDAÇÃO.
     if (useStandardAnalysis) {
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else if (useWebSearch) {
-      result = await callGemini(deidentifiedQuery, [], null);
+      result = await callGemini(deidentifiedQuery);
       source = 'web';
     } else {
         await logQuestionForAnalytics(deidentifiedQuery);
@@ -648,10 +619,12 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
 
 export async function regenerateAnswer(
   originalQuery: string,
-  isStandardAnalysis: boolean,
   attachments: AttachedFile[],
+  options: {
+    isStandardAnalysis?: boolean;
+  } = {},
   userId?: string,
-  chatId?: string
+  chatId?: string,
 ): Promise<{ 
   summary?: string; 
   searchFailed?: boolean; 
@@ -678,7 +651,7 @@ export async function regenerateAnswer(
         await logRegeneratedQuestion(userId, chatId, deidentifiedQuery, '');
     }
 
-    if (isStandardAnalysis) {
+    if (options.isStandardAnalysis) {
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else {
@@ -1293,7 +1266,8 @@ export async function runApiHealthCheck(): Promise<any> {
     // Test Gemini API (Web Search)
     let geminiStartTime = Date.now();
     try {
-        await callGemini("teste", [], "Responda 'ok'");
+        const res = await callGemini("teste");
+        if (res.error) throw new Error(res.error);
         results.push({
             api: 'Google Gemini API',
             status: 'OK',
@@ -1310,7 +1284,3 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
-
-    
-
-    
