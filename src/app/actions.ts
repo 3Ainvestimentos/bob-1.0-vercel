@@ -327,13 +327,13 @@ async function callDiscoveryEngine(
 
       const requestBody: any = {
         query: preamble === POSICAO_CONSOLIDADA_PREAMBLE ? "faça a análise deste relatório" : query,
-        pageSize: 5,
+        pageSize: 10,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
         languageCode: 'pt-BR',
         contentSearchSpec: {
             summarySpec: {
-              summaryResultCount: 5,
+              summaryResultCount: 10,
               ignoreAdversarialQuery: true,
               includeCitations: false,
               modelPromptSpec: {
