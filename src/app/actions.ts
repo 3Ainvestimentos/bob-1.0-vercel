@@ -555,6 +555,9 @@ export async function askAssistant(
         }
     }
 
+    // AVISO: O fluxo abaixo para 'useStandardAnalysis' é CRÍTICO para o negócio.
+    // Ele garante que a análise de Posição Consolidada seja sempre feita pelo Gemini com o preamble correto.
+    // NÃO ALTERE ESTE FLUXO SEM A DEVIDA VALIDAÇÃO.
     if (useStandardAnalysis) {
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
@@ -1275,7 +1278,7 @@ export async function runApiHealthCheck(): Promise<any> {
     // Test Gemini API (Web Search)
     let geminiStartTime = Date.now();
     try {
-        const res = await callGemini("teste");
+        const res = await callGemini("teste", [], "Responda 'ok'");
         if (res.error) throw new Error(res.error);
         results.push({
             api: 'Google Gemini API',
