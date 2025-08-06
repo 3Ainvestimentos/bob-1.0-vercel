@@ -456,7 +456,7 @@ export function ChatInputForm({
                     </div>
                 </div>
             </div>
-          <div className="relative flex items-start min-h-[90px]">
+          <div className="relative flex min-h-[90px]">
             <TextareaAutosize
                 ref={inputRef}
                 placeholder={
