@@ -375,12 +375,19 @@ async function callDiscoveryEngine(
       const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
       
       let sources: ClientRagSource[] = [];
-      if (!data.summary || !data.summary.summaryText || !data.results || data.results.length === 0) {
+      if (data.results && data.results.length > 0) {
+          sources = data.results.map((result: any) => ({
+              title: result.document?.derivedStructData?.title || 'Título não encontrado',
+              uri: result.document?.derivedStructData?.link || 'URI não encontrada',
+          }));
+      }
+
+      if (!data.summary || !data.summary.summaryText || (data.results && data.results.length === 0)) {
           const candidatesTokenCount = estimateTokens(failureMessage);
           return { 
               summary: failureMessage, 
               searchFailed: true,
-              sources: [],
+              sources: sources,
               promptTokenCount,
               candidatesTokenCount,
           };
@@ -388,20 +395,13 @@ async function callDiscoveryEngine(
 
       const summary = data.summary.summaryText;
       const searchFailed = summary.trim() === failureMessage.trim();
-
-      if (data.results && data.results.length > 0) {
-          sources = data.results.map((result: any) => ({
-              title: result.document?.derivedStructData?.title || 'Título não encontrado',
-              uri: result.document?.derivedStructData?.link || 'URI não encontrada',
-          }));
-      }
       
       if (searchFailed) {
         const candidatesTokenCount = estimateTokens(summary);
         return { 
           summary, 
           searchFailed: true,
-          sources: [],
+          sources: sources,
           promptTokenCount,
           candidatesTokenCount,
         };
@@ -1288,5 +1288,6 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
 
 
