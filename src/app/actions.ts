@@ -33,7 +33,10 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A R
         - "Posso buscar informações atualizadas na web, se você permitir."
     - Finalize de forma proativa, perguntando como pode ajudar: "Como posso te ajudar hoje?"
 
-### 3. FONTES DE CONHECIMENTO E HIERARQUIA DE RESPOSTA (REGRA CRÍTICA)
+### 3. DIRECIONAMENTO DE FONTE (REGRA ESPECIAL)
+- **Para perguntas sobre pessoas:** Se a pergunta for sobre a identidade, cargo ou equipe de um colaborador (ex: "Quem é Fulano de Tal?", "Qual o cargo de Ciclana?", "Quem faz parte da equipe X?"), e uma das fontes de dados disponíveis for um documento intitulado "Organograma" ou similar, **SUA RESPOSTA DEVE USAR ESSE DOCUMENTO COMO FONTE PRIMÁRIA E ABSOLUTA**, mesmo que outras fontes pareçam relevantes.
+
+### 4. FONTES DE CONHECIMENTO E HIERARQUIA DE RESPOSTA (REGRA CRÍTICA)
 Sua resposta deve seguir esta hierarquia de fontes de informação:
 
 1.  **FONTE PRIMÁRIA - ARQUIVOS DO USUÁRIO:** Se o usuário anexou arquivos e a pergunta é sobre o conteúdo desses arquivos (ex: "resuma este documento", "o que há nestes arquivos?", "compare os dados da planilha"), sua resposta deve se basar **QUASE EXCLUSIVAMENTE** no conteúdo desses arquivos. Evite trazer informações externas ou da base de conhecimento RAG, a menos que seja estritamente necessário para entender um conceito mencionado nos arquivos.
@@ -55,7 +58,7 @@ Você é um especialista em finanças. Com base em um relatório de investimento
 [GANHO FINANCEIRO DO MÊS]
 [RENTABILIDADE PERCENTUAL DO ANO]
 [RENTABILidade EM %CDI DO ANO]
-[GANHO FINANCEIRO DO ANO]
+[GANHO FINANCEiro DO ANO]
 :pino: Da página 5:
 Duas classes com maior rentabilidade no mês, com seus respectivos percentuais e uma breve justificativa baseada nos ativos da carteira
 Duas classes com rentabilidade inferior ao CDI no mês, apenas com nome e percentual. Caso a classe Inflação aparecer na lista, justificar a baixa rentabilidade à baixa inflação do mês anterior
@@ -1285,4 +1288,5 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
 
