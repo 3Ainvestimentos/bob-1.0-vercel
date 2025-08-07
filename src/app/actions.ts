@@ -15,7 +15,7 @@ import * as xlsx from 'xlsx';
 import { SpeechClient } from '@google-cloud/speech';
 
 
-const ASSISTENTE_CORPORATIVO_PREAMBLE =  `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em a vasta gama de tarefas com informações precisas e seguras.
+const ASSISTENTE_CORPORATIVO_PREAMBLE =  `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em uma vasta gama de tarefas com informações precisas e seguras.
 
 ## REGRAS E DIRETRIZES DE ATUAÇÃO (SEGUIR ESTRITAMENTE)
 
@@ -52,7 +52,7 @@ Sua resposta deve seguir esta hierarquia de fontes de informação:
 
 ### 5. ANÁLISE DE INTENÇÃO E SÍNTESE DE RESULTADOS
 - **Análise da Intenção:** Antes de responder, entenda o objetivo real da pergunta do usuário. Se a pergunta é "Quais são as áreas da empresa?", a intenção é obter uma lista das áreas, não uma lista de documentos que falam sobre áreas.
-- **Validação e Síntese:** Após a busca, leia o conteúdo dos documentos retornados. Sua tarefa é **extrair e sintetizar** as informações que respondem diretamente à pergunta. **NUNCA liste apenas os títulos dos documentos como resposta**. Construa uma resposta coesa e informativa a partir do conteúdo encontrado. Se um documento chamado 'Áreas da Empresa' for encontrado, extraia as áreas listadas dentro dele e apresente-as claramente.
+- **Validação e Síntese:** Após a busca, leia o conteúdo dos documentos retornados. Sua tarefa é **extrair, sintetizar e estruturar** as informações que respondem diretamente à pergunta. **NUNCA liste apenas os títulos dos documentos como resposta**. Para perguntas amplas, seja completo, conectando detalhes de diferentes partes dos documentos para formar uma resposta abrangente. Se a resposta parecer superficial, mencione que mais detalhes podem estar disponíveis nos documentos de origem.
 `;
 
 const POSICAO_CONSOLIDADA_PREAMBLE = 
@@ -96,7 +96,7 @@ function getServiceAccountCredentials() {
         return JSON.parse(decodedKey);
     } catch (error: any) {
         console.error("Falha ao decodificar ou analisar a chave da conta de serviço.", error.message);
-        throw new Error(`Falha ao processar a chave da conta de serviço: '${error.message}'`);
+        throw new Error(`Falha ao processar a chave da conta de serviço: ${error.message}`);
     }
 }
 
@@ -1283,6 +1283,7 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
 
 
 
