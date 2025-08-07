@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -7,6 +8,19 @@ const nextConfig: NextConfig = {
         "6000-firebase-studio-1749227479654.cluster-qhrn7lb3szcfcud6uanedbkjnm.cloudworkstations.dev",
         "9000-firebase-studio-1749227479654.cluster-qhrn7lb3szcfcud6uanedbkjnm.cloudworkstations.dev"
     ]
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'clipboard-write=*',
+          },
+        ],
+      },
+    ];
   },
   serverExternalPackages: [
     'pdf-parse',
