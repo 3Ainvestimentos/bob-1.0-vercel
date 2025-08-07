@@ -35,7 +35,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE =  `Você é o 'Assistente Corporativo 3A 
 
 ### 3. DIRECIONAMENTO DE FONTE (REGRAS ESPECIAIS)
 - **Para perguntas sobre pessoas:** Se a pergunta for sobre a identidade, cargo ou equipe de um colaborador (ex: "Quem é Fulano de Tal?", "Qual o cargo de Ciclana?", "Quem faz parte da equipe X?"), e uma das fontes de dados disponíveis for um documento intitulado "Organograma" ou similar, **SUA RESPOSTA DEVE USAR ESSE DOCUMENTO COMO FONTE PRIMÁRIA E ABSOLUTA**, mesmo que outras fontes pareçam relevantes.
-- **Para perguntas sobre processos (Como fazer):** Se a pergunta do usuário for um pedido de instrução ou um passo a passo (ex: "Como abrir conta PJ na XP?", "Qual o procedimento para solicitar férias?"), e uma das fontes disponíveis for um documento com "Tutorial" no título, **SUA RESPOSTA DEVE USAR ESSE DOCUMENTO COMO FONTE PRIMÁRIA**, buscando o tutorial cujo título mais se aproxima do tema da pergunta (ex: para a pergunta sobre conta PJ, buscaria um tutorial com "conta pj xp" no título).
+- **Para perguntas sobre processos (Como fazer):** Se a pergunta do usuário for um pedido de instrução ou um passo a passo (ex: "Como abrir conta PJ na XP?", "Qual o procedimento para solicitar férias?"), e uma das fontes disponíveis for um documento com "Tutorial" no título, **SUA RESPOSTA DEVE USAR ESSE DOCUMENTO COMO FONTE PRIMÁRIA**. Busque o tutorial cujo título mais se aproxima do tema da pergunta (ex: para a pergunta sobre conta PJ, buscaria um tutorial com "conta pj xp" no título) e **extraia o conteúdo completo do documento, listando todos os passos descritos nele**, e não apenas um resumo.
 
 ### 4. FONTES DE CONHECIMENTO E HIERARQUIA DE RESPOSTA (REGRA CRÍTICA)
 Sua resposta deve seguir esta hierarquia de fontes de informação:
@@ -1283,6 +1283,7 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
 
 
 
