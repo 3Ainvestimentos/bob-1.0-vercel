@@ -33,8 +33,9 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE =  `Você é o 'Assistente Corporativo 3A 
         - "Posso buscar informações atualizadas na web, se você permitir."
     - Finalize de forma proativa, perguntando como pode ajudar: "Como posso te ajudar hoje?"
 
-### 3. DIRECIONAMENTO DE FONTE (REGRA ESPECIAL)
+### 3. DIRECIONAMENTO DE FONTE (REGRAS ESPECIAIS)
 - **Para perguntas sobre pessoas:** Se a pergunta for sobre a identidade, cargo ou equipe de um colaborador (ex: "Quem é Fulano de Tal?", "Qual o cargo de Ciclana?", "Quem faz parte da equipe X?"), e uma das fontes de dados disponíveis for um documento intitulado "Organograma" ou similar, **SUA RESPOSTA DEVE USAR ESSE DOCUMENTO COMO FONTE PRIMÁRIA E ABSOLUTA**, mesmo que outras fontes pareçam relevantes.
+- **Para perguntas sobre processos (Como fazer):** Se a pergunta do usuário for um pedido de instrução ou um passo a passo (ex: "Como abrir conta PJ na XP?", "Qual o procedimento para solicitar férias?"), e uma das fontes disponíveis for um documento com "Tutorial" no título, **SUA RESPOSTA DEVE USAR ESSE DOCUMENTO COMO FONTE PRIMÁRIA**, buscando o tutorial cujo título mais se aproxima do tema da pergunta (ex: para a pergunta sobre conta PJ, buscaria um tutorial com "conta pj xp" no título).
 
 ### 4. FONTES DE CONHECIMENTO E HIERARQUIA DE RESPOSTA (REGRA CRÍTICA)
 Sua resposta deve seguir esta hierarquia de fontes de informação:
@@ -95,7 +96,7 @@ function getServiceAccountCredentials() {
         return JSON.parse(decodedKey);
     } catch (error: any) {
         console.error("Falha ao decodificar ou analisar a chave da conta de serviço.", error.message);
-        throw new Error(`Falha ao processar a chave da conta de serviço: ${error.message}`);
+        throw new Error(`Falha ao processar a chave da conta de serviço: '${error.message}'`);
     }
 }
 
@@ -251,7 +252,7 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             return data.text;
         } catch (error: any) {
             console.error("Error parsing PDF:", error);
-            throw new Error(`Falha ao processar o arquivo PDF: ${error.message}`);
+            throw new Error(`Falha ao processar o arquivo PDF: '${error.message}'`);
         }
     } else if (
         mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || // .docx
@@ -262,7 +263,7 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             return result.value;
         } catch (error: any) {
             console.error("Error parsing Word document:", error);
-            throw new Error(`Falha ao processar o arquivo Word: ${error.message}`);
+            throw new Error(`Falha ao processar o arquivo Word: '${error.message}'`);
         }
     } else if (
         mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || // .xlsx
@@ -281,7 +282,7 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             return fullText;
         } catch (error: any) {
             console.error("Error parsing Excel file:", error);
-            throw new Error(`Falha ao processar o arquivo Excel: ${error.message}`);
+            throw new Error(`Falha ao processar o arquivo Excel: '${error.message}'`);
         }
     }
 
@@ -401,19 +402,8 @@ async function callDiscoveryEngine(
       const summary = data.summary.summaryText;
       const searchFailed = summary.trim() === failureMessage.trim();
       
-      if (searchFailed) {
-        const candidatesTokenCount = estimateTokens(summary);
-        return { 
-          summary, 
-          searchFailed: true,
-          sources: sources,
-          promptTokenCount,
-          candidatesTokenCount,
-        };
-      }
-      
       const candidatesTokenCount = estimateTokens(summary);
-      return { summary, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
+      return { summary, searchFailed, sources, promptTokenCount, candidatesTokenCount };
 
     } catch (error: any) {
       console.error("Error in callDiscoveryEngine:", error.message);
@@ -623,7 +613,7 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
         if (error.message.includes('permission') || error.message.includes('denied')) {
             throw new Error(`Erro de permissão com a API Speech-to-Text. Verifique se a conta de serviço tem o papel "Editor de Projeto" ou "Usuário de API Cloud Speech".`);
         }
-        throw new Error(`Não foi possível processar o áudio. Detalhes: ${error.message}`);
+        throw new Error(`Não foi possível processar o áudio. Detalhes: '${error.message}'`);
     }
 }
 
@@ -1025,7 +1015,7 @@ export async function getAdminInsights(): Promise<any> {
         };
     } catch (error: any) {
         console.error("Error fetching admin insights:", error.message);
-        return { error: `Não foi possível carregar os insights: ${error.message}` };
+        return { error: `Não foi possível carregar os insights: '${error.message}'` };
     }
 }
 
@@ -1045,7 +1035,7 @@ export async function getAdminUsers(): Promise<any> {
 
     } catch (error: any) {
         console.error('Error fetching admin users:', error);
-        return { error: `Não foi possível buscar a lista de usuários: ${error.message}` };
+        return { error: `Não foi possível buscar a lista de usuários: '${error.message}'` };
     }
 }
 
@@ -1094,7 +1084,7 @@ export async function getLegalIssueAlerts(): Promise<any> {
         return alerts;
     } catch (error: any) {
         console.error('Error fetching legal issue alerts:', error);
-        return { error: `Não foi possível buscar os alertas jurídicos: ${error.message}` };
+        return { error: `Não foi possível buscar os alertas jurídicos: '${error.message}'` };
     }
 }
 
@@ -1148,7 +1138,7 @@ export async function getFeedbacks(): Promise<any> {
 
     } catch (error: any) {
         console.error('Error fetching feedbacks:', error);
-        return { error: `Não foi possível buscar os feedbacks: ${error.message}` };
+        return { error: `Não foi possível buscar os feedbacks: '${error.message}'` };
     }
 }
 
@@ -1293,6 +1283,8 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+
 
 
 
