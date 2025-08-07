@@ -1,43 +1,23 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Regra Geral: Bloqueia todo o acesso por padrão.
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Permite que usuários autenticados leiam e modifiquem APENAS seus próprios dados.
-    match /users/{userId}/{document=**} {
+    
+    // Regra para dados de usuário: um usuário só pode ler e escrever em seus próprios documentos.
+    match /users/{userId}/{documents=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Permite que um usuário autenticado verifique se ele mesmo é um admin.
-    // Ninguém pode listar todos os admins ou modificar a coleção.
-    match /admins/{userId} {
-      allow get: if request.auth != null && request.auth.uid == userId;
-      allow list, create, update, delete: if false;
-    }
-
-    // Permite que usuários autenticados criem logs de alerta, mas não os leiam ou modifiquem.
-    match /dlp_alerts/{alertId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if false; // Apenas o backend/admins devem ler.
-    }
-    match /legal_issue_alerts/{alertId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if false; // Apenas o backend/admins devem ler.
+    // Nova regra para arquivamento: permite que um usuário crie um documento em 'archived_chats'.
+    // A segurança é garantida ao verificar se o ID do usuário que está fazendo a requisição
+    // é o mesmo que está sendo salvo no campo 'deletedBy' do documento de arquivamento.
+    match /archived_chats/{chatId} {
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.deletedBy;
+      
+      // Nega a leitura, atualização ou exclusão de chats arquivados pelo cliente para segurança.
+      allow read, update, delete: if false;
     }
     
-    // Apenas o backend (através da conta de serviço) pode ler e escrever nesta coleção.
-    // O acesso do cliente é bloqueado.
-    match /question_analytics/{questionId} {
-      allow read, write: if false;
-    }
-
-    // Ninguém pode ler ou escrever na coleção de chats arquivados diretamente.
-    match /archived_chats/{chatId} {
-        allow read, write: if false;
-    }
+    // Nega acesso a qualquer outra coleção na raiz por padrão.
   }
 }
