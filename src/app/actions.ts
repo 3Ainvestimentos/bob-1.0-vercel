@@ -342,7 +342,7 @@ async function callDiscoveryEngine(
         languageCode: 'pt-BR',
         contentSearchSpec: {
             summarySpec: {
-              summaryResultCount: 10,
+              summaryResultCount: 1,
               ignoreAdversarialQuery: true,
               includeCitations: false,
               modelPromptSpec: {
@@ -1283,6 +1283,7 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
 
 
 
