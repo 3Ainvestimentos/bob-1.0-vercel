@@ -390,12 +390,13 @@ async function callDiscoveryEngine(
           let tutorialContent = "Com base nos documentos encontrados, aqui estão os procedimentos:\n\n";
           tutorialContent += tutorialResults.map((result: any) => {
               const title = result.document?.derivedStructData?.title || 'Tutorial';
+              const cleanTitle = title.replace(/tutorial/gi, '').trim();
               const content = result.document?.derivedStructData?.extractive_answers?.[0]?.content || 'Conteúdo não encontrado.';
-              return `**${title.toUpperCase()}**\n${content}`;
+              return `**${cleanTitle.toUpperCase()}**\n${content}`;
           }).join('\n\n---\n\n');
           
           sources = tutorialResults.map((result: any) => ({
-              title: result.document?.derivedStructData?.title || 'Título não encontrado',
+              title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial/gi, '').trim(),
               uri: result.document?.derivedStructData?.link || 'URI não encontrada',
           }));
           const candidatesTokenCount = estimateTokens(tutorialContent);
