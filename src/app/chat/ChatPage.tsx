@@ -585,7 +585,7 @@ function ChatPageContent() {
                 });
             }
             // Always fetch data after check
-            fetchSidebarData();
+            await fetchSidebarData();
         } catch (err: any) {
             toast({
                 variant: 'destructive',
@@ -593,8 +593,6 @@ function ChatPageContent() {
                 description: err.message,
             });
             await handleSignOut();
-        } finally {
-            // isSidebarLoading is set to false inside fetchSidebarData
         }
     };
     
@@ -776,13 +774,14 @@ function ChatPageContent() {
   
     const query = lastFailedQuery;
     
-    const messagesWithUserQuery = messages.filter(m => m.id !== messages[messages.length - 1].id);
+    // Remove the "no results" assistant message before performing the web search.
+    const messagesWithoutFailure = messages.filter(m => m.id !== messages[messages.length - 1].id);
   
+    setMessages(messagesWithoutFailure);
     setLastFailedQuery(null);
     setIsLoading(true);
     setError(null);
-    setMessages(messagesWithUserQuery);
-  
+    
     try {
       const assistantResponse = await askAssistant(
         query,
@@ -809,7 +808,7 @@ function ChatPageContent() {
         latencyMs: assistantResponse.latencyMs,
       };
   
-      const finalMessages = [...messagesWithUserQuery, assistantMessage];
+      const finalMessages = [...messagesWithoutFailure, assistantMessage];
       setMessages(finalMessages);
   
       if (activeChatId) {
@@ -1627,3 +1626,5 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
+
+    
