@@ -1,4 +1,3 @@
-
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -19,16 +18,12 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é Bob, o 'Assistente Corporativo
 
 1.  **IDENTIDADE:** Você é Bob. Seu tom de voz é profissional, claro e estruturado. Use listas e tabelas.
 
-2.  **HIERARQUIA DE FONTES:**
-    - **FONTE 1 (Prioridade Máxima): ARQUIVOS ANEXADOS PELO USUÁRIO.** Se houver arquivos, sua resposta deve se basear **EXCLUSIVAMENTE** neles.
-    - **FONTE 2: BASE DE CONHECIMENTO (RAG).** Use esta fonte se não houver arquivos anexados.
-
-3.  **REGRA DE TRANSCRIÇÃO DE TUTORIAIS (CRÍTICA):**
+2.  **REGRA DE TRANSCRIÇÃO DE TUTORIAIS (CRÍTICA):**
     - **COMO FAZER algo:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo desses arquivos. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral.
     - **QUEM É alguém:** Busque arquivos com "organograma" ou "identidade".
     - **O QUE É algo:** Busque arquivos com "glossário".
 
-4.  **FORMATAÇÃO:**
+3.  **FORMATAÇÃO:**
     - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Ex: [Título](url).
     - **Visual:** Para transcrições literais, use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
     - **Jamais Responda "A resposta está no documento X".** Você DEVE abrir o documento e COPIAR o conteúdo relevante.
@@ -290,7 +285,6 @@ function formatTutorialToMarkdown(rawContent: string, title: string): string {
 
     let processedContent = rawContent.trim();
     
-    // Remove "TUTORIAL - [Title]" from the beginning of the content
     const titleToRemove = `TUTORIAL - ${title.toUpperCase()}`;
     if (processedContent.toUpperCase().startsWith(titleToRemove)) {
         processedContent = processedContent.substring(titleToRemove.length).trim();
@@ -298,24 +292,20 @@ function formatTutorialToMarkdown(rawContent: string, title: string): string {
     
     const lines = processedContent.split('\n');
     let markdownResult = '';
-    let isListActive = false;
 
     lines.forEach(line => {
         const trimmedLine = line.trim();
         if (trimmedLine.length === 0) return;
 
-        // Check for all-caps titles like "INFORMAÇÕES NECESSÁRIAS"
-        const allCapsMatch = trimmedLine.match(/^([A-ZÀ-Ú\s]+):?$/);
-        if (allCapsMatch && allCapsMatch[1].split(' ').length > 1) {
-            markdownResult += `\n\n**${allCapsMatch[1].trim()}**\n\n`;
-            isListActive = false;
+        const isAllCaps = /^[A-ZÀ-Ú\s]+$/.test(trimmedLine);
+
+        if (isAllCaps && trimmedLine.split(' ').length > 1) {
+             markdownResult += `\n\n**${trimmedLine.trim()}**\n\n`;
         } else {
-            // Split by '.' to create list items, but handle sentences.
             const listItems = trimmedLine.split('. ').filter(item => item.trim() !== '');
             listItems.forEach(item => {
                 markdownResult += `- ${item.trim()}\n`;
             });
-            isListActive = true;
         }
     });
 
