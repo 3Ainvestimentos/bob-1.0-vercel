@@ -15,37 +15,22 @@ import * as xlsx from 'xlsx';
 import { SpeechClient } from '@google-cloud/speech';
 
 
-const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é Bob, o "Assistente Corporativo 3A RIVA". Sua única função é ser um "copiador inteligente" e seguir estas regras de forma ESTRITA e LITERAL.
-
-### REGRA MÁXIMA: TRANSCRIÇÃO LITERAL
-- **SUA ÚNICA FUNÇÃO É LOCALIZAR E TRANSCREVER O CONTEÚDO EXATO DO DOCUMENTO.**
-- **PROIBIÇÃO ABSOLUTA:** É terminantemente proibido criar, gerar, resumir, interpretar, inferir, modificar ou adicionar qualquer palavra ou ideia que não esteja EXPLICITAMENTE escrita no documento fonte. Qualquer desvio do texto original é uma falha grave.
-- **NÃO FAÇA RESUMOS:** Se o documento tem 10 páginas, sua resposta deve conter o conteúdo relevante das 10 páginas.
-- **PROIBIÇÃO DE DIRECIONAMENTO:** Nunca responda "A resposta está no documento X". Você DEVE abrir o documento e COPIAR o conteúdo relevante.
+const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é Bob, o "Assistente Corporativo 3A RIVA". Siga estas regras ESTRITAS e LITERAIS:
 
 ### 1. IDENTIDADE E TOM DE VOZ
-- **Identidade:** Bob, o Assistente Corporativo 3A RIVA.
-- **Tom de Voz:** Profissional, claro, objetivo e estritamente informativo, baseado apenas nos dados.
+- **Identidade:** Assistente Corporativo 3A RIVA.
+- **Tom de Voz:** Profissional, claro, objetivo e estritamente informativo, baseado apenas nos dados encontrados.
 
-### 2. DIRECIONAMENTO DE FONTE E EXTRAÇÃO (HIERARQUIA OBRIGATÓRIA)
+### 2. HIERARQUIA DE FONTES (OBRIGATÓRIO)
 Sua resposta deve ser construída seguindo esta hierarquia:
+- **FONTE 1 (Prioridade Máxima): ARQUIVOS ANEXADOS PELO USUÁRIO.** Se houver arquivos, sua resposta deve se basear **EXCLUSIVAMENTE** neles.
+- **FONTE 2: BASE DE CONHECIMENTO INTERNA (RAG).** Use esta fonte apenas se não houver arquivos anexados.
 
-#### **FONTE 1: ARQUIVOS ANEXADOS PELO USUÁRIO**
-- Se houver arquivos anexados, sua resposta deve se basear **QUASE EXCLUSIVAMENTE** neles.
-- Ignore a base de conhecimento (RAG) a menos que a pergunta explicitamente peça para comparar o arquivo com dados internos.
-
-#### **FONTE 2: BASE DE CONHECIMENTO INTERNA (RAG)**
-- Use esta fonte apenas se não houver arquivos anexados ou se a pergunta os relaciona com dados internos.
-- **Análise de Intenção e Síntese de Resultados:**
-    - **SEJA COMPLETO:** Ao encontrar um documento relevante, não pare na primeira informação. Conecte detalhes de todas as partes relevantes do(s) documento(s) para fornecer uma resposta completa e abrangente.
-    - **ESTRUTURE A RESPOSTA:** Organize as informações de forma clara, usando listas, marcadores e títulos para facilitar a leitura. Uma resposta bem estruturada é essencial.
-    - **SEJA PROATIVO NA INFORMAÇÃO:** Se a resposta parecer superficial com base no que foi encontrado, indique que mais detalhes podem estar disponíveis nos documentos de origem.
-- **Regras de Direcionamento Específico:**
-    - **Para perguntas sobre "quem é alguém"**: Priorize a busca por arquivos com "Organograma" no título.
-    - **Para perguntas sobre "como fazer algo" (ex: "Como abrir conta?")**:
-        1. Priorize a busca por arquivos com "Tutorial" no título.
-        2. **EXTRAIA E APRESENTE O CONTEÚDO COMPLETO**: Você deve retornar **TODOS OS PASSOS** descritos no documento do tutorial, de forma **LITERAL E NA ÍNTEGRA**. Não resuma.
-`;
+### 3. REGRAS PARA TUTORIAIS ("Como fazer algo")
+- **REGRA DE EXTRAÇÃO:** Se a pergunta é sobre "como fazer algo" e você encontrar um documento de tutorial, sua única função é **COPIAR E TRANSCREVER O CONTEÚDO EXATO** do documento.
+- **PROIBIÇÃO DE RESUMO:** Não resuma, interprete, modifique ou adicione qualquer informação que não esteja literalmente no documento do tutorial.
+- **PROIBIÇÃO DE DIRECIONAMENTO:** Nunca responda "A resposta está no documento X". Você DEVE extrair o conteúdo relevante e apresentá-lo.
+        `;
 
 
 const POSICAO_CONSOLIDADA_PREAMBLE = 
@@ -89,7 +74,7 @@ function getServiceAccountCredentials() {
         return JSON.parse(decodedKey);
     } catch (error: any) {
         console.error("Falha ao decodificar ou analisar a chave da conta de serviço.", error.message);
-        throw new Error(`Falha ao processar a chave da conta de serviço: ${error.message}`);
+        throw new Error(`Falha ao processar a chave da conta de serviço: ${'${error.message}'}`);
     }
 }
 
@@ -245,7 +230,7 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             return data.text;
         } catch (error: any) {
             console.error("Error parsing PDF:", error);
-            throw new Error(`Falha ao processar o arquivo PDF: '${error.message}'`);
+            throw new Error(`Falha ao processar o arquivo PDF: '${'${error.message}'}'`);
         }
     } else if (
         mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || // .docx
@@ -256,7 +241,7 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             return result.value;
         } catch (error: any) {
             console.error("Error parsing Word document:", error);
-            throw new Error(`Falha ao processar o arquivo Word: '${error.message}'`);
+            throw new Error(`Falha ao processar o arquivo Word: '${'${error.message}'}'`);
         }
     } else if (
         mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || // .xlsx
@@ -266,21 +251,21 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
             let fullText = '';
             workbook.SheetNames.forEach(sheetName => {
-                fullText += `\n\n### Início da Planilha: ${sheetName} ###\n\n`;
+                fullText += `\n\n### Início da Planilha: ${'${sheetName}'} ###\n\n`;
                 const worksheet = workbook.Sheets[sheetName];
                 const sheetData = xlsx.utils.sheet_to_csv(worksheet, { header: 1 });
                 fullText += sheetData;
-                fullText += `\n\n### Fim da Planilha: ${sheetName} ###\n`;
+                fullText += `\n\n### Fim da Planilha: ${'${sheetName}'} ###\n`;
             });
             return fullText;
         } catch (error: any) {
             console.error("Error parsing Excel file:", error);
-            throw new Error(`Falha ao processar o arquivo Excel: '${error.message}'`);
+            throw new Error(`Falha ao processar o arquivo Excel: '${'${error.message}'}'`);
         }
     }
 
     
-    throw new Error(`O processamento de arquivos do tipo '${mimeType}' não é suportado.`);
+    throw new Error(`O processamento de arquivos do tipo '${'${mimeType}'}' não é suportado.`);
 }
 
 async function callDiscoveryEngine(
@@ -610,7 +595,7 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
         if (error.message.includes('permission') || error.message.includes('denied')) {
             throw new Error(`Erro de permissão com a API Speech-to-Text. Verifique se a conta de serviço tem o papel "Editor de Projeto" ou "Usuário de API Cloud Speech".`);
         }
-        throw new Error(`Não foi possível processar o áudio. Detalhes: '${error.message}'`);
+        throw new Error(`Não foi possível processar o áudio. Detalhes: '${'${error.message}'}'`);
     }
 }
 
@@ -1012,7 +997,7 @@ export async function getAdminInsights(): Promise<any> {
         };
     } catch (error: any) {
         console.error("Error fetching admin insights:", error.message);
-        return { error: `Não foi possível carregar os insights: '${error.message}'` };
+        return { error: `Não foi possível carregar os insights: '${'${error.message}'}'` };
     }
 }
 
@@ -1032,7 +1017,7 @@ export async function getAdminUsers(): Promise<any> {
 
     } catch (error: any) {
         console.error('Error fetching admin users:', error);
-        return { error: `Não foi possível buscar a lista de usuários: '${error.message}'` };
+        return { error: `Não foi possível buscar a lista de usuários: '${'${error.message}'}'` };
     }
 }
 
@@ -1081,7 +1066,7 @@ export async function getLegalIssueAlerts(): Promise<any> {
         return alerts;
     } catch (error: any) {
         console.error('Error fetching legal issue alerts:', error);
-        return { error: `Não foi possível buscar os alertas jurídicos: '${error.message}'` };
+        return { error: `Não foi possível buscar os alertas jurídicos: '${'${error.message}'}'` };
     }
 }
 
@@ -1135,7 +1120,7 @@ export async function getFeedbacks(): Promise<any> {
 
     } catch (error: any) {
         console.error('Error fetching feedbacks:', error);
-        return { error: `Não foi possível buscar os feedbacks: '${error.message}'` };
+        return { error: `Não foi possível buscar os feedbacks: '${'${error.message}'}'` };
     }
 }
 
@@ -1298,4 +1283,5 @@ export async function runApiHealthCheck(): Promise<any> {
     
 
     
+
 
