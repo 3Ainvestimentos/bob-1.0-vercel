@@ -557,16 +557,7 @@ export async function askAssistant(
     }
 
     if (!result || typeof result.summary === 'undefined') {
-        const errorMessage = result?.searchFailed
-            ? "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web"
-            : "Nenhum resultado encontrado. Tente reformular a consulta da pesquisa.";
-        
-        return {
-            summary: errorMessage,
-            searchFailed: result?.searchFailed ?? true,
-            source: 'rag',
-            error: !result ? "A chamada ao serviço de IA retornou uma resposta vazia." : undefined
-        };
+        throw new Error("A chamada ao serviço de IA retornou uma resposta vazia ou inválida.");
     }
     
     const latencyMs = Date.now() - startTime;
@@ -583,7 +574,13 @@ export async function askAssistant(
     };
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
-    return { error: error.message };
+    const errorMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
+    return {
+      summary: errorMessage,
+      searchFailed: true,
+      source: "rag",
+      error: error.message,
+    };
   }
 }
 
@@ -1299,6 +1296,8 @@ export async function runApiHealthCheck(): Promise<any> {
 
 
 
+
+    
 
     
 
