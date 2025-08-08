@@ -285,6 +285,26 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
     throw new Error(`O processamento de arquivos do tipo '${mimeType}' não é suportado.`);
 }
 
+function formatTutorialToMarkdown(rawContent: string): string {
+    if (!rawContent) return 'Conteúdo não encontrado.';
+
+    const lines = rawContent.split('\n').filter(line => line.trim() !== '');
+    
+    const formattedLines = lines.map(line => {
+        const trimmedLine = line.trim();
+        // Verifica se a linha começa com um número seguido de ponto ou parêntese
+        if (/^\d+[.)]/.test(trimmedLine)) {
+            // Remove o número e o ponto/parêntese para adicionar o do markdown
+            return trimmedLine.replace(/^\d+[.)]\s*/, '');
+        }
+        return trimmedLine;
+    });
+    
+    // Junta as linhas formatadas como uma lista numerada
+    return formattedLines.map((line, index) => `${index + 1}. ${line}`).join('\n');
+}
+
+
 async function callDiscoveryEngine(
     query: string,
     attachments: AttachedFile[],
@@ -391,8 +411,9 @@ async function callDiscoveryEngine(
           tutorialContent += tutorialResults.map((result: any) => {
               const title = result.document?.derivedStructData?.title || 'Tutorial';
               const cleanTitle = title.replace(/tutorial/gi, '').trim();
-              const content = result.document?.derivedStructData?.extractive_answers?.[0]?.content || 'Conteúdo não encontrado.';
-              return `**${cleanTitle.toUpperCase()}**\n${content}`;
+              const rawContent = result.document?.derivedStructData?.extractive_answers?.[0]?.content || 'Conteúdo não encontrado.';
+              const formattedContent = formatTutorialToMarkdown(rawContent);
+              return `**${cleanTitle.toUpperCase()}**\n${formattedContent}`;
           }).join('\n\n---\n\n');
           
           sources = tutorialResults.map((result: any) => ({
