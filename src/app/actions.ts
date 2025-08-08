@@ -15,23 +15,69 @@ import * as xlsx from 'xlsx';
 import { SpeechClient } from '@google-cloud/speech';
 
 
-const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é Bob, o "Assistente Corporativo 3A RIVA". Sua identidade é a de um assistente profissional, claro e objetivo.
-Sua resposta deve ser estritamente informativa, baseada apenas nos dados encontrados.
-Se a pergunta é sobre "como fazer algo" e você encontrar um documento de tutorial, sua única função é COPIAR E TRANSCREVER O CONTEÚDO EXATO do documento. Não resuma, interprete ou modifique o conteúdo do tutorial.
-Sempre que possível, estruture as respostas com listas e tabelas para facilitar a leitura.
+const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é o 'Assistente Corporativo 3A RIVA', a inteligência artificial de suporte da 3A RIVA. Seu nome é Bob. Seu propósito é ser um parceiro estratégico para todos os colaboradores da 3A RIVA, auxiliando em a vasta gama de tarefas com informações precisas e seguras.
+
+## REGRAS E DIRETRIZES DE ATUAÇÃO (SEGUIR ESTRITAMENTE)
+
+### 1. IDENTIDADE E TOM DE VOZ
+- **Identidade:** Você é Bob, o Assistente Corporativo 3A RIVA.
+- **Tom de Voz:** Profissional, claro, objetivo e estruturado. Use listas, marcadores e tabelas para organizar informações.
+
+### 2. COMPORTAMENTO EM SAUDAÇÕES
+- **REGRA DE APRESENTAÇÃO:** Se a pergunta do usuário for apenas uma saudação (por exemplo: "Olá", "ola", "Oi", "Bom dia", "Tudo bem?") ou qualquer outro tipo de saudação, sua primeira resposta DEVE ser uma apresentação sua.
+- **Conteúdo da Apresentação:**
+    - Comece se apresentando: "Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA."
+    - Em seguida, liste de 3 a 4 das suas principais funcionalidades em formato de tópicos para que o usuário saiba o que você pode fazer. Por exemplo:
+        - "Posso analisar documentos que você anexar (como PDFs e planilhas)."
+        - "Respondo perguntas com base em nossa base de conhecimento interna."
+        - "Posso buscar informações atualizadas na web, se você permitir."
+    - Finalize de forma proativa, perguntando como pode ajudar: "Como posso te ajudar hoje?"
+
+### 3. FONTES DE CONHECIMENTO E HIERARQUIA DE RESPOSTA (REGRA CRÍTICA)
+Sua resposta deve seguir esta hierarquia de fontes de informação:
+
+1.  **FONTE PRIMÁRIA - ARQUIVOS DO USUÁRIO:** Se o usuário anexou arquivos e a pergunta é sobre o conteúdo desses arquivos (ex: "resuma este documento", "o que há nestes arquivos?", "compare os dados da planilha"), sua resposta deve se basar **QUASE EXCLUSIVAMENTE** no conteúdo desses arquivos. Evite trazer informações externas ou da base de conhecimento RAG, a menos que seja estritamente necessário para entender um conceito mencionado nos arquivos.
+
+2.  **FONTE SECUNDÁRIA - BASE DE CONHECIMENTO (RAG):** Se a pergunta do usuário requer conhecimento interno da 3A RIVA (ex: "quais são nossos produtos?", "me fale sobre o procedimento X") e **também** faz referência a um arquivo anexado (ex: "compare o arquivo com nossos produtos"), você deve **sintetizar** as informações de AMBAS as fontes (arquivos do usuário e resultados do RAG) para criar uma resposta completa.
+
+3.  **PROIBIÇÃO DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado geral ou qualquer informação externa que não seja fornecida no contexto (arquivos ou RAG). Não invente, não infira, não adivinhe.
+
+4.  **LINKS:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Exemplo: [Título](url).
+
+5.  **MÉTODOS DE PESQUISA** - Nunca responda "A resposta está no documento X". Você **DEVE** abrir o documento e **COPIAR** o conteúdo relevante.
+
+Priorize a busca de arquivos com base na intenção da pergunta:
+- **COMO FAZER algo:** Busque arquivos com **"tutorial"** no nome E APENAS COPIE O CONTEÚDO.
+- **QUEM É alguém:** Busque arquivos com **"organograma"** ou **"identidade"** no nome.
+- **O QUE É algo:** Busque arquivos com **"glossário"** no nome.
+
+---
+EXEMPLO DE RESPOSTA OBRIGATÓRIA PARA A QUERY DO TIPO COMO FAZER algo: 
+Com base nos documentos encontrados, aqui estão os procedimentos:
+
+**ALTERAR SENHA - SITE** (Excluir a palavra 'TUTORIAL' caso esteja presente no nome do arquivo)
+*CONTEÚDO COPIADO EXATAMENTE DO ARQUIVO, SEM NENHUMA ALTERAÇÃO*
+1. Acesse sua conta pelo site www.xpi.com.br.
+2. Clique em seu nome no canto superior direito da tela.
+3. Selecione "MEUS DADOS".
+...
+
+**ALTERAR SENHA - APP** (Excluir a palavra 'TUTORIAL' caso esteja presente no nome do arquivo)
+*CONTEÚDO COPIADO EXATAMENTE DO ARQUIVO, SEM NENHUMA ALTERAÇÃO*
+1. Acesse sua conta pelo aplicativo XP Investimentos.
+2. No menu, clique em "MEUS DADOS".
+3. Clique em "SEGURANÇA".
+...
 `;
 
-
-const POSICAO_CONSOLIDADA_PREAMBLE = 
-`REGRA_OBRIGATÓRIA: Preciso que a resposta seja em MARKDOWN
-Você é um especialista em finanças. Com base em um relatório de investimentos em PDF da XP, extraia:
+const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanças. Com base em um relatório de investimentos em PDF da XP, extraia:
 :pino: Da página 2:
 [RENTABILIDADE PERCENTUAL DO MÊS]
 [RENTABILIDADE EM %CDI DO MÊS]
 [GANHO FINANCEIRO DO MÊS]
 [RENTABILIDADE PERCENTUAL DO ANO]
-[RENTABILidade EM %CDI DO ANO]
-[GANHO FINANCEiro DO ANO]
+[RENTABILIDADE EM %CDI DO ANO]
+[GANHO FINANCEIRO DO ANO]
 :pino: Da página 5:
 Duas classes com maior rentabilidade no mês, com seus respectivos percentuais e uma breve justificativa baseada nos ativos da carteira
 Duas classes com rentabilidade inferior ao CDI no mês, apenas com nome e percentual. Caso a classe Inflação aparecer na lista, justificar a baixa rentabilidade à baixa inflação do mês anterior
@@ -45,8 +91,7 @@ Os principais detratores foram:
 [Classe 1]: [rentabilidade]
 [Classe 2]: [rentabilidade]
 Em julho de 2025, o assunto da vez no mercado brasileiro foram as imposições de tarifas de 50% por parte dos Estados Unidos sobre uma série de produtos nacionais. A incerteza inicial sobre o alcance dessas medidas afetou negativamente o sentimento dos investidores, pressionando o Ibovespa, que recuou 4,17% no mês. Ao final do mês, a divulgação de uma lista de quase 700 itens isentos trouxe algum alívio, com destaque para os setores de aviação e laranja. Contudo, setores como o de carne bovina seguiram pressionados. No campo monetário, o Copom manteve a taxa Selic em 15%, como esperado, diante das persistentes incertezas inflacionárias. Por outro lado, tivemos bons dados econômicos: o IGP-M registrou nova deflação, o IPCA-15 avançou 0,33% (abaixo da expectativa) e a taxa de desemprego caiu para 5,8%, o menor patamar da série. O FMI também revisou para cima a projeção de crescimento do PIB brasileiro para 2,3% em 2025.
-No cenário internacional, as tensões comerciais continuaram no centro das atenções. Além das tarifas direcionadas ao Brasil, os Estados Unidos mantiveram postura rígida nas negociações com a União Europeia e a China, o que gerou receios quanto ao impacto sobre o comércio global. O Federal Reserve optou por manter a taxa de juros no intervalo de 4,25% a 4,5% ao ano, em linha com as expectativas, reforçando um discurso de cautela diante do cenário externo desafiador. Apesar das incertezas, o S&P 500 avançou 2,17% no mês, refletindo a resiliência dos mercados americanos frente ao ambiente de maior aversão ao risco e reação aos bons resultados divulgados pelas empresas.
-`;
+No cenário internacional, as tensões comerciais continuaram no centro das atenções. Além das tarifas direcionadas ao Brasil, os Estados Unidos mantiveram postura rígida nas negociações com a União Europeia e a China, o que gerou receios quanto ao impacto sobre o comércio global. O Federal Reserve optou por manter a taxa de juros no intervalo de 4,25% a 4,5% ao ano, em linha com as expectativas, reforçando um discurso de cautela diante do cenário externo desafiador. Apesar das incertezas, o S&P 500 avançou 2,17% no mês, refletindo a resiliência dos mercados americanos frente ao ambiente de maior aversão ao risco e reação aos bons resultados divulgados pelas empresas.`;
 
 let adminApp: App | null = null;
 
@@ -63,7 +108,7 @@ function getServiceAccountCredentials() {
         return JSON.parse(decodedKey);
     } catch (error: any) {
         console.error("Falha ao decodificar ou analisar a chave da conta de serviço.", error.message);
-        throw new Error(`Falha ao processar a chave da conta de serviço: ${'${error.message}'}`);
+        throw new Error(`Falha ao processar a chave da conta de serviço: ${error.message}`);
     }
 }
 
@@ -219,7 +264,7 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             return data.text;
         } catch (error: any) {
             console.error("Error parsing PDF:", error);
-            throw new Error(`Falha ao processar o arquivo PDF: '${'${error.message}'}'`);
+            throw new Error(`Falha ao processar o arquivo PDF: ${error.message}`);
         }
     } else if (
         mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || // .docx
@@ -230,7 +275,7 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             return result.value;
         } catch (error: any) {
             console.error("Error parsing Word document:", error);
-            throw new Error(`Falha ao processar o arquivo Word: '${'${error.message}'}'`);
+            throw new Error(`Falha ao processar o arquivo Word: ${error.message}`);
         }
     } else if (
         mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || // .xlsx
@@ -240,21 +285,21 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
             const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
             let fullText = '';
             workbook.SheetNames.forEach(sheetName => {
-                fullText += `\n\n### Início da Planilha: ${'${sheetName}'} ###\n\n`;
+                fullText += `\n\n### Início da Planilha: ${sheetName} ###\n\n`;
                 const worksheet = workbook.Sheets[sheetName];
                 const sheetData = xlsx.utils.sheet_to_csv(worksheet, { header: 1 });
                 fullText += sheetData;
-                fullText += `\n\n### Fim da Planilha: ${'${sheetName}'} ###\n`;
+                fullText += `\n\n### Fim da Planilha: ${sheetName} ###\n`;
             });
             return fullText;
         } catch (error: any) {
             console.error("Error parsing Excel file:", error);
-            throw new Error(`Falha ao processar o arquivo Excel: '${'${error.message}'}'`);
+            throw new Error(`Falha ao processar o arquivo Excel: ${error.message}`);
         }
     }
 
     
-    throw new Error(`O processamento de arquivos do tipo '${'${mimeType}'}' não é suportado.`);
+    throw new Error(`O processamento de arquivos do tipo '${mimeType}' não é suportado.`);
 }
 
 async function callDiscoveryEngine(
@@ -303,13 +348,13 @@ async function callDiscoveryEngine(
 
       const requestBody: any = {
         query: preamble === POSICAO_CONSOLIDADA_PREAMBLE ? "faça a análise deste relatório" : query,
-        pageSize: 10,
+        pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
         languageCode: 'pt-BR',
         contentSearchSpec: {
             summarySpec: {
-              summaryResultCount: 1,
+              summaryResultCount: 5,
               ignoreAdversarialQuery: true,
               includeCitations: false,
               modelPromptSpec: {
@@ -348,16 +393,9 @@ async function callDiscoveryEngine(
       const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
       
       let sources: ClientRagSource[] = [];
-      if (data.results && data.results.length > 0) {
-          sources = data.results.map((result: any) => ({
-              title: result.document?.derivedStructData?.title || 'Título não encontrado',
-              uri: result.document?.derivedStructData?.link || 'URI não encontrada',
-          }));
-      }
-
-      const summary = data.summary?.summaryText || "";
-
-      if (!summary || data.results?.length === 0) {
+      const summary = data.summary?.summaryText;
+      
+      if (!summary || !data.results || data.results.length === 0) {
           const candidatesTokenCount = estimateTokens(failureMessage);
           return { 
               summary: failureMessage, 
@@ -366,6 +404,26 @@ async function callDiscoveryEngine(
               promptTokenCount,
               candidatesTokenCount,
           };
+      }
+
+      const searchFailed = summary.trim() === failureMessage.trim();
+
+      if (data.results && data.results.length > 0) {
+          sources = data.results.map((result: any) => ({
+              title: result.document?.derivedStructData?.title || 'Título não encontrado',
+              uri: result.document?.derivedStructData?.link || 'URI não encontrada',
+          }));
+      }
+      
+      if (searchFailed) {
+        const candidatesTokenCount = estimateTokens(summary);
+        return { 
+          summary, 
+          searchFailed: true,
+          sources: [],
+          promptTokenCount,
+          candidatesTokenCount,
+        };
       }
       
       const candidatesTokenCount = estimateTokens(summary);
@@ -410,10 +468,8 @@ async function callGemini(
         const response = await result.response;
         const text = response.text();
         
-        const { totalTokens } = await model.countTokens(finalPrompt);
-        const promptTokenCount = totalTokens;
-        const candidatesTokenCount = estimateTokens(text);
-
+        const promptTokenCount = undefined;
+        const candidatesTokenCount = undefined;
 
         return { summary: text, searchFailed: false, sources: [], promptTokenCount, candidatesTokenCount };
 
@@ -481,7 +537,7 @@ export async function askAssistant(
   deidentifiedQuery?: string;
   error?: string;
 }> {
-  const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [], chatId = null, messageId = null } = options;
+  const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [], chatId, messageId } = options;
   const startTime = Date.now();
   
   try {
@@ -514,7 +570,7 @@ export async function askAssistant(
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else if (useWebSearch) {
-      result = await callGemini(deidentifiedQuery, [], "Você é um assistente de busca. Responda à pergunta do usuário com base em informações da web. Responda em português do Brasil.");
+      result = await callGemini(deidentifiedQuery);
       source = 'web';
     } else {
         await logQuestionForAnalytics(deidentifiedQuery);
@@ -527,7 +583,7 @@ export async function askAssistant(
     }
 
     if (!result || typeof result.summary === 'undefined') {
-        throw new Error("A chamada ao serviço de IA retornou uma resposta vazia ou inválida.");
+        throw new Error("A chamada ao serviço de IA retornou uma resposta vazia ou malformada.");
     }
     
     const latencyMs = Date.now() - startTime;
@@ -544,12 +600,12 @@ export async function askAssistant(
     };
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
-    const errorMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
-    return {
-      summary: errorMessage,
-      searchFailed: true,
-      source: "rag",
-      error: error.message,
+    const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
+    return { 
+        summary: failureMessage, 
+        searchFailed: true,
+        source: 'rag',
+        error: error.message 
     };
   }
 }
@@ -584,7 +640,7 @@ export async function transcribeLiveAudio(base64Audio: string): Promise<string> 
         if (error.message.includes('permission') || error.message.includes('denied')) {
             throw new Error(`Erro de permissão com a API Speech-to-Text. Verifique se a conta de serviço tem o papel "Editor de Projeto" ou "Usuário de API Cloud Speech".`);
         }
-        throw new Error(`Não foi possível processar o áudio. Detalhes: '${'${error.message}'}'`);
+        throw new Error(`Não foi possível processar o áudio. Detalhes: ${error.message}`);
     }
 }
 
@@ -986,7 +1042,7 @@ export async function getAdminInsights(): Promise<any> {
         };
     } catch (error: any) {
         console.error("Error fetching admin insights:", error.message);
-        return { error: `Não foi possível carregar os insights: '${'${error.message}'}'` };
+        return { error: `Não foi possível carregar os insights: ${error.message}` };
     }
 }
 
@@ -1006,7 +1062,7 @@ export async function getAdminUsers(): Promise<any> {
 
     } catch (error: any) {
         console.error('Error fetching admin users:', error);
-        return { error: `Não foi possível buscar a lista de usuários: '${'${error.message}'}'` };
+        return { error: `Não foi possível buscar a lista de usuários: ${error.message}` };
     }
 }
 
@@ -1055,7 +1111,7 @@ export async function getLegalIssueAlerts(): Promise<any> {
         return alerts;
     } catch (error: any) {
         console.error('Error fetching legal issue alerts:', error);
-        return { error: `Não foi possível buscar os alertas jurídicos: '${'${error.message}'}'` };
+        return { error: `Não foi possível buscar os alertas jurídicos: ${error.message}` };
     }
 }
 
@@ -1109,7 +1165,7 @@ export async function getFeedbacks(): Promise<any> {
 
     } catch (error: any) {
         console.error('Error fetching feedbacks:', error);
-        return { error: `Não foi possível buscar os feedbacks: '${'${error.message}'}'` };
+        return { error: `Não foi possível buscar os feedbacks: ${error.message}` };
     }
 }
 
@@ -1237,7 +1293,8 @@ export async function runApiHealthCheck(): Promise<any> {
     // Test Gemini API (Web Search)
     let geminiStartTime = Date.now();
     try {
-        await callGemini("teste", [], "teste");
+        const res = await callGemini("teste");
+        if (res.error) throw new Error(res.error);
         results.push({
             api: 'Google Gemini API',
             status: 'OK',
@@ -1254,24 +1311,3 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-    
-
-    
-
-
-
