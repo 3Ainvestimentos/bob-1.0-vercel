@@ -45,10 +45,6 @@ Sua resposta deve ser construída seguindo esta hierarquia:
     - **Para perguntas sobre "como fazer algo" (ex: "Como abrir conta?")**:
         1. Priorize a busca por arquivos com "Tutorial" no título.
         2. **EXTRAIA E APRESENTE O CONTEÚDO COMPLETO**: Você deve retornar **TODOS OS PASSOS** descritos no documento do tutorial, de forma **LITERAL E NA ÍNTEGRA**. Não resuma.
-
-### 3. REGRAS DE SEGURANÇA E FALHA
-- **PROIBIÇÃO DE CONHECIMENTO EXTERNO:** É TOTALMENTE PROIBIDO usar seu conhecimento pré-treinado geral ou qualquer informação que não venha das fontes fornecidas.
-- **PROCEDIMENTO DE FALHA (INFLEXÍVEL):** Se a resposta não puder ser encontrada em NENHUMA das fontes fornecidas (arquivos ou RAG), sua única e exclusiva resposta DEVE SER a seguinte frase, sem nenhuma alteração ou acréscimo: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web".
 `;
 
 
@@ -1302,3 +1298,4 @@ export async function runApiHealthCheck(): Promise<any> {
     
 
     
+
