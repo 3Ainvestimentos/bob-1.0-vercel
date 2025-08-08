@@ -30,6 +30,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é Bob, o 'Assistente Corporativo
 
 4.  **FORMATAÇÃO:**
     - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Ex: [Título](url).
+    - **Visual:** Para transcrições literais, use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
     - **Jamais Responda "A resposta está no documento X".** Você DEVE abrir o documento e COPIAR o conteúdo relevante.
 
 ---
@@ -90,7 +91,7 @@ function getServiceAccountCredentials() {
         return JSON.parse(decodedKey);
     } catch (error: any) {
         console.error("Falha ao decodificar ou analisar a chave da conta de serviço.", error.message);
-        throw new Error(`Falha ao processar a chave da conta de serviço: ${error.message}`);
+        throw new Error(`Falha ao processar a chave da conta de serviço: ${'' + error.message}`);
     }
 }
 
@@ -1318,5 +1319,7 @@ export async function runApiHealthCheck(): Promise<any> {
     return { results };
 }
 
+
+    
 
     
