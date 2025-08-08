@@ -37,6 +37,7 @@ import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { BobIcon } from '@/components/icons/BobIcon';
 import { Badge } from '../ui/badge';
+import rehypeRaw from 'rehype-raw';
 
 interface ChatMessageAreaProps {
   messages: Message[];
@@ -184,7 +185,7 @@ export function ChatMessageArea({
                     ) : (
                       <>
                         <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          <ReactMarkdown rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>
                         </div>
                         {activeChatId && (
                           <div className="flex items-center justify-between">
@@ -237,7 +238,7 @@ export function ChatMessageArea({
                               <span className="truncate">{msg.fileNames.join(', ')}</span>
                           </div>
                       )}
-                      <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none" rehypePlugins={[rehypeRaw]}>
                         {msg.content}
                       </ReactMarkdown>
                     </div>
