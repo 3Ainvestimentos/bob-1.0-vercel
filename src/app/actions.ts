@@ -285,23 +285,41 @@ async function getFileContent(fileDataUri: string, mimeType: string): Promise<st
     throw new Error(`O processamento de arquivos do tipo '${mimeType}' não é suportado.`);
 }
 
-function formatTutorialToMarkdown(rawContent: string): string {
+function formatTutorialToMarkdown(rawContent: string, title: string): string {
     if (!rawContent) return 'Conteúdo não encontrado.';
 
-    const lines = rawContent.split('\n').filter(line => line.trim() !== '');
+    let processedContent = rawContent.trim();
     
-    const formattedLines = lines.map(line => {
+    // Remove "TUTORIAL - [Title]" from the beginning of the content
+    const titleToRemove = `TUTORIAL - ${title.toUpperCase()}`;
+    if (processedContent.toUpperCase().startsWith(titleToRemove)) {
+        processedContent = processedContent.substring(titleToRemove.length).trim();
+    }
+    
+    const lines = processedContent.split('\n');
+    let markdownResult = '';
+    let isListActive = false;
+
+    lines.forEach(line => {
         const trimmedLine = line.trim();
-        // Verifica se a linha começa com um número seguido de ponto ou parêntese
-        if (/^\d+[.)]/.test(trimmedLine)) {
-            // Remove o número e o ponto/parêntese para adicionar o do markdown
-            return trimmedLine.replace(/^\d+[.)]\s*/, '');
+        if (trimmedLine.length === 0) return;
+
+        // Check for all-caps titles like "INFORMAÇÕES NECESSÁRIAS"
+        const allCapsMatch = trimmedLine.match(/^([A-ZÀ-Ú\s]+):?$/);
+        if (allCapsMatch && allCapsMatch[1].split(' ').length > 1) {
+            markdownResult += `\n\n**${allCapsMatch[1].trim()}**\n\n`;
+            isListActive = false;
+        } else {
+            // Split by '.' to create list items, but handle sentences.
+            const listItems = trimmedLine.split('. ').filter(item => item.trim() !== '');
+            listItems.forEach(item => {
+                markdownResult += `- ${item.trim()}\n`;
+            });
+            isListActive = true;
         }
-        return trimmedLine;
     });
-    
-    // Junta as linhas formatadas como uma lista numerada
-    return formattedLines.map((line, index) => `${index + 1}. ${line}`).join('\n');
+
+    return markdownResult.trim();
 }
 
 
@@ -409,11 +427,10 @@ async function callDiscoveryEngine(
       if (tutorialResults.length > 0) {
           let tutorialContent = "Com base nos documentos encontrados, aqui estão os procedimentos:\n\n";
           tutorialContent += tutorialResults.map((result: any) => {
-              const title = result.document?.derivedStructData?.title || 'Tutorial';
-              const cleanTitle = title.replace(/tutorial/gi, '').trim();
+              const title = (result.document?.derivedStructData?.title || 'Tutorial').replace(/tutorial -/gi, '').trim();
               const rawContent = result.document?.derivedStructData?.extractive_answers?.[0]?.content || 'Conteúdo não encontrado.';
-              const formattedContent = formatTutorialToMarkdown(rawContent);
-              return `**${cleanTitle.toUpperCase()}**\n${formattedContent}`;
+              const formattedContent = formatTutorialToMarkdown(rawContent, title);
+              return `**${title.toUpperCase()}**\n\n${formattedContent}`;
           }).join('\n\n---\n\n');
           
           sources = tutorialResults.map((result: any) => ({
@@ -439,7 +456,7 @@ async function callDiscoveryEngine(
 
       if (results.length > 0) {
           sources = results.map((result: any) => ({
-              title: result.document?.derivedStructData?.title || 'Título não encontrado',
+              title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim(),
               uri: result.document?.derivedStructData?.link || 'URI não encontrada',
           }));
       }
