@@ -557,8 +557,16 @@ export async function askAssistant(
     }
 
     if (!result || typeof result.summary === 'undefined') {
-        console.error("A chamada ao serviço de IA retornou uma resposta inesperada ou indefinida. Resposta recebida:", result);
-        throw new Error("A chamada ao serviço de IA retornou uma resposta vazia ou malformada. Verifique as permissões da conta de serviço e a configuração da API.");
+        const errorMessage = result?.searchFailed
+            ? "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web"
+            : "Nenhum resultado encontrado. Tente reformular a consulta da pesquisa.";
+        
+        return {
+            summary: errorMessage,
+            searchFailed: result?.searchFailed ?? true,
+            source: 'rag',
+            error: !result ? "A chamada ao serviço de IA retornou uma resposta vazia." : undefined
+        };
     }
     
     const latencyMs = Date.now() - startTime;
