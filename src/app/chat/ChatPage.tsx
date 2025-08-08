@@ -776,8 +776,7 @@ function ChatPageContent() {
   
     const query = lastFailedQuery;
     
-    // Remove the last assistant message which was the failure message
-    const messagesWithUserQuery = messages.slice(0, -1);
+    const messagesWithUserQuery = messages.filter(m => m.id !== messages[messages.length - 1].id);
   
     setLastFailedQuery(null);
     setIsLoading(true);
@@ -1338,7 +1337,7 @@ function ChatPageContent() {
   };
 
 
-  if (authLoading || isSidebarLoading) {
+  if (authLoading || (isSidebarLoading && conversations.length === 0)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <p className="text-lg text-muted-foreground">Carregando Bob 1.0...</p>
