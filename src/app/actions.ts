@@ -1,3 +1,4 @@
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -297,11 +298,13 @@ function formatTutorialToMarkdown(rawContent: string, title: string): string {
         const trimmedLine = line.trim();
         if (trimmedLine.length === 0) return;
 
+        // Matches lines that are all caps, likely subtitles
         const isAllCaps = /^[A-ZÀ-Ú\s]+$/.test(trimmedLine);
 
         if (isAllCaps && trimmedLine.split(' ').length > 1) {
              markdownResult += `\n\n**${trimmedLine.trim()}**\n\n`;
         } else {
+            // Splits content by '.' to create list items, for text that is not a subtitle
             const listItems = trimmedLine.split('. ').filter(item => item.trim() !== '');
             listItems.forEach(item => {
                 markdownResult += `- ${item.trim()}\n`;
@@ -424,7 +427,7 @@ async function callDiscoveryEngine(
           }).join('\n\n---\n\n');
           
           sources = tutorialResults.map((result: any) => ({
-              title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial/gi, '').trim(),
+              title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial -/gi, '').trim(),
               uri: result.document?.derivedStructData?.link || 'URI não encontrada',
           }));
           const candidatesTokenCount = estimateTokens(tutorialContent);
