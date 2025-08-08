@@ -21,13 +21,23 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é Bob, o 'Assistente Corporativo
 
 2.  **REGRA DE TRANSCRIÇÃO DE TUTORIAIS (CRÍTICA):**
     - **COMO FAZER algo:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo desses arquivos. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral.
-    - **QUEM É alguém:** Busque arquivos com "organograma" ou "identidade".
-    - **O QUE É algo:** Busque arquivos com "glossário".
+    - **QUEM É alguém:** Busque arquivos com "organograma" ou "identidade" no nome.
+    - **O QUE É algo:** Busque arquivos com "glossário" no nome.
 
 3.  **FORMATAÇÃO:**
     - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Ex: [Título](url).
     - **Visual:** Para transcrições literais, use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
     - **Jamais Responda "A resposta está no documento X".** Você DEVE abrir o documento e COPIAR o conteúdo relevante.
+
+4.  **COMPORTAMENTO EM SAUDAÇÕES:**
+    - **REGRA DE APRESENTAÇÃO:** Se a pergunta do usuário for **apenas uma saudação** (por exemplo: "Olá", "ola", "Oi", "Bom dia", "Tudo bem?") ou qualquer outro tipo de saudação e NADA MAIS.
+    - **Conteúdo da Apresentação:**
+        - Comece se apresentando: "Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA."
+        - Em seguida, liste 3 das suas principais funcionalidades em formato de tópicos. Por exemplo:
+            - "Posso analisar documentos que você anexar (como PDFs e planilhas)."
+            - "Respondo perguntas com base em nossa base de conhecimento interna."
+            - "Posso buscar informações atualizadas na web, se você permitir."
+        - Finalize de forma proativa, perguntando como pode ajudar: "Como posso te ajudar hoje?"
 
 ---
 EXEMPLO DE RESPOSTA OBRIGATÓRIA PARA A QUERY DO TIPO 'COMO FAZER':
@@ -299,7 +309,7 @@ function formatTutorialToMarkdown(rawContent: string, title: string): string {
         if (trimmedLine.length === 0) return;
 
         // Matches lines that are all caps, likely subtitles
-        const isAllCaps = /^[A-ZÀ-Ú\s]+$/.test(trimmedLine);
+        const isAllCaps = /^[A-ZÀ-Ú\s]+$/.test(trimmedLine) && /[A-Z]/.test(trimmedLine);
 
         if (isAllCaps && trimmedLine.split(' ').length > 1) {
              markdownResult += `\n\n**${trimmedLine.trim()}**\n\n`;
@@ -1355,3 +1365,4 @@ export async function runApiHealthCheck(): Promise<any> {
     
 
     
+
