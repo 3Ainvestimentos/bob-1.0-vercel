@@ -345,6 +345,9 @@ async function callDiscoveryEngine(
               modelSpec: {
                 version: "stable"
               }
+            },
+            extractiveContentSpec: {
+                maxExtractiveAnswerCount: 5,
             }
         }
       };
@@ -376,8 +379,29 @@ async function callDiscoveryEngine(
       
       let sources: ClientRagSource[] = [];
       const summary = data.summary?.summaryText;
+      const results = data.results || [];
       
-      if (!summary || !data.results || data.results.length === 0) {
+      const tutorialResults = results.filter((result: any) => 
+          result.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
+      );
+
+      if (tutorialResults.length > 0) {
+          let tutorialContent = "Com base nos documentos encontrados, aqui estão os procedimentos:\n\n";
+          tutorialContent += tutorialResults.map((result: any) => {
+              const title = result.document?.derivedStructData?.title || 'Tutorial';
+              const content = result.document?.derivedStructData?.snippets?.[0]?.snippet || 'Conteúdo não encontrado.';
+              return `**${title.toUpperCase()}**\n${content}`;
+          }).join('\n\n---\n\n');
+          
+          sources = tutorialResults.map((result: any) => ({
+              title: result.document?.derivedStructData?.title || 'Título não encontrado',
+              uri: result.document?.derivedStructData?.link || 'URI não encontrada',
+          }));
+          const candidatesTokenCount = estimateTokens(tutorialContent);
+          return { summary: tutorialContent, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
+      }
+
+      if (!summary || results.length === 0) {
           const candidatesTokenCount = estimateTokens(failureMessage);
           return { 
               summary: failureMessage, 
@@ -387,11 +411,11 @@ async function callDiscoveryEngine(
               candidatesTokenCount,
           };
       }
-
+      
       const searchFailed = summary.trim() === failureMessage.trim();
 
-      if (data.results && data.results.length > 0) {
-          sources = data.results.map((result: any) => ({
+      if (results.length > 0) {
+          sources = results.map((result: any) => ({
               title: result.document?.derivedStructData?.title || 'Título não encontrado',
               uri: result.document?.derivedStructData?.link || 'URI não encontrada',
           }));
@@ -1293,3 +1317,6 @@ export async function runApiHealthCheck(): Promise<any> {
 
     return { results };
 }
+
+
+    
