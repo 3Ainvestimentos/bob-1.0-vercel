@@ -100,7 +100,6 @@ export function ChatMessageArea({
   onRemoveFile,
 }: ChatMessageAreaProps) {
   const activeChatId = activeChat?.id ?? null;
-  const attachedFiles = activeChat?.attachedFiles ?? [];
 
   const initialSuggestions = useMemo(() => {
     const shuffled = [...webSearchSuggestions].sort(() => 0.5 - Math.random());

@@ -773,22 +773,24 @@ function ChatPageContent() {
 
   const handleWebSearch = async () => {
     if (!lastFailedQuery || isLoading || !user) return;
-
+  
     const query = lastFailedQuery;
+    
+    // Remove the last assistant message which was the failure message
     const messagesWithUserQuery = messages.slice(0, -1);
-
+  
     setLastFailedQuery(null);
     setIsLoading(true);
     setError(null);
     setMessages(messagesWithUserQuery);
-
+  
     try {
       const assistantResponse = await askAssistant(
         query,
         { useWebSearch: true },
         user.uid
       );
-
+  
       if (assistantResponse.error) {
         throw new Error(assistantResponse.error);
       }
@@ -807,10 +809,10 @@ function ChatPageContent() {
         candidatesTokenCount: assistantResponse.candidatesTokenCount,
         latencyMs: assistantResponse.latencyMs,
       };
-
+  
       const finalMessages = [...messagesWithUserQuery, assistantMessage];
       setMessages(finalMessages);
-
+  
       if (activeChatId) {
         await saveConversation(user.uid, finalMessages, activeChatId);
       }
@@ -821,7 +823,7 @@ function ChatPageContent() {
         role: 'assistant',
         content: errorMessageContent,
       };
-      setMessages((prev) => [...messagesWithUserQuery, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
       setError(errorMessageContent);
     } finally {
       setIsLoading(false);
@@ -1626,5 +1628,3 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
-
-    
