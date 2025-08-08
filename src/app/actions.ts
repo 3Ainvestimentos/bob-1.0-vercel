@@ -389,7 +389,7 @@ async function callDiscoveryEngine(
           let tutorialContent = "Com base nos documentos encontrados, aqui estão os procedimentos:\n\n";
           tutorialContent += tutorialResults.map((result: any) => {
               const title = result.document?.derivedStructData?.title || 'Tutorial';
-              const content = result.document?.derivedStructData?.snippets?.[0]?.snippet || 'Conteúdo não encontrado.';
+              const content = result.document?.derivedStructData?.extractive_answers?.[0]?.content || 'Conteúdo não encontrado.';
               return `**${title.toUpperCase()}**\n${content}`;
           }).join('\n\n---\n\n');
           
