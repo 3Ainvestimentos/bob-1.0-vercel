@@ -700,6 +700,20 @@ function ChatPageContent() {
             }
         }
         
+        // Critical fix: force searchFailed state if response is empty
+        if (!assistantResponse.summary && assistantResponse.source !== 'web') {
+            const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
+            const errorMessage: Message = {
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                content: failureMessage,
+            };
+            setMessages((prev) => [...prev, errorMessage]);
+            setLastFailedQuery(userQuery);
+            setIsLoading(false);
+            return;
+        }
+
         if (!assistantResponse.summary) {
           throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
         }
@@ -1626,5 +1640,3 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
-
-    
