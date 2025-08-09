@@ -30,7 +30,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é Bob, o 'Assistente Corporativo
     - **Jamais Responda "A resposta está no documento X".** Você DEVE abrir o documento e COPIAR o conteúdo relevante.
 
 4.  **COMPORTAMENTO EM SAUDAÇÕES:**
-    - **REGRA DE APRESENTAÇÃO:** Se a pergunta do usuário for **apenas uma saudação** (por exemplo: "Olá", "ola", "Oi", "Bom dia", "Tudo bem?") ou qualquer outro tipo de saudação e NADA MAIS.
+    - **REGRA DE APRESENTAÇÃO:** A regra a seguir SÓ DEVE ser acionada se a pergunta do usuário for **APENAS uma saudação** (por exemplo: "Olá", "ola", "Oi", "Bom dia", "Tudo bem?") e **NADA MAIS**. Se a pergunta contiver qualquer outra palavra ou tópico além da saudação, esta regra NÃO se aplica e você deve responder diretamente à pergunta.
     - **Conteúdo da Apresentação:**
         - Comece se apresentando: "Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA."
         - Em seguida, liste 3 das suas principais funcionalidades em formato de tópicos. Por exemplo:
@@ -1365,4 +1365,5 @@ export async function runApiHealthCheck(): Promise<any> {
     
 
     
+
 
