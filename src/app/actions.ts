@@ -427,7 +427,7 @@ async function callDiscoveryEngine(
           result.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
       );
 
-      if (tutorialResults.length > 0) {
+      if (tutorialResults.length > 0 && query.toLowerCase().includes('como fazer')) {
           let tutorialContent = "Com base nos documentos encontrados, aqui estão os procedimentos:\n\n";
           tutorialContent += tutorialResults.map((result: any) => {
               const title = (result.document?.derivedStructData?.title || 'Tutorial').replace(/tutorial -/gi, '').trim();
@@ -1367,3 +1367,6 @@ export async function runApiHealthCheck(): Promise<any> {
     
 
 
+
+
+    
