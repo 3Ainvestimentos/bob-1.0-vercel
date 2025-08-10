@@ -102,6 +102,20 @@ const faqData = [
         </div>
     )
   },
+  {
+    value: 'item-4',
+    trigger: '4. Suporte e Resolução de Problemas',
+    content: (
+        <div className="space-y-4">
+            <div>
+                <strong className="font-semibold">4.1. Canal de Suporte</strong>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+                    <li><span className="font-medium text-foreground">Abertura de Tickets:</span> Caso encontre qualquer problema técnico, comportamento inesperado ou tenha alguma dúvida que não foi respondida aqui, por favor, abra um ticket de suporte através da aplicação "Connect".</li>
+                </ul>
+            </div>
+        </div>
+    )
+  },
 ];
 
 export function FaqDialog({ open, onOpenChange }: FaqDialogProps) {
