@@ -173,7 +173,7 @@ export function ChatMessageArea({
                       <span className="font-semibold text-foreground">Bob</span>
                     </div>
                     {regeneratingMessageId === msg.id ? (
-                      <div className="w-fit rounded-lg bg-muted px-4 py-2">
+                      <div className="w-fit rounded-xl bg-muted px-4 py-2">
                           <p className="animate-pulse text-sm italic text-muted-foreground">
                               Bob está pensando...
                           </p>
@@ -252,7 +252,7 @@ export function ChatMessageArea({
                     <BobIcon className="h-6 w-6" isThinking />
                   </AvatarFallback>
                 </Avatar>
-                <div className="w-fit rounded-lg bg-muted px-4 py-2">
+                <div className="w-fit rounded-xl bg-muted px-4 py-2">
                     <p className="animate-pulse text-sm italic text-muted-foreground">
                         Bob está pensando...
                     </p>
