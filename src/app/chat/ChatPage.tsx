@@ -74,7 +74,7 @@ import { FaqDialog } from '@/components/chat/FaqDialog';
 import { FileUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AttachedFile } from '@/types';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RobotIdeaIcon } from '@/components/icons/RobotIdeaIcon';
 
 
@@ -1602,6 +1602,7 @@ function ChatPageContent() {
                             className="w-auto max-w-xs text-sm bg-chart-2 text-white shadow-lg border-none rounded-xl"
                         >
                            <GreetingPopoverContent onOpen={isGreetingPopoverOpen} />
+                           <PopoverArrow className="fill-chart-2" />
                         </PopoverContent>
                     </Popover>
                 </div>
