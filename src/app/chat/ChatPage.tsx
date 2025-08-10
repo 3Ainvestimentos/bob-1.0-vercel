@@ -532,7 +532,7 @@ function ChatPageContent() {
         return newExpanded;
       });
     } catch (err: any) {
-      setError(`Erro ao carregar o histórico: ${err.message}`);
+      setError(`Erro ao carregar o histórico: ${'' + err.message}`);
       toast({
           variant: "destructive",
           title: "Erro de Carregamento",
@@ -625,7 +625,7 @@ function ChatPageContent() {
             });
         }
     } catch (err: any) {
-      setError(`Erro ao carregar a conversa: ${err.message}`);
+      setError(`Erro ao carregar a conversa: ${'' + err.message}`);
       setMessages([]);
     } finally {
       setIsLoading(false);
@@ -760,7 +760,7 @@ function ChatPageContent() {
         }
 
     } catch (err: any) {
-        const errorMessageContent = `Ocorreu um erro: ${err.message}`;
+        const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
         const errorMessage: Message = {
             id: crypto.randomUUID(),
             role: 'assistant',
@@ -829,7 +829,7 @@ function ChatPageContent() {
         await saveConversation(user.uid, finalMessages, activeChatId);
       }
     } catch (err: any) {
-      const errorMessageContent = `Erro ao buscar na web: ${err.message}`;
+      const errorMessageContent = `Erro ao buscar na web: ${'' + err.message}`;
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -851,7 +851,7 @@ function ChatPageContent() {
       setIsNewGroupDialogOpen(false);
       await fetchSidebarData();
     } catch (err: any) {
-      setError(`Erro ao criar o grupo: ${err.message}`);
+      setError(`Erro ao criar o grupo: ${'' + err.message}`);
     }
   };
 
@@ -866,7 +866,7 @@ function ChatPageContent() {
       );
       await updateConversationGroup(user.uid, chatId, groupId);
     } catch (err: any) {
-      setError(`Erro ao mover a conversa: ${err.message}`);
+      setError(`Erro ao mover a conversa: ${'' + err.message}`);
       fetchSidebarData();
     }
   };
@@ -882,7 +882,7 @@ function ChatPageContent() {
       await deleteGroup(user.uid, groupToDelete);
       await fetchSidebarData(); 
     } catch (err: any)      {
-      setError(`Erro ao excluir o grupo: ${err.message}`);
+      setError(`Erro ao excluir o grupo: ${'' + err.message}`);
     } finally {
       setIsDeleteDialogOpen(false);
       setGroupToDelete(null);
@@ -910,7 +910,7 @@ function ChatPageContent() {
         setNewItemName('');
         await fetchSidebarData();
     } catch (err: any) {
-        setError(`Erro ao renomear: ${err.message}`);
+        setError(`Erro ao renomear: ${'' + err.message}`);
     }
   };
 
@@ -928,7 +928,7 @@ function ChatPageContent() {
             handleNewChat();
         }
     } catch (err: any) {
-        setError(`Erro ao excluir a conversa: ${err.message}`);
+        setError(`Erro ao excluir a conversa: ${'' + err.message}`);
     } finally {
         setIsDeleteConvoDialogOpen(false);
         setConvoToDelete(null);
@@ -964,7 +964,7 @@ function ChatPageContent() {
           await setFeedback(user.uid, activeChatId, message.id, finalRating, userQuery, assistantResponse);
       } catch (err: any) {
           console.error("Error saving feedback:", err);
-          setError(`Erro ao salvar o feedback: ${err.message}`);
+          setError(`Erro ao salvar o feedback: ${'' + err.message}`);
           setFeedbacks(prev => {
               const revertedFeedbacks = { ...prev };
               if (currentRating) {
@@ -1058,7 +1058,7 @@ function ChatPageContent() {
 
     } catch (err: any) {
       setMessages(messages);
-      const errorMessageContent = `Ocorreu um erro: ${err.message}`;
+      const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
       const errorMessage: Message = {
           id: crypto.randomUUID(),
           role: 'assistant',
@@ -1111,7 +1111,7 @@ function ChatPageContent() {
 
     } catch (err: any) {
         console.error("Error saving feedback comment:", err);
-        setError(`Erro ao salvar o comentário de feedback: ${err.message}`);
+        setError(`Erro ao salvar o comentário de feedback: ${'' + err.message}`);
     } finally {
         setIsFeedbackDialogOpen(false);
         setFeedbackDetails(null);
@@ -1198,7 +1198,7 @@ function ChatPageContent() {
         toast({
             variant: 'destructive',
             title: 'Erro ao Enviar',
-            description: `Não foi possível reportar o problema: ${err.message}`,
+            description: `Não foi possível reportar o problema: ${'' + err.message}`,
         });
     } finally {
         setIsLegalReportDialogOpen(false);
@@ -1596,7 +1596,11 @@ function ChatPageContent() {
                                 <RobotIdeaIcon className="h-10 w-10" />
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto max-w-xs text-sm" side="bottom" align="end">
+                        <PopoverContent
+                            side="left"
+                            align="center"
+                            className="w-auto max-w-xs text-sm bg-chart-2 text-white shadow-lg border-none"
+                        >
                            <GreetingPopoverContent onOpen={isGreetingPopoverOpen} />
                         </PopoverContent>
                     </Popover>
