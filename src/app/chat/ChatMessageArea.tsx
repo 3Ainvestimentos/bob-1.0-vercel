@@ -96,11 +96,6 @@ export function ChatMessageArea({
 }: ChatMessageAreaProps) {
   const activeChatId = activeChat?.id ?? null;
 
-  const initialSuggestions = useMemo(() => {
-    const shuffled = [...webSearchSuggestions].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 2);
-  }, []);
-
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto flex h-full max-w-4xl flex-col">
@@ -135,7 +130,7 @@ export function ChatMessageArea({
                       </div>
                     </div>
                   </Card>
-                   {initialSuggestions.map((suggestion, index) => (
+                   {webSearchSuggestions.map((suggestion, index) => (
                       <Card key={index} className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick(suggestion.title)}>
                         <div className="flex items-start gap-4">
                           <suggestion.Icon className="h-6 w-6 text-muted-foreground" />
@@ -283,3 +278,5 @@ export function ChatMessageArea({
     </div>
   );
 }
+
+    
