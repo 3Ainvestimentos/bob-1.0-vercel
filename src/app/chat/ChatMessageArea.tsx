@@ -16,27 +16,21 @@ import { User } from 'firebase/auth';
 import {
   AlertTriangle,
   FileText,
-  Lightbulb,
-  Mail,
   MoreHorizontal,
-  Newspaper,
   Paperclip,
-  Pin,
   RefreshCw,
   Search,
   Share2,
   ThumbsDown,
   ThumbsUp,
-  X,
-  TrendingUp,
-  Briefcase,
-  BookOpen,
   Hand,
+  UserPlus,
+  KeyRound,
+  PiggyBank,
 } from 'lucide-react';
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { BobIcon } from '@/components/icons/BobIcon';
-import { Badge } from '../ui/badge';
 import rehypeRaw from 'rehype-raw';
 
 interface ChatMessageAreaProps {
@@ -63,19 +57,19 @@ interface ChatMessageAreaProps {
 
 const webSearchSuggestions = [
     {
-        Icon: Mail,
-        title: "Criar campanha de e-mail",
-        description: "para vendas de fim de ano",
+        Icon: UserPlus,
+        title: "Como abrir uma conta",
+        description: "Ver o passo-a-passo para novos clientes",
     },
     {
-        Icon: Lightbulb,
-        title: "Preparar tópicos",
-        description: "para uma entrevista sobre vida de nômade digital",
+        Icon: KeyRound,
+        title: "Como alterar uma senha",
+        description: "Ajudar um cliente a redefinir o acesso",
     },
     {
-        Icon: FileText,
-        title: "Analisar um novo artigo",
-        description: "Resumir e destacar pontos chave de um artigo científico",
+        Icon: PiggyBank,
+        title: "Como fazer um resgate de previdência",
+        description: "Consultar as regras e o procedimento",
     }
 ];
 
@@ -104,7 +98,7 @@ export function ChatMessageArea({
 
   const initialSuggestions = useMemo(() => {
     const shuffled = [...webSearchSuggestions].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 3);
+    return shuffled.slice(0, 2);
   }, []);
 
   return (
