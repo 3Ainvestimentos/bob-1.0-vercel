@@ -5,7 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import AuthProvider from '@/context/AuthProvider';
 import { ThemeProvider } from '@/components/theme-provider';
 
-const archivo = Archivo({ subsets: ['latin'], variable: '--font-sans' });
+const archivo = Archivo({ 
+  subsets: ['latin'], 
+  variable: '--font-sans',
+  weight: ['300', '400', '500', '600', '700'] 
+});
 
 export const metadata: Metadata = {
   title: 'DataVisor',
