@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BobIcon } from '@/components/icons/BobIcon';
 import { getMaintenanceMode } from './actions';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 
 export default function LoginPage() {
@@ -47,21 +47,30 @@ export default function LoginPage() {
                 try {
                     const userDocRef = doc(db, 'users', user.uid);
                     let userDocSnap = await getDoc(userDocRef);
+                    let userData;
                     
+                    const isAdminByEmail = user.email === 'pedro.rosa@3ainvestimentos.com.br';
+
                     if (!userDocSnap.exists()) {
-                        const isAdminByEmail = user.email === 'pedro.rosa@3ainvestimentos.com.br';
-                         await setDoc(userDocRef, {
+                        const newUserData = {
                             uid: user.uid,
                             email: user.email,
                             displayName: user.displayName,
                             createdAt: serverTimestamp(),
                             role: isAdminByEmail ? 'admin' : 'user',
                             termsAccepted: false,
-                        });
-                        userDocSnap = await getDoc(userDocRef); // Re-fetch the document
+                        };
+                        await setDoc(userDocRef, newUserData);
+                        userData = newUserData;
+                    } else {
+                        userData = userDocSnap.data();
+                        // Bootstrap the admin user if they already exist but don't have the admin role
+                        if (isAdminByEmail && userData.role !== 'admin') {
+                            await updateDoc(userDocRef, { role: 'admin' });
+                            userData.role = 'admin';
+                        }
                     }
                     
-                    const userData = userDocSnap.data();
                     if (!userData) {
                         throw new Error("Não foi possível ler os dados do seu perfil. Entre em contato com o suporte.");
                     }
