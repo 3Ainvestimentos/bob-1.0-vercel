@@ -7,6 +7,7 @@
 
 
 
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -37,6 +38,24 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
     - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Ex: [Título](url).
     - **Visual:** Para transcrições literais, use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
     - **Jamais Responda "A resposta está no documento X".** Você DEVE abrir o documento e COPIAR o conteúdo relevante.
+
+### EXEMPLO DE RESPOSTA OBRIGATÓRIA PARA A QUERY DO TIPO 'COMO FAZER':
+
+Com base nos documentos encontrados, aqui estão os procedimentos:
+
+**TUTORIAL ALTERAR SENHA - SITE**
+
+- Acesse sua conta pelo site www.xpi.com.br.
+- Clique em seu nome no canto superior direito da tela.
+- Selecione "MEUS DADOS".
+- ...
+
+**TUTORIAL ALTERAR SENHA - APP**
+
+- Acesse sua conta pelo aplicativo XP Investimentos.
+- No menu, clique em "MEUS DADOS".
+- Clique em "SEGURANÇA".
+- ...
 `;
 
 const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanças. Com base em um relatório de investimentos em PDF da XP, extraia:
@@ -1470,4 +1489,5 @@ export async function runApiHealthCheck(): Promise<any> {
     
 
     
+
 
