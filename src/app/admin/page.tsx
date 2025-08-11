@@ -1,10 +1,7 @@
 
-
-
-
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
 import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage, setUserRole, deleteUser, createUser, getPreRegisteredUsers } from '@/app/actions';
@@ -131,7 +128,14 @@ export default function AdminPage() {
 
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [newUser, setNewUser] = useState({ email: '', role: 'user' as UserRole });
+  const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
 
+  const filteredUsers = useMemo(() => {
+    if (roleFilter === 'all') {
+      return allUsers;
+    }
+    return allUsers.filter(user => user.role === roleFilter);
+  }, [allUsers, roleFilter]);
 
   const fetchAdminData = async () => {
     if (!user) return;
@@ -918,20 +922,34 @@ export default function AdminPage() {
             <TabsContent value="users" className="mt-4 space-y-8">
                  <Card>
                     <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle>Gerenciamento de Usuários Ativos</CardTitle>
-                                <CardDescription>
-                                    Adicione, edite e remova usuários e seus papéis no sistema.
-                                </CardDescription>
-                            </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                           <div>
+                             <CardTitle>Gerenciamento de Usuários Ativos</CardTitle>
+                             <CardDescription>
+                                 Adicione, edite e remova usuários e seus papéis no sistema.
+                             </CardDescription>
+                           </div>
+                           <div className='flex items-center gap-2'>
+                             <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as UserRole | 'all')}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder="Filtrar por papel..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Papéis</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="beta">Beta</SelectItem>
+                                    <SelectItem value="user">Usuário</SelectItem>
+                                </SelectContent>
+                             </Select>
                              <Button onClick={() => setIsAddUserDialogOpen(true)}>
                                 <UserPlus className="mr-2 h-4 w-4" />
-                                Pré-registrar Usuário
-                            </Button>
+                                Pré-registrar
+                             </Button>
+                           </div>
                         </div>
                     </CardHeader>
                     <CardContent>
+                       <div className="w-full overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -943,7 +961,7 @@ export default function AdminPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {allUsers.map(u => (
+                                {filteredUsers.map(u => (
                                     <TableRow key={u.uid}>
                                         <TableCell className="font-medium">{u.displayName || 'N/A'}</TableCell>
                                         <TableCell>{u.email}</TableCell>
@@ -980,6 +998,7 @@ export default function AdminPage() {
                                 ))}
                             </TableBody>
                         </Table>
+                       </div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -990,34 +1009,36 @@ export default function AdminPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Papel Atribuído</TableHead>
-                                    <TableHead>Data do Convite</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {preRegisteredUsers.length > 0 ? preRegisteredUsers.map(u => (
-                                    <TableRow key={u.email}>
-                                        <TableCell className="font-medium">{u.email}</TableCell>
-                                        <TableCell>
-                                            <Badge className={cn(roleDisplay[u.role]?.className)}>
-                                                {roleDisplay[u.role]?.label || 'Usuário'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</TableCell>
-                                    </TableRow>
-                                )) : (
+                        <div className="w-full overflow-x-auto">
+                            <Table>
+                                 <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={3} className="h-24 text-center">
-                                            Nenhum usuário pré-registrado no momento.
-                                        </TableCell>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Papel Atribuído</TableHead>
+                                        <TableHead>Data do Convite</TableHead>
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {preRegisteredUsers.length > 0 ? preRegisteredUsers.map(u => (
+                                        <TableRow key={u.email}>
+                                            <TableCell className="font-medium">{u.email}</TableCell>
+                                            <TableCell>
+                                                <Badge className={cn(roleDisplay[u.role]?.className)}>
+                                                    {roleDisplay[u.role]?.label || 'Usuário'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="h-24 text-center">
+                                                Nenhum usuário pré-registrado no momento.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </TabsContent>
@@ -1321,5 +1342,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
