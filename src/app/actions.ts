@@ -8,6 +8,7 @@
 
 
 
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -31,7 +32,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 2.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):**
     - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo.
     - **COMO FAZER algo:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo desses arquivos. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral.
-    - **QUEM É alguém:** Busque arquivos com "organograma" ou "identidade" no nome.
+    - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome.
     - **O QUE É algo:** Busque arquivos com "glossário" no nome.
 
 3.  **FORMATAÇÃO:**
@@ -1491,3 +1492,6 @@ export async function runApiHealthCheck(): Promise<any> {
     
 
 
+
+
+    
