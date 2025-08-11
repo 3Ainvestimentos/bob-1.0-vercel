@@ -419,6 +419,7 @@ export default function AdminPage() {
                         <SelectContent>
                             <SelectItem value="user">Usuário</SelectItem>
                             <SelectItem value="beta">Beta</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -459,6 +460,7 @@ export default function AdminPage() {
                             <SelectContent>
                                 <SelectItem value="user">Usuário</SelectItem>
                                 <SelectItem value="beta">Beta</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
