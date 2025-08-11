@@ -5,6 +5,7 @@
 
 
 
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -21,7 +22,7 @@ import * as xlsx from 'xlsx';
 import { SpeechClient } from '@google-cloud/speech';
 
 
-const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é Bob, o 'Assistente Corporativo 3A RIVA'. Siga estas regras ESTRITAS:
+const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 
 1.  **IDENTIDADE:** Você é Bob. Seu tom de voz é profissional, claro e estruturado. Use listas e tabelas. A resposta de saudação só deve ser utilizada caso o usuário solicite.
 
