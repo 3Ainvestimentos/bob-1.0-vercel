@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BobIcon } from '@/components/icons/BobIcon';
 import { getMaintenanceMode } from './actions';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 
 export default function LoginPage() {
@@ -46,13 +46,27 @@ export default function LoginPage() {
             const checkUserRoleAndRedirect = async () => {
                 try {
                     const userDocRef = doc(db, 'users', user.uid);
-                    const userDocSnap = await getDoc(userDocRef);
+                    let userDocSnap = await getDoc(userDocRef);
                     
                     if (!userDocSnap.exists()) {
-                         throw new Error("Seu perfil de usuário não foi encontrado. Entre em contato com o suporte.");
+                        const isAdminByEmail = user.email === 'pedro.rosa@3ainvestimentos.com.br';
+                         await setDoc(userDocRef, {
+                            uid: user.uid,
+                            email: user.email,
+                            displayName: user.displayName,
+                            createdAt: serverTimestamp(),
+                            role: isAdminByEmail ? 'admin' : 'user',
+                            termsAccepted: false,
+                        });
+                        userDocSnap = await getDoc(userDocRef); // Re-fetch the document
                     }
                     
-                    const userRole = userDocSnap.data()?.role || 'user';
+                    const userData = userDocSnap.data();
+                    if (!userData) {
+                        throw new Error("Não foi possível ler os dados do seu perfil. Entre em contato com o suporte.");
+                    }
+                    
+                    const userRole = userData.role || 'user';
                     
                     if (userRole === 'admin') {
                         router.push('/chat');
@@ -71,7 +85,6 @@ export default function LoginPage() {
                             });
                         }
                     } else {
-                        // All roles can access if not in maintenance mode
                         router.push('/chat');
                     }
 
