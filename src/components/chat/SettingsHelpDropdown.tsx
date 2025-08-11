@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -14,8 +15,11 @@ import { HelpCircle, LogIn, LogOut, Moon, Settings, Sun, Shield } from 'lucide-r
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { ADMIN_UID } from '@/types';
+import { UserRole } from '@/types';
 import { User } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface SettingsHelpDropdownProps {
   isAuthenticated: boolean;
@@ -31,8 +35,22 @@ export function SettingsHelpDropdown({
 }: SettingsHelpDropdownProps) {
   const { setTheme } = useTheme();
   const router = useRouter();
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  
+  useEffect(() => {
+    const fetchUserRole = async () => {
+        if (user) {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                setUserRole(userDocSnap.data().role || 'user');
+            }
+        }
+    };
+    fetchUserRole();
+  }, [user]);
 
-  const isUserAdmin = user?.uid === ADMIN_UID;
+  const isUserAdmin = userRole === 'admin';
 
   return (
     <DropdownMenu>

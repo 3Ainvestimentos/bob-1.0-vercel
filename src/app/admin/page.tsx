@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2, MessageSquare, Save, MoreHorizontal, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { ADMIN_UID, UserRole } from '@/types';
+import { UserRole } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 
 interface AdminInsights {
@@ -166,14 +168,26 @@ export default function AdminPage() {
       return;
     }
     
-    if (user.uid === ADMIN_UID) {
-        setIsAuthorized(true);
-        fetchAdminData();
-    } else {
-        setIsAuthorized(false);
-        setError("Você não tem permissão para ver esta página.");
-        setIsLoading(false);
-    }
+    const checkAuthorization = async () => {
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+                setIsAuthorized(true);
+                fetchAdminData();
+            } else {
+                setIsAuthorized(false);
+                setError("Você não tem permissão para ver esta página.");
+                setIsLoading(false);
+            }
+        } catch (err) {
+            setIsAuthorized(false);
+            setError("Ocorreu um erro ao verificar suas permissões.");
+            setIsLoading(false);
+        }
+    };
+    checkAuthorization();
       
   }, [user, authLoading, router]);
 
@@ -928,7 +942,7 @@ export default function AdminPage() {
                                         </TableCell>
                                         <TableCell>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                                         <TableCell className="text-right">
-                                            {u.uid !== ADMIN_UID && (
+                                            {u.role !== 'admin' && (
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" size="icon">
