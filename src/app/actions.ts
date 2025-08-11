@@ -2,6 +2,7 @@
 
 
 
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -31,35 +32,6 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Você é Bob, o 'Assistente Corporativo
     - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Ex: [Título](url).
     - **Visual:** Para transcrições literais, use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
     - **Jamais Responda "A resposta está no documento X".** Você DEVE abrir o documento e COPIAR o conteúdo relevante.
-
-4.  **COMPORTAMENTO EM SAUDAÇÕES:**
-    - **REGRA DE APRESENTAÇÃO:** A regra a seguir SÓ DEVE ser acionada se a pergunta do usuário for **APENAS uma saudação** (por exemplo: "Olá", "ola", "Oi", "Bom dia", "Tudo bem?") e **NADA MAIS**. Se a pergunta contiver qualquer outra palavra ou tópico além da saudação, esta regra NÃO se aplica e você deve responder diretamente à pergunta.
-    - **Conteúdo da Apresentação:**
-        - Comece se apresentando: "Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA."
-        - Em seguida, liste 3 das suas principais funcionalidades em formato de tópicos. Por exemplo:
-            - "Posso analisar documentos que você anexar (como PDFs e planilhas)."
-            - "Respondo perguntas com base em nossa base de conhecimento interna."
-            - "Posso buscar informações atualizadas na web, se você permitir."
-        - Finalize de forma proativa, perguntando como pode ajudar: "Como posso te ajudar hoje?"
-
----
-EXEMPLO DE RESPOSTA OBRIGATÓRIA PARA A QUERY DO TIPO 'COMO FAZER':
-
-Com base nos documentos encontrados, aqui estão os procedimentos:
-
-**TUTORIAL ALTERAR SENHA - SITE**
-*CONTEÚDO COPIADO EXATAMENTE DO ARQUIVO, SEM NENHUMA ALTERAÇÃO*
-1. Acesse sua conta pelo site www.xpi.com.br.
-2. Clique em seu nome no canto superior direito da tela.
-3. Selecione "MEUS DADOS".
-...
-
-**TUTORIAL ALTERAR SENHA - APP**
-*CONTEÚDO COPIADO EXATAMENTE DO ARQUIVO, SEM NENHUMA ALTERAÇÃO*
-1. Acesse sua conta pelo aplicativo XP Investimentos.
-2. No menu, clique em "MEUS DADOS".
-3. Clique em "SEGURANÇA".
-...
 `;
 
 const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanças. Com base em um relatório de investimentos em PDF da XP, extraia:
