@@ -9,4 +9,6 @@ export interface AttachedFile {
     deidentifiedContent?: string;
 }
 
+export type UserRole = 'admin' | 'beta' | 'user';
+
     

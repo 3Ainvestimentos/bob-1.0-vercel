@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -6,7 +7,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore as getFirestoreAdmin, FieldValue, DocumentData, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
-import { AttachedFile } from '@/types';
+import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { google } from 'googleapis';
 import pdf from 'pdf-parse';
@@ -1096,22 +1097,81 @@ export async function getAdminInsights(): Promise<any> {
 }
 
 
-export async function getAdminUsers(): Promise<any> {
+export async function getUsersWithRoles(): Promise<any> {
     try {
         const authAdmin = getAuthenticatedAuthAdmin();
+        const adminDb = getAuthenticatedFirestoreAdmin();
         const listUsersResult = await authAdmin.listUsers();
         
-        const allUsers = listUsersResult.users.map(userRecord => ({
-            uid: userRecord.uid,
-            email: userRecord.email,
-            displayName: userRecord.displayName,
-        }));
+        const usersFromAuth = listUsersResult.users;
+        
+        const userDocsPromises = usersFromAuth.map(user => 
+            adminDb.collection('users').doc(user.uid).get()
+        );
+        
+        const userDocsSnapshots = await Promise.all(userDocsPromises);
+        
+        const usersWithRoles = usersFromAuth.map((user, index) => {
+            const userDoc = userDocsSnapshots[index];
+            const userData = userDoc.data();
+            return {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                role: userData?.role || 'user',
+                createdAt: (userData?.createdAt as AdminTimestamp)?.toDate().toISOString() || user.metadata.creationTime,
+            };
+        });
 
-        return allUsers;
+        return usersWithRoles;
 
     } catch (error: any) {
-        console.error('Error fetching admin users:', error);
+        console.error('Error fetching users with roles:', error);
         return { error: `Não foi possível buscar a lista de usuários: ${error.message}` };
+    }
+}
+
+
+export async function setUserRole(userId: string, role: UserRole): Promise<{success: boolean, error?: string}> {
+    if (!userId || !role) {
+        return { success: false, error: "UserID e Role são obrigatórios." };
+    }
+
+    try {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const userRef = adminDb.collection('users').doc(userId);
+        
+        await userRef.set({ role: role }, { merge: true });
+
+        return { success: true };
+    } catch (error: any) {
+        console.error(`Error setting role for user ${userId}:`, error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function deleteUser(userId: string): Promise<{success: boolean, error?: string}> {
+     if (!userId) {
+        return { success: false, error: "UserID é obrigatório." };
+    }
+    try {
+        const authAdmin = getAuthenticatedAuthAdmin();
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        
+        // Delete from Auth
+        await authAdmin.deleteUser(userId);
+        
+        // Delete from Firestore
+        const userRef = adminDb.collection('users').doc(userId);
+        await userRef.delete();
+
+        // Optionally, delete their subcollections too if needed (e.g., chats, groups)
+        // This part can be complex and requires careful handling. For now, we delete the main user doc.
+
+        return { success: true };
+    } catch (error: any) {
+         console.error(`Error deleting user ${userId}:`, error);
+         return { success: false, error: error.message };
     }
 }
 

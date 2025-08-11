@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -73,7 +74,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { FaqDialog } from '@/components/chat/FaqDialog';
 import { FileUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AttachedFile } from '@/types';
+import { AttachedFile, UserRole } from '@/types';
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RobotIdeaIcon } from '@/components/icons/RobotIdeaIcon';
 
@@ -582,6 +583,7 @@ function ChatPageContent() {
                     email: user.email,
                     displayName: user.displayName,
                     createdAt: serverTimestamp(),
+                    role: 'user', // Default role for new users
                 });
             }
             // Always fetch data after check
@@ -1570,7 +1572,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
@@ -1583,9 +1585,7 @@ function ChatPageContent() {
 
         <SidebarInset>
             <main className="flex flex-1 flex-col bg-background relative">
-                <div className={cn(
-                  "absolute top-4 right-4 z-10 transition-opacity duration-500"
-                )}>
+                <div className="absolute top-4 right-4 z-10">
                     <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                         <PopoverTrigger asChild>
                             <button 

@@ -1,23 +1,29 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getAdminUsers, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage } from '@/app/actions';
+import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage, setUserRole, deleteUser } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2, MessageSquare, Save } from 'lucide-react';
+import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2, MessageSquare, Save, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { ADMIN_UID } from '@/types';
+import { ADMIN_UID, UserRole } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 
 
 interface AdminInsights {
@@ -48,6 +54,8 @@ interface AdminUser {
     uid: string;
     email?: string;
     displayName?: string;
+    role: UserRole;
+    createdAt: string;
 }
 
 interface AdminCosts {
@@ -91,7 +99,7 @@ export default function AdminPage() {
   const { toast } = useToast();
   
   const [insights, setInsights] = useState<AdminInsights | null>(null);
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   const [costs, setCosts] = useState<AdminCosts | null>(null);
   const [legalAlerts, setLegalAlerts] = useState<LegalIssueAlert[]>([]);
   const [feedbacks, setFeedbacks] = useState<{positive: Feedback[], negative: Feedback[]}>({ positive: [], negative: [] });
@@ -104,7 +112,45 @@ export default function AdminPage() {
   const [apiHealthResults, setApiHealthResults] = useState<ApiHealthResult[]>([]);
   const [isCheckingApiHealth, setIsCheckingApiHealth] = useState(false);
   const [isSavingGreeting, setIsSavingGreeting] = useState(false);
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('user');
 
+
+  const fetchAdminData = async () => {
+    if (!user) return;
+    setIsLoading(true);
+     try {
+        const [insightsData, usersData, costsData, maintenanceData, alertsData, feedbacksData, greetingData] = await Promise.all([
+            getAdminInsights(),
+            getUsersWithRoles(),
+            getAdminCosts(),
+            getMaintenanceMode(),
+            getLegalIssueAlerts(),
+            getFeedbacks(),
+            getGreetingMessage(),
+        ]);
+        if (insightsData?.error) throw new Error(insightsData.error);
+        if (usersData?.error) throw new Error(usersData.error);
+        if (costsData?.error) throw new Error(costsData.error);
+        if (alertsData?.error) throw new Error(alertsData.error);
+        if (feedbacksData?.error) throw new Error(feedbacksData.error);
+        
+        setInsights(insightsData);
+        setAllUsers(usersData);
+        setCosts(costsData);
+        setIsMaintenanceMode(maintenanceData.isMaintenanceMode);
+        setLegalAlerts(alertsData);
+        setFeedbacks(feedbacksData);
+        setGreetingMessage(greetingData);
+     } catch (err: any) {
+        console.error('Erro ao buscar dados do painel:', err);
+        setError(err.message || 'Não foi possível carregar os dados do painel.');
+     } finally {
+        setIsLoading(false);
+     }
+  };
 
   useEffect(() => {
     if (authLoading) {
@@ -118,34 +164,7 @@ export default function AdminPage() {
     
     if (user.uid === ADMIN_UID) {
         setIsAuthorized(true);
-        Promise.all([
-            getAdminInsights(),
-            getAdminUsers(),
-            getAdminCosts(),
-            getMaintenanceMode(),
-            getLegalIssueAlerts(),
-            getFeedbacks(),
-            getGreetingMessage(),
-        ]).then(([insightsData, usersData, costsData, maintenanceData, alertsData, feedbacksData, greetingData]) => {
-            if (insightsData?.error) throw new Error(insightsData.error);
-            if (usersData?.error) throw new Error(usersData.error);
-            if (costsData?.error) throw new Error(costsData.error);
-            if (alertsData?.error) throw new Error(alertsData.error);
-            if (feedbacksData?.error) throw new Error(feedbacksData.error);
-            
-            setInsights(insightsData);
-            setAdminUsers(usersData);
-            setCosts(costsData);
-            setIsMaintenanceMode(maintenanceData.isMaintenanceMode);
-            setLegalAlerts(alertsData);
-            setFeedbacks(feedbacksData);
-            setGreetingMessage(greetingData);
-        }).catch(err => {
-            console.error('Erro ao buscar dados do painel:', err);
-            setError(err.message || 'Não foi possível carregar os dados do painel.');
-        }).finally(() => {
-            setIsLoading(false);
-        });
+        fetchAdminData();
     } else {
         setIsAuthorized(false);
         setError("Você não tem permissão para ver esta página.");
@@ -219,6 +238,43 @@ export default function AdminPage() {
     }
   };
 
+  const handleOpenEditUserDialog = (userToEdit: AdminUser) => {
+    setSelectedUser(userToEdit);
+    setSelectedRole(userToEdit.role);
+    setIsEditUserDialogOpen(true);
+  };
+
+  const handleSaveUserRole = async () => {
+    if (!selectedUser) return;
+    const result = await setUserRole(selectedUser.uid, selectedRole);
+    if (result.success) {
+        toast({ title: 'Sucesso', description: `O papel de ${selectedUser.displayName} foi atualizado.` });
+        await fetchAdminData();
+    } else {
+        toast({ variant: 'destructive', title: 'Erro', description: result.error });
+    }
+    setIsEditUserDialogOpen(false);
+    setSelectedUser(null);
+  };
+  
+  const handleOpenDeleteUserDialog = (userToDelete: AdminUser) => {
+    setSelectedUser(userToDelete);
+    setIsDeleteUserDialogOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    const result = await deleteUser(selectedUser.uid);
+     if (result.success) {
+        toast({ title: 'Sucesso', description: `O usuário ${selectedUser.displayName} foi excluído.` });
+        await fetchAdminData();
+    } else {
+        toast({ variant: 'destructive', title: 'Erro', description: result.error });
+    }
+    setIsDeleteUserDialogOpen(false);
+    setSelectedUser(null);
+  };
+
 
   const formatLatency = (ms: number) => {
     if (ms === 0) return 'N/A';
@@ -288,6 +344,12 @@ export default function AdminPage() {
         )}
     </>
   );
+  
+  const roleDisplay: Record<UserRole, { label: string, className: string }> = {
+    admin: { label: 'Admin', className: 'bg-red-500 text-white' },
+    beta: { label: 'Beta', className: 'bg-blue-500 text-white' },
+    user: { label: 'Usuário', className: 'bg-gray-500 text-white' },
+  };
 
   if (authLoading || isLoading) {
     return (
@@ -311,6 +373,49 @@ export default function AdminPage() {
 
   return (
     <div className="dark flex min-h-screen w-full flex-col bg-background text-foreground">
+       <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Editar Papel do Usuário</DialogTitle>
+                    <DialogDescription>
+                        Altere o nível de acesso para {selectedUser?.displayName || selectedUser?.email}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as UserRole)}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecione um papel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="user">Usuário</SelectItem>
+                            <SelectItem value="beta">Beta</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditUserDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleSaveUserRole}>Salvar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <AlertDialog open={isDeleteUserDialogOpen} onOpenChange={setIsDeleteUserDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Você tem certeza que deseja excluir o usuário {selectedUser?.displayName}? Esta ação é permanente e removerá o usuário da autenticação e do banco de dados.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteUser} className={cn("bg-destructive text-destructive-foreground hover:bg-destructive/90")}>
+                        Excluir Usuário
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        
       <header className="sticky top-0 z-30 flex h-20 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 md:grid md:grid-cols-3">
         <div className="flex items-center">
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => router.push('/chat')}>
@@ -333,9 +438,9 @@ export default function AdminPage() {
                 <TabsTrigger value="analytics">Análise Geral</TabsTrigger>
                 <TabsTrigger value="rag">Análise RAG</TabsTrigger>
                 <TabsTrigger value="latency">Latência</TabsTrigger>
+                <TabsTrigger value="users">Usuários</TabsTrigger>
                 <TabsTrigger value="feedback">Feedbacks</TabsTrigger>
                 <TabsTrigger value="legal">Alertas Jurídicos</TabsTrigger>
-                <TabsTrigger value="costs">Custos</TabsTrigger>
                 <TabsTrigger value="content">Conteúdo</TabsTrigger>
                 <TabsTrigger value="system">Sistema</TabsTrigger>
             </TabsList>
@@ -488,45 +593,6 @@ export default function AdminPage() {
                                         )}
                                     </TableBody>
                                 </Table>
-                            </CardContent>
-                        </Card>
-                        <Card className="col-span-1">
-                            <CardHeader>
-                                <div className="flex items-center gap-2">
-                                    <Shield className="h-5 w-5 text-muted-foreground" />
-                                    <CardTitle>Todos os Usuários</CardTitle>
-                                </div>
-                                <CardDescription>
-                                    Lista de todos os usuários registrados no sistema.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="max-h-80 overflow-y-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Nome</TableHead>
-                                                <TableHead>Email</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {adminUsers.length > 0 ? (
-                                                adminUsers.map((admin) => (
-                                                    <TableRow key={admin.uid}>
-                                                        <TableCell className="font-medium">{admin.displayName ?? 'N/A'}</TableCell>
-                                                        <TableCell>{admin.email ?? 'N/A'}</TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={2} className="h-24 text-center">
-                                                        Nenhum usuário encontrado.
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
                             </CardContent>
                         </Card>
                     </div>
@@ -765,6 +831,70 @@ export default function AdminPage() {
                         </Card>
                     </div>
                 </div>
+            </TabsContent>
+            <TabsContent value="users" className="mt-4">
+                 <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle>Gerenciamento de Usuários</CardTitle>
+                                <CardDescription>
+                                    Adicione, edite e remova usuários e seus papéis no sistema.
+                                </CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Usuário</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Papel</TableHead>
+                                    <TableHead>Data de Criação</TableHead>
+                                    <TableHead className="text-right">Ações</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {allUsers.map(u => (
+                                    <TableRow key={u.uid}>
+                                        <TableCell className="font-medium">{u.displayName || 'N/A'}</TableCell>
+                                        <TableCell>{u.email}</TableCell>
+                                        <TableCell>
+                                            <Badge className={cn(roleDisplay[u.role]?.className)}>
+                                                {roleDisplay[u.role]?.label || 'Usuário'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                                        <TableCell className="text-right">
+                                            {u.uid !== ADMIN_UID && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => handleOpenEditUserDialog(u)}>
+                                                            <Pencil className="mr-2 h-4 w-4" />
+                                                            Editar Papel
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem 
+                                                            className="text-destructive focus:text-destructive"
+                                                            onClick={() => handleOpenDeleteUserDialog(u)}>
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Excluir
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
             </TabsContent>
             <TabsContent value="feedback" className="mt-4">
                  <div className="grid gap-4 md:grid-cols-2 md:gap-8">
