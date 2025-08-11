@@ -1,6 +1,7 @@
 
 
 
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -1129,6 +1130,32 @@ export async function getUsersWithRoles(): Promise<any> {
     } catch (error: any) {
         console.error('Error fetching users with roles:', error);
         return { error: `Não foi possível buscar a lista de usuários: ${error.message}` };
+    }
+}
+
+export async function getPreRegisteredUsers(): Promise<any> {
+    try {
+        const adminDb = getAuthenticatedFirestoreAdmin();
+        const preRegSnapshot = await adminDb.collection('pre_registered_users').get();
+        
+        if (preRegSnapshot.empty) {
+            return [];
+        }
+        
+        const preRegisteredUsers = preRegSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                email: doc.id,
+                role: data.role,
+                createdAt: (data.createdAt as AdminTimestamp)?.toDate().toISOString(),
+            };
+        });
+        
+        return preRegisteredUsers;
+
+    } catch (error: any) {
+        console.error('Error fetching pre-registered users:', error);
+        return { error: `Não foi possível buscar a lista de usuários pré-registrados: ${error.message}` };
     }
 }
 

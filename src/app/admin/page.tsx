@@ -1,12 +1,13 @@
 
 
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage, setUserRole, deleteUser, createUser } from '@/app/actions';
+import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage, setUserRole, deleteUser, createUser, getPreRegisteredUsers } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,6 +63,12 @@ interface AdminUser {
     createdAt: string;
 }
 
+interface PreRegisteredUser {
+    email: string;
+    role: UserRole;
+    createdAt: string;
+}
+
 interface AdminCosts {
     currentMonthCost: number;
     costPerMillionInputTokens: number;
@@ -104,6 +111,7 @@ export default function AdminPage() {
   
   const [insights, setInsights] = useState<AdminInsights | null>(null);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
+  const [preRegisteredUsers, setPreRegisteredUsers] = useState<PreRegisteredUser[]>([]);
   const [costs, setCosts] = useState<AdminCosts | null>(null);
   const [legalAlerts, setLegalAlerts] = useState<LegalIssueAlert[]>([]);
   const [feedbacks, setFeedbacks] = useState<{positive: Feedback[], negative: Feedback[]}>({ positive: [], negative: [] });
@@ -129,9 +137,10 @@ export default function AdminPage() {
     if (!user) return;
     setIsLoading(true);
      try {
-        const [insightsData, usersData, costsData, maintenanceData, alertsData, feedbacksData, greetingData] = await Promise.all([
+        const [insightsData, usersData, preRegData, costsData, maintenanceData, alertsData, feedbacksData, greetingData] = await Promise.all([
             getAdminInsights(),
             getUsersWithRoles(),
+            getPreRegisteredUsers(),
             getAdminCosts(),
             getMaintenanceMode(),
             getLegalIssueAlerts(),
@@ -140,12 +149,14 @@ export default function AdminPage() {
         ]);
         if (insightsData?.error) throw new Error(insightsData.error);
         if (usersData?.error) throw new Error(usersData.error);
+        if (preRegData?.error) throw new Error(preRegData.error);
         if (costsData?.error) throw new Error(costsData.error);
         if (alertsData?.error) throw new Error(alertsData.error);
         if (feedbacksData?.error) throw new Error(feedbacksData.error);
         
         setInsights(insightsData);
         setAllUsers(usersData);
+        setPreRegisteredUsers(preRegData);
         setCosts(costsData);
         setIsMaintenanceMode(maintenanceData.isMaintenanceMode);
         setLegalAlerts(alertsData);
@@ -303,6 +314,7 @@ export default function AdminPage() {
         const result = await createUser(email, role);
         if (result.success) {
             toast({ title: 'Sucesso', description: `Usuário com email ${email} foi pré-registrado com sucesso.` });
+            await fetchAdminData();
             setIsAddUserDialogOpen(false);
             setNewUser({ email: '', role: 'user' });
             // We don't need to refetch data as the user list won't change until they log in.
@@ -903,19 +915,19 @@ export default function AdminPage() {
                     </div>
                 </div>
             </TabsContent>
-            <TabsContent value="users" className="mt-4">
+            <TabsContent value="users" className="mt-4 space-y-8">
                  <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle>Gerenciamento de Usuários</CardTitle>
+                                <CardTitle>Gerenciamento de Usuários Ativos</CardTitle>
                                 <CardDescription>
                                     Adicione, edite e remova usuários e seus papéis no sistema.
                                 </CardDescription>
                             </div>
                              <Button onClick={() => setIsAddUserDialogOpen(true)}>
                                 <UserPlus className="mr-2 h-4 w-4" />
-                                Novo Usuário
+                                Pré-registrar Usuário
                             </Button>
                         </div>
                     </CardHeader>
@@ -966,6 +978,44 @@ export default function AdminPage() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Usuários Pré-registrados</CardTitle>
+                        <CardDescription>
+                            Estes usuários foram convidados, mas ainda não fizeram o primeiro login.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                             <TableHeader>
+                                <TableRow>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Papel Atribuído</TableHead>
+                                    <TableHead>Data do Convite</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {preRegisteredUsers.length > 0 ? preRegisteredUsers.map(u => (
+                                    <TableRow key={u.email}>
+                                        <TableCell className="font-medium">{u.email}</TableCell>
+                                        <TableCell>
+                                            <Badge className={cn(roleDisplay[u.role]?.className)}>
+                                                {roleDisplay[u.role]?.label || 'Usuário'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                                    </TableRow>
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="h-24 text-center">
+                                            Nenhum usuário pré-registrado no momento.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </CardContent>
