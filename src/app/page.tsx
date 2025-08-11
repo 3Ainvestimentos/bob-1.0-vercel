@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BobIcon } from '@/components/icons/BobIcon';
 import { getMaintenanceMode } from './actions';
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 
 export default function LoginPage() {
@@ -42,7 +43,7 @@ export default function LoginPage() {
             return;
         }
 
-        if (user) {
+        if (user && user.email) {
             const checkUserRoleAndRedirect = async () => {
                 try {
                     const userDocRef = doc(db, 'users', user.uid);
@@ -52,19 +53,39 @@ export default function LoginPage() {
                     const isAdminByEmail = user.email === 'pedro.rosa@3ainvestimentos.com.br';
 
                     if (!userDocSnap.exists()) {
+                        
+                        const preRegRef = doc(db, 'pre_registered_users', user.email!);
+                        const preRegSnap = await getDoc(preRegRef);
+
+                        let role = 'user';
+                        if (preRegSnap.exists()) {
+                            role = preRegSnap.data().role || 'user';
+                        }
+                        
+                        if (isAdminByEmail) {
+                            role = 'admin';
+                        }
+
                         const newUserData = {
                             uid: user.uid,
                             email: user.email,
                             displayName: user.displayName,
                             createdAt: serverTimestamp(),
-                            role: isAdminByEmail ? 'admin' : 'user',
+                            role: role,
                             termsAccepted: false,
                         };
-                        await setDoc(userDocRef, newUserData);
+                        
+                        const batch = writeBatch(db);
+                        batch.set(userDocRef, newUserData);
+                        if (preRegSnap.exists()) {
+                            batch.delete(preRegRef);
+                        }
+                        await batch.commit();
+
                         userData = newUserData;
+
                     } else {
                         userData = userDocSnap.data();
-                        // Bootstrap the admin user if they already exist but don't have the admin role
                         if (isAdminByEmail && userData.role !== 'admin') {
                             await updateDoc(userDocRef, { role: 'admin' });
                             userData.role = 'admin';

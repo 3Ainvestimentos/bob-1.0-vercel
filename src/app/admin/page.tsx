@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -121,7 +122,7 @@ export default function AdminPage() {
   const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false);
 
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-  const [newUser, setNewUser] = useState({ displayName: '', email: '', password: '', role: 'user' as UserRole });
+  const [newUser, setNewUser] = useState({ email: '', role: 'user' as UserRole });
 
 
   const fetchAdminData = async () => {
@@ -293,15 +294,20 @@ export default function AdminPage() {
   };
 
     const handleCreateUser = async () => {
-        const { email, password, displayName, role } = newUser;
-        const result = await createUser(email, password, displayName, role);
+        const { email, role } = newUser;
+        if (!email.trim() || !role) {
+            toast({ variant: 'destructive', title: 'Erro de Validação', description: 'Por favor, preencha o email e selecione um papel.' });
+            return;
+        }
+
+        const result = await createUser(email, role);
         if (result.success) {
-            toast({ title: 'Sucesso', description: `Usuário ${displayName} criado com sucesso.` });
-            await fetchAdminData();
+            toast({ title: 'Sucesso', description: `Usuário com email ${email} foi pré-registrado com sucesso.` });
             setIsAddUserDialogOpen(false);
-            setNewUser({ displayName: '', email: '', password: '', role: 'user' });
+            setNewUser({ email: '', role: 'user' });
+            // We don't need to refetch data as the user list won't change until they log in.
         } else {
-            toast({ variant: 'destructive', title: 'Erro ao Criar Usuário', description: result.error });
+            toast({ variant: 'destructive', title: 'Erro ao Pré-registrar', description: result.error });
         }
     };
 
@@ -433,23 +439,15 @@ export default function AdminPage() {
         <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+                    <DialogTitle>Pré-registrar Novo Usuário</DialogTitle>
                     <DialogDescription>
-                        Crie um novo usuário e defina seu papel inicial.
+                        Insira o email e o papel inicial. O usuário completará o registro ao fazer login com o Google.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="displayName">Nome</Label>
-                        <Input id="displayName" value={newUser.displayName} onChange={(e) => setNewUser(prev => ({ ...prev, displayName: e.target.value }))} />
-                    </div>
-                    <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" value={newUser.email} onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Senha</Label>
-                        <Input id="password" type="password" value={newUser.password} onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))} />
+                        <Input id="email" type="email" value={newUser.email} onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))} placeholder="exemplo@3ariva.com.br" />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="role">Papel</Label>
@@ -467,7 +465,7 @@ export default function AdminPage() {
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsAddUserDialogOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleCreateUser}>Criar Usuário</Button>
+                    <Button onClick={handleCreateUser}>Pré-registrar Usuário</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -1131,49 +1132,39 @@ export async function getUsersWithRoles(): Promise<any> {
     }
 }
 
-export async function createUser(
-    email: string,
-    password_1: string,
-    displayName: string,
-    role: UserRole
-): Promise<{ success: boolean; error?: string }> {
-    if (!email || !password_1 || !displayName || !role) {
-        return { success: false, error: 'Todos os campos são obrigatórios.' };
+export async function createUser(email: string, role: UserRole): Promise<{ success: boolean, error?: string }> {
+    if (!email || !role) {
+        return { success: false, error: 'Email e Papel são obrigatórios.' };
     }
-
     try {
-        const authAdmin = getAuthenticatedAuthAdmin();
         const adminDb = getAuthenticatedFirestoreAdmin();
+        
+        const authAdmin = getAuthenticatedAuthAdmin();
+        try {
+            await authAdmin.getUserByEmail(email);
+            return { success: false, error: 'Este e-mail já está em uso por outro usuário no Firebase Authentication.' };
+        } catch (error: any) {
+            if (error.code !== 'auth/user-not-found') {
+                throw error;
+            }
+        }
 
-        // Create user in Firebase Authentication
-        const userRecord = await authAdmin.createUser({
-            email,
-            password: password_1,
-            displayName,
-            emailVerified: true, // Optionally set email as verified
-        });
+        const preRegRef = adminDb.collection('pre_registered_users').doc(email.toLowerCase());
+        const preRegDoc = await preRegRef.get();
+        if (preRegDoc.exists) {
+            return { success: false, error: 'Este e-mail já está pré-registrado.' };
+        }
 
-        // Create user document in Firestore
-        const userRef = adminDb.collection('users').doc(userRecord.uid);
-        await userRef.set({
-            uid: userRecord.uid,
-            email: userRecord.email,
-            displayName: userRecord.displayName,
+        await preRegRef.set({
             role: role,
             createdAt: FieldValue.serverTimestamp(),
-            termsAccepted: false, // Force terms acceptance on first login
         });
-
         return { success: true };
     } catch (error: any) {
-        console.error(`Error creating user ${email}:`, error);
-        if (error.code === 'auth/email-already-exists') {
-            return { success: false, error: 'Este e-mail já está em uso por outro usuário.' };
-        }
-        return { success: false, error: error.message };
+        console.error(`Error pre-registering user ${email}:`, error);
+        return { success: false, error: `Ocorreu um erro inesperado: ${error.message}` };
     }
 }
-
 
 export async function setUserRole(userId: string, role: UserRole): Promise<{success: boolean, error?: string}> {
     if (!userId || !role) {
