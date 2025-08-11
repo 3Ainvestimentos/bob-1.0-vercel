@@ -5,11 +5,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage, setUserRole, deleteUser } from '@/app/actions';
+import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage, setUserRole, deleteUser, createUser } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2, MessageSquare, Save, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2, MessageSquare, Save, MoreHorizontal, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ADMIN_UID, UserRole } from '@/types';
@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 
 interface AdminInsights {
@@ -112,10 +113,13 @@ export default function AdminPage() {
   const [apiHealthResults, setApiHealthResults] = useState<ApiHealthResult[]>([]);
   const [isCheckingApiHealth, setIsCheckingApiHealth] = useState(false);
   const [isSavingGreeting, setIsSavingGreeting] = useState(false);
+  
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
   const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false);
+
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-  const [selectedRole, setSelectedRole] = useState<UserRole>('user');
+  const [newUser, setNewUser] = useState({ displayName: '', email: '', password: '', role: 'user' as UserRole });
 
 
   const fetchAdminData = async () => {
@@ -240,13 +244,12 @@ export default function AdminPage() {
 
   const handleOpenEditUserDialog = (userToEdit: AdminUser) => {
     setSelectedUser(userToEdit);
-    setSelectedRole(userToEdit.role);
     setIsEditUserDialogOpen(true);
   };
 
   const handleSaveUserRole = async () => {
     if (!selectedUser) return;
-    const result = await setUserRole(selectedUser.uid, selectedRole);
+    const result = await setUserRole(selectedUser.uid, selectedUser.role);
     if (result.success) {
         toast({ title: 'Sucesso', description: `O papel de ${selectedUser.displayName} foi atualizado.` });
         await fetchAdminData();
@@ -274,6 +277,19 @@ export default function AdminPage() {
     setIsDeleteUserDialogOpen(false);
     setSelectedUser(null);
   };
+
+    const handleCreateUser = async () => {
+        const { email, password, displayName, role } = newUser;
+        const result = await createUser(email, password, displayName, role);
+        if (result.success) {
+            toast({ title: 'Sucesso', description: `Usuário ${displayName} criado com sucesso.` });
+            await fetchAdminData();
+            setIsAddUserDialogOpen(false);
+            setNewUser({ displayName: '', email: '', password: '', role: 'user' });
+        } else {
+            toast({ variant: 'destructive', title: 'Erro ao Criar Usuário', description: result.error });
+        }
+    };
 
 
   const formatLatency = (ms: number) => {
@@ -382,7 +398,7 @@ export default function AdminPage() {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as UserRole)}>
+                    <Select value={selectedUser?.role} onValueChange={(value) => setSelectedUser(prev => prev ? {...prev, role: value as UserRole} : null)}>
                         <SelectTrigger>
                             <SelectValue placeholder="Selecione um papel" />
                         </SelectTrigger>
@@ -395,6 +411,47 @@ export default function AdminPage() {
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsEditUserDialogOpen(false)}>Cancelar</Button>
                     <Button onClick={handleSaveUserRole}>Salvar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+                    <DialogDescription>
+                        Crie um novo usuário e defina seu papel inicial.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="displayName">Nome</Label>
+                        <Input id="displayName" value={newUser.displayName} onChange={(e) => setNewUser(prev => ({ ...prev, displayName: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" value={newUser.email} onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Senha</Label>
+                        <Input id="password" type="password" value={newUser.password} onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="role">Papel</Label>
+                        <Select value={newUser.role} onValueChange={(value) => setNewUser(prev => ({...prev, role: value as UserRole}))}>
+                            <SelectTrigger id="role">
+                                <SelectValue placeholder="Selecione um papel" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="user">Usuário</SelectItem>
+                                <SelectItem value="beta">Beta</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAddUserDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleCreateUser}>Criar Usuário</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -842,6 +899,10 @@ export default function AdminPage() {
                                     Adicione, edite e remova usuários e seus papéis no sistema.
                                 </CardDescription>
                             </div>
+                             <Button onClick={() => setIsAddUserDialogOpen(true)}>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Novo Usuário
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -1196,3 +1257,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
