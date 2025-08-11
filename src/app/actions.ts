@@ -9,6 +9,7 @@
 
 
 
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -72,7 +73,7 @@ Duas classes com maior rentabilidade no mês, com seus respectivos percentuais e
 Duas classes com rentabilidade inferior ao CDI no mês, apenas com nome e percentual. Caso a classe Inflação aparecer na lista, justificar a baixa rentabilidade à baixa inflação do mês anterior
 :balão_de_fala: Monte uma mensagem personalizada com esse modelo, usando asteriscos para a formatação de WhatsApp e sem formatação automática do chat:
 Olá!
-Em maio sua carteira rendeu [RENTABILIDADE PERCENTUAL DO MÊS], o que equivale a [RENTABILIDADE EM %CDI DO MÊS], um ganho bruto de [GANHO FINANCEIRO DO MÊS]! No ano, estamos com uma rentabilidade de [RENTABILIDADE PERCENTUAL DO ANO], o que equivale a uma performance de [RENTABILIDADE EM %CDI DO ANO] e um ganho financeiro de [GANHO FINANCEIRO DO ANO]!
+Em julho sua carteira rendeu [RENTABILIDADE PERCENTUAL DO MÊS], o que equivale a [RENTABILIDADE EM %CDI DO MÊS], um ganho bruto de [GANHO FINANCEIRO DO MÊS]! No ano, estamos com uma rentabilidade de [RENTABILIDADE PERCENTUAL DO ANO], o que equivale a uma performance de [RENTABILIDADE EM %CDI DO ANO] e um ganho financeiro de [GANHO FINANCEIRO DO ANO]!
 Os principais destaques foram:
 [Classe 1], com [rentabilidade], [justificativa]
 [Classe 2], com [rentabilidade], [justificativa]
@@ -1493,5 +1494,7 @@ export async function runApiHealthCheck(): Promise<any> {
 
 
 
+
+    
 
     
