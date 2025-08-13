@@ -413,7 +413,7 @@ export default function AdminPage() {
 
   if (!isAuthorized) {
     return (
-      <div className="dark flex h-screen w-full flex-col items-center justify-center bg-background text-center">
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-center">
         <h1 className="text-2xl font-bold text-destructive">Acesso Negado</h1>
         <p className="text-muted-foreground">{error}</p>
         <Button onClick={() => router.push('/chat')} className="mt-4">
@@ -424,7 +424,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="dark flex min-h-screen w-full flex-col bg-background text-foreground">
+    <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
        <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
             <DialogContent>
                 <DialogHeader>
