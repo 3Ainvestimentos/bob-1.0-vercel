@@ -234,7 +234,7 @@ export default function AdminPage() {
     setIsSavingGreeting(true);
     try {
         const result = await setGreetingMessage(greetingMessage);
-        if (result?.error) {
+        if (result && result.error) {
             throw new Error(result.error);
         }
         toast({
