@@ -1,3 +1,4 @@
+
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
@@ -1394,12 +1395,12 @@ export async function getGreetingMessage(): Promise<string> {
     }
 }
 
-export async function setGreetingMessage(greetingMessage: string): Promise<{ error: string | null }> {
+export async function setGreetingMessage(greetingMessage: string): Promise<{ success?: boolean, error?: string | null }> {
     try {
         const adminDb = getAuthenticatedFirestoreAdmin();
         const contentRef = adminDb.collection('system_settings').doc('content');
         await contentRef.set({ greetingMessage }, { merge: true });
-        return { error: null };
+        return { success: true };
     } catch (error: any) {
         console.error("Error setting greeting message:", error);
         return { error: error.message };
@@ -1485,7 +1486,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists) {
+        if (userDocSnap.exists()) {
             // Usuário já existe e está configurado, login permitido.
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
@@ -1494,7 +1495,7 @@ export async function validateAndOnboardUser(
         const preRegRef = adminDb.collection('pre_registered_users').doc(email);
         const preRegSnap = await preRegRef.get();
 
-        if (!preRegSnap.exists) {
+        if (!preRegSnap.exists()) {
             // E-mail não está na lista de permissões, acesso negado.
             return { success: false, role: null, error: 'Seu e-mail não está autorizado a acessar este sistema.' };
         }
