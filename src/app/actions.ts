@@ -1,21 +1,9 @@
-
-
-
-
-
-
-
-
-
-
-
-
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getFirestore as getFirestoreAdmin, FieldValue, DocumentData, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
+import { getFirestore as getFirestoreAdmin, FieldValue, DocumentData, Timestamp as AdminTimestamp, writeBatch } from 'firebase-admin/firestore';
 import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
 import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
@@ -28,7 +16,7 @@ import { SpeechClient } from '@google-cloud/speech';
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 
-1.  **IDENTIDADE:** Você é Bob. Seu tom de voz é profissional, claro e estruturado. Use listas e tabelas. A resposta de saudação só deve ser utilizada caso o usuário solicite.
+1.  **IDENTIDADE:** Seu tom de voz é profissional, claro e estruturado. Use listas e tabelas. A resposta de saudação só deve ser utilizada caso o usuário solicite.
 
 2.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):**
     - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo.
@@ -1481,20 +1469,58 @@ export async function runApiHealthCheck(): Promise<any> {
 }
 
 
-    
+export async function validateAndOnboardUser(
+    uid: string, 
+    email: string, 
+    displayName: string | null
+): Promise<{ success: boolean; role: UserRole | null; error?: string }> {
+    if (!uid || !email) {
+        return { success: false, role: null, error: 'UID e Email são obrigatórios.' };
+    }
 
-    
+    const adminDb = getAuthenticatedFirestoreAdmin();
 
+    try {
+        // 1. Verificar se o usuário já existe na coleção 'users'
+        const userDocRef = adminDb.collection('users').doc(uid);
+        const userDocSnap = await userDocRef.get();
 
+        if (userDocSnap.exists()) {
+            // Usuário já existe e está configurado, login permitido.
+            return { success: true, role: userDocSnap.data()?.role || 'user' };
+        }
 
+        // 2. Se não existe, verificar a coleção 'pre_registered_users'
+        const preRegRef = adminDb.collection('pre_registered_users').doc(email);
+        const preRegSnap = await preRegRef.get();
 
-    
+        if (!preRegSnap.exists) {
+            // E-mail não está na lista de permissões, acesso negado.
+            return { success: false, role: null, error: 'Seu e-mail não está autorizado a acessar este sistema.' };
+        }
 
-    
+        // 3. Usuário está pré-registrado. Criar o usuário final e remover o pré-registro.
+        const role = preRegSnap.data()?.role || 'user';
+        const newUserData = {
+            uid,
+            email,
+            displayName: displayName || 'Usuário',
+            createdAt: FieldValue.serverTimestamp(),
+            role,
+            termsAccepted: false,
+        };
+        
+        // Usar um batch para garantir a atomicidade da operação
+        const batch = adminDb.batch();
+        batch.set(userDocRef, newUserData); // Cria o documento do usuário final
+        batch.delete(preRegRef);          // Remove o documento de pré-registro
+        
+        await batch.commit();
 
+        return { success: true, role };
 
-
-
-    
-
-    
+    } catch (error: any) {
+        console.error('Erro durante a validação e onboarding do usuário:', error);
+        return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
+    }
+}

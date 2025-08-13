@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -11,7 +9,7 @@ import { signInWithPopup, signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BobIcon } from '@/components/icons/BobIcon';
-import { getMaintenanceMode } from './actions';
+import { getMaintenanceMode, validateAndOnboardUser } from './actions';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 
@@ -43,56 +41,21 @@ export default function LoginPage() {
         }
 
         if (user && user.email) {
-            const checkUserRoleAndRedirect = async () => {
+            const handleUserLogin = async () => {
                 try {
-                    const userDocRef = doc(db, 'users', user.uid);
-                    let userDocSnap = await getDoc(userDocRef);
-                    let userData;
-                    
-                    if (!userDocSnap.exists()) {
-                        
-                        const preRegRef = doc(db, 'pre_registered_users', user.email!);
-                        const preRegSnap = await getDoc(preRegRef);
+                    const validationResult = await validateAndOnboardUser(user.uid, user.email!, user.displayName);
 
-                        // Se não estiver pré-registrado, negar acesso
-                        if (!preRegSnap.exists()) {
-                             await signOut(auth);
-                             toast({
-                                 variant: 'destructive',
-                                 title: 'Acesso Negado',
-                                 description: 'Seu e-mail não está autorizado a acessar este sistema. Entre em contato com o administrador.',
-                             });
-                             return;
-                        }
-                        
-                        // Se estiver pré-registrado, criar usuário final e remover pré-registro
-                        const role = preRegSnap.data().role || 'user';
-                        
-                        const newUserData = {
-                            uid: user.uid,
-                            email: user.email,
-                            displayName: user.displayName,
-                            createdAt: serverTimestamp(),
-                            role: role,
-                            termsAccepted: false,
-                        };
-                        
-                        const batch = writeBatch(db);
-                        batch.set(userDocRef, newUserData);
-                        batch.delete(preRegRef); // Remove da lista de pré-registrados
-                        await batch.commit();
-
-                        userData = newUserData;
-
-                    } else {
-                        userData = userDocSnap.data();
+                    if (!validationResult.success) {
+                        await signOut(auth);
+                        toast({
+                            variant: 'destructive',
+                            title: 'Acesso Negado',
+                            description: validationResult.error || 'Você não tem permissão para acessar o sistema.',
+                        });
+                        return;
                     }
-                    
-                    if (!userData) {
-                        throw new Error("Não foi possível ler os dados do seu perfil. Entre em contato com o suporte.");
-                    }
-                    
-                    const userRole = userData.role || 'user';
+
+                    const userRole = validationResult.role;
                     
                     if (userRole === 'admin') {
                         router.push('/chat');
@@ -119,11 +82,11 @@ export default function LoginPage() {
                     toast({
                         variant: 'destructive',
                         title: 'Erro de Autenticação',
-                        description: err.message,
+                        description: `Ocorreu um erro inesperado: ${err.message}`,
                     });
                 }
             };
-            checkUserRoleAndRedirect();
+            handleUserLogin();
         }
     }, [user, loading, router, toast, isMaintenanceMode, isCheckingMaintenance]);
 
