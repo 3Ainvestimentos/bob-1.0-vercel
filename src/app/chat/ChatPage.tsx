@@ -1570,7 +1570,7 @@ function ChatPageContent() {
                         <PopoverContent
                             side="left"
                             align="center"
-                            className="w-auto max-w-xs text-sm bg-chart-2 text-white shadow-lg border-none rounded-xl"
+                            className="w-auto max-w-xs text-sm bg-chart-2 text-black shadow-lg border-none rounded-xl"
                         >
                            <GreetingPopoverContent onOpen={isGreetingPopoverOpen} />
                            <PopoverArrow className="fill-chart-2" />
