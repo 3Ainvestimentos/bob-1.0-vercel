@@ -1641,7 +1641,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
@@ -1654,11 +1654,12 @@ function ChatPageContent() {
 
         <SidebarInset>
             <main className="flex h-full flex-1 flex-col bg-background">
-                <div className={cn(
-                    "fixed top-4 right-4 z-10 transition-opacity", 
-                    "opacity-100",
-                    "group-data-[state=expanded]:hidden"
-                )}>
+                 <div
+                    className={cn(
+                        'fixed top-4 right-4 z-10 transition-opacity duration-300',
+                        messages.length > 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                    )}
+                >
                     <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                         <PopoverTrigger asChild>
                             <button 
