@@ -1485,7 +1485,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists()) {
+        if (userDocSnap.exists) {
             // Usuário já existe e está configurado, login permitido.
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
