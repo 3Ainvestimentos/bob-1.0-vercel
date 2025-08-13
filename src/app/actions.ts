@@ -1395,7 +1395,7 @@ export async function getGreetingMessage(): Promise<string> {
     }
 }
 
-export async function setGreetingMessage(greetingMessage: string): Promise<{ success?: boolean, error?: string | null }> {
+export async function setGreetingMessage(greetingMessage: string): Promise<{ success: boolean; error?: string }> {
     try {
         const adminDb = getAuthenticatedFirestoreAdmin();
         const contentRef = adminDb.collection('system_settings').doc('content');
@@ -1403,7 +1403,7 @@ export async function setGreetingMessage(greetingMessage: string): Promise<{ suc
         return { success: true };
     } catch (error: any) {
         console.error("Error setting greeting message:", error);
-        return { error: error.message };
+        return { success: false, error: error.message };
     }
 }
 

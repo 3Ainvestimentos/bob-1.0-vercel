@@ -1517,7 +1517,7 @@ function ChatPageContent() {
         <AlertDialog open={isDeleteConvoDialogOpen} onOpenChange={setIsDeleteConvoDialogOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+                    <DialogTitle>Excluir conversa?</DialogTitle>
                     <AlertDialogDescription>
                         Esta ação não pode ser desfeita. A conversa será excluída permanentemente.
                     </AlertDialogDescription>
@@ -1657,7 +1657,7 @@ function ChatPageContent() {
                  <div
                     className={cn(
                         'fixed top-4 right-4 z-10 transition-opacity duration-300',
-                        'opacity-100'
+                        messages.length > 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'
                     )}
                 >
                     <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
