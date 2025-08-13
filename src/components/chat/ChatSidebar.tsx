@@ -257,7 +257,7 @@ export function ChatSidebar({
       </DndContext>
 
       <SidebarFooter>
-        <SidebarMenu>
+        <SidebarMenu className="group-data-[state=collapsed]:justify-center">
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onNewChat}
