@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -50,22 +49,25 @@ export default function LoginPage() {
                     let userDocSnap = await getDoc(userDocRef);
                     let userData;
                     
-                    const isAdminByEmail = user.email === 'pedro.rosa@3ainvestimentos.com.br';
-
                     if (!userDocSnap.exists()) {
                         
                         const preRegRef = doc(db, 'pre_registered_users', user.email!);
                         const preRegSnap = await getDoc(preRegRef);
 
-                        let role = 'user';
-                        if (preRegSnap.exists()) {
-                            role = preRegSnap.data().role || 'user';
+                        // Se não estiver pré-registrado, negar acesso
+                        if (!preRegSnap.exists()) {
+                             await signOut(auth);
+                             toast({
+                                 variant: 'destructive',
+                                 title: 'Acesso Negado',
+                                 description: 'Seu e-mail não está autorizado a acessar este sistema. Entre em contato com o administrador.',
+                             });
+                             return;
                         }
                         
-                        if (isAdminByEmail) {
-                            role = 'admin';
-                        }
-
+                        // Se estiver pré-registrado, criar usuário final e remover pré-registro
+                        const role = preRegSnap.data().role || 'user';
+                        
                         const newUserData = {
                             uid: user.uid,
                             email: user.email,
@@ -77,19 +79,13 @@ export default function LoginPage() {
                         
                         const batch = writeBatch(db);
                         batch.set(userDocRef, newUserData);
-                        if (preRegSnap.exists()) {
-                            batch.delete(preRegRef);
-                        }
+                        batch.delete(preRegRef); // Remove da lista de pré-registrados
                         await batch.commit();
 
                         userData = newUserData;
 
                     } else {
                         userData = userDocSnap.data();
-                        if (isAdminByEmail && userData.role !== 'admin') {
-                            await updateDoc(userDocRef, { role: 'admin' });
-                            userData.role = 'admin';
-                        }
                     }
                     
                     if (!userData) {
