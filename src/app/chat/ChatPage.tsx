@@ -1641,7 +1641,7 @@ function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={onToggleGroup}
+                onToggleGroup={handleToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
@@ -1657,7 +1657,7 @@ function ChatPageContent() {
                  <div
                     className={cn(
                         'fixed top-4 right-4 z-10 transition-opacity duration-300',
-                        messages.length > 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                        'opacity-100'
                     )}
                 >
                     <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
