@@ -239,17 +239,17 @@ export default function AdminPage() {
           }
           toast({
               title: 'Mensagem Salva',
-              description: 'A mensagem de saudação do Bob foi atualizada com sucesso.',
+              description: 'A saudação foi atualizada. A página será recarregada.',
           });
-          const updatedMessage = await getGreetingMessage();
-          setGreetingMessage(updatedMessage);
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
       } catch (error: any) {
           toast({
               variant: 'destructive',
               title: 'Erro ao Salvar',
               description: `Não foi possível salvar a mensagem: ${error.message}`,
           });
-      } finally {
           setIsSavingGreeting(false);
       }
   };
@@ -1345,3 +1345,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
