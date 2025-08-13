@@ -18,6 +18,7 @@ import {
   regenerateAnswer,
   removeFileFromConversation,
   transcribeLiveAudio,
+  validateAndOnboardUser
 } from '@/app/actions';
 import {
   AlertDialog,
@@ -77,6 +78,8 @@ import { cn } from '@/lib/utils';
 import { AttachedFile, UserRole } from '@/types';
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RobotIdeaIcon } from '@/components/icons/RobotIdeaIcon';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 
 // ---- Data Types ----
@@ -489,6 +492,9 @@ function ChatPageContent() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   
   const [isGreetingPopoverOpen, setIsGreetingPopoverOpen] = useState(false);
+  const [isCheckingTerms, setIsCheckingTerms] = useState(true);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -562,7 +568,7 @@ function ChatPageContent() {
     setSelectedFiles([]);
   };
 
-  useEffect(() => {
+ useEffect(() => {
     if (authLoading) {
       return;
     }
@@ -570,8 +576,49 @@ function ChatPageContent() {
       router.push('/');
       return;
     }
-    fetchSidebarData();
-  }, [user, authLoading, router, fetchSidebarData]);
+    
+    const checkAndCreateUser = async () => {
+      setIsCheckingTerms(true);
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (!userDocSnap.exists()) {
+            const validationResult = await validateAndOnboardUser(user.uid, user.email!, user.displayName);
+            
+            if (!validationResult.success) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Acesso Negado',
+                    description: validationResult.error || 'Você não tem permissão para acessar o sistema.',
+                });
+                await handleSignOut();
+                return;
+            }
+        }
+        
+        // Refetch after potential creation
+        const finalUserDocSnap = await getDoc(userDocRef);
+
+        if (finalUserDocSnap.exists() && finalUserDocSnap.data()?.termsAccepted === true) {
+            fetchSidebarData();
+        } else {
+            setShowTermsDialog(true);
+        }
+
+      } catch (err: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao verificar termos',
+          description: err.message,
+        });
+        await handleSignOut();
+      } finally {
+        setIsCheckingTerms(false);
+      }
+    };
+    checkAndCreateUser();
+  }, [user, authLoading, router, toast, handleSignOut, fetchSidebarData]);
 
 
   const handleSelectConversation = async (chatId: string) => {
@@ -1322,9 +1369,31 @@ function ChatPageContent() {
       e.dataTransfer.clearData();
     }
   };
+  
+    const handleAcceptTerms = async () => {
+        if (!user) return;
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, { termsAccepted: true });
+            setShowTermsDialog(false);
+            fetchSidebarData();
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: `Não foi possível salvar sua preferência: ${error.message}`,
+            });
+            await handleSignOut();
+        }
+    };
+    
+    const handleDeclineTerms = async () => {
+        setShowTermsDialog(false);
+        await handleSignOut();
+    };
 
 
-  if (authLoading || (isSidebarLoading && conversations.length === 0)) {
+  if (authLoading || isCheckingTerms) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <p className="text-lg text-muted-foreground">Carregando Bob 1.0...</p>
@@ -1528,6 +1597,34 @@ function ChatPageContent() {
         </Dialog>
         
         <FaqDialog open={isFaqDialogOpen} onOpenChange={setIsFaqDialogOpen} />
+        
+        <AlertDialog open={showTermsDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Termos de Uso e Política de Privacidade</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Para continuar, você deve concordar com os Termos de Uso e a Política de Privacidade do Bob. Ao aceitar, você reconhece que o sistema pode cometer erros e que as informações devem ser verificadas.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="flex items-center space-x-2 my-4">
+                    <Checkbox
+                        id="terms"
+                        checked={termsAccepted}
+                        onCheckedChange={(checked) => setTermsAccepted(!!checked)}
+                    />
+                    <Label htmlFor="terms">Eu li e aceito os Termos de Uso</Label>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={handleDeclineTerms}>Recusar e Sair</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleAcceptTerms}
+                        disabled={!termsAccepted}
+                    >
+                        Continuar
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
 
         <Sidebar>
@@ -1556,8 +1653,8 @@ function ChatPageContent() {
         </Sidebar>
 
         <SidebarInset>
-            <main className="flex flex-1 flex-col bg-background relative">
-                <div className="absolute top-4 right-4 z-10">
+            <main className="flex h-full flex-1 flex-col bg-background">
+                <div className={cn("fixed top-4 right-4 z-10 transition-opacity", messages.length > 0 ? "opacity-0" : "opacity-100", "group-data-[state=expanded]:hidden")}>
                     <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                         <PopoverTrigger asChild>
                             <button 
@@ -1616,3 +1713,5 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
+
+    
