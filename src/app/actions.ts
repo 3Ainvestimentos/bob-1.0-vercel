@@ -74,7 +74,6 @@ No cenário internacional, as tensões comerciais continuaram no centro das aten
 
 let adminApp: App | null = null;
 
-
 function getServiceAccountCredentials() {
     const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
 
@@ -1385,7 +1384,7 @@ export async function getGreetingMessage(): Promise<string> {
         const contentRef = adminDb.collection('system_settings').doc('content');
         const docSnap = await contentRef.get();
 
-        if (docSnap.exists()) {
+        if (docSnap.exists) {
             return docSnap.data()?.greetingMessage || defaultMessage;
         }
         return defaultMessage;
@@ -1525,3 +1524,5 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
+
+    
