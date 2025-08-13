@@ -21,7 +21,7 @@ interface FaqDialogProps {
 
 const faqData = [
   {
-    value: 'item-1',
+    value: 'item-bob-1',
     trigger: 'Como posso interagir com o Bob?',
     content: (
         <div className="space-y-4 text-muted-foreground">
@@ -42,7 +42,7 @@ const faqData = [
     )
   },
   {
-    value: 'item-2',
+    value: 'item-bob-2',
     trigger: 'O que posso perguntar ou pedir ao Bob?',
     content: (
         <div className="space-y-2 text-muted-foreground">
@@ -58,7 +58,7 @@ const faqData = [
     )
   },
     {
-    value: 'item-3',
+    value: 'item-bob-3',
     trigger: 'Como organizo minhas conversas?',
     content: (
         <div className="space-y-4 text-muted-foreground">
@@ -79,7 +79,7 @@ const faqData = [
     )
   },
   {
-    value: 'item-4',
+    value: 'item-bob-4',
     trigger: 'Quais ações posso realizar nas respostas do Bob?',
     content: (
         <div className="space-y-2 text-muted-foreground">
@@ -94,7 +94,7 @@ const faqData = [
     )
   },
     {
-    value: 'item-5',
+    value: 'item-bob-5',
     trigger: 'Como posso obter melhores resultados?',
     content: (
         <div className="space-y-2 text-muted-foreground">
