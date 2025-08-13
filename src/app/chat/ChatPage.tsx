@@ -1654,7 +1654,11 @@ function ChatPageContent() {
 
         <SidebarInset>
             <main className="flex h-full flex-1 flex-col bg-background">
-                <div className={cn("fixed top-4 right-4 z-10 transition-opacity", messages.length > 0 ? "opacity-0" : "opacity-100", "group-data-[state=expanded]:hidden")}>
+                <div className={cn(
+                    "fixed top-4 right-4 z-10 transition-opacity", 
+                    messages.length > 0 ? "opacity-10 pointer-events-none" : "opacity-100", 
+                    "group-data-[state=expanded]:hidden"
+                )}>
                     <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                         <PopoverTrigger asChild>
                             <button 
@@ -1713,5 +1717,3 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
-
-    
