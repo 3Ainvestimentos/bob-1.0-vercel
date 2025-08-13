@@ -22,97 +22,88 @@ interface FaqDialogProps {
 const faqData = [
   {
     value: 'item-1',
-    trigger: '1. Funcionalidades Essenciais da Conversa',
+    trigger: 'Como posso interagir com o Bob?',
     content: (
-        <div className="space-y-4">
+        <div className="space-y-4 text-muted-foreground">
+            <p>Você pode fazer perguntas de três maneiras diferentes:</p>
             <div>
-                <strong className="font-semibold">1.1. Interação com a IA</strong>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li><span className="font-medium text-foreground">Chat Conversacional:</span> Interface de chat intuitiva para fazer perguntas em linguagem natural.</li>
-                    <li><span className="font-medium text-foreground">Envio de Arquivos (Multimodalidade):</span> Anexe arquivos (Documentos, Imagens, Áudio, Vídeo) diretamente na conversa para análise.</li>
-                    <li><span className="font-medium text-foreground">Entrada por Voz:</span> Utilize o microfone para ditar suas perguntas. O áudio é transcrito e processado automaticamente.</li>
-                    <li><span className="font-medium text-foreground">Memória de Contexto:</span> O Bob mantém o contexto da conversa atual, permitindo perguntas de acompanhamento.</li>
-                </ul>
+                <strong className="font-semibold text-foreground">a) Digitando sua Pergunta</strong>
+                <p className="mt-1">É a forma mais simples. Apenas escreva o que você precisa no campo de texto e pressione "Enter".</p>
             </div>
             <div>
-                <strong className="font-semibold">1.2. Capacidades do Modelo de IA</strong>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li><span className="font-medium text-foreground">Troca de Modelos:</span> Escolha entre Bob 1.0 Flash (rápido) e Bob 1.0 Pro (raciocínio complexo).</li>
-                    <li><span className="font-medium text-foreground">Busca na Web (Simulada):</span> Para perguntas que exigem informações recentes, o Bob pode simular uma busca na web.</li>
-                    <li><span className="font-medium text-foreground">Citação de Fontes:</span> Quando uma busca é realizada, as respostas incluem os links das fontes utilizadas.</li>
-                </ul>
+                <strong className="font-semibold text-foreground">b) Anexando um Arquivo</strong>
+                <p className="mt-1">Clique no ícone de clipe de papel (📎), selecione um ou mais arquivos (PDF, Word, Excel) e, em seguida, faça uma pergunta sobre eles. Por exemplo: "Resuma este relatório".</p>
             </div>
             <div>
-                <strong className="font-semibold">1.3. Interação com as Respostas</strong>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li><span className="font-medium text-foreground">Gerar Novamente:</span> Peça para o Bob tentar uma nova resposta com um clique.</li>
-                    <li><span className="font-medium text-foreground">Excluir Última Geração:</span> Remova a última resposta da IA e o seu prompt correspondente.</li>
-                    <li><span className="font-medium text-foreground">Feedback:</span> Avalie as respostas com "gostei" ou "não gostei".</li>
-                    <li><span className="font-medium text-foreground">Copiar e Compartilhar:</span> Copie o texto de uma única resposta ou de uma conversa inteira.</li>
-                    <li><span className="font-medium text-foreground">Contagem de Tokens:</span> Exibe a quantidade de tokens usados para gerar a resposta.</li>
-                    <li><span className="font-medium text-foreground">Reportar Problema:</span> Sinalize respostas com possíveis problemas jurídicos ou de conformidade.</li>
-                </ul>
+                <strong className="font-semibold text-foreground">c) Usando a Voz</strong>
+                <p className="mt-1">Clique no ícone de microfone (🎤), fale sua pergunta de forma clara, e o sistema irá transcrevê-la para a caixa de texto, pronta para ser enviada.</p>
             </div>
         </div>
     )
   },
   {
     value: 'item-2',
-    trigger: '2. Organização e Gerenciamento de Histórico',
+    trigger: 'O que posso perguntar ou pedir ao Bob?',
     content: (
-        <div className="space-y-4">
-            <div>
-                <strong className="font-semibold">2.1. Projetos (Pastas)</strong>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li><span className="font-medium text-foreground">Criação de Projetos:</span> Organize seus chats em "Projetos" para agrupar conversas por tema.</li>
-                    <li><span className="font-medium text-foreground">Gerenciamento de Projetos:</span> Renomeie e exclua projetos. Ao excluir um projeto, as conversas são mantidas como avulsas.</li>
-                    <li><span className="font-medium text-foreground">Destino para Novos Chats:</span> Defina um projeto como destino padrão para novas conversas.</li>
-                </ul>
-            </div>
-            <div>
-                <strong className="font-semibold">2.2. Gerenciamento de Conversas</strong>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li><span className="font-medium text-foreground">Mover entre Projetos:</span> Mova conversas para um projeto ou remova-as de um.</li>
-                    <li><span className="font-medium text-foreground">Exclusão de Conversas:</span> Exclua conversas individuais.</li>
-                    <li><span className="font-medium text-foreground">Persistência Local:</span> O histórico é salvo no seu navegador (localStorage), garantindo privacidade, mas não sincroniza entre dispositivos.</li>
-                </ul>
-            </div>
+        <div className="space-y-2 text-muted-foreground">
+            <p>Você pode usar o Bob para diversas tarefas:</p>
+            <ul className="list-disc space-y-1 pl-5">
+                <li><span className="font-medium text-foreground">Tirar Dúvidas Gerais:</span> "Quem é o responsável pela área de compliance?".</li>
+                <li><span className="font-medium text-foreground">Analisar Documentos:</span> Anexe um PDF e peça: "Resuma os pontos principais deste documento."</li>
+                <li><span className="font-medium text-foreground">Extrair Dados de Planilhas:</span> Envie um arquivo Excel e pergunte: "Qual foi o total de vendas no último trimestre com base nesta planilha?".</li>
+                <li><span className="font-medium text-foreground">Análise Padrão de Investimentos (Ação Especial):</span> Anexe um relatório de posição consolidada da XP e digite o comando: <strong className='text-foreground'>"faça a análise com nosso padrão"</strong>. Bob irá extrair os dados e montar uma mensagem formatada para o WhatsApp.</li>
+                <li><span className="font-medium text-foreground">Buscar na Web:</span> Se a resposta não estiver na nossa base interna, Bob oferecerá a opção "Pesquisar na Web" para buscar informações externas.</li>
+            </ul>
         </div>
     )
   },
-  {
+    {
     value: 'item-3',
-    trigger: '3. Experiência do Usuário e Suporte',
+    trigger: 'Como organizo minhas conversas?',
     content: (
-        <div className="space-y-4">
+        <div className="space-y-4 text-muted-foreground">
+            <p>Para manter seu histórico organizado, você pode usar <strong className="text-foreground">Projetos</strong>, que funcionam como pastas.</p>
             <div>
-                <strong className="font-semibold">3.1. Assistência Proativa</strong>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li><span className="font-medium text-foreground">Insights Proativos:</span> O Bob oferece sugestões e insights contextuais que aparecem de forma discreta no cabeçalho.</li>
-                    <li><span className="font-medium text-foreground">Sugestões de Prompt:</span> Na tela inicial, o Bob apresenta sugestões de prompts para inspirar o usuário.</li>
-                </ul>
+                <strong className="font-semibold text-foreground">Criar um Projeto:</strong>
+                <p className="mt-1">Na barra lateral, clique em "Novo projeto".</p>
             </div>
             <div>
-                <strong className="font-semibold">3.2. Personalização e Ajuda</strong>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li><span className="font-medium text-foreground">Temas:</span> Escolha entre os temas Claro (Light), Escuro (Dark), ou sincronize com o Sistema Operacional.</li>
-                    <li><span className="font-medium text-foreground">Guias e FAQ:</span> Esta seção de ajuda explica todas as funcionalidades.</li>
-                </ul>
+                <strong className="font-semibold text-foreground">Mover uma Conversa:</strong>
+                <p className="mt-1">Você pode <strong className="text-foreground">arrastar e soltar</strong> uma conversa de um lugar para outro. Alternativamente, clique nos três pontinhos (⋮) ao lado do nome da conversa para ver a opção "Mover para...".</p>
+            </div>
+            <div>
+                <strong className="font-semibold text-foreground">Renomear ou Excluir:</strong>
+                <p className="mt-1">Clique nos três pontinhos (⋮) ao lado do nome da conversa ou do projeto para encontrar as opções de renomear e excluir.</p>
             </div>
         </div>
     )
   },
   {
     value: 'item-4',
-    trigger: '4. Suporte e Resolução de Problemas',
+    trigger: 'Quais ações posso realizar nas respostas do Bob?',
     content: (
-        <div className="space-y-4">
-            <div>
-                <strong className="font-semibold">4.1. Canal de Suporte</strong>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li><span className="font-medium text-foreground">Abertura de Tickets:</span> Caso encontre qualquer problema técnico, comportamento inesperado ou tenha alguma dúvida que não foi respondida aqui, por favor, abra um ticket de suporte através da aplicação "Connect".</li>
-                </ul>
-            </div>
+        <div className="space-y-2 text-muted-foreground">
+            <p>Para cada resposta que o Bob te dá, você tem várias opções:</p>
+            <ul className="list-disc space-y-1 pl-5">
+                <li><strong className="text-foreground">👍 / 👎 (Feedback):</strong> Use os ícones de polegar para nos dizer se a resposta foi útil ou não. Seu feedback é muito importante!</li>
+                <li><strong className="text-foreground">🔄 (Gerar Novamente):</strong> Não gostou da resposta? Clique neste ícone para pedir ao Bob que tente novamente.</li>
+                <li><strong className="text-foreground">📋 (Copiar):</strong> Copia o texto da resposta para sua área de transferência.</li>
+                <li><strong className="text-foreground">🚨 (Informar Problema Jurídico):</strong> Se você identificar alguma informação na resposta que pareça sensível ou incorreta do ponto de vista legal, use esta opção para notificar a equipe de conformidade.</li>
+            </ul>
+        </div>
+    )
+  },
+    {
+    value: 'item-5',
+    trigger: 'Como posso obter melhores resultados?',
+    content: (
+        <div className="space-y-2 text-muted-foreground">
+             <ul className="list-disc space-y-1 pl-5">
+                <li><strong className="text-foreground">Seja Específico:</strong> Quanto mais clara e detalhada for a sua pergunta, melhor será a resposta do Bob.</li>
+                <li><strong className="text-foreground">Use Palavras-Chave:</strong> Para tarefas específicas, como a análise de relatórios, use os comandos exatos (ex: "análise com nosso padrão").</li>
+                <li><strong className="text-foreground">Forneça Contexto:</strong> Ao analisar um arquivo, diga ao Bob o que você procura. Em vez de apenas "Analise este arquivo", tente "Analise este arquivo e me diga quais foram os principais riscos apontados".</li>
+            </ul>
+             <p className="pt-2">Para qualquer dúvida ou problema não coberto por este guia, por favor, abra um chamado no <strong className="text-foreground">Connect</strong>.</p>
         </div>
     )
   },
