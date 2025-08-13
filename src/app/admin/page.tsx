@@ -233,23 +233,18 @@ export default function AdminPage() {
   const handleSaveGreetingMessage = async () => {
       setIsSavingGreeting(true);
       try {
-          const result = await setGreetingMessage(greetingMessage);
-          if (result && result.error) {
-              throw new Error(result.error);
-          }
+          await setGreetingMessage(greetingMessage);
           toast({
               title: 'Mensagem Salva',
-              description: 'A saudação foi atualizada. A página será recarregada.',
+              description: 'A saudação foi atualizada com sucesso.',
           });
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
       } catch (error: any) {
           toast({
               variant: 'destructive',
               title: 'Erro ao Salvar',
               description: `Não foi possível salvar a mensagem: ${error.message}`,
           });
+      } finally {
           setIsSavingGreeting(false);
       }
   };

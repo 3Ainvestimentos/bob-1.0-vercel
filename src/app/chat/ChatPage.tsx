@@ -430,16 +430,14 @@ const FileDropOverlay = () => (
     </div>
 );
 
-const GreetingPopoverContent = ({ onOpen }: { onOpen: boolean }) => {
+const GreetingPopoverContent = () => {
     const [greeting, setGreeting] = useState('Carregando...');
     
     useEffect(() => {
-        if (onOpen) {
-            getGreetingMessage()
-                .then(message => setGreeting(message))
-                .catch(() => setGreeting('Não foi possível carregar a saudação.'));
-        }
-    }, [onOpen]);
+        getGreetingMessage()
+            .then(message => setGreeting(message))
+            .catch(() => setGreeting('Não foi possível carregar a saudação.'));
+    }, []);
 
     return <>{greeting}</>;
 };
@@ -1656,7 +1654,7 @@ function ChatPageContent() {
             <main className="flex h-full flex-1 flex-col bg-background">
                  <div
                     className={cn(
-                        'fixed top-4 right-4 z-10 transition-opacity duration-300',
+                        'absolute top-4 right-4 z-10 transition-opacity duration-300',
                         messages.length > 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'
                     )}
                 >
@@ -1674,7 +1672,7 @@ function ChatPageContent() {
                             align="center"
                             className="w-auto max-w-xs text-sm bg-chart-2 text-black shadow-lg border-none rounded-xl"
                         >
-                           <GreetingPopoverContent onOpen={isGreetingPopoverOpen} />
+                           <GreetingPopoverContent />
                            <PopoverArrow className="fill-chart-2" />
                         </PopoverContent>
                     </Popover>

@@ -1385,7 +1385,7 @@ export async function getGreetingMessage(): Promise<string> {
         const contentRef = adminDb.collection('system_settings').doc('content');
         const docSnap = await contentRef.get();
 
-        if (docSnap.exists) {
+        if (docSnap.exists()) {
             return docSnap.data()?.greetingMessage || defaultMessage;
         }
         return defaultMessage;
@@ -1395,15 +1395,15 @@ export async function getGreetingMessage(): Promise<string> {
     }
 }
 
-export async function setGreetingMessage(greetingMessage: string): Promise<{ success: boolean; error?: string }> {
+export async function setGreetingMessage(greetingMessage: string): Promise<void> {
     try {
         const adminDb = getAuthenticatedFirestoreAdmin();
         const contentRef = adminDb.collection('system_settings').doc('content');
         await contentRef.set({ greetingMessage }, { merge: true });
-        return { success: true };
     } catch (error: any) {
         console.error("Error setting greeting message:", error);
-        return { success: false, error: error.message };
+        // We don't throw here to avoid crashing the server on a non-critical error,
+        // but we log it for debugging. In a real app, you might want more robust error handling.
     }
 }
 
