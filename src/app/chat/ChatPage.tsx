@@ -570,36 +570,8 @@ function ChatPageContent() {
       router.push('/');
       return;
     }
-
-    const checkAndCreateUser = async () => {
-        setIsSidebarLoading(true);
-        try {
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDocSnap = await getDoc(userDocRef);
-
-            if (!userDocSnap.exists()) {
-                await setDoc(userDocRef, {
-                    uid: user.uid,
-                    email: user.email,
-                    displayName: user.displayName,
-                    createdAt: serverTimestamp(),
-                    role: 'user', // Default role for new users
-                });
-            }
-            // Always fetch data after check
-            await fetchSidebarData();
-        } catch (err: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Erro ao configurar usuário',
-                description: err.message,
-            });
-            await handleSignOut();
-        }
-    };
-    
-    checkAndCreateUser();
-  }, [user, authLoading, router, toast, fetchSidebarData, handleSignOut]);
+    fetchSidebarData();
+  }, [user, authLoading, router, fetchSidebarData]);
 
 
   const handleSelectConversation = async (chatId: string) => {
