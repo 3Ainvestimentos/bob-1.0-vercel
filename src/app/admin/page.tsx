@@ -231,22 +231,28 @@ export default function AdminPage() {
   };
   
   const handleSaveGreetingMessage = async () => {
-      setIsSavingGreeting(true);
-      try {
-          await setGreetingMessage(greetingMessage);
-          toast({
-              title: 'Mensagem Salva',
-              description: 'A saudação foi atualizada com sucesso.',
-          });
-      } catch (error: any) {
-          toast({
-              variant: 'destructive',
-              title: 'Erro ao Salvar',
-              description: `Não foi possível salvar a mensagem: ${error.message}`,
-          });
-      } finally {
-          setIsSavingGreeting(false);
+    setIsSavingGreeting(true);
+    try {
+      const result = await setGreetingMessage(greetingMessage);
+      if (result?.error) {
+        throw new Error(result.error);
       }
+      toast({
+        title: 'Mensagem Salva',
+        description: 'A saudação foi atualizada com sucesso.',
+      });
+      // Re-fetch the greeting message to confirm it's updated in the state
+      const updatedMessage = await getGreetingMessage();
+      setGreetingMessage(updatedMessage);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao Salvar',
+        description: `Não foi possível salvar a mensagem: ${error.message}`,
+      });
+    } finally {
+      setIsSavingGreeting(false);
+    }
   };
 
 

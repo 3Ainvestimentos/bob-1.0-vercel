@@ -430,7 +430,7 @@ const FileDropOverlay = () => (
     </div>
 );
 
-const GreetingPopoverContent = () => {
+const GreetingPopoverContent = ({ onOpenChange }: { onOpenChange: (isOpen: boolean) => void }) => {
     const [greeting, setGreeting] = useState('Carregando...');
     
     useEffect(() => {
@@ -1655,7 +1655,7 @@ function ChatPageContent() {
                  <div
                     className={cn(
                         'absolute top-4 right-4 z-10 transition-opacity duration-300',
-                        messages.length > 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                        messages.length > 0 ? 'opacity-10' : 'opacity-100'
                     )}
                 >
                     <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
@@ -1672,7 +1672,7 @@ function ChatPageContent() {
                             align="center"
                             className="w-auto max-w-xs text-sm bg-chart-2 text-black shadow-lg border-none rounded-xl"
                         >
-                           <GreetingPopoverContent />
+                           <GreetingPopoverContent onOpenChange={setIsGreetingPopoverOpen} />
                            <PopoverArrow className="fill-chart-2" />
                         </PopoverContent>
                     </Popover>

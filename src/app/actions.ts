@@ -1395,15 +1395,15 @@ export async function getGreetingMessage(): Promise<string> {
     }
 }
 
-export async function setGreetingMessage(greetingMessage: string): Promise<void> {
+export async function setGreetingMessage(greetingMessage: string): Promise<{ success: boolean, error?: string }> {
     try {
         const adminDb = getAuthenticatedFirestoreAdmin();
         const contentRef = adminDb.collection('system_settings').doc('content');
         await contentRef.set({ greetingMessage }, { merge: true });
+        return { success: true };
     } catch (error: any) {
         console.error("Error setting greeting message:", error);
-        // We don't throw here to avoid crashing the server on a non-critical error,
-        // but we log it for debugging. In a real app, you might want more robust error handling.
+        return { success: false, error: error.message };
     }
 }
 
