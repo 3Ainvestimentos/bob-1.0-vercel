@@ -1,7 +1,6 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
 import { auth, db, googleProvider } from '@/lib/firebase';
@@ -10,7 +9,8 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BobIcon } from '@/components/icons/BobIcon';
 import { getMaintenanceMode, validateAndOnboardUser } from './actions';
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
+import { GoogleIcon } from '@/components/icons/GoogleIcon';
 
 
 export default function LoginPage() {
@@ -43,35 +43,24 @@ export default function LoginPage() {
         if (user && user.email) {
             const handleUserLogin = async () => {
                 try {
-                    const validationResult = await validateAndOnboardUser(user.uid, user.email!, user.displayName);
-
-                    if (!validationResult.success) {
-                        await signOut(auth);
-                        toast({
-                            variant: 'destructive',
-                            title: 'Acesso Negado',
-                            description: validationResult.error || 'Você não tem permissão para acessar o sistema.',
-                        });
-                        return;
-                    }
-
-                    const userRole = validationResult.role;
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
                     
-                    if (userRole === 'admin') {
+                    if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
                         router.push('/chat');
                         return;
                     }
 
                     if (isMaintenanceMode) {
-                        if (userRole === 'beta') {
-                            router.push('/chat');
+                        if (userDocSnap.exists() && userDocSnap.data().role === 'beta') {
+                           router.push('/chat');
                         } else {
-                            await signOut(auth);
-                            toast({
-                                variant: 'destructive',
-                                title: 'Acesso Negado',
-                                description: 'O sistema está em manutenção. Apenas usuários beta e administradores podem acessar.',
-                            });
+                           await signOut(auth);
+                           toast({
+                               variant: 'destructive',
+                               title: 'Acesso Negado',
+                               description: 'O sistema está em manutenção. Apenas usuários beta e administradores podem acessar.',
+                           });
                         }
                     } else {
                         router.push('/chat');
@@ -129,7 +118,7 @@ export default function LoginPage() {
 
                     <div className="mt-8 flex flex-col gap-4">
                          <Button onClick={handleGoogleSignIn}>
-                            <LogIn className="mr-2 h-4 w-4" />
+                            <GoogleIcon className="mr-2 h-4 w-4" />
                             {isMaintenanceMode ? 'Entrar como admin ou beta' : 'Entrar com conta 3A RIVA'}
                         </Button>
                     </div>
