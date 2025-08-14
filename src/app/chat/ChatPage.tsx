@@ -1653,10 +1653,7 @@ function ChatPageContent() {
         <SidebarInset>
             <main className="flex h-full flex-1 flex-col bg-background">
                  <div
-                    className={cn(
-                        'absolute top-4 right-4 z-10 transition-opacity duration-300',
-                        messages.length > 0 ? 'opacity-10' : 'opacity-100'
-                    )}
+                    className="absolute top-4 right-4 z-10 transition-opacity duration-300 opacity-100"
                 >
                     <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                         <PopoverTrigger asChild>
