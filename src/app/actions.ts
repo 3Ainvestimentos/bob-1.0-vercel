@@ -374,7 +374,7 @@ async function callDiscoveryEngine(
                 preamble: modelPrompt
               },
               modelSpec: {
-                version: "stable"
+                version: "gemini-2.5-flash"
               }
             },
             extractiveContentSpec: {
