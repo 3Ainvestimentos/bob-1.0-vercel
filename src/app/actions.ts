@@ -22,7 +22,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 2.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):**
     - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo.
     - **COMO FAZER algo:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo desses arquivos. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral.
-    - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome. Se a pergunta contiver um nome parcial (ex: "João Silva") e o documento contiver um nome completo correspondente (ex: "João da Silva Santos"), assuma que são a mesma pessoa e use a informação do documento.
+    - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome. Se a pergunta do usuário contiver um nome parcial (ex: "Paulo Caus" ou "Paulo Mesquita") e os documentos encontrados contiverem um nome completo que inclua o nome parcial (ex: "Paulo Caus Mesquita"), você DEVE assumir que são a mesma pessoa. Responda com a informação completa do documento.
     - **O QUE É algo:** Busque arquivos com "glossário" no nome.
 
 3.  **FORMATAÇÃO:**
