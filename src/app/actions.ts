@@ -485,13 +485,15 @@ async function callDiscoveryEngine(
 async function callGemini(
     query: string,
     attachments: AttachedFile[] = [],
-    preamble: string | null = null
+    preamble: string | null = null,
+    usePro: boolean = false
 ): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; promptTokenCount?: number; candidatesTokenCount?: number; }> {
     const geminiApiKey = await getGeminiApiKey();
 
     try {
         const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const modelName = usePro ? "gemini-1.5-pro-latest" : "gemini-1.5-flash-latest";
+        const model = genAI.getGenerativeModel({ model: modelName });
         
         let fileContextPreamble = '';
         if (attachments.length > 0) {
@@ -613,7 +615,7 @@ export async function askAssistant(
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else if (useWebSearch) {
-      result = await callGemini(deidentifiedQuery);
+      result = await callGemini(deidentifiedQuery, [], null, true);
       source = 'web';
     } else {
         await logQuestionForAnalytics(deidentifiedQuery);
@@ -1457,7 +1459,7 @@ export async function runApiHealthCheck(): Promise<any> {
     // Test Gemini API (Web Search)
     let geminiStartTime = Date.now();
     try {
-        const res = await callGemini("teste");
+        const res = await callGemini("teste", [], null, true);
         if (res.error) throw new Error(res.error);
         results.push({
             api: 'Google Gemini API',
@@ -1538,4 +1540,5 @@ export async function validateAndOnboardUser(
     
 
     
+
 
