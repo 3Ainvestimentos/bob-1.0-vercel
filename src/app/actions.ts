@@ -486,7 +486,7 @@ async function callGemini(
 
     try {
         const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
         let fileContextPreamble = '';
         if (attachments.length > 0) {
