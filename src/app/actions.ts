@@ -486,7 +486,7 @@ async function callGemini(
 
     try {
         const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
         let fileContextPreamble = '';
         if (attachments.length > 0) {
@@ -1395,6 +1395,9 @@ export async function getGreetingMessage(): Promise<string> {
 }
 
 export async function setGreetingMessage(greetingMessage: string): Promise<{ success: boolean, error?: string }> {
+    if (!greetingMessage) {
+        return { success: false, error: 'A mensagem de saudação não pode estar vazia.' };
+    }
     try {
         const adminDb = getAuthenticatedFirestoreAdmin();
         const contentRef = adminDb.collection('system_settings').doc('content');
@@ -1524,5 +1527,3 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
-
-    
