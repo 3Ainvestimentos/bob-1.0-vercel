@@ -374,7 +374,7 @@ async function callDiscoveryEngine(
                 preamble: modelPrompt
               },
               modelSpec: {
-                version: "gemini-2.5-flash"
+                version: "stable"
               }
             },
             extractiveContentSpec: {
@@ -486,7 +486,7 @@ async function callGemini(
 
     try {
         const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         
         let fileContextPreamble = '';
         if (attachments.length > 0) {
