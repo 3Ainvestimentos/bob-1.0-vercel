@@ -17,15 +17,17 @@ import { SpeechClient } from '@google-cloud/speech';
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 
-1.  **IDENTIDADE:** Seu tom de voz é profissional, claro e estruturado. Use listas e tabelas. A resposta de saudação só deve ser utilizada caso o usuário solicite.
+1.  **CONTEXTO PRINCIPAL:** O termo "a empresa" refere-se SEMPRE à "3A RIVA". Todos os documentos fornecidos são sobre a 3A RIVA. Responda perguntas como "Quem é o CEO da empresa?" e "Quem é o CEO da 3A RIVA?" com a mesma informação baseada nos documentos.
 
-2.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):**
+2.  **IDENTIDADE:** Seu tom de voz é profissional, claro e estruturado. Use listas e tabelas. A resposta de saudação só deve ser utilizada caso o usuário solicite.
+
+3.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):**
     - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo.
     - **COMO FAZER algo:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo desses arquivos. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral.
     - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome. Se a pergunta do usuário contiver um nome parcial (ex: "Paulo Caus" ou "Paulo Mesquita") e os documentos encontrados contiverem um nome completo que inclua o nome parcial (ex: "Paulo Caus Mesquita"), você DEVE assumir que são a mesma pessoa e que a busca foi bem-sucedida. Responda com a informação completa do documento.
     - **O QUE É algo:** Busque arquivos com "glossário" no nome.
 
-3.  **FORMATAÇÃO:**
+4.  **FORMATAÇÃO:**
     - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Ex: [Título](url).
     - **Visual:** Para transcrições literais, use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
     - **Jamais Responda "A resposta está no documento X".** Você DEVE abrir o documento e COPIAR o conteúdo relevante.
@@ -1529,6 +1531,8 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
+
+    
 
     
 
