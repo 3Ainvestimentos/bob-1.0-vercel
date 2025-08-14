@@ -22,7 +22,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 2.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):**
     - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo.
     - **COMO FAZER algo:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo desses arquivos. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral.
-    - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome. Se a pergunta do usuário contiver um nome parcial (ex: "Paulo Caus" ou "Paulo Mesquita") e os documentos encontrados contiverem um nome completo que inclua o nome parcial (ex: "Paulo Caus Mesquita"), você DEVE assumir que são a mesma pessoa. Responda com a informação completa do documento.
+    - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome. Se a pergunta do usuário contiver um nome parcial (ex: "Paulo Caus" ou "Paulo Mesquita") e os documentos encontrados contiverem um nome completo que inclua o nome parcial (ex: "Paulo Caus Mesquita"), você DEVE assumir que são a mesma pessoa e que a busca foi bem-sucedida. Responda com a informação completa do documento.
     - **O QUE É algo:** Busque arquivos com "glossário" no nome.
 
 3.  **FORMATAÇÃO:**
@@ -360,7 +360,7 @@ async function callDiscoveryEngine(
       const modelPrompt = `${preamble}${fileContextPreamble}`;
 
       const requestBody: any = {
-        query: preamble === POSICAO_CONSOLIDADA_PREAMBLE ? "faça a análise deste relatório" : query,
+        query: query,
         pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
@@ -382,6 +382,22 @@ async function callDiscoveryEngine(
             }
         }
       };
+
+      if (preamble === POSICAO_CONSOLIDADA_PREAMBLE) {
+        requestBody.query = "faça a análise deste relatório";
+      }
+
+      const lowerCaseQuery = query.toLowerCase();
+      if (lowerCaseQuery.startsWith("quem é ") || lowerCaseQuery.startsWith("quem e ")) {
+          const name = query.substring(7).replace('?', '').trim();
+          const nameParts = name.split(' ');
+          if (nameParts.length > 2) {
+              const firstName = nameParts[0];
+              const lastName = nameParts[nameParts.length - 1];
+              const simplifiedName = `${firstName} ${lastName}`;
+              requestBody.query = `${name} OR "${simplifiedName}"`;
+          }
+      }
 
       const apiResponse = await fetch(url, {
         method: 'POST',
@@ -1512,3 +1528,5 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
+
+    
