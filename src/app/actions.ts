@@ -412,6 +412,17 @@ async function callDiscoveryEngine(
       const summary = data.summary?.summaryText;
       const results = data.results || [];
       
+      if (!summary || results.length === 0) {
+          const candidatesTokenCount = estimateTokens(failureMessage);
+          return { 
+              summary: failureMessage, 
+              searchFailed: true,
+              sources: [],
+              promptTokenCount,
+              candidatesTokenCount,
+          };
+      }
+      
       const tutorialResults = results.filter((result: any) => 
           result.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
       );
@@ -432,37 +443,11 @@ async function callDiscoveryEngine(
           const candidatesTokenCount = estimateTokens(tutorialContent);
           return { summary: tutorialContent, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
       }
-
-      if (!summary || results.length === 0) {
-          const candidatesTokenCount = estimateTokens(failureMessage);
-          return { 
-              summary: failureMessage, 
-              searchFailed: true,
-              sources: [],
-              promptTokenCount,
-              candidatesTokenCount,
-          };
-      }
       
-      const searchFailed = summary.trim() === failureMessage.trim();
-
-      if (results.length > 0) {
-          sources = results.map((result: any) => ({
-              title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim(),
-              uri: result.document?.derivedStructData?.link || 'URI não encontrada',
-          }));
-      }
-      
-      if (searchFailed) {
-        const candidatesTokenCount = estimateTokens(summary);
-        return { 
-          summary, 
-          searchFailed: true,
-          sources: [],
-          promptTokenCount,
-          candidatesTokenCount,
-        };
-      }
+      sources = results.map((result: any) => ({
+          title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim(),
+          uri: result.document?.derivedStructData?.link || 'URI não encontrada',
+      }));
       
       const candidatesTokenCount = estimateTokens(summary);
       return { summary, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
