@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -117,9 +118,9 @@ export default function LoginPage() {
                     )}
 
                     <div className="mt-8 flex flex-col gap-4">
-                         <Button onClick={handleGoogleSignIn}>
+                         <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
                             <GoogleIcon className="mr-2 h-4 w-4" />
-                            {isMaintenanceMode ? 'Entrar como admin ou beta' : 'Entrar com conta 3A RIVA'}
+                            Entrar com Google
                         </Button>
                     </div>
                 </div>
