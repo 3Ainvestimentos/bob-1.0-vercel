@@ -503,7 +503,7 @@ async function callGemini(
         let webSearchContext = '';
         if (webSearchResults.length > 0) {
             webSearchContext = `
-              **Instrução Adicional:** Baseie sua resposta nos seguintes trechos de busca da web. Responda de forma concisa e direta.
+              
               ${webSearchResults.map((r, i) => `Trecho ${i+1} (Fonte: ${r.link}):\n${r.snippet}`).join('\n\n')}
             `;
         }
@@ -664,13 +664,20 @@ export async function askAssistant(
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else if (useWebSearch) {
-      const searchResults = await callCustomSearch(deidentifiedQuery);
-      if (!searchResults.success || !searchResults.results || searchResults.results.length === 0) {
-          result = { summary: 'Não foi possível encontrar resultados na web para esta consulta.', searchFailed: true, sources: [] };
-      } else {
-          result = await callGemini(deidentifiedQuery, [], null, "gemini-1.5-flash-latest", searchResults.results);
-      }
-      source = 'web';
+        const searchResults = await callCustomSearch(deidentifiedQuery);
+        if (!searchResults.success || !searchResults.results || searchResults.results.length === 0) {
+            result = { summary: 'Não foi possível encontrar resultados na web para esta consulta.', searchFailed: true, sources: [] };
+        } else {
+             // TEST: Return raw results
+            const formattedResults = searchResults.results.map(r => `### [${r.title}](${r.link})\n${r.snippet}`).join('\n\n---\n\n');
+            const summary = `**Resultados da busca para: "${deidentifiedQuery}"**\n\n---\n\n${formattedResults}`;
+            result = { 
+                summary: summary, 
+                searchFailed: false, 
+                sources: searchResults.results.map(r => ({ title: r.title, uri: r.link })) 
+            };
+        }
+        source = 'web';
     } else {
         await logQuestionForAnalytics(deidentifiedQuery);
         result = await callDiscoveryEngine(
