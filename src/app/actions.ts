@@ -101,8 +101,7 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
 
 async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
     const {google} = require('googleapis');
-    await getFirebaseAdminApp();
-    const credentials = getServiceAccountCredentialsFromEnv();
+    const credentials = await getServiceAccountCredentialsFromEnv();
     const projectId = credentials.project_id;
     
     if (!projectId) {
@@ -183,8 +182,7 @@ async function callDiscoveryEngine(
     promptTokenCount?: number; 
     candidatesTokenCount?: number; 
 }> {
-    await getFirebaseAdminApp();
-    const credentials = getServiceAccountCredentialsFromEnv();
+    const credentials = await getServiceAccountCredentialsFromEnv();
     
     const auth = new GoogleAuth({
       credentials,
@@ -552,7 +550,7 @@ export async function askAssistant(
 
 export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
     await getFirebaseAdminApp();
-    const credentials = getServiceAccountCredentialsFromEnv();
+    const credentials = await getServiceAccountCredentialsFromEnv();
     const speechClient = new SpeechClient({ credentials });
 
     const audio = {
