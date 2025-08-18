@@ -63,15 +63,15 @@ const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista financeiro. Sua t
 **MODELO OBRIGATÓRIO DA MENSAGEM (PREENCHA OS CAMPOS):**
 
 Olá!
-Em julho sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]*, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* e um ganho financeiro de *[GANHO FINANCEIRO DO ANO]*!
+Em julho sua carteira rendeu *[RENTABILIDADE_MES]*, o que equivale a *[CDI_MES]*, um ganho bruto de *[GANHO_FINANCEIRO_MES]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE_ANO]*, o que equivale a uma performance de *[CDI_ANO]* e um ganho financeiro de *[GANHO_FINANCEIRO_ANO]*!
 
 Os principais destaques foram:
-*[Classe Destaque 1]*, com *[rentabilidade]*, *[justificativa]*
-*[Classe Destaque 2]*, com *[rentabilidade]*, *[justificativa]*
+*[CLASSE_DESTAQUE_1]*, com *[RENTABILIDADE_DESTAQUE_1]*, *[JUSTIFICATIVA_DESTAQUE_1]*
+*[CLASSE_DESTAQUE_2]*, com *[RENTABILIDADE_DESTAQUE_2]*, *[JUSTIFICATIVA_DESTAQUE_2]*
 
 Os principais detratores foram:
-*[Classe Detrator 1]*: *[rentabilidade]*
-*[Classe Detrator 2]*: *[rentabilidade]*
+*[CLASSE_DETRATOR_1]*: *[RENTABILIDADE_DETRATOR_1]*
+*[CLASSE_DETRATOR_2]*: *[RENTABILIDADE_DETRATOR_2]*
 
 Em julho de 2025, o assunto da vez no mercado brasileiro foram as imposições de tarifas de 50% por parte dos Estados Unidos sobre uma série de produtos nacionais. A incerteza inicial sobre o alcance dessas medidas afetou negativamente o sentimento dos investidores, pressionando o Ibovespa, que recuou 4,17% no mês. Ao final do mês, a divulgação de uma lista de quase 700 itens isentos trouxe algum alívio, com destaque para os setores de aviação e laranja. Contudo, setores como o de carne bovina seguiram pressionados. No campo monetário, o Copom manteve a taxa Selic em 15%, como esperado, diante das persistentes incertezas inflacionárias. Por outro lado, tivemos bons dados econômicos: o IGP-M registrou nova deflação, o IPCA-15 avançou 0,33% (abaixo da expectativa) e a taxa de desemprego caiu para 5,8%, o menor patamar da série. O FMI também revisou para cima a projeção de crescimento do PIB brasileiro para 2,3% em 2025.
 No cenário internacional, as tensões comerciais continuaram no centro das atenções. Além das tarifas direcionadas ao Brasil, os Estados Unidos mantiveram postura rígida nas negociações com a União Europeia e a China, o que gerou receios quanto ao impacto sobre o comércio global. O Federal Reserve optou por manter a taxa de juros no intervalo de 4,25% a 4,5% ao ano, em linha com as expectativas, reforçando um discurso de cautela diante do cenário externo desafiador. Apesar das incertezas, o S&P 500 avançou 2,17% no mês, refletindo a resiliência dos mercados americanos frente ao ambiente de maior aversão ao risco e reação aos bons resultados divulgados pelas empresas.`;
@@ -486,7 +486,8 @@ async function callGemini(
     query: string,
     attachments: AttachedFile[] = [],
     preamble: string | null = null,
-    modelName: string = "gemini-1.5-flash-latest" 
+    modelName: string = "gemini-1.5-flash-latest",
+    webSearchResults: any[] = [] 
 ): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; promptTokenCount?: number; candidatesTokenCount?: number; }> {
     const geminiApiKey = await getGeminiApiKey();
 
@@ -501,9 +502,18 @@ async function callGemini(
             ).join('');
         }
 
+        let webSearchContext = '';
+        if (webSearchResults.length > 0) {
+            webSearchContext = `
+              **Instrução Adicional:** Baseie sua resposta nos seguintes trechos de busca da web.
+              ${webSearchResults.map((r, i) => `Trecho ${i+1} (Fonte: ${r.link}):\n${r.snippet}`).join('\n\n')}
+            `;
+        }
+
         const finalPrompt = `
             ${preamble || 'Responda em português do Brasil, a menos que seja solicitado o contrário na pergunta.'}
             ${fileContextPreamble}
+            ${webSearchContext}
             
             Pergunta do usuário: "${query}"
         `;
@@ -514,8 +524,13 @@ async function callGemini(
         
         const promptTokenCount = undefined;
         const candidatesTokenCount = undefined;
+        
+        const sources: ClientRagSource[] = webSearchResults.map(r => ({
+            title: r.title,
+            uri: r.link,
+        }));
 
-        return { summary: text, searchFailed: false, sources: [], promptTokenCount, candidatesTokenCount };
+        return { summary: text, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
 
     } catch (error: any) {
         console.error("Error calling Gemini API:", error);
@@ -541,7 +556,7 @@ async function callCustomSearch(query: string): Promise<{ success: boolean; resu
             auth: apiKey,
             cx: searchEngineId,
             q: query,
-            num: 1, // We only need one result to confirm the API is working
+            num: 5,
         });
 
         return { success: true, results: response.data.items || [] };
@@ -642,7 +657,12 @@ export async function askAssistant(
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else if (useWebSearch) {
-      result = await callGemini(deidentifiedQuery, [], null, "gemini-1.5-flash-latest");
+      const searchResults = await callCustomSearch(deidentifiedQuery);
+      if (!searchResults.success || !searchResults.results || searchResults.results.length === 0) {
+          result = { summary: 'Não foi possível encontrar resultados na web para esta consulta.', searchFailed: true, sources: [] };
+      } else {
+          result = await callGemini(deidentifiedQuery, [], null, "gemini-1.5-flash-latest", searchResults.results);
+      }
       source = 'web';
     } else {
         await logQuestionForAnalytics(deidentifiedQuery);
@@ -1580,5 +1600,3 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
-
-    
