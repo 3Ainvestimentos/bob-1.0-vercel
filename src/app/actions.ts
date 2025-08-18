@@ -72,7 +72,20 @@ Os principais detratores foram:
 Em julho de 2025, o assunto da vez no mercado brasileiro foram as imposições de tarifas de 50% por parte dos Estados Unidos sobre uma série de produtos nacionais. A incerteza inicial sobre o alcance dessas medidas afetou negativamente o sentimento dos investidores, pressionando o Ibovespa, que recuou 4,17% no mês. Ao final do mês, a divulgação de uma lista de quase 700 itens isentos trouxe algum alívio, com destaque para os setores de aviação e laranja. Contudo, setores como o de carne bovina seguiram pressionados. No campo monetário, o Copom manteve a taxa Selic em 15%, como esperado, diante das persistentes incertezas inflacionárias. Por outro lado, tivemos bons dados econômicos: o IGP-M registrou nova deflação, o IPCA-15 avançou 0,33% (abaixo da expectativa) e a taxa de desemprego caiu para 5,8%, o menor patamar da série. O FMI também revisou para cima a projeção de crescimento do PIB brasileiro para 2,3% em 2025.
 No cenário internacional, as tensões comerciais continuaram no centro das atenções. Além das tarifas direcionadas ao Brasil, os Estados Unidos mantiveram postura rígida nas negociações com a União Europeia e a China, o que gerou receios quanto ao impacto sobre o comércio global. O Federal Reserve optou por manter a taxa de juros no intervalo de 4,25% a 4,5% ao ano, em linha com as expectativas, reforçando um discurso de cautela diante do cenário externo desafiador. Apesar das incertezas, o S&P 500 avançou 2,17% no mês, refletindo a resiliência dos mercados americanos frente ao ambiente de maior aversão ao risco e reação aos bons resultados divulgados pelas empresas.`;
 
-// A lógica de inicialização do Firebase foi movida para src/lib/server/firebase.ts
+
+function getServiceAccountCredentials() {
+    const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
+    if (!serviceAccountKeyBase64) {
+        throw new Error('A variável de ambiente SERVICE_ACCOUNT_KEY_INTERNAL não está definida ou está vazia.');
+    }
+    try {
+        const decodedKey = Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf-8');
+        return JSON.parse(decodedKey);
+    } catch (error: any) {
+        console.error("Falha ao decodificar ou analisar a chave da conta de serviço.", error.message);
+        throw new Error(`Falha ao processar a chave da conta de serviço: ${'' + error.message}`);
+    }
+}
 
 async function getGeminiApiKey(): Promise<string> {
     if (process.env.GEMINI_API_KEY) {
@@ -102,12 +115,7 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
 
 async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
     const {google} = require('googleapis');
-    const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
-
-    if (!serviceAccountKeyBase64) {
-        throw new Error('SERVICE_ACCOUNT_KEY_INTERNAL não definida.');
-    }
-    const credentials = JSON.parse(Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf-8'));
+    const credentials = getServiceAccountCredentials();
     const projectId = credentials.project_id;
     
     if (!projectId) {
@@ -188,12 +196,7 @@ async function callDiscoveryEngine(
     promptTokenCount?: number; 
     candidatesTokenCount?: number; 
 }> {
-    const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
-
-    if (!serviceAccountKeyBase64) {
-        throw new Error('SERVICE_ACCOUNT_KEY_INTERNAL não definida.');
-    }
-    const credentials = JSON.parse(Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf-8'));
+    const credentials = getServiceAccountCredentials();
     
     const auth = new GoogleAuth({
       credentials,
@@ -387,16 +390,12 @@ async function callGemini(
         
         let result = await chat.sendMessage(promptParts);
 
-        // If the model returns a function call, we send it back to the model with an empty
-        // response. This is the signal to the model to use its internally-provided
-        // search results to answer the user's query.
         const functionCalls = result.response.functionCalls();
         if (functionCalls && functionCalls.length > 0) {
             result = await chat.sendMessage([{
                 functionResponse: {
                     name: functionCalls[0].name,
                     response: {
-                       // The empty response tells the model to use the search results it found
                     },
                 }
             }]);
@@ -564,12 +563,7 @@ export async function askAssistant(
 }
 
 export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
-    const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
-
-    if (!serviceAccountKeyBase64) {
-        throw new Error('SERVICE_ACCOUNT_KEY_INTERNAL não definida.');
-    }
-    const credentials = JSON.parse(Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf-8'));
+    const credentials = getServiceAccountCredentials();
     const speechClient = new SpeechClient({ credentials });
 
     const audio = {
@@ -1449,3 +1443,5 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
+
+    

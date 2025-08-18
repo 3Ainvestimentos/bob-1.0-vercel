@@ -13,7 +13,7 @@ import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
 
 let adminApp: App | null = null;
 
-function getServiceAccountCredentials() {
+function getServiceAccountCredentialsFromEnv() {
     const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
 
     if (!serviceAccountKeyBase64) {
@@ -29,7 +29,7 @@ function getServiceAccountCredentials() {
     }
 }
 
-function getFirebaseAdminApp() {
+function initializeFirebaseAdminApp() {
     if (adminApp) {
         return adminApp;
     }
@@ -42,7 +42,7 @@ function getFirebaseAdminApp() {
     }
     
     try {
-        const serviceAccount = getServiceAccountCredentials();
+        const serviceAccount = getServiceAccountCredentialsFromEnv();
         adminApp = initializeApp({
             credential: cert(serviceAccount)
         }, appName);
@@ -56,11 +56,13 @@ function getFirebaseAdminApp() {
 
 
 export async function getAuthenticatedFirestoreAdmin() {
-    const app = getFirebaseAdminApp();
+    const app = initializeFirebaseAdminApp();
     return getFirestoreAdmin(app);
 }
 
 export async function getAuthenticatedAuthAdmin() {
-    const app = getFirebaseAdminApp();
+    const app = initializeFirebaseAdminApp();
     return getAuthAdmin(app);
 }
+
+    
