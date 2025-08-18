@@ -279,7 +279,7 @@ async function callDiscoveryEngine(
       const summary = data.summary?.summaryText;
       const results = data.results || [];
       
-      const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível"];
+      const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar"];
       const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
 
       if (!summary || results.length === 0 || summaryHasFailureKeyword) {
