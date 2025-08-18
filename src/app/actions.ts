@@ -526,6 +526,34 @@ async function callGemini(
     }
 }
 
+async function callCustomSearch(query: string): Promise<{ success: boolean; results?: any[] }> {
+    const apiKey = process.env.CUSTOM_SEARCH_API_KEY;
+    const searchEngineId = process.env.CUSTOM_SEARCH_ENGINE_ID;
+
+    if (!apiKey || !searchEngineId) {
+        throw new Error('A chave da API de Pesquisa Personalizada ou o ID do Mecanismo de Busca não estão configurados no ambiente.');
+    }
+
+    const customsearch = google.customsearch('v1');
+
+    try {
+        const response = await customsearch.cse.list({
+            auth: apiKey,
+            cx: searchEngineId,
+            q: query,
+            num: 1, // We only need one result to confirm the API is working
+        });
+
+        return { success: true, results: response.data.items || [] };
+    } catch (error: any) {
+        console.error('Error calling Custom Search API:', error);
+        if (error.code === 403) {
+             throw new Error("A chave da API da Pesquisa Personalizada é inválida ou não tem permissão para este mecanismo de busca.");
+        }
+        throw new Error(`Falha na chamada da API de Pesquisa Personalizada: ${error.message}`);
+    }
+}
+
 
 export async function logQuestionForAnalytics(query: string): Promise<void> {
     const adminDb = getAuthenticatedFirestoreAdmin();
@@ -1474,6 +1502,25 @@ export async function runApiHealthCheck(): Promise<any> {
         });
     }
 
+    // Test Custom Search API
+    let customSearchStartTime = Date.now();
+    try {
+        await callCustomSearch("teste");
+        results.push({
+            api: 'Google Custom Search',
+            status: 'OK',
+            latency: Date.now() - customSearchStartTime,
+        });
+    } catch (e: any) {
+        results.push({
+            api: 'Google Custom Search',
+            status: 'Erro',
+            latency: Date.now() - customSearchStartTime,
+            error: e.message,
+        });
+    }
+
+
     return { results };
 }
 
@@ -1535,10 +1582,3 @@ export async function validateAndOnboardUser(
 }
 
     
-
-    
-
-    
-
-
-
