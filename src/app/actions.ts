@@ -272,10 +272,6 @@ async function callDiscoveryEngine(
 
       const data = await apiResponse.json();
 
-      if (!data) {
-          throw new Error("A chamada ao Discovery Engine retornou uma resposta vazia.");
-      }
-
       const promptForTokenCount = modelPrompt + query;
       const promptTokenCount = await estimateTokens(promptForTokenCount);
       
@@ -391,6 +387,10 @@ async function callGemini(
         const text = response.text();
         let sources: ClientRagSource[] = [];
 
+        if (!text) {
+             return { summary: '', searchFailed: true, sources: [] };
+        }
+
         if (response.candidates?.[0]?.citationMetadata?.citationSources) {
              sources = response.candidates[0].citationMetadata.citationSources.map((source: any) => ({
                 title: source.uri || 'Fonte da Web',
@@ -405,7 +405,8 @@ async function callGemini(
         if (error.message.includes('API key not valid')) {
             throw new Error(`Erro de autenticação com a API Gemini. Verifique se a GEMINI_API_KEY é válida.`);
         }
-        throw new Error(`Ocorreu um erro ao chamar a API Gemini: ${error.message}`);
+        // Return a structured error object instead of throwing for some cases
+        return { summary: `Ocorreu um erro ao chamar a API Gemini: ${error.message}`, searchFailed: true, sources: [] };
     }
 }
 
@@ -1430,5 +1431,3 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
-
-    
