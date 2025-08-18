@@ -9,10 +9,8 @@ import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
 import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { google } from 'googleapis';
-import pdf from 'pdf-parse';
-import mammoth from 'mammoth';
-import * as xlsx from 'xlsx';
 import { SpeechClient } from '@google-cloud/speech';
+import { estimateTokens, getFileContent, formatTutorialToMarkdown } from '@/lib/server/utils';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
@@ -227,98 +225,6 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     }
 }
 
-
-function estimateTokens(text: string): number {
-  return Math.ceil((text || '').length / 4);
-}
-
-async function getFileContent(fileDataUri: string, mimeType: string): Promise<string> {
-    const base64Data = fileDataUri.split(',')[1];
-    if (!base64Data) {
-        throw new Error('Formato de Data URI inválido.');
-    }
-
-    const fileBuffer = Buffer.from(base64Data, 'base64');
-
-    if (mimeType === 'application/pdf') {
-        try {
-            const data = await pdf(fileBuffer);
-            return data.text;
-        } catch (error: any) {
-            console.error("Error parsing PDF:", error);
-            throw new Error(`Falha ao processar o arquivo PDF: ${error.message}`);
-        }
-    } else if (
-        mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || // .docx
-        mimeType === 'application/msword' // .doc
-    ) {
-        try {
-            const result = await mammoth.extractRawText({ buffer: fileBuffer });
-            return result.value;
-        } catch (error: any) {
-            console.error("Error parsing Word document:", error);
-            throw new Error(`Falha ao processar o arquivo Word: ${error.message}`);
-        }
-    } else if (
-        mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || // .xlsx
-        mimeType === 'application/vnd.ms-excel' // .xls
-    ) {
-        try {
-            const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
-            let fullText = '';
-            workbook.SheetNames.forEach(sheetName => {
-                fullText += `\n\n### Início da Planilha: ${sheetName} ###\n\n`;
-                const worksheet = workbook.Sheets[sheetName];
-                const sheetData = xlsx.utils.sheet_to_csv(worksheet, { header: 1 });
-                fullText += sheetData;
-                fullText += `\n\n### Fim da Planilha: ${sheetName} ###\n`;
-            });
-            return fullText;
-        } catch (error: any) {
-            console.error("Error parsing Excel file:", error);
-            throw new Error(`Falha ao processar o arquivo Excel: ${error.message}`);
-        }
-    }
-
-    
-    throw new Error(`O processamento de arquivos do tipo '${mimeType}' não é suportado.`);
-}
-
-function formatTutorialToMarkdown(rawContent: string, title: string): string {
-    if (!rawContent) return 'Conteúdo não encontrado.';
-
-    let processedContent = rawContent.trim();
-    
-    const titleToRemove = `TUTORIAL - ${title.toUpperCase()}`;
-    if (processedContent.toUpperCase().startsWith(titleToRemove)) {
-        processedContent = processedContent.substring(titleToRemove.length).trim();
-    }
-    
-    const lines = processedContent.split('\n');
-    let markdownResult = '';
-
-    lines.forEach(line => {
-        const trimmedLine = line.trim();
-        if (trimmedLine.length === 0) return;
-
-        // Matches lines that are all caps, likely subtitles
-        const isAllCaps = /^[A-ZÀ-Ú\s]+$/.test(trimmedLine) && /[A-Z]/.test(trimmedLine);
-
-        if (isAllCaps && trimmedLine.split(' ').length > 1) {
-             markdownResult += `\n\n**${trimmedLine.trim()}**\n\n`;
-        } else {
-            // Splits content by '.' to create list items, for text that is not a subtitle
-            const listItems = trimmedLine.split('. ').filter(item => item.trim() !== '');
-            listItems.forEach(item => {
-                markdownResult += `- ${item.trim()}\n`;
-            });
-        }
-    });
-
-    return markdownResult.trim();
-}
-
-
 async function callDiscoveryEngine(
     query: string,
     attachments: AttachedFile[],
@@ -357,7 +263,7 @@ async function callDiscoveryEngine(
       let fileContextPreamble = '';
       if (attachments.length > 0) {
           fileContextPreamble = attachments.map(file => 
-              `\n\n### INÍCIO DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###\n${file.deidentifiedContent}\n### FIM DO CONTEúdo DO ARQUIVO: ${file.fileName} ###`
+              `\n\n### INÍCIO DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###\n${file.deidentifiedContent}\n### FIM DO CONTEÚdo DO ARQUIVO: ${file.fileName} ###`
           ).join('');
       }
       
@@ -425,7 +331,7 @@ async function callDiscoveryEngine(
       }
 
       const promptForTokenCount = modelPrompt + query;
-      const promptTokenCount = estimateTokens(promptForTokenCount);
+      const promptTokenCount = await estimateTokens(promptForTokenCount);
       
       let sources: ClientRagSource[] = [];
       const summary = data.summary?.summaryText;
@@ -447,18 +353,19 @@ async function callDiscoveryEngine(
 
       if (tutorialResults.length > 0 && query.toLowerCase().includes('como fazer')) {
           let tutorialContent = "Com base nos documentos encontrados, aqui estão os procedimentos:\n\n";
-          tutorialContent += tutorialResults.map((result: any) => {
+          const formattedTutorials = await Promise.all(tutorialResults.map(async (result: any) => {
               const title = (result.document?.derivedStructData?.title || 'Tutorial').replace(/tutorial -/gi, '').trim();
               const rawContent = result.document?.derivedStructData?.extractive_answers?.[0]?.content || 'Conteúdo não encontrado.';
-              const formattedContent = formatTutorialToMarkdown(rawContent, title);
+              const formattedContent = await formatTutorialToMarkdown(rawContent, title);
               return `**${title.toUpperCase()}**\n\n${formattedContent}`;
-          }).join('\n\n---\n\n');
+          }));
+          tutorialContent += formattedTutorials.join('\n\n---\n\n');
           
           sources = tutorialResults.map((result: any) => ({
               title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial -/gi, '').trim(),
               uri: result.document?.derivedStructData?.link || 'URI não encontrada',
           }));
-          const candidatesTokenCount = estimateTokens(tutorialContent);
+          const candidatesTokenCount = await estimateTokens(tutorialContent);
           return { summary: tutorialContent, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
       }
       
@@ -467,7 +374,7 @@ async function callDiscoveryEngine(
           uri: result.document?.derivedStructData?.link || 'URI não encontrada',
       }));
       
-      const candidatesTokenCount = estimateTokens(summary);
+      const candidatesTokenCount = await estimateTokens(summary);
       return { summary, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
 
     } catch (error: any) {
@@ -492,9 +399,7 @@ async function callGemini(
         const genAI = new GoogleGenerativeAI(geminiApiKey);
 
         const tools = enableWebSearch ? [{
-            "google_search_retrieval": {
-                // By default, this is empty, but you can specify search options
-            }
+            "google_search_retrieval": {}
         }] : [];
 
         const model = genAI.getGenerativeModel({
@@ -667,7 +572,18 @@ export async function askAssistant(
     
     const latencyMs = Date.now() - startTime;
     
-    const summary = result.summary || (result.searchFailed ? "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web" : "Não foi possível gerar uma resposta.");
+    if (result.searchFailed) {
+      return {
+          summary: "",
+          searchFailed: true,
+          source: 'rag',
+          sources: [],
+          latencyMs,
+          deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
+      };
+    }
+    
+    const summary = result.summary || "Não foi possível gerar uma resposta.";
 
     return {
         summary: summary,
