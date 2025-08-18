@@ -4,7 +4,7 @@
 import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { FieldValue } from 'firebase-admin/firestore';
-import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin } from '@/lib/server/firebase';
+import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseAdminApp, getServiceAccountCredentialsFromEnv } from '@/lib/server/firebase';
 import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { SpeechClient } from '@google-cloud/speech';
@@ -73,20 +73,6 @@ Em julho de 2025, o assunto da vez no mercado brasileiro foram as imposições d
 No cenário internacional, as tensões comerciais continuaram no centro das atenções. Além das tarifas direcionadas ao Brasil, os Estados Unidos mantiveram postura rígida nas negociações com a União Europeia e a China, o que gerou receios quanto ao impacto sobre o comércio global. O Federal Reserve optou por manter a taxa de juros no intervalo de 4,25% a 4,5% ao ano, em linha com as expectativas, reforçando um discurso de cautela diante do cenário externo desafiador. Apesar das incertezas, o S&P 500 avançou 2,17% no mês, refletindo a resiliência dos mercados americanos frente ao ambiente de maior aversão ao risco e reação aos bons resultados divulgados pelas empresas.`;
 
 
-function getServiceAccountCredentials() {
-    const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
-    if (!serviceAccountKeyBase64) {
-        throw new Error('A variável de ambiente SERVICE_ACCOUNT_KEY_INTERNAL não está definida ou está vazia.');
-    }
-    try {
-        const decodedKey = Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf-8');
-        return JSON.parse(decodedKey);
-    } catch (error: any) {
-        console.error("Falha ao decodificar ou analisar a chave da conta de serviço.", error.message);
-        throw new Error(`Falha ao processar a chave da conta de serviço: ${'' + error.message}`);
-    }
-}
-
 async function getGeminiApiKey(): Promise<string> {
     if (process.env.GEMINI_API_KEY) {
         return process.env.GEMINI_API_KEY;
@@ -115,7 +101,8 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
 
 async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
     const {google} = require('googleapis');
-    const credentials = getServiceAccountCredentials();
+    await getFirebaseAdminApp();
+    const credentials = getServiceAccountCredentialsFromEnv();
     const projectId = credentials.project_id;
     
     if (!projectId) {
@@ -196,7 +183,8 @@ async function callDiscoveryEngine(
     promptTokenCount?: number; 
     candidatesTokenCount?: number; 
 }> {
-    const credentials = getServiceAccountCredentials();
+    await getFirebaseAdminApp();
+    const credentials = getServiceAccountCredentialsFromEnv();
     
     const auth = new GoogleAuth({
       credentials,
@@ -563,7 +551,8 @@ export async function askAssistant(
 }
 
 export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
-    const credentials = getServiceAccountCredentials();
+    await getFirebaseAdminApp();
+    const credentials = getServiceAccountCredentialsFromEnv();
     const speechClient = new SpeechClient({ credentials });
 
     const audio = {
@@ -1287,7 +1276,7 @@ export async function setMaintenanceMode(isMaintenanceMode: boolean): Promise<an
         return { success: true };
     } catch (error: any) {
         console.error("Error setting maintenance mode:", error);
-        return { error: error.message };
+        return { success: false, error: error.message };
     }
 }
 
