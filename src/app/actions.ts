@@ -463,19 +463,14 @@ export async function askAssistant(
   deidentifiedQuery?: string;
   error?: string;
 }> {
-  const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [], chatId, messageId } = options;
+  const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [] } = options;
   const startTime = Date.now();
-  let source: 'rag' | 'web' | 'transcription' | 'gemini' = 'rag';
-  
+
   try {
-    let result;
-    
-    let finalQuery = query;
+    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(query);
 
-    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(finalQuery);
-
-    if (userId && chatId && foundInfoTypes.length > 0) {
-        await logDlpAlert(userId, chatId, foundInfoTypes);
+    if (userId && options.chatId && foundInfoTypes.length > 0) {
+        await logDlpAlert(userId, options.chatId, foundInfoTypes);
     }
     
     const attachments: AttachedFile[] = [];
@@ -491,6 +486,9 @@ export async function askAssistant(
             });
         }
     }
+
+    let result;
+    let source: 'rag' | 'web' | 'gemini';
 
     if (useStandardAnalysis) {
         source = 'gemini';
@@ -510,48 +508,36 @@ export async function askAssistant(
     
     const latencyMs = Date.now() - startTime;
     
-    if (result.searchFailed) {
+    if (result.searchFailed || !result.summary) {
       return {
-          summary: "",
+          summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
           searchFailed: true,
           source: source,
           sources: [],
           latencyMs,
-          deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
+          deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
       };
     }
     
-    if (!result.summary) {
-        return {
-            summary: "",
-            searchFailed: true,
-            source: source,
-            sources: [],
-            latencyMs,
-            deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
-        };
-    }
-    
-    const summary = result.summary;
-
     return {
-        summary: summary,
+        summary: result.summary,
         searchFailed: false,
         source: source,
         sources: result.sources || [],
         promptTokenCount: result.promptTokenCount,
         candidatesTokenCount: result.candidatesTokenCount,
         latencyMs: latencyMs,
-        deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
+        deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
     };
+
   } catch (error: any) {
     const latencyMs = Date.now() - startTime;
-    console.error(`Error in askAssistant (source: ${source}):`, error.message);
+    console.error(`Error in askAssistant:`, error);
     const errorMessage = `Ocorreu um erro ao processar sua solicitação: ${error.message}`;
     return { 
         summary: errorMessage,
         searchFailed: true,
-        source: source,
+        source: useWebSearch ? 'web' : (useStandardAnalysis ? 'gemini' : 'rag'),
         error: error.message,
         latencyMs,
     };
