@@ -279,7 +279,10 @@ async function callDiscoveryEngine(
       const summary = data.summary?.summaryText;
       const results = data.results || [];
       
-      if (!summary || results.length === 0) {
+      const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível"];
+      const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
+
+      if (!summary || results.length === 0 || summaryHasFailureKeyword) {
           return { 
               summary: "",
               searchFailed: true,
@@ -463,85 +466,85 @@ export async function askAssistant(
   deidentifiedQuery?: string;
   error?: string;
 }> {
-  const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [] } = options;
-  const startTime = Date.now();
+    const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [] } = options;
+    const startTime = Date.now();
 
-  try {
-    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(query);
+    try {
+        const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(query);
 
-    if (userId && options.chatId && foundInfoTypes.length > 0) {
-        await logDlpAlert(userId, options.chatId, foundInfoTypes);
-    }
-    
-    const attachments: AttachedFile[] = [];
-    if (fileDataUris.length > 0) {
-        for (const file of fileDataUris) {
-            const content = await getFileContent(file.dataUri, file.mimeType);
-            const { deidentifiedQuery: deidentifiedContent } = await deidentifyQuery(content);
-            attachments.push({
-                id: crypto.randomUUID(),
-                fileName: file.name,
-                mimeType: file.mimeType,
-                deidentifiedContent: deidentifiedContent,
-            });
+        if (userId && options.chatId && foundInfoTypes.length > 0) {
+            await logDlpAlert(userId, options.chatId, foundInfoTypes);
         }
-    }
+        
+        const attachments: AttachedFile[] = [];
+        if (fileDataUris.length > 0) {
+            for (const file of fileDataUris) {
+                const content = await getFileContent(file.dataUri, file.mimeType);
+                const { deidentifiedQuery: deidentifiedContent } = await deidentifyQuery(content);
+                attachments.push({
+                    id: crypto.randomUUID(),
+                    fileName: file.name,
+                    mimeType: file.mimeType,
+                    deidentifiedContent: deidentifiedContent,
+                });
+            }
+        }
 
-    let result;
-    let source: 'rag' | 'web' | 'gemini';
+        let result;
+        let source: 'rag' | 'web' | 'gemini';
 
-    if (useStandardAnalysis) {
-        source = 'gemini';
-        result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
-    } else if (useWebSearch) {
-        source = 'web';
-        result = await callGemini(deidentifiedQuery, attachments, null, true);
-    } else {
-        source = 'rag';
-        await logQuestionForAnalytics(deidentifiedQuery);
-        result = await callDiscoveryEngine(
-            deidentifiedQuery,
-            attachments,
-            ASSISTENTE_CORPORATIVO_PREAMBLE
-        );
-    }
-    
-    const latencyMs = Date.now() - startTime;
-    
-    if (result.searchFailed || !result.summary) {
-      return {
-          summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
-          searchFailed: true,
-          source: source,
-          sources: [],
-          latencyMs,
-          deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
-      };
-    }
-    
-    return {
-        summary: result.summary,
-        searchFailed: false,
-        source: source,
-        sources: result.sources || [],
-        promptTokenCount: result.promptTokenCount,
-        candidatesTokenCount: result.candidatesTokenCount,
-        latencyMs: latencyMs,
-        deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
-    };
+        if (useStandardAnalysis) {
+            source = 'gemini';
+            result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
+        } else if (useWebSearch) {
+            source = 'web';
+            result = await callGemini(deidentifiedQuery, attachments, null, true);
+        } else {
+            source = 'rag';
+            await logQuestionForAnalytics(deidentifiedQuery);
+            result = await callDiscoveryEngine(
+                deidentifiedQuery,
+                attachments,
+                ASSISTENTE_CORPORATIVO_PREAMBLE
+            );
+        }
+        
+        const latencyMs = Date.now() - startTime;
+        
+        if (result.searchFailed || !result.summary) {
+            return {
+                summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
+                searchFailed: true,
+                source: source,
+                sources: [],
+                latencyMs,
+                deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
+            };
+        }
+        
+        return {
+            summary: result.summary,
+            searchFailed: false,
+            source: source,
+            sources: result.sources || [],
+            promptTokenCount: result.promptTokenCount,
+            candidatesTokenCount: result.candidatesTokenCount,
+            latencyMs: latencyMs,
+            deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
+        };
 
-  } catch (error: any) {
-    const latencyMs = Date.now() - startTime;
-    console.error(`Error in askAssistant:`, error);
-    const errorMessage = `Ocorreu um erro ao processar sua solicitação: ${error.message}`;
-    return { 
-        summary: errorMessage,
-        searchFailed: true,
-        source: useWebSearch ? 'web' : (useStandardAnalysis ? 'gemini' : 'rag'),
-        error: error.message,
-        latencyMs,
-    };
-  }
+    } catch (error: any) {
+        const latencyMs = Date.now() - startTime;
+        console.error(`Error in askAssistant:`, error);
+        const errorMessage = `Ocorreu um erro ao processar sua solicitação: ${error.message}`;
+        return { 
+            summary: errorMessage,
+            searchFailed: true,
+            source: useWebSearch ? 'web' : (useStandardAnalysis ? 'gemini' : 'rag'),
+            error: error.message,
+            latencyMs,
+        };
+    }
 }
 
 export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
