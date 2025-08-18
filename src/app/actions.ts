@@ -405,7 +405,6 @@ async function callGemini(
         if (error.message.includes('API key not valid')) {
             throw new Error(`Erro de autenticação com a API Gemini. Verifique se a GEMINI_API_KEY é válida.`);
         }
-        // Return a structured error object instead of throwing for some cases
         return { summary: `Ocorreu um erro ao chamar a API Gemini: ${error.message}`, searchFailed: true, sources: [] };
     }
 }
@@ -508,14 +507,19 @@ export async function askAssistant(
         );
         source = 'rag';
     }
-
-    if (!result) {
-        throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
-    }
     
     const latencyMs = Date.now() - startTime;
     
     if (result.searchFailed) {
+      // Se a busca falhou, mas a chamada à API retornou uma mensagem de erro, use-a.
+      if (result.summary) {
+          return {
+              summary: result.summary,
+              searchFailed: true,
+              source: source,
+              error: result.summary
+          };
+      }
       return {
           summary: "",
           searchFailed: true,
@@ -526,7 +530,12 @@ export async function askAssistant(
       };
     }
     
-    const summary = result.summary || "Não foi possível gerar uma resposta.";
+    // Se a API não retornou conteúdo, aí sim usamos a mensagem de erro genérica.
+    if (!result.summary) {
+        throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
+    }
+    
+    const summary = result.summary;
 
     return {
         summary: summary,
@@ -648,7 +657,12 @@ export async function regenerateAnswer(
     };
   } catch (error: any) {
     console.error("Error in regenerateAnswer (internal):", error.message);
-    return { error: error.message };
+    return { 
+        summary: `Ocorreu um erro ao processar sua solicitação: ${error.message}`,
+        searchFailed: true,
+        source: 'rag',
+        error: error.message 
+    };
   }
 }
 
