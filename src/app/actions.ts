@@ -433,7 +433,7 @@ async function callDiscoveryEngine(
       
       if (!summary || results.length === 0) {
           return { 
-              summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
+              summary: "",
               searchFailed: true,
               sources: [],
               promptTokenCount,
@@ -661,14 +661,16 @@ export async function askAssistant(
         source = 'rag';
     }
 
-    if (!result || typeof result.summary === 'undefined') {
+    if (!result) {
         throw new Error("A chamada ao serviço de IA retornou uma resposta vazia ou malformada.");
     }
     
     const latencyMs = Date.now() - startTime;
+    
+    const summary = result.summary || (result.searchFailed ? "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web" : "Não foi possível gerar uma resposta.");
 
     return {
-        summary: result.summary,
+        summary: summary,
         searchFailed: result.searchFailed,
         source: source,
         sources: result.sources || [],
