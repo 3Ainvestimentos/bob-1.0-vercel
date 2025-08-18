@@ -503,7 +503,7 @@ async function callGemini(
         let webSearchContext = '';
         if (webSearchResults.length > 0) {
             webSearchContext = `
-              
+              Instrução Adicional: Baseie sua resposta nos seguintes trechos de busca da web. Responda de forma concisa e direta.
               ${webSearchResults.map((r, i) => `Trecho ${i+1} (Fonte: ${r.link}):\n${r.snippet}`).join('\n\n')}
             `;
         }
@@ -558,11 +558,8 @@ async function callCustomSearch(query: string): Promise<{ success: boolean; resu
             num: 8,
             gl: 'br',
             lr: 'lang_pt',
+            sort: 'date',
         };
-
-        if (query.toLowerCase().includes('hoje')) {
-            requestParams.sort = 'date';
-        }
 
         const response = await customsearch.cse.list(requestParams);
 
@@ -668,11 +665,10 @@ export async function askAssistant(
         if (!searchResults.success || !searchResults.results || searchResults.results.length === 0) {
             result = { summary: 'Não foi possível encontrar resultados na web para esta consulta.', searchFailed: true, sources: [] };
         } else {
-             // TEST: Return raw results
-            const formattedResults = searchResults.results.map(r => `### [${r.title}](${r.link})\n${r.snippet}`).join('\n\n---\n\n');
             const summary = `**Resultados da busca para: "${deidentifiedQuery}"**\n\n---\n\n${formattedResults}`;
+            const formattedResults = searchResults.results.map(r => `### [${r.title}](${r.link})\n${r.snippet}`).join('\n\n---\n\n');
             result = { 
-                summary: summary, 
+                summary: summary,
                 searchFailed: false, 
                 sources: searchResults.results.map(r => ({ title: r.title, uri: r.link })) 
             };
@@ -686,6 +682,13 @@ export async function askAssistant(
             ASSISTENTE_CORPORATIVO_PREAMBLE
         );
         source = 'rag';
+        if (result.searchFailed) {
+            const searchResults = await callCustomSearch(deidentifiedQuery);
+            if (searchResults.success && searchResults.results && searchResults.results.length > 0) {
+                result = await callGemini(deidentifiedQuery, [], null, 'gemini-1.5-pro-latest', searchResults.results);
+                source = 'web';
+            }
+        }
     }
 
     if (!result || typeof result.summary === 'undefined') {
