@@ -405,7 +405,7 @@ async function callGemini(
         if (error.message.includes('API key not valid')) {
             throw new Error(`Erro de autenticação com a API Gemini. Verifique se a GEMINI_API_KEY é válida.`);
         }
-        return { summary: `Ocorreu um erro ao chamar a API Gemini: ${error.message}`, searchFailed: true, sources: [] };
+        throw error;
     }
 }
 
@@ -465,10 +465,10 @@ export async function askAssistant(
 }> {
   const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [], chatId, messageId } = options;
   const startTime = Date.now();
+  let source: 'rag' | 'web' | 'transcription' | 'gemini' = 'rag';
   
   try {
     let result;
-    let source: 'rag' | 'web' | 'transcription' | 'gemini';
     
     let finalQuery = query;
 
@@ -493,36 +493,34 @@ export async function askAssistant(
     }
 
     if (useStandardAnalysis) {
-        result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
+        result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
     } else if (useWebSearch) {
-        result = await callGemini(deidentifiedQuery, attachments, null, true);
         source = 'web';
+        result = await callGemini(deidentifiedQuery, attachments, null, true);
     } else {
+        source = 'rag';
         await logQuestionForAnalytics(deidentifiedQuery);
         result = await callDiscoveryEngine(
             deidentifiedQuery,
             attachments,
             ASSISTENTE_CORPORATIVO_PREAMBLE
         );
-        source = 'rag';
     }
     
     const latencyMs = Date.now() - startTime;
     
-    // Se a busca falhou, seja por erro ou por não encontrar resultados
     if (result.searchFailed) {
       return {
-          summary: result.summary, // A mensagem de erro da API, se houver
+          summary: "",
           searchFailed: true,
           source: source,
-          error: result.summary,
+          sources: [],
           latencyMs,
           deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
       };
     }
     
-    // Se a API retornou sucesso, mas o conteúdo é vazio, tratamos como falha de busca
     if (!result.summary) {
         return {
             summary: "",
@@ -538,7 +536,7 @@ export async function askAssistant(
 
     return {
         summary: summary,
-        searchFailed: result.searchFailed,
+        searchFailed: false,
         source: source,
         sources: result.sources || [],
         promptTokenCount: result.promptTokenCount,
@@ -547,12 +545,15 @@ export async function askAssistant(
         deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
     };
   } catch (error: any) {
-    console.error("Error in askAssistant:", error.message);
+    const latencyMs = Date.now() - startTime;
+    console.error(`Error in askAssistant (source: ${source}):`, error.message);
+    const errorMessage = `Ocorreu um erro ao processar sua solicitação: ${error.message}`;
     return { 
-        summary: `Ocorreu um erro ao processar sua solicitação: ${error.message}`,
+        summary: errorMessage,
         searchFailed: true,
-        source: 'rag',
-        error: error.message 
+        source: source,
+        error: error.message,
+        latencyMs,
     };
   }
 }
@@ -627,21 +628,27 @@ export async function regenerateAnswer(
     }
 
     if (options.isStandardAnalysis) {
-        result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
+        result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
     } else {
+        source = 'rag';
         result = await callDiscoveryEngine(
             deidentifiedQuery,
             attachments,
             ASSISTENTE_CORPORATIVO_PREAMBLE
         );
-        source = 'rag';
     }
     
     const latencyMs = Date.now() - startTime;
 
-    if (!result) {
-        throw new Error("A chamada para regenerar a resposta retornou uma resposta vazia.");
+    if (!result || !result.summary) {
+        return {
+            summary: "Não foi possível regenerar uma resposta.",
+            searchFailed: true,
+            source: source,
+            sources: [],
+            latencyMs,
+        };
     }
     
     return { 
