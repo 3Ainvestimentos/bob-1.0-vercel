@@ -509,7 +509,7 @@ export async function askAssistant(
     }
 
     if (!result) {
-        throw new Error("A chamada ao serviço de IA retornou uma resposta vazia ou malformada.");
+        throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
     }
     
     const latencyMs = Date.now() - startTime;
@@ -1430,3 +1430,5 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
+
+    
