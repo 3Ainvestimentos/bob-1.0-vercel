@@ -492,7 +492,7 @@ async function callGemini(
         const genAI = new GoogleGenerativeAI(geminiApiKey);
 
         const tools = enableWebSearch ? [{
-            "googleSearch": {
+            "google_search_retrieval": {
                 // By default, this is empty, but you can specify search options
             }
         }] : [];
@@ -504,9 +504,16 @@ async function callGemini(
 
         const chat = model.startChat();
         
+        let finalPreamble = preamble || '';
+        
+        let promptWithContext = query;
+        if (enableWebSearch) {
+            promptWithContext = `**Instrução Adicional:** Baseie sua resposta nos seguintes trechos de busca da web. Responda de forma concisa e direta.\n\n**Pergunta do usuário:** "${query}"`;
+        }
+        
         const promptParts: Part[] = [];
-        if (preamble) {
-            promptParts.push({ text: preamble });
+        if (finalPreamble) {
+            promptParts.push({ text: finalPreamble });
         }
         if (attachments.length > 0) {
             const fileParts = attachments.map(file =>
@@ -514,25 +521,26 @@ async function callGemini(
             );
             promptParts.push({ text: fileParts.join('') });
         }
-        promptParts.push({ text: `\n\nPergunta do usuário: "${query}"` });
+        promptParts.push({ text: promptWithContext });
         
-        const result = await chat.sendMessage(promptParts);
-        let response = await result.response;
-        
-        const functionCalls = response.functionCalls();
+        let result = await chat.sendMessage(promptParts);
+
+        // If the model returns a function call, we send it back to the model with an empty
+        // response. This is the signal to the model to use its internally-provided
+        // search results to answer the user's query.
+        let functionCalls = result.response.functionCalls();
         if (functionCalls && functionCalls.length > 0) {
-            // If the model returns a function call, we send it back to the model with an empty
-            // response. This is the signal to the model to use its internally-provided
-            // search results to answer the user's query.
-            const apiResponse = await chat.sendMessage([{
+            result = await chat.sendMessage([{
                 functionResponse: {
                     name: functionCalls[0].name,
-                    response: {},
+                    response: {
+                       // The empty response tells the model to use the search results it found
+                    },
                 }
             }]);
-            response = await apiResponse.response;
         }
 
+        const response = await result.response;
         const text = response.text();
         let sources: ClientRagSource[] = [];
 
@@ -1561,5 +1569,3 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
-
-    
