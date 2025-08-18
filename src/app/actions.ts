@@ -2,7 +2,7 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
-import { GoogleGenerativeAI, FunctionDeclarationSchemaType, Part } from '@google/generative-ai';
+import { GoogleGenerativeAI, FunctionDeclarationSchemaType, Part, FunctionCallingMode, EnhancedGenerateContentResponse } from '@google/generative-ai';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore as getFirestoreAdmin, FieldValue, DocumentData, Timestamp as AdminTimestamp, writeBatch } from 'firebase-admin/firestore';
 import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
@@ -492,37 +492,52 @@ async function callGemini(
         const genAI = new GoogleGenerativeAI(geminiApiKey);
 
         const tools = enableWebSearch ? [{
-            "googleSearch": {}
+            "googleSearch": {
+                // By default, this is empty, but you can specify search options
+            }
         }] : [];
 
-        const model = genAI.getGenerativeModel({ 
+        const model = genAI.getGenerativeModel({
             model: "gemini-1.5-pro-latest",
-            tools: tools as any // Cast to any to allow for the search tool
+            tools: tools as any,
         });
-        
-        const parts: Part[] = [];
-        if (preamble) {
-            parts.push({ text: preamble });
-        }
 
+        const chat = model.startChat();
+        
+        const promptParts: Part[] = [];
+        if (preamble) {
+            promptParts.push({ text: preamble });
+        }
         if (attachments.length > 0) {
-            const fileParts = attachments.map(file => 
+            const fileParts = attachments.map(file =>
                 `\n\n### INÍCIO DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###\n${file.deidentifiedContent}\n### FIM DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###`
             );
-            parts.push({ text: fileParts.join('') });
+            promptParts.push({ text: fileParts.join('') });
         }
+        promptParts.push({ text: `\n\nPergunta do usuário: "${query}"` });
         
-        parts.push({ text: `\n\nPergunta do usuário: "${query}"`});
+        const result = await chat.sendMessage(promptParts);
+        let response = await result.response;
+        
+        const functionCalls = response.functionCalls();
+        if (functionCalls && functionCalls.length > 0) {
+            // If the model returns a function call, we send it back to the model with an empty
+            // response. This is the signal to the model to use its internally-provided
+            // search results to answer the user's query.
+            const apiResponse = await chat.sendMessage([{
+                functionResponse: {
+                    name: functionCalls[0].name,
+                    response: {},
+                }
+            }]);
+            response = await apiResponse.response;
+        }
 
-        const result = await model.generateContent({ contents: [{ role: "user", parts }] });
-        const response = await result.response;
         const text = response.text();
-        
-        const toolCalls = response.functionCalls();
         let sources: ClientRagSource[] = [];
 
-        if (toolCalls && toolCalls.length > 0 && response.candidates?.[0].citationMetadata?.citationSources) {
-             sources = response.candidates[0].citationMetadata.citationSources.map(source => ({
+        if (response.candidates?.[0]?.citationMetadata?.citationSources) {
+             sources = response.candidates[0].citationMetadata.citationSources.map((source: any) => ({
                 title: source.uri || 'Fonte da Web',
                 uri: source.uri || '#',
              }));
@@ -535,7 +550,7 @@ async function callGemini(
         if (error.message.includes('API key not valid')) {
             throw new Error(`Erro de autenticação com a API Gemini. Verifique se a GEMINI_API_KEY é válida.`);
         }
-        throw new Error(error.message);
+        throw new Error(`Ocorreu um erro ao chamar a API Gemini: ${error.message}`);
     }
 }
 
