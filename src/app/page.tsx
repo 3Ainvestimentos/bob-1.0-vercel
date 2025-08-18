@@ -118,7 +118,7 @@ export default function LoginPage() {
                     )}
 
                     <div className="mt-8 flex flex-col gap-4">
-                         <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
+                         <Button onClick={handleGoogleSignIn} variant="outline" className="w-full text-muted-foreground">
                             <GoogleIcon className="mr-2 h-4 w-4" />
                             Entrar com Google
                         </Button>
