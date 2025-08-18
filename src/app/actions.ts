@@ -503,7 +503,6 @@ async function callGemini(
         let webSearchContext = '';
         if (webSearchResults.length > 0) {
             webSearchContext = `
-              Instrução Adicional: Baseie sua resposta nos seguintes trechos de busca da web. Responda de forma concisa e direta.
               ${webSearchResults.map((r, i) => `Trecho ${i+1} (Fonte: ${r.link}):\n${r.snippet}`).join('\n\n')}
             `;
         }
@@ -665,10 +664,9 @@ export async function askAssistant(
         if (!searchResults.success || !searchResults.results || searchResults.results.length === 0) {
             result = { summary: 'Não foi possível encontrar resultados na web para esta consulta.', searchFailed: true, sources: [] };
         } else {
-            const summary = `**Resultados da busca para: "${deidentifiedQuery}"**\n\n---\n\n${formattedResults}`;
             const formattedResults = searchResults.results.map(r => `### [${r.title}](${r.link})\n${r.snippet}`).join('\n\n---\n\n');
             result = { 
-                summary: summary,
+                summary: formattedResults,
                 searchFailed: false, 
                 sources: searchResults.results.map(r => ({ title: r.title, uri: r.link })) 
             };
@@ -683,11 +681,7 @@ export async function askAssistant(
         );
         source = 'rag';
         if (result.searchFailed) {
-            const searchResults = await callCustomSearch(deidentifiedQuery);
-            if (searchResults.success && searchResults.results && searchResults.results.length > 0) {
-                result = await callGemini(deidentifiedQuery, [], null, 'gemini-1.5-pro-latest', searchResults.results);
-                source = 'web';
-            }
+             setLastFailedQuery(deidentifiedQuery);
         }
     }
 
@@ -772,7 +766,7 @@ export async function regenerateAnswer(
   error?: string;
 }> {
   try {
-    const startTime = Date.now();
+    const startTime = Date.now() - startTime;
     let result;
     let source: 'rag' | 'web' | 'gemini';
 
