@@ -2,7 +2,7 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, FunctionDeclarationSchemaType, Part } from '@google/generative-ai';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore as getFirestoreAdmin, FieldValue, DocumentData, Timestamp as AdminTimestamp, writeBatch } from 'firebase-admin/firestore';
 import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
@@ -71,7 +71,7 @@ Os principais destaques foram:
 
 Os principais detratores foram:
 *[CLASSE_DETRATOR_1]*: *[RENTABILIDADE_DETRATOR_1]*
-*[CLASSE_DETRATOR_2]*: *[RENTABILIDADE_DETRATOR_2]*
+*[CLASSE_DETRATOR_2]*: *[RENTABILidade_DETRATOR_2]*
 
 Em julho de 2025, o assunto da vez no mercado brasileiro foram as imposições de tarifas de 50% por parte dos Estados Unidos sobre uma série de produtos nacionais. A incerteza inicial sobre o alcance dessas medidas afetou negativamente o sentimento dos investidores, pressionando o Ibovespa, que recuou 4,17% no mês. Ao final do mês, a divulgação de uma lista de quase 700 itens isentos trouxe algum alívio, com destaque para os setores de aviação e laranja. Contudo, setores como o de carne bovina seguiram pressionados. No campo monetário, o Copom manteve a taxa Selic em 15%, como esperado, diante das persistentes incertezas inflacionárias. Por outro lado, tivemos bons dados econômicos: o IGP-M registrou nova deflação, o IPCA-15 avançou 0,33% (abaixo da expectativa) e a taxa de desemprego caiu para 5,8%, o menor patamar da série. O FMI também revisou para cima a projeção de crescimento do PIB brasileiro para 2,3% em 2025.
 No cenário internacional, as tensões comerciais continuaram no centro das atenções. Além das tarifas direcionadas ao Brasil, os Estados Unidos mantiveram postura rígida nas negociações com a União Europeia e a China, o que gerou receios quanto ao impacto sobre o comércio global. O Federal Reserve optou por manter a taxa de juros no intervalo de 4,25% a 4,5% ao ano, em linha com as expectativas, reforçando um discurso de cautela diante do cenário externo desafiador. Apesar das incertezas, o S&P 500 avançou 2,17% no mês, refletindo a resiliência dos mercados americanos frente ao ambiente de maior aversão ao risco e reação aos bons resultados divulgados pelas empresas.`;
@@ -199,7 +199,7 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
                 minLikelihood: 'LIKELY',
                 includeQuote: true,
             },
-        }
+        },
     };
 
     try {
@@ -484,52 +484,51 @@ async function callGemini(
     query: string,
     attachments: AttachedFile[] = [],
     preamble: string | null = null,
-    modelName: string = "gemini-1.5-flash-latest",
-    webSearchResults: any[] = [] 
+    enableWebSearch: boolean = false
 ): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; promptTokenCount?: number; candidatesTokenCount?: number; }> {
     const geminiApiKey = await getGeminiApiKey();
 
     try {
         const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: modelName });
+
+        const tools = enableWebSearch ? [{
+            "googleSearch": {}
+        }] : [];
+
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-pro-latest",
+            tools: tools as any // Cast to any to allow for the search tool
+        });
         
-        let fileContextPreamble = '';
+        const parts: Part[] = [];
+        if (preamble) {
+            parts.push({ text: preamble });
+        }
+
         if (attachments.length > 0) {
-            fileContextPreamble = attachments.map(file => 
+            const fileParts = attachments.map(file => 
                 `\n\n### INÍCIO DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###\n${file.deidentifiedContent}\n### FIM DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###`
-            ).join('');
+            );
+            parts.push({ text: fileParts.join('') });
         }
+        
+        parts.push({ text: `\n\nPergunta do usuário: "${query}"`});
 
-        let webSearchContext = '';
-        if (webSearchResults.length > 0) {
-            webSearchContext = `
-              **Instrução Adicional:** Baseie sua resposta nos seguintes trechos de busca da web. Responda de forma concisa e direta.
-              
-              ${webSearchResults.map((r, i) => `Trecho ${i+1} (Fonte: ${r.link}):\n${r.snippet}`).join('\n\n')}
-            `;
-        }
-
-        const finalPrompt = `
-            ${preamble || 'Responda em português do Brasil, a menos que seja solicitado o contrário na pergunta.'}
-            ${fileContextPreamble}
-            ${webSearchContext}
-            
-            Pergunta do usuário: "${query}"
-        `;
-
-        const result = await model.generateContent(finalPrompt);
+        const result = await model.generateContent({ contents: [{ role: "user", parts }] });
         const response = await result.response;
         const text = response.text();
         
-        const promptTokenCount = undefined;
-        const candidatesTokenCount = undefined;
-        
-        const sources: ClientRagSource[] = webSearchResults.map(r => ({
-            title: r.title,
-            uri: r.link,
-        }));
+        const toolCalls = response.functionCalls();
+        let sources: ClientRagSource[] = [];
 
-        return { summary: text, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
+        if (toolCalls && toolCalls.length > 0 && response.candidates?.[0].citationMetadata?.citationSources) {
+             sources = response.candidates[0].citationMetadata.citationSources.map(source => ({
+                title: source.uri || 'Fonte da Web',
+                uri: source.uri || '#',
+             }));
+        }
+
+        return { summary: text, searchFailed: false, sources };
 
     } catch (error: any) {
         console.error("Error calling Gemini API:", error);
@@ -539,44 +538,6 @@ async function callGemini(
         throw new Error(error.message);
     }
 }
-
-async function callCustomSearch(query: string): Promise<{ success: boolean; results?: any[] }> {
-    const apiKey = process.env.CUSTOM_SEARCH_API_KEY;
-    const searchEngineId = process.env.CUSTOM_SEARCH_ENGINE_ID;
-
-    if (!apiKey || !searchEngineId) {
-        console.warn('A chave da API de Pesquisa Personalizada ou o ID do Mecanismo de Busca não estão configurados no ambiente. A busca web não funcionará.');
-        return { success: false, results: [] };
-    }
-
-    const customsearch = google.customsearch('v1');
-
-    try {
-        const requestParams: any = {
-            auth: apiKey,
-            cx: searchEngineId,
-            q: query,
-            num: 8,
-            gl: 'br',
-            lr: 'lang_pt',
-        };
-
-        if (query.toLowerCase().includes('hoje')) {
-            requestParams.sort = 'date';
-        }
-
-        const response = await customsearch.cse.list(requestParams);
-
-        return { success: true, results: response.data.items || [] };
-    } catch (error: any) {
-        console.error('Error calling Custom Search API:', error);
-        if (error.code === 403) {
-             throw new Error("A chave da API da Pesquisa Personalizada é inválida ou não tem permissão para este mecanismo de busca.");
-        }
-        throw new Error(`Falha na chamada da API de Pesquisa Personalizada: ${error.message}`);
-    }
-}
-
 
 export async function logQuestionForAnalytics(query: string): Promise<void> {
     const adminDb = getAuthenticatedFirestoreAdmin();
@@ -665,17 +626,7 @@ export async function askAssistant(
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         source = 'gemini';
     } else if (useWebSearch) {
-        const searchResults = await callCustomSearch(deidentifiedQuery);
-        if (!searchResults.success || !searchResults.results || searchResults.results.length === 0) {
-            result = { summary: 'Não foi possível encontrar resultados na web para esta consulta.', searchFailed: true, sources: [] };
-        } else {
-            const formattedResults = searchResults.results.map(r => `### [${r.title}](${r.link})\n${r.snippet}`).join('\n\n---\n\n');
-            result = { 
-                summary: formattedResults,
-                searchFailed: false, 
-                sources: searchResults.results.map(r => ({ title: r.title, uri: r.link })) 
-            };
-        }
+        result = await callGemini(deidentifiedQuery, attachments, null, true);
         source = 'web';
     } else {
         await logQuestionForAnalytics(deidentifiedQuery);
@@ -768,7 +719,7 @@ export async function regenerateAnswer(
   error?: string;
 }> {
   try {
-    const startTime = Date.now() - startTime;
+    const startTime = Date.now();
     let result;
     let source: 'rag' | 'web' | 'gemini';
 
@@ -1518,7 +1469,7 @@ export async function runApiHealthCheck(): Promise<any> {
     // Test Gemini API (Web Search)
     let geminiStartTime = Date.now();
     try {
-        const res = await callGemini("teste", [], null, "gemini-1.5-pro-latest");
+        const res = await callGemini("teste", [], null, true);
         if (res.error) throw new Error(res.error);
         results.push({
             api: 'Google Gemini API',
@@ -1534,26 +1485,8 @@ export async function runApiHealthCheck(): Promise<any> {
         });
     }
 
-    // Test Custom Search API
-    let customSearchStartTime = Date.now();
-    try {
-        const res = await callCustomSearch("teste");
-        if (!res.success) throw new Error("A busca personalizada falhou em retornar resultados.");
-        results.push({
-            api: 'Google Custom Search',
-            status: 'OK',
-            latency: Date.now() - customSearchStartTime,
-        });
-    } catch (e: any) {
-        results.push({
-            api: 'Google Custom Search',
-            status: 'Erro',
-            latency: Date.now() - customSearchStartTime,
-            error: e.message,
-        });
-    }
-
-
+    // Test Custom Search API - Removed as it's no longer in use
+    
     return { results };
 }
 
@@ -1613,3 +1546,5 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
+
+    

@@ -44,7 +44,6 @@
     "firebase": "^10.12.3",
     "firebase-admin": "^12.2.0",
     "google-auth-library": "^9.11.0",
-    "googleapis": "^140.0.1",
     "lucide-react": "^0.475.0",
     "mammoth": "^1.7.2",
     "next": "15.2.3",
@@ -72,3 +71,5 @@
     "typescript": "^5"
   }
 }
+
+    
