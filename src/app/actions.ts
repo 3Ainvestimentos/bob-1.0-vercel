@@ -503,6 +503,8 @@ async function callGemini(
         let webSearchContext = '';
         if (webSearchResults.length > 0) {
             webSearchContext = `
+              **Instrução Adicional:** Baseie sua resposta nos seguintes trechos de busca da web. Responda de forma concisa e direta.
+              
               ${webSearchResults.map((r, i) => `Trecho ${i+1} (Fonte: ${r.link}):\n${r.snippet}`).join('\n\n')}
             `;
         }
@@ -557,8 +559,11 @@ async function callCustomSearch(query: string): Promise<{ success: boolean; resu
             num: 8,
             gl: 'br',
             lr: 'lang_pt',
-            sort: 'date',
         };
+
+        if (query.toLowerCase().includes('hoje')) {
+            requestParams.sort = 'date';
+        }
 
         const response = await customsearch.cse.list(requestParams);
 
@@ -680,9 +685,6 @@ export async function askAssistant(
             ASSISTENTE_CORPORATIVO_PREAMBLE
         );
         source = 'rag';
-        if (result.searchFailed) {
-             setLastFailedQuery(deidentifiedQuery);
-        }
     }
 
     if (!result || typeof result.summary === 'undefined') {
@@ -1535,7 +1537,8 @@ export async function runApiHealthCheck(): Promise<any> {
     // Test Custom Search API
     let customSearchStartTime = Date.now();
     try {
-        await callCustomSearch("teste");
+        const res = await callCustomSearch("teste");
+        if (!res.success) throw new Error("A busca personalizada falhou em retornar resultados.");
         results.push({
             api: 'Google Custom Search',
             status: 'OK',
