@@ -2,13 +2,11 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
-import { GoogleGenerativeAI, FunctionDeclarationSchemaType, Part, FunctionCallingMode, EnhancedGenerateContentResponse } from '@google/generative-ai';
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getFirestore as getFirestoreAdmin, FieldValue, DocumentData, Timestamp as AdminTimestamp, writeBatch } from 'firebase-admin/firestore';
-import { getAuth as getAuthAdmin } from 'firebase-admin/auth';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin } from '@/lib/server/firebase';
 import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
-import { google } from 'googleapis';
 import { SpeechClient } from '@google-cloud/speech';
 import { estimateTokens, getFileContent, formatTutorialToMarkdown } from '@/lib/server/utils';
 
@@ -74,59 +72,7 @@ Os principais detratores foram:
 Em julho de 2025, o assunto da vez no mercado brasileiro foram as imposições de tarifas de 50% por parte dos Estados Unidos sobre uma série de produtos nacionais. A incerteza inicial sobre o alcance dessas medidas afetou negativamente o sentimento dos investidores, pressionando o Ibovespa, que recuou 4,17% no mês. Ao final do mês, a divulgação de uma lista de quase 700 itens isentos trouxe algum alívio, com destaque para os setores de aviação e laranja. Contudo, setores como o de carne bovina seguiram pressionados. No campo monetário, o Copom manteve a taxa Selic em 15%, como esperado, diante das persistentes incertezas inflacionárias. Por outro lado, tivemos bons dados econômicos: o IGP-M registrou nova deflação, o IPCA-15 avançou 0,33% (abaixo da expectativa) e a taxa de desemprego caiu para 5,8%, o menor patamar da série. O FMI também revisou para cima a projeção de crescimento do PIB brasileiro para 2,3% em 2025.
 No cenário internacional, as tensões comerciais continuaram no centro das atenções. Além das tarifas direcionadas ao Brasil, os Estados Unidos mantiveram postura rígida nas negociações com a União Europeia e a China, o que gerou receios quanto ao impacto sobre o comércio global. O Federal Reserve optou por manter a taxa de juros no intervalo de 4,25% a 4,5% ao ano, em linha com as expectativas, reforçando um discurso de cautela diante do cenário externo desafiador. Apesar das incertezas, o S&P 500 avançou 2,17% no mês, refletindo a resiliência dos mercados americanos frente ao ambiente de maior aversão ao risco e reação aos bons resultados divulgados pelas empresas.`;
 
-let adminApp: App | null = null;
-
-function getServiceAccountCredentials() {
-    const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
-
-    if (!serviceAccountKeyBase64) {
-        throw new Error('A variável de ambiente SERVICE_ACCOUNT_KEY_INTERNAL não está definida ou está vazia.');
-    }
-
-    try {
-        const decodedKey = Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf-8');
-        return JSON.parse(decodedKey);
-    } catch (error: any) {
-        console.error("Falha ao decodificar ou analisar a chave da conta de serviço.", error.message);
-        throw new Error(`Falha ao processar a chave da conta de serviço: ${'' + error.message}`);
-    }
-}
-
-function getFirebaseAdminApp() {
-    if (adminApp) {
-        return adminApp;
-    }
-
-    const appName = 'firebase-admin-app-singleton';
-    const existingApp = getApps().find(app => app.name === appName);
-    if (existingApp) {
-        adminApp = existingApp;
-        return adminApp;
-    }
-    
-    try {
-        const serviceAccount = getServiceAccountCredentials();
-        adminApp = initializeApp({
-            credential: cert(serviceAccount)
-        }, appName);
-    } catch (error: any) {
-        console.error("Falha ao inicializar o Admin SDK do Firebase com as credenciais da conta de serviço:", error.message);
-        throw new Error("Não foi possível inicializar os serviços de backend. Verifique a configuração da conta de serviço.");
-    }
-
-    return adminApp;
-}
-
-
-function getAuthenticatedFirestoreAdmin() {
-    const app = getFirebaseAdminApp();
-    return getFirestoreAdmin(app);
-}
-
-function getAuthenticatedAuthAdmin() {
-    const app = getFirebaseAdminApp();
-    return getAuthAdmin(app);
-}
+// A lógica de inicialização do Firebase foi movida para src/lib/server/firebase.ts
 
 async function getGeminiApiKey(): Promise<string> {
     if (process.env.GEMINI_API_KEY) {
@@ -140,7 +86,7 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
         return;
     }
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const alertRef = adminDb.collection('dlp_alerts').doc();
         await alertRef.set({
             userId,
@@ -155,7 +101,13 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
 
 
 async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
-    const credentials = getServiceAccountCredentials();
+    const {google} = require('googleapis');
+    const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
+
+    if (!serviceAccountKeyBase64) {
+        throw new Error('SERVICE_ACCOUNT_KEY_INTERNAL não definida.');
+    }
+    const credentials = JSON.parse(Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf-8'));
     const projectId = credentials.project_id;
     
     if (!projectId) {
@@ -236,7 +188,12 @@ async function callDiscoveryEngine(
     promptTokenCount?: number; 
     candidatesTokenCount?: number; 
 }> {
-    const credentials = getServiceAccountCredentials();
+    const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
+
+    if (!serviceAccountKeyBase64) {
+        throw new Error('SERVICE_ACCOUNT_KEY_INTERNAL não definida.');
+    }
+    const credentials = JSON.parse(Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf-8'));
     
     const auth = new GoogleAuth({
       credentials,
@@ -433,7 +390,7 @@ async function callGemini(
         // If the model returns a function call, we send it back to the model with an empty
         // response. This is the signal to the model to use its internally-provided
         // search results to answer the user's query.
-        let functionCalls = result.response.functionCalls();
+        const functionCalls = result.response.functionCalls();
         if (functionCalls && functionCalls.length > 0) {
             result = await chat.sendMessage([{
                 functionResponse: {
@@ -468,7 +425,7 @@ async function callGemini(
 }
 
 export async function logQuestionForAnalytics(query: string): Promise<void> {
-    const adminDb = getAuthenticatedFirestoreAdmin();
+    const adminDb = await getAuthenticatedFirestoreAdmin();
     const crypto = require('crypto');
 
     const normalizedQuery = query.toLowerCase().trim().replace(/[?.,!]/g, '');
@@ -607,7 +564,12 @@ export async function askAssistant(
 }
 
 export async function transcribeLiveAudio(base64Audio: string): Promise<string> {
-    const credentials = getServiceAccountCredentials();
+    const serviceAccountKeyBase64 = process.env.SERVICE_ACCOUNT_KEY_INTERNAL;
+
+    if (!serviceAccountKeyBase64) {
+        throw new Error('SERVICE_ACCOUNT_KEY_INTERNAL não definida.');
+    }
+    const credentials = JSON.parse(Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf-8'));
     const speechClient = new SpeechClient({ credentials });
 
     const audio = {
@@ -719,7 +681,7 @@ export async function logRegeneratedQuestion(
         return;
     };
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const regeneratedRef = adminDb.collection('users').doc(userId).collection('regenerated_answers').doc();
         await regeneratedRef.set({
             userId,
@@ -820,7 +782,7 @@ export async function removeFileFromConversation(
     }
 
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
         const chatSnap = await chatRef.get();
 
@@ -828,7 +790,7 @@ export async function removeFileFromConversation(
             throw new Error("Conversation not found.");
         }
 
-        const chatData = chatSnap.data() as DocumentData;
+        const chatData = chatSnap.data() as import('firebase-admin/firestore').DocumentData;
         const existingFiles: AttachedFile[] = chatData.attachedFiles || [];
 
         const updatedFiles = existingFiles.filter(file => file.id !== fileId);
@@ -857,9 +819,9 @@ function calculatePercentile(arr: number[], percentile: number): number {
 
 export async function getAdminInsights(): Promise<any> {
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
 
-        const listUsersResult = await getAuthenticatedAuthAdmin().listUsers();
+        const listUsersResult = await (await getAuthenticatedAuthAdmin()).listUsers();
         const totalUsers = listUsersResult.users.length;
 
         const chatsCollectionGroup = adminDb.collectionGroup('chats');
@@ -884,7 +846,7 @@ export async function getAdminInsights(): Promise<any> {
             const messages = (doc.data().messages || []) as Message[];
             const userId = doc.ref.parent.parent?.id; 
             
-            const chatCreatedAt = (doc.data().createdAt as AdminTimestamp).toDate();
+            const chatCreatedAt = (doc.data().createdAt as import('firebase-admin/firestore').Timestamp).toDate();
             const gmtMinus3Offset = 3 * 60 * 60 * 1000;
             
             messages.forEach((m: Message) => {
@@ -981,7 +943,7 @@ export async function getAdminInsights(): Promise<any> {
         const topQuestionsSnapshot = await analyticsCollection.orderBy('count', 'desc').limit(10).get();
         const topQuestions = topQuestionsSnapshot.docs.map(doc => {
             const data = doc.data();
-            const lastAsked = data.lastAsked as AdminTimestamp;
+            const lastAsked = data.lastAsked as import('firebase-admin/firestore').Timestamp;
             return {
                 ...data,
                 lastAsked: lastAsked.toDate().toLocaleString('pt-BR', {
@@ -1045,8 +1007,8 @@ export async function getAdminInsights(): Promise<any> {
 
 export async function getUsersWithRoles(): Promise<any> {
     try {
-        const authAdmin = getAuthenticatedAuthAdmin();
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const authAdmin = await getAuthenticatedAuthAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const listUsersResult = await authAdmin.listUsers();
         
         const usersFromAuth = listUsersResult.users;
@@ -1065,7 +1027,7 @@ export async function getUsersWithRoles(): Promise<any> {
                 email: user.email,
                 displayName: user.displayName,
                 role: userData?.role || 'user',
-                createdAt: (userData?.createdAt as AdminTimestamp)?.toDate().toISOString() || user.metadata.creationTime,
+                createdAt: (userData?.createdAt as import('firebase-admin/firestore').Timestamp)?.toDate().toISOString() || user.metadata.creationTime,
             };
         });
 
@@ -1079,7 +1041,7 @@ export async function getUsersWithRoles(): Promise<any> {
 
 export async function getPreRegisteredUsers(): Promise<any> {
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const preRegSnapshot = await adminDb.collection('pre_registered_users').get();
         
         if (preRegSnapshot.empty) {
@@ -1091,7 +1053,7 @@ export async function getPreRegisteredUsers(): Promise<any> {
             return {
                 email: doc.id,
                 role: data.role,
-                createdAt: (data.createdAt as AdminTimestamp)?.toDate().toISOString(),
+                createdAt: (data.createdAt as import('firebase-admin/firestore').Timestamp)?.toDate().toISOString(),
             };
         });
         
@@ -1108,9 +1070,9 @@ export async function createUser(email: string, role: UserRole): Promise<{ succe
         return { success: false, error: 'Email e Papel são obrigatórios.' };
     }
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         
-        const authAdmin = getAuthenticatedAuthAdmin();
+        const authAdmin = await getAuthenticatedAuthAdmin();
         try {
             await authAdmin.getUserByEmail(email);
             return { success: false, error: 'Este e-mail já está em uso por outro usuário no Firebase Authentication.' };
@@ -1143,7 +1105,7 @@ export async function setUserRole(userId: string, role: UserRole): Promise<{succ
     }
 
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const userRef = adminDb.collection('users').doc(userId);
         
         await userRef.set({ role: role }, { merge: true });
@@ -1160,8 +1122,8 @@ export async function deleteUser(userId: string): Promise<{success: boolean, err
         return { success: false, error: "UserID é obrigatório." };
     }
     try {
-        const authAdmin = getAuthenticatedAuthAdmin();
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const authAdmin = await getAuthenticatedAuthAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         
         // Delete from Auth
         await authAdmin.deleteUser(userId);
@@ -1182,8 +1144,8 @@ export async function deleteUser(userId: string): Promise<{success: boolean, err
 
 export async function getLegalIssueAlerts(): Promise<any> {
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
-        const authAdmin = getAuthenticatedAuthAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
+        const authAdmin = await getAuthenticatedAuthAdmin();
         
         const alertsSnapshot = await adminDb.collection('legal_issue_alerts').get();
 
@@ -1207,7 +1169,7 @@ export async function getLegalIssueAlerts(): Promise<any> {
 
         const alerts = alertsSnapshot.docs.map(doc => {
             const data = doc.data();
-            const reportedAt = data.reportedAt as AdminTimestamp;
+            const reportedAt = data.reportedAt as import('firebase-admin/firestore').Timestamp;
             const userInfo = userMap.get(data.userId);
 
             return {
@@ -1232,8 +1194,8 @@ export async function getLegalIssueAlerts(): Promise<any> {
 
 export async function getFeedbacks(): Promise<any> {
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
-        const authAdmin = getAuthenticatedAuthAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
+        const authAdmin = await getAuthenticatedAuthAdmin();
         
         const feedbacksSnapshot = await adminDb.collectionGroup('feedbacks').get();
 
@@ -1257,7 +1219,7 @@ export async function getFeedbacks(): Promise<any> {
 
         const allFeedbacks = feedbacksSnapshot.docs.map(doc => {
             const data = doc.data();
-            const updatedAt = data.updatedAt as AdminTimestamp;
+            const updatedAt = data.updatedAt as import('firebase-admin/firestore').Timestamp;
             const userInfo = userMap.get(data.userId);
 
             return {
@@ -1308,7 +1270,7 @@ export async function getAdminCosts(): Promise<any> {
 
 export async function getMaintenanceMode(): Promise<any> {
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const settingsRef = adminDb.collection('system_settings').doc('config');
         const docSnap = await settingsRef.get();
 
@@ -1325,7 +1287,7 @@ export async function getMaintenanceMode(): Promise<any> {
 
 export async function setMaintenanceMode(isMaintenanceMode: boolean): Promise<any> {
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const settingsRef = adminDb.collection('system_settings').doc('config');
         await settingsRef.set({ isMaintenanceMode }, { merge: true });
         return { success: true };
@@ -1338,7 +1300,7 @@ export async function setMaintenanceMode(isMaintenanceMode: boolean): Promise<an
 export async function getGreetingMessage(): Promise<string> {
     const defaultMessage = 'Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA.';
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const contentRef = adminDb.collection('system_settings').doc('content');
         const docSnap = await contentRef.get();
 
@@ -1357,7 +1319,7 @@ export async function setGreetingMessage(greetingMessage: string): Promise<{ suc
         return { success: false, error: 'A mensagem de saudação não pode estar vazia.' };
     }
     try {
-        const adminDb = getAuthenticatedFirestoreAdmin();
+        const adminDb = await getAuthenticatedFirestoreAdmin();
         const contentRef = adminDb.collection('system_settings').doc('content');
         await contentRef.set({ greetingMessage }, { merge: true });
         return { success: true };
@@ -1441,7 +1403,7 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: 'UID e Email são obrigatórios.' };
     }
 
-    const adminDb = getAuthenticatedFirestoreAdmin();
+    const adminDb = await getAuthenticatedFirestoreAdmin();
 
     try {
         // 1. Verificar se o usuário já existe na coleção 'users'
