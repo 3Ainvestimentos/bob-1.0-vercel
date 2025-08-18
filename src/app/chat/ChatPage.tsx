@@ -664,7 +664,7 @@ function ChatPageContent() {
     });
   };
 
-  const submitQuery = async (query: string, files: File[]) => {
+  const submitQuery = async (query: string, files: File[], isWebSearch: boolean = false) => {
     if (!query.trim() && files.length === 0) return;
     if (isLoading || !user) return;
 
@@ -703,6 +703,7 @@ function ChatPageContent() {
                 chatId: currentChatId,
                 messageId: assistantMessageId,
                 useStandardAnalysis,
+                useWebSearch: isWebSearch,
             },
             user.uid
         );
@@ -717,20 +718,6 @@ function ChatPageContent() {
                 lastUserMessage.originalContent = lastUserMessage.content;
                 lastUserMessage.content = assistantResponse.deidentifiedQuery;
             }
-        }
-        
-        // Critical fix: force searchFailed state if response is empty
-        if (!assistantResponse.summary && assistantResponse.source !== 'web') {
-            const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
-            const errorMessage: Message = {
-                id: crypto.randomUUID(),
-                role: 'assistant',
-                content: failureMessage,
-            };
-            setMessages((prev) => [...prev, errorMessage]);
-            setLastFailedQuery(userQuery);
-            setIsLoading(false);
-            return;
         }
 
         if (!assistantResponse.summary) {
@@ -748,7 +735,7 @@ function ChatPageContent() {
             latencyMs: assistantResponse.latencyMs,
         };
 
-        if (assistantResponse.searchFailed) {
+        if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
             setLastFailedQuery(userQuery);
         }
 
@@ -806,59 +793,8 @@ function ChatPageContent() {
     if (!lastFailedQuery || isLoading || !user) return;
   
     const query = lastFailedQuery;
-    
-    // Remove the "no results" assistant message before performing the web search.
-    const messagesWithoutFailure = messages.filter(m => m.id !== messages[messages.length - 1].id);
-  
-    setMessages(messagesWithoutFailure);
     setLastFailedQuery(null);
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const assistantResponse = await askAssistant(
-        query,
-        { useWebSearch: true },
-        user.uid
-      );
-  
-      if (assistantResponse.error) {
-        throw new Error(assistantResponse.error);
-      }
-      
-      if (!assistantResponse.summary) {
-          throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
-      }
-      
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: assistantResponse.summary,
-        source: assistantResponse.source,
-        sources: assistantResponse.sources,
-        promptTokenCount: assistantResponse.promptTokenCount,
-        candidatesTokenCount: assistantResponse.candidatesTokenCount,
-        latencyMs: assistantResponse.latencyMs,
-      };
-  
-      const finalMessages = [...messagesWithoutFailure, assistantMessage];
-      setMessages(finalMessages);
-  
-      if (activeChatId) {
-        await saveConversation(user.uid, finalMessages, activeChatId);
-      }
-    } catch (err: any) {
-      const errorMessageContent = `Erro ao buscar na web: ${'' + err.message}`;
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: errorMessageContent,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      setError(errorMessageContent);
-    } finally {
-      setIsLoading(false);
-    }
+    await submitQuery(query, [], true);
   };
 
   const handleCreateGroup = async (e: FormEvent) => {

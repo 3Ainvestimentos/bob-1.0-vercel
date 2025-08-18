@@ -426,20 +426,18 @@ async function callDiscoveryEngine(
 
       const promptForTokenCount = modelPrompt + query;
       const promptTokenCount = estimateTokens(promptForTokenCount);
-      const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
       
       let sources: ClientRagSource[] = [];
       const summary = data.summary?.summaryText;
       const results = data.results || [];
       
       if (!summary || results.length === 0) {
-          const candidatesTokenCount = estimateTokens(failureMessage);
           return { 
-              summary: failureMessage, 
+              summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
               searchFailed: true,
               sources: [],
               promptTokenCount,
-              candidatesTokenCount,
+              candidatesTokenCount: 0,
           };
       }
       
@@ -505,7 +503,7 @@ async function callGemini(
         let webSearchContext = '';
         if (webSearchResults.length > 0) {
             webSearchContext = `
-              **Instrução Adicional:** Baseie sua resposta nos seguintes trechos de busca da web.
+              **Instrução Adicional:** Baseie sua resposta nos seguintes trechos de busca da web. Responda de forma concisa e direta.
               ${webSearchResults.map((r, i) => `Trecho ${i+1} (Fonte: ${r.link}):\n${r.snippet}`).join('\n\n')}
             `;
         }
@@ -546,7 +544,8 @@ async function callCustomSearch(query: string): Promise<{ success: boolean; resu
     const searchEngineId = process.env.CUSTOM_SEARCH_ENGINE_ID;
 
     if (!apiKey || !searchEngineId) {
-        throw new Error('A chave da API de Pesquisa Personalizada ou o ID do Mecanismo de Busca não estão configurados no ambiente.');
+        console.warn('A chave da API de Pesquisa Personalizada ou o ID do Mecanismo de Busca não estão configurados no ambiente. A busca web não funcionará.');
+        return { success: false, results: [] };
     }
 
     const customsearch = google.customsearch('v1');
@@ -692,9 +691,8 @@ export async function askAssistant(
     };
   } catch (error: any) {
     console.error("Error in askAssistant:", error.message);
-    const failureMessage = "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web";
     return { 
-        summary: failureMessage, 
+        summary: `Ocorreu um erro ao processar sua solicitação: ${error.message}`,
         searchFailed: true,
         source: 'rag',
         error: error.message 
