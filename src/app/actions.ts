@@ -357,7 +357,7 @@ async function callDiscoveryEngine(
       let fileContextPreamble = '';
       if (attachments.length > 0) {
           fileContextPreamble = attachments.map(file => 
-              `\n\n### INÍCIO DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###\n${file.deidentifiedContent}\n### FIM DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###`
+              `\n\n### INÍCIO DO CONTEÚDO DO ARQUIVO: ${file.fileName} ###\n${file.deidentifiedContent}\n### FIM DO CONTEúdo DO ARQUIVO: ${file.fileName} ###`
           ).join('');
       }
       
