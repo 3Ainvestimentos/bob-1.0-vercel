@@ -510,29 +510,28 @@ export async function askAssistant(
     
     const latencyMs = Date.now() - startTime;
     
+    // Se a busca falhou, seja por erro ou por não encontrar resultados
     if (result.searchFailed) {
-      // Se a busca falhou, mas a chamada à API retornou uma mensagem de erro, use-a.
-      if (result.summary) {
-          return {
-              summary: result.summary,
-              searchFailed: true,
-              source: source,
-              error: result.summary
-          };
-      }
       return {
-          summary: "",
+          summary: result.summary, // A mensagem de erro da API, se houver
           searchFailed: true,
-          source: 'rag',
-          sources: [],
+          source: source,
+          error: result.summary,
           latencyMs,
           deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
       };
     }
     
-    // Se a API não retornou conteúdo, aí sim usamos a mensagem de erro genérica.
+    // Se a API retornou sucesso, mas o conteúdo é vazio, tratamos como falha de busca
     if (!result.summary) {
-        throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
+        return {
+            summary: "",
+            searchFailed: true,
+            source: source,
+            sources: [],
+            latencyMs,
+            deidentifiedQuery: finalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
+        };
     }
     
     const summary = result.summary;
