@@ -551,12 +551,20 @@ async function callCustomSearch(query: string): Promise<{ success: boolean; resu
     const customsearch = google.customsearch('v1');
 
     try {
-        const response = await customsearch.cse.list({
+        const requestParams: any = {
             auth: apiKey,
             cx: searchEngineId,
             q: query,
-            num: 5,
-        });
+            num: 8,
+            gl: 'br',
+            lr: 'lang_pt',
+        };
+
+        if (query.toLowerCase().includes('hoje')) {
+            requestParams.sort = 'date';
+        }
+
+        const response = await customsearch.cse.list(requestParams);
 
         return { success: true, results: response.data.items || [] };
     } catch (error: any) {
