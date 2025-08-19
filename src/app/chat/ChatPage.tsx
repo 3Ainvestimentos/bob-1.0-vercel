@@ -80,6 +80,7 @@ import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from '@/compone
 import { RobotIdeaIcon } from '@/components/icons/RobotIdeaIcon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
 
 
 // ---- Data Types ----
@@ -664,12 +665,87 @@ function ChatPageContent() {
     });
   };
 
+  const continueQuery = async (query: string, files: File[], isWebSearch: boolean) => {
+    if (isLoading || !user) return;
+
+    const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
+    const fileNames = files.map(f => f.name);
+
+    setIsLoading(true);
+    setError(null);
+    setLastFailedQuery(null);
+    
+    let currentChatId = activeChatId;
+    let assistantMessageId = crypto.randomUUID();
+
+    try {
+        const fileDataUris = await Promise.all(files.map(readFileAsDataURL));
+        
+        const assistantResponse = await askAssistant(
+            query,
+            { 
+                fileDataUris,
+                chatId: currentChatId,
+                messageId: assistantMessageId,
+                useStandardAnalysis,
+                useWebSearch: isWebSearch,
+            },
+            user.uid
+        );
+
+        if (assistantResponse.error) {
+            throw new Error(assistantResponse.error);
+        }
+
+        if (!assistantResponse.summary) {
+            throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
+        }
+
+        const assistantMessage: Message = {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: assistantResponse.summary,
+            source: assistantResponse.source,
+            sources: assistantResponse.sources,
+            promptTokenCount: assistantResponse.promptTokenCount,
+            candidatesTokenCount: assistantResponse.candidatesTokenCount,
+            latencyMs: assistantResponse.latencyMs,
+        };
+
+        if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
+            setLastFailedQuery(query);
+        }
+
+        const finalMessages = [...messages, assistantMessage];
+        setMessages(finalMessages);
+
+        if (currentChatId) {
+            await saveConversation(user.uid, finalMessages, currentChatId);
+        } else {
+            console.error("Tried to continue a query without an active chat ID.");
+            setError("Erro: Não foi possível salvar a continuação da conversa.");
+        }
+        
+    } catch (err: any) {
+        const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
+        const errorMessage: Message = {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: errorMessageContent,
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        setError(errorMessageContent);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+
   const submitQuery = async (query: string, files: File[], isWebSearch: boolean = false) => {
     if (!query.trim() && files.length === 0) return;
     if (isLoading || !user) return;
 
     const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
-
     const fileNames = files.map(f => f.name);
     
     const userQuery = query || (files.length > 0 ? `Analise os arquivos anexados.` : '');
@@ -780,7 +856,11 @@ function ChatPageContent() {
   };
   
   const handleSuggestionClick = (suggestion: string) => {
-    setInput(suggestion);
+    if (suggestion === POSICAO_CONSOLIDADA_PREAMBLE) {
+      setInput(suggestion);
+    } else {
+      submitQuery(suggestion, []);
+    }
     inputRef.current?.focus();
   };
   
@@ -794,7 +874,7 @@ function ChatPageContent() {
   
     const query = lastFailedQuery;
     setLastFailedQuery(null);
-    await submitQuery(query, [], true);
+    await continueQuery(query, [], true);
   };
 
   const handleCreateGroup = async (e: FormEvent) => {
@@ -1649,3 +1729,5 @@ function ChatPageContent() {
 }
 
 export default ChatPageContent;
+
+    
