@@ -894,11 +894,7 @@ export default function ChatPageContent() {
   };
   
   const handleSuggestionClick = (suggestion: string) => {
-    if (suggestion === POSICAO_CONSOLIDADA_PREAMBLE) {
-      setInput(suggestion);
-    } else {
-      submitQuery(suggestion, []);
-    }
+    setInput(suggestion);
     inputRef.current?.focus();
   };
   
