@@ -2,7 +2,6 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
-import { google } from 'googleapis';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseAdminApp, getServiceAccountCredentialsFromEnv } from '@/lib/server/firebase';
@@ -77,9 +76,10 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
 
 
 async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
+    const {google} = require('googleapis');
     const credentials = await getServiceAccountCredentialsFromEnv();
     const projectId = credentials.project_id;
-
+    
     if (!projectId) {
         throw new Error("O 'project_id' não foi encontrado nas credenciais da conta de serviço.");
     }
@@ -1415,7 +1415,5 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
-
-    
 
     
