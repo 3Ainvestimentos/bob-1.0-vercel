@@ -95,38 +95,37 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     const parent = `projects/${projectId}/locations/global`;
 
     const infoTypesToDetect = [
-        'PERSON_NAME',
-        'BRAZIL_CPF_NUMBER'
+        { name: 'PERSON_NAME' },
+        { name: 'BRAZIL_CPF_NUMBER' }
     ];
     
     const request = {
         parent: parent,
-        resource: {
-            deidentifyConfig: {
-                infoTypeTransformations: {
-                    transformations: [
-                        {
-                            infoTypes: infoTypesToDetect.map(name => ({ name })),
-                            primitiveTransformation: {
-                                replaceWithInfoTypeConfig: {},
-                            },
+        deidentifyConfig: {
+            infoTypeTransformations: {
+                transformations: [
+                    {
+                        infoTypes: infoTypesToDetect,
+                        primitiveTransformation: {
+                            replaceWithInfoTypeConfig: {},
                         },
-                    ],
-                },
+                    },
+                ],
             },
-            inspectConfig: {
-                infoTypes: infoTypesToDetect.map(name => ({ name })),
-                minLikelihood: 'LIKELY',
-                includeQuote: true,
-            },
-            item: {
-                value: query,
-            },
+        },
+        inspectConfig: {
+            infoTypes: infoTypesToDetect,
+            minLikelihood: 'LIKELY',
+            includeQuote: true,
+        },
+        item: {
+            value: query,
         },
     };
 
     try {
-        const [response] = await dlp.projects.content.deidentify(request as any);
+        // @ts-ignore - The type definition for dlp.projects.content.deidentify is incorrect in the library
+        const [response] = await dlp.projects.content.deidentify(request);
         
         let deidentifiedQuery = response.item?.value || query;
         const findings = response.overview?.transformationSummaries?.[0]?.results || [];
@@ -1422,5 +1421,7 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
+
+    
 
     
