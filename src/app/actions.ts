@@ -9,7 +9,7 @@ import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { SpeechClient } from '@google-cloud/speech';
 import { estimateTokens, getFileContent, formatTutorialToMarkdown } from '@/lib/server/utils';
-import { POSICAO_CONSOLIDADA_PREAMBLE } from './chat/preambles';
+import { POSICAO_CONSOLIDADA_PREAMBLE } from '@/app/chat/preambles';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
@@ -255,7 +255,7 @@ async function callDiscoveryEngine(
       const summary = data.summary?.summaryText;
       const results = data.results || [];
       
-      const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar", "não encontrei", "não tenho como"];
+      const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar", "não encontrei", "não tenho como", "não foram encontradas"];
       const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
 
       if (!summary || results.length === 0 || summaryHasFailureKeyword) {
@@ -486,7 +486,7 @@ export async function askAssistant(
         
         const latencyMs = Date.now() - startTime;
         
-        if (!result || !result.summary) {
+        if (!result || result.searchFailed) {
             return {
                 summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
                 searchFailed: true,
