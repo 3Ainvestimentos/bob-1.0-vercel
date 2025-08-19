@@ -94,49 +94,43 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
 
     const parent = `projects/${projectId}/locations/global`;
 
-    const infoTypesToDetect = [
-        { name: 'PERSON_NAME' },
-        { name: 'BRAZIL_CPF_NUMBER' }
-    ];
+    const infoTypesToDetect = [{ name: 'PERSON_NAME' }, { name: 'BRAZIL_CPF_NUMBER'}];
     
     const request = {
         parent: parent,
-        deidentifyConfig: {
-            infoTypeTransformations: {
-                transformations: [
-                    {
-                        infoTypes: infoTypesToDetect,
-                        primitiveTransformation: {
-                            replaceWithInfoTypeConfig: {},
-                        },
-                    },
-                ],
+        requestBody: {
+            item: {
+                value: query,
             },
-        },
-        inspectConfig: {
-            infoTypes: infoTypesToDetect,
-            minLikelihood: 'LIKELY',
-            includeQuote: true,
-        },
-        item: {
-            value: query,
+            deidentifyConfig: {
+                infoTypeTransformations: {
+                    transformations: [
+                        {
+                            infoTypes: infoTypesToDetect,
+                            primitiveTransformation: {
+                                replaceWithInfoTypeConfig: {},
+                            },
+                        },
+                    ],
+                },
+            },
+            inspectConfig: {
+                infoTypes: infoTypesToDetect,
+                minLikelihood: 'LIKELY',
+                includeQuote: true,
+            },
         },
     };
 
     try {
-        // @ts-ignore - The type definition for dlp.projects.content.deidentify is incorrect in the library
-        const [response] = await dlp.projects.content.deidentify(request);
+        const response = await dlp.projects.content.deidentify(request);
         
-        let deidentifiedQuery = response.item?.value || query;
-        const findings = response.overview?.transformationSummaries?.[0]?.results || [];
+        const deidentifiedQuery = response.data.item?.value || query;
+        const findings = response.data.overview?.transformationSummaries?.[0]?.results || [];
         
         const foundInfoTypes = findings
           .map((result: any) => result.infoType?.name)
           .filter(Boolean) as string[];
-
-        if (deidentifiedQuery.includes('[BRAZIL_CPF_NUMBER]')) {
-             deidentifiedQuery = deidentifiedQuery.replace(/\[BRAZIL_CPF_NUMBER\]/g, '[CPF_ANONIMIZADO]');
-        }
 
         return { deidentifiedQuery, foundInfoTypes };
 
