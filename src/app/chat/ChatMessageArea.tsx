@@ -27,11 +27,13 @@ import {
   UserPlus,
   KeyRound,
   PiggyBank,
+  Wand2,
 } from 'lucide-react';
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { BobIcon } from '@/components/icons/BobIcon';
 import rehypeRaw from 'rehype-raw';
+import { POSICAO_CONSOLIDADA_PREAMBLE } from '../actions';
 
 interface ChatMessageAreaProps {
   messages: Message[];
@@ -56,11 +58,6 @@ interface ChatMessageAreaProps {
 }
 
 const webSearchSuggestions = [
-    {
-        Icon: UserPlus,
-        title: "Como abrir uma conta",
-        description: "Ver o passo-a-passo para novos clientes",
-    },
     {
         Icon: KeyRound,
         title: "Como alterar uma senha",
@@ -126,6 +123,17 @@ export function ChatMessageArea({
                         <p className="font-semibold">Análise de Relatório de Performance XP</p>
                         <p className="text-sm text-muted-foreground">
                           Mensagem de relacionamento com o padrão 3A RIVA
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick(POSICAO_CONSOLIDADA_PREAMBLE)}>
+                    <div className="flex items-start gap-4">
+                      <Wand2 className="h-6 w-6 text-muted-foreground" />
+                      <div>
+                        <p className="font-semibold">Personalizar sua pergunta</p>
+                        <p className="text-sm text-muted-foreground">
+                          Use um prompt avançado como ponto de partida
                         </p>
                       </div>
                     </div>

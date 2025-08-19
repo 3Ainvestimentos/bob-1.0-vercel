@@ -48,7 +48,7 @@ Com base nos documentos encontrados, aqui estão os procedimentos:
 - ...
 `;
 
-const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista financeiro. Sua tarefa é extrair dados de um relatório de investimentos da XP e formatar uma mensagem para WhatsApp.
+export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista financeiro. Sua tarefa é extrair dados de um relatório de investimentos da XP e formatar uma mensagem para WhatsApp.
 
 **REGRAS ESTRITAS:**
 1.  **EXTRAIA OS DADOS:**
@@ -279,7 +279,7 @@ async function callDiscoveryEngine(
       const summary = data.summary?.summaryText;
       const results = data.results || [];
       
-      const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar"];
+      const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar", "não encontrei", "não tenho como"];
       const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
 
       if (!summary || results.length === 0 || summaryHasFailureKeyword) {
@@ -511,7 +511,7 @@ export async function askAssistant(
         
         const latencyMs = Date.now() - startTime;
         
-        if (result.searchFailed || !result.summary) {
+        if (!result || !result.summary) {
             return {
                 summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
                 searchFailed: true,
