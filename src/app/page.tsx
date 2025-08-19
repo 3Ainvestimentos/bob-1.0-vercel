@@ -113,11 +113,11 @@ export default function LoginPage() {
                     <h1 className="text-4xl font-bold tracking-tight">Bem-vindo ao Bob</h1>
                     
                     {isMaintenanceMode ? (
-                        <div className="mt-6 w-full max-w-sm rounded-lg border border-green-200 bg-green-50 p-6 text-center text-green-700">
+                        <div className="mt-6 w-full max-w-sm rounded-xl border border-orange-200 bg-orange-50 p-6 text-center text-orange-700">
                            <div className="flex justify-center">
-                             <Wrench className="h-8 w-8 text-green-600" />
+                             <Wrench className="h-8 w-8 text-orange-600" />
                            </div>
-                           <h2 className="mt-4 text-lg font-semibold text-green-800">Plataforma em Manutenção</h2>
+                           <h2 className="mt-4 text-lg font-semibold text-orange-800">Plataforma em Manutenção</h2>
                            <p className="mt-1 text-sm">
                              A plataforma está temporariamente indisponível para manutenção. Voltaremos em breve!
                            </p>
