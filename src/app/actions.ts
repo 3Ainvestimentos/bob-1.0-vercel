@@ -101,28 +101,26 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     
     const request = {
         parent: parent,
-        resource: {
-            deidentifyConfig: {
-                infoTypeTransformations: {
-                    transformations: [
-                        {
-                            infoTypes: infoTypesToDetect,
-                            primitiveTransformation: {
-                                replaceWithInfoTypeConfig: {},
-                            },
+        deidentifyConfig: {
+            infoTypeTransformations: {
+                transformations: [
+                    {
+                        infoTypes: infoTypesToDetect,
+                        primitiveTransformation: {
+                            replaceWithInfoTypeConfig: {},
                         },
-                    ],
-                },
+                    },
+                ],
             },
-            inspectConfig: {
-                infoTypes: infoTypesToDetect,
-                minLikelihood: 'LIKELY',
-                includeQuote: true,
-            },
-            item: {
-                value: query,
-            },
-        }
+        },
+        inspectConfig: {
+            infoTypes: infoTypesToDetect,
+            minLikelihood: 'LIKELY',
+            includeQuote: true,
+        },
+        item: {
+            value: query,
+        },
     };
 
     try {
