@@ -3,7 +3,7 @@
 
 import { GoogleAuth } from 'google-auth-library';
 import { google } from 'googleapis';
-import { GoogleGenerativeAI, Part } from '@google-generative-ai';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseAdminApp, getServiceAccountCredentialsFromEnv } from '@/lib/server/firebase';
 import { AttachedFile, UserRole } from '@/types';
@@ -95,36 +95,38 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     const parent = `projects/${projectId}/locations/global`;
 
     const infoTypesToDetect = [
-        { name: 'PERSON_NAME' }, 
-        { name: 'BRAZIL_CPF_NUMBER' }
+        'PERSON_NAME',
+        'BRAZIL_CPF_NUMBER'
     ];
     
     const request = {
         parent: parent,
-        deidentifyConfig: {
-            infoTypeTransformations: {
-                transformations: [
-                    {
-                        infoTypes: infoTypesToDetect,
-                        primitiveTransformation: {
-                            replaceWithInfoTypeConfig: {},
+        resource: {
+            deidentifyConfig: {
+                infoTypeTransformations: {
+                    transformations: [
+                        {
+                            infoTypes: infoTypesToDetect.map(name => ({ name })),
+                            primitiveTransformation: {
+                                replaceWithInfoTypeConfig: {},
+                            },
                         },
-                    },
-                ],
+                    ],
+                },
             },
-        },
-        inspectConfig: {
-            infoTypes: infoTypesToDetect,
-            minLikelihood: 'LIKELY',
-            includeQuote: true,
-        },
-        item: {
-            value: query,
+            inspectConfig: {
+                infoTypes: infoTypesToDetect.map(name => ({ name })),
+                minLikelihood: 'LIKELY',
+                includeQuote: true,
+            },
+            item: {
+                value: query,
+            },
         },
     };
 
     try {
-        const [response] = await dlp.projects.content.deidentify(request);
+        const [response] = await dlp.projects.content.deidentify(request as any);
         
         let deidentifiedQuery = response.item?.value || query;
         const findings = response.overview?.transformationSummaries?.[0]?.results || [];
