@@ -59,6 +59,7 @@ import {
   updateDoc,
   where,
   writeBatch,
+  arrayUnion
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -361,15 +362,13 @@ async function saveConversation(
 
   if (chatId) {
     const chatRef = doc(conversationsRef, chatId);
-    const updatePayload: any = { 
+    const updatePayload: any = {
       messages: sanitizedMessages,
-      totalTokens 
+      totalTokens,
     };
 
-    if (options.attachedFiles) {
-        const docSnap = await getDoc(chatRef);
-        const existingFiles = docSnap.data()?.attachedFiles || [];
-        updatePayload.attachedFiles = [...existingFiles, ...options.attachedFiles];
+    if (options.attachedFiles && options.attachedFiles.length > 0) {
+      updatePayload.attachedFiles = arrayUnion(...options.attachedFiles);
     }
     
     await updateDoc(chatRef, updatePayload);
