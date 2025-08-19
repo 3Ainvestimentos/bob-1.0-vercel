@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -444,7 +443,7 @@ const GreetingPopoverContent = ({ onOpenChange }: { onOpenChange: (isOpen: boole
 };
 
 
-function ChatPageContent() {
+export default function ChatPageContent() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -1728,6 +1727,3 @@ function ChatPageContent() {
   );
 }
 
-export default ChatPageContent;
-
-    
