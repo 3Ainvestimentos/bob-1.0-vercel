@@ -2,7 +2,7 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
-import { GoogleGenerativeAI, Part } from '@google-cloud/speech';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseAdminApp, getServiceAccountCredentialsFromEnv } from '@/lib/server/firebase';
 import { AttachedFile, UserRole } from '@/types';
@@ -125,10 +125,7 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     try {
         const response = await dlp.projects.content.deidentify(request);
         
-        let deidentifiedQuery = response.data.item?.value || query;
-        if (deidentifiedQuery.includes('[BRAZIL_CPF_NUMBER]')) {
-            deidentifiedQuery = deidentifiedQuery.replace(/\[BRAZIL_CPF_NUMBER\]/g, '[CPF_ANONIMIZADO]');
-        }
+        const deidentifiedQuery = response.data.item?.value || query;
         
         const findings = response.data.overview?.transformationSummaries?.[0]?.results || [];
         
@@ -1419,5 +1416,7 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
+
+    
 
     
