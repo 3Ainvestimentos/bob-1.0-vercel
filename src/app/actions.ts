@@ -124,10 +124,10 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     };
 
     try {
-        const response = await dlp.projects.content.deidentify(request);
+        const [response] = await dlp.projects.content.deidentify(request);
         
-        let deidentifiedQuery = response.data.item?.value || query;
-        const findings = response.data.overview?.transformationSummaries?.[0]?.results || [];
+        let deidentifiedQuery = response.item?.value || query;
+        const findings = response.overview?.transformationSummaries?.[0]?.results || [];
         
         const foundInfoTypes = findings
           .map((result: any) => result.infoType?.name)
