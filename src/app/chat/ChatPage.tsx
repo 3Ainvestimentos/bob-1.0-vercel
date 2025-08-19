@@ -43,7 +43,7 @@ import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar'
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import {
   Timestamp,
   addDoc,
@@ -80,6 +80,7 @@ import { RobotIdeaIcon } from '@/components/icons/RobotIdeaIcon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 
 // ---- Data Types ----
@@ -329,6 +330,7 @@ async function saveConversation(
   chatId?: string | null,
   options: {
     newChatTitle?: string;
+    attachedFiles?: AttachedFile[];
   } = {}
 ): Promise<string> {
   if (!userId) throw new Error('User ID is required.');
@@ -363,6 +365,13 @@ async function saveConversation(
       messages: sanitizedMessages,
       totalTokens 
     };
+
+    if (options.attachedFiles) {
+        const docSnap = await getDoc(chatRef);
+        const existingFiles = docSnap.data()?.attachedFiles || [];
+        updatePayload.attachedFiles = [...existingFiles, ...options.attachedFiles];
+    }
+    
     await updateDoc(chatRef, updatePayload);
     return chatId;
   } else {
@@ -375,7 +384,7 @@ async function saveConversation(
         totalTokens,
         createdAt: serverTimestamp(),
         groupId: null,
-        attachedFiles: [],
+        attachedFiles: options.attachedFiles || [],
     };
 
     const newChatRef = await addDoc(conversationsRef, newChatPayload);
@@ -740,14 +749,14 @@ export default function ChatPageContent() {
   };
 
 
-  const submitQuery = async (query: string, files: File[], isWebSearch: boolean = false) => {
-    if (!query.trim() && files.length === 0) return;
+  const submitQuery = async (query: string, filesToUpload: File[], isWebSearch: boolean = false) => {
+    if (!query.trim() && filesToUpload.length === 0) return;
     if (isLoading || !user) return;
 
     const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
-    const fileNames = files.map(f => f.name);
+    const fileNames = filesToUpload.map(f => f.name);
     
-    const userQuery = query || (files.length > 0 ? `Analise os arquivos anexados.` : '');
+    const userQuery = query || (filesToUpload.length > 0 ? `Analise os arquivos anexados.` : '');
 
     const userMessage: Message = {
         id: crypto.randomUUID(),
@@ -769,7 +778,34 @@ export default function ChatPageContent() {
     let assistantMessageId = crypto.randomUUID();
     
     try {
-        const fileDataUris = await Promise.all(files.map(readFileAsDataURL));
+        // Handle file uploads if they exist
+        const attachedFiles: AttachedFile[] = [];
+        if (filesToUpload.length > 0) {
+            // Ensure a chat ID exists before uploading
+            if (!currentChatId) {
+                const tempTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
+                const newId = await saveConversation(user.uid, newMessages, null, { newChatTitle: tempTitle });
+                currentChatId = newId;
+                const newFullChat = await getFullConversation(user.uid, newId);
+                setActiveChat(newFullChat);
+            }
+
+            for (const file of filesToUpload) {
+                const storageRef = ref(storage, `users/${user.uid}/${currentChatId}/${file.name}`);
+                const snapshot = await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+
+                attachedFiles.push({
+                    id: crypto.randomUUID(),
+                    fileName: file.name,
+                    mimeType: file.type,
+                    storagePath: snapshot.ref.fullPath,
+                    downloadURL: downloadURL,
+                });
+            }
+        }
+        
+        const fileDataUris = await Promise.all(filesToUpload.map(readFileAsDataURL));
 
         const assistantResponse = await askAssistant(
             userQuery,
@@ -820,7 +856,7 @@ export default function ChatPageContent() {
                 user.uid,
                 [...newMessages, assistantMessage],
                 null,
-                { newChatTitle: newTitle }
+                { newChatTitle: newTitle, attachedFiles }
             );
             const newFullChat = await getFullConversation(user.uid, newId);
             setActiveChat(newFullChat);
@@ -829,8 +865,12 @@ export default function ChatPageContent() {
             await saveConversation(
                 user.uid,
                 [...newMessages, assistantMessage],
-                currentChatId
+                currentChatId,
+                { attachedFiles }
             );
+             // Refresh active chat to show new files
+            const updatedChat = await getFullConversation(user.uid, currentChatId);
+            setActiveChat(updatedChat);
         }
 
         const finalMessages = [...newMessages, assistantMessage];
@@ -1726,4 +1766,3 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
-

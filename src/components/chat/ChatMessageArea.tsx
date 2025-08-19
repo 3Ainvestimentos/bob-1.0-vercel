@@ -33,6 +33,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { BobIcon } from '@/components/icons/BobIcon';
 import { Badge } from '../ui/badge';
+import rehypeRaw from 'rehype-raw';
 
 interface ChatMessageAreaProps {
   messages: Message[];
@@ -43,8 +44,6 @@ interface ChatMessageAreaProps {
   userInitials: string;
   lastFailedQuery: string | null;
   feedbacks: Record<string, 'positive' | 'negative'>;
-  suggestions: string[];
-  isSuggestionsLoading: boolean;
   regeneratingMessageId: string | null;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   onFeedback: (message: Message, rating: 'positive' | 'negative') => void;
@@ -67,8 +66,6 @@ export function ChatMessageArea({
   userInitials,
   lastFailedQuery,
   feedbacks,
-  suggestions,
-  isSuggestionsLoading,
   regeneratingMessageId,
   messagesEndRef,
   onFeedback,
@@ -82,7 +79,6 @@ export function ChatMessageArea({
   onRemoveFile,
 }: ChatMessageAreaProps) {
   const activeChatId = activeChat?.id ?? null;
-  const attachedFiles = activeChat?.attachedFiles ?? [];
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -98,62 +94,6 @@ export function ChatMessageArea({
                 <p className="mt-2 text-lg text-muted-foreground">
                   Como posso te ajudar hoje?
                 </p>
-              </div>
-              <div className="mt-12">
-                <div className="flex items-center justify-between">
-                  <p className="text-muted-foreground">
-                    Você também pode me perguntar assim:
-                  </p>
-                  <Button variant="ghost" size="icon">
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
-                    <div className="flex items-start gap-4">
-                      <Newspaper className="h-6 w-6 text-chart-1" />
-                      <div>
-                        <p className="font-semibold">Buscar notícias sobre IA</p>
-                        <p className="text-sm text-muted-foreground">
-                          Explorar os últimos acontecimentos no mundo da IA
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                  <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
-                    <div className="flex items-start gap-4">
-                      <Mail className="h-6 w-6 text-chart-1" />
-                      <div>
-                        <p className="font-semibold">Criar campanha de e-mail</p>
-                        <p className="text-sm text-muted-foreground">
-                          para vendas de fim de ano
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                  <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
-                    <div className="flex items-start gap-4">
-                      <Lightbulb className="h-6 w-6 text-chart-1" />
-                      <div>
-                        <p className="font-semibold">Preparar tópicos</p>
-                        <p className="text-sm text-muted-foreground">
-                          para uma entrevista sobre vida de nômade digital
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                  <Card className="cursor-pointer p-4 transition-colors hover:bg-accent">
-                    <div className="flex items-start gap-4">
-                      <FileText className="h-6 w-6 text-chart-1" />
-                      <div>
-                        <p className="font-semibold">Analisar um novo artigo</p>
-                        <p className="text-sm text-muted-foreground">
-                          Resumir e destacar pontos chave de um artigo científico
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
               </div>
             </div>
           </div>
@@ -172,19 +112,15 @@ export function ChatMessageArea({
                       <span className="font-semibold text-foreground">Bob</span>
                     </div>
                     {regeneratingMessageId === msg.id ? (
-                      <div className="w-full max-w-md rounded-lg bg-muted p-4">
-                        <p className="animate-pulse text-sm italic text-muted-foreground">
-                          Bob está pensando...
-                        </p>
-                        <div className="mt-3 space-y-2">
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-4/5" />
-                        </div>
+                      <div className="w-fit rounded-xl bg-muted px-4 py-2">
+                          <p className="animate-pulse text-sm italic text-muted-foreground">
+                              Bob está pensando...
+                          </p>
                       </div>
                     ) : (
                       <>
                         <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          <ReactMarkdown rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>
                         </div>
                         {activeChatId && (
                           <div className="flex items-center justify-between">
@@ -223,11 +159,6 @@ export function ChatMessageArea({
                                 </Button>
                               )}
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {typeof msg.promptTokenCount === 'number' && typeof msg.candidatesTokenCount === 'number'
-                                ? `Tokens usados: ${msg.promptTokenCount + msg.candidatesTokenCount}`
-                                : ''}
-                            </div>
                           </div>
                         )}
                       </>
@@ -235,14 +166,8 @@ export function ChatMessageArea({
                   </div>
                 ) : (
                   <div className="flex items-start justify-end gap-4">
-                    <div className="max-w-[80%] rounded-xl bg-accent p-3 text-accent-foreground shadow-sm">
-                      {msg.fileNames && (
-                          <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-background/50 p-2 text-xs">
-                              <Paperclip className="h-4 w-4 shrink-0" />
-                              <span className="truncate">{msg.fileNames.join(', ')}</span>
-                          </div>
-                      )}
-                      <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
+                    <div className="max-w-[80%] rounded-xl bg-user-bubble p-3 text-user-bubble-foreground shadow-sm">
+                      <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none" rehypePlugins={[rehypeRaw]}>
                         {msg.content}
                       </ReactMarkdown>
                     </div>
@@ -260,21 +185,16 @@ export function ChatMessageArea({
                     <BobIcon className="h-6 w-6" isThinking />
                   </AvatarFallback>
                 </Avatar>
-                <div className="w-full max-w-md rounded-lg bg-muted p-4">
-                  <p className="animate-pulse text-sm italic text-muted-foreground">
-                    Bob está pensando...
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-4/5" />
-                    <Skeleton className="h-4 w-11/12" />
-                  </div>
+                <div className="w-fit rounded-xl bg-muted px-4 py-2">
+                    <p className="animate-pulse text-sm italic text-muted-foreground">
+                        Bob está pensando...
+                    </p>
                 </div>
               </div>
             )}
             {lastFailedQuery && !isLoading && (
               <div className="flex justify-center pt-4">
-                <Button onClick={onWebSearch} disabled={isLoading}>
+                <Button variant="secondary" onClick={onWebSearch} disabled={isLoading} className="rounded-full shadow-md">
                   <Search className="mr-2 h-4 w-4" />
                   Pesquisar na Web
                 </Button>
@@ -292,33 +212,6 @@ export function ChatMessageArea({
                 </div>
                 <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-destructive-foreground">
                   <p className="text-sm">{error}</p>
-                </div>
-              </div>
-            )}
-            {(isSuggestionsLoading || suggestions.length > 0) && !isLoading && (
-              <div className="mt-6 flex flex-col items-start gap-3">
-                <p className="text-sm text-muted-foreground">Sugestões:</p>
-                <div className="flex flex-wrap gap-2">
-                  {isSuggestionsLoading ? (
-                    <>
-                      <Skeleton className="h-9 w-48 rounded-full" />
-                      <Skeleton className="h-9 w-40 rounded-full" />
-                      <Skeleton className="h-9 w-52 rounded-full" />
-                    </>
-                  ) : (
-                    suggestions.map((s, i) => (
-                      <Button
-                        key={i}
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full"
-                        onClick={() => onSuggestionClick(s)}
-                        disabled={isLoading}
-                      >
-                        {s}
-                      </Button>
-                    ))
-                  )}
                 </div>
               </div>
             )}
