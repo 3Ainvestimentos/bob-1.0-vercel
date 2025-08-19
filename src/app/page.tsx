@@ -73,7 +73,7 @@ export default function LoginPage() {
                     toast({
                         variant: 'destructive',
                         title: 'Erro de Autenticação',
-                        description: `Ocorreu um erro inesperado: ${err.message}`,
+                        description: `Ocorreu um erro inesperado: ${'' + err.message}`,
                     });
                 }
             };
@@ -126,7 +126,7 @@ export default function LoginPage() {
                          <p className="mt-2 text-lg text-muted-foreground">Assistente de IA Generativa da 3A RIVA</p>
                     )}
 
-                    <div className="mt-8 flex w-full max-w-xs flex-col gap-4">
+                    <div className="mt-8 w-full max-w-sm">
                          <Button onClick={handleGoogleSignIn} variant="outline" className="w-full text-muted-foreground">
                             <GoogleIcon className="mr-2 h-4 w-4" />
                             Entrar com Google
