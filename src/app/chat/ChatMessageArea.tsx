@@ -33,7 +33,7 @@ import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { BobIcon } from '@/components/icons/BobIcon';
 import rehypeRaw from 'rehype-raw';
-import { POSICAO_CONSOLIDADA_PREAMBLE } from '../actions';
+import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
 
 interface ChatMessageAreaProps {
   messages: Message[];
