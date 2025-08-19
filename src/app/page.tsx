@@ -12,6 +12,7 @@ import { BobIcon } from '@/components/icons/BobIcon';
 import { getMaintenanceMode, validateAndOnboardUser } from './actions';
 import { doc, getDoc } from 'firebase/firestore';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
+import { Wrench } from 'lucide-react';
 
 
 export default function LoginPage() {
@@ -112,12 +113,20 @@ export default function LoginPage() {
                     <h1 className="text-4xl font-bold tracking-tight">Bem-vindo ao Bob</h1>
                     
                     {isMaintenanceMode ? (
-                        <p className="mt-2 text-lg text-destructive">O sistema está em manutenção e retorna em breve.</p>
+                        <div className="mt-6 w-full max-w-sm rounded-lg border border-orange-200 bg-orange-50 p-6 text-center text-orange-700">
+                           <div className="flex justify-center">
+                             <Wrench className="h-8 w-8 text-orange-600" />
+                           </div>
+                           <h2 className="mt-4 text-lg font-semibold text-orange-800">Plataforma em Manutenção</h2>
+                           <p className="mt-1 text-sm">
+                             A plataforma está temporariamente indisponível para manutenção. Voltaremos em breve!
+                           </p>
+                        </div>
                     ) : (
                          <p className="mt-2 text-lg text-muted-foreground">Assistente de IA Generativa da 3A RIVA</p>
                     )}
 
-                    <div className="mt-8 flex flex-col gap-4">
+                    <div className="mt-8 flex w-full max-w-xs flex-col gap-4">
                          <Button onClick={handleGoogleSignIn} variant="outline" className="w-full text-muted-foreground">
                             <GoogleIcon className="mr-2 h-4 w-4" />
                             Entrar com Google
