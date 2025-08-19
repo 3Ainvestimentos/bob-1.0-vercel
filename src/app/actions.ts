@@ -2,7 +2,7 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
-import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part } from '@google-cloud/speech';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseAdminApp, getServiceAccountCredentialsFromEnv } from '@/lib/server/firebase';
 import { AttachedFile, UserRole } from '@/types';
@@ -98,25 +98,27 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     
     const request = {
         parent: parent,
-        item: {
-            value: query,
-        },
-        deidentifyConfig: {
-            infoTypeTransformations: {
-                transformations: [
-                    {
-                        infoTypes: infoTypesToDetect,
-                        primitiveTransformation: {
-                            replaceWithInfoTypeConfig: {},
-                        },
-                    },
-                ],
+        requestBody: {
+            item: {
+                value: query,
             },
-        },
-        inspectConfig: {
-            infoTypes: infoTypesToDetect,
-            minLikelihood: 'LIKELY',
-            includeQuote: true,
+            deidentifyConfig: {
+                infoTypeTransformations: {
+                    transformations: [
+                        {
+                            infoTypes: infoTypesToDetect,
+                            primitiveTransformation: {
+                                replaceWithInfoTypeConfig: {},
+                            },
+                        },
+                    ],
+                },
+            },
+            inspectConfig: {
+                infoTypes: infoTypesToDetect,
+                minLikelihood: 'LIKELY',
+                includeQuote: true,
+            },
         },
     };
 
@@ -1418,3 +1420,4 @@ export async function validateAndOnboardUser(
     }
 }
 
+    
