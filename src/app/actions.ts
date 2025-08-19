@@ -98,34 +98,36 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     
     const request = {
         parent: parent,
-        requestBody: {
-            item: {
-                value: query,
-            },
-            deidentifyConfig: {
-                infoTypeTransformations: {
-                    transformations: [
-                        {
-                            infoTypes: infoTypesToDetect,
-                            primitiveTransformation: {
-                                replaceWithInfoTypeConfig: {},
-                            },
+        item: {
+            value: query,
+        },
+        deidentifyConfig: {
+            infoTypeTransformations: {
+                transformations: [
+                    {
+                        infoTypes: infoTypesToDetect,
+                        primitiveTransformation: {
+                            replaceWithInfoTypeConfig: {},
                         },
-                    ],
-                },
+                    },
+                ],
             },
-            inspectConfig: {
-                infoTypes: infoTypesToDetect,
-                minLikelihood: 'LIKELY',
-                includeQuote: true,
-            },
+        },
+        inspectConfig: {
+            infoTypes: infoTypesToDetect,
+            minLikelihood: 'LIKELY',
+            includeQuote: true,
         },
     };
 
     try {
         const response = await dlp.projects.content.deidentify(request);
         
-        const deidentifiedQuery = response.data.item?.value || query;
+        let deidentifiedQuery = response.data.item?.value || query;
+        if (deidentifiedQuery.includes('[BRAZIL_CPF_NUMBER]')) {
+            deidentifiedQuery = deidentifiedQuery.replace(/\[BRAZIL_CPF_NUMBER\]/g, '[CPF_ANONIMIZADO]');
+        }
+        
         const findings = response.data.overview?.transformationSummaries?.[0]?.results || [];
         
         const foundInfoTypes = findings
@@ -1416,4 +1418,3 @@ export async function validateAndOnboardUser(
     }
 }
 
-    
