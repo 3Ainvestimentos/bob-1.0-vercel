@@ -129,6 +129,8 @@ interface FeedbackDetails {
     assistantResponse: string;
 }
 
+export type SearchSource = 'rag' | 'web';
+
 
 // ---- Firestore Functions ----
 
@@ -466,7 +468,6 @@ export default function ChatPageContent() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isSidebarLoading, setIsSidebarLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<Conversation | null>(null);
-  const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
   
   const [isNewGroupDialogOpen, setIsNewGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -502,6 +503,8 @@ export default function ChatPageContent() {
   const [isCheckingTerms, setIsCheckingTerms] = useState(true);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  const [searchSource, setSearchSource] = useState<SearchSource>('rag');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -546,7 +549,7 @@ export default function ChatPageContent() {
         return newExpanded;
       });
     } catch (err: any) {
-      setError(`Erro ao carregar o histórico: ${'' + err.message}`);
+      setError(`Erro ao carregar o histórico: ${err.message}`);
       toast({
           variant: "destructive",
           title: "Erro de Carregamento",
@@ -570,7 +573,6 @@ export default function ChatPageContent() {
     setMessages([]);
     setInput('');
     setError(null);
-    setLastFailedQuery(null);
     setFeedbacks({});
     setSelectedFiles([]);
   };
@@ -632,7 +634,6 @@ export default function ChatPageContent() {
     if (isLoading || !user) return;
     setIsLoading(true);
     setError(null);
-    setLastFailedQuery(null);
     setMessages([]); 
     setFeedbacks({});
     setSelectedFiles([]);
@@ -653,7 +654,7 @@ export default function ChatPageContent() {
             });
         }
     } catch (err: any) {
-      setError(`Erro ao carregar a conversa: ${'' + err.message}`);
+      setError(`Erro ao carregar a conversa: ${err.message}`);
       setMessages([]);
     } finally {
       setIsLoading(false);
@@ -677,16 +678,18 @@ export default function ChatPageContent() {
     if (!query.trim() && filesToUpload.length === 0) return;
     if (isLoading || !user) return;
   
+    const originalQuery = query;
     setInput('');
     setSelectedFiles([]);
-    setIsLoading(true);
     setError(null);
-    setLastFailedQuery(null);
-  
+    
+    setIsLoading(true);
+    
     try {
       // 1. De-identify query first
-      const deidentifiedQuery = await deidentifyTextOnly(query);
-      const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
+      const deidentifiedQuery = await deidentifyTextOnly(originalQuery);
+      
+      const useStandardAnalysis = originalQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
       const fileNames = filesToUpload.map(f => f.name);
   
       // 2. Create the user message with both original and de-identified content
@@ -694,14 +697,14 @@ export default function ChatPageContent() {
         id: crypto.randomUUID(),
         role: 'user',
         content: deidentifiedQuery,
-        originalContent: query,
+        originalContent: originalQuery,
         fileNames: fileNames.length > 0 ? fileNames : null,
         isStandardAnalysis: useStandardAnalysis,
+        source: searchSource,
       };
       
       // 3. Update the UI with the user message
-      const currentMessagesWithUser = [...messages, userMessage];
-      setMessages(currentMessagesWithUser);
+      setMessages(prevMessages => [...prevMessages, userMessage]);
   
       // 4. Handle chat creation and file uploads if needed
       let currentChatId = activeChatId;
@@ -709,7 +712,7 @@ export default function ChatPageContent() {
   
       if (!currentChatId) {
         const tempTitle = await generateTitleForConversation(deidentifiedQuery, fileNames.join(', '));
-        const newId = await saveConversation(user.uid, currentMessagesWithUser, null, { newChatTitle: tempTitle });
+        const newId = await saveConversation(user.uid, [userMessage], null, { newChatTitle: tempTitle });
         currentChatId = newId;
         const newFullChat = await getFullConversation(user.uid, newId);
         setActiveChat(newFullChat);
@@ -732,15 +735,14 @@ export default function ChatPageContent() {
       }
       
       const fileDataUris = await Promise.all(filesToUpload.map(readFileAsDataURL));
-      const useWebSearch = false; // Define default value here
   
-      // 5. Call the assistant with the de-identified query
+      // 5. Call the assistant with the de-identified query and selected source
       const assistantResponse = await askAssistant(
         deidentifiedQuery,
         {
           fileDataUris,
           useStandardAnalysis,
-          useWebSearch,
+          source: searchSource,
         }
       );
   
@@ -764,16 +766,12 @@ export default function ChatPageContent() {
       };
       
       // 6. Update UI with the final state
-      const finalMessages = [...currentMessagesWithUser, assistantMessage];
-      setMessages(finalMessages);
-      await saveConversation(user.uid, finalMessages, currentChatId, { attachedFiles });
-  
-      if (assistantResponse.searchFailed) {
-        setLastFailedQuery(deidentifiedQuery);
-      }
+      const finalMessages = [userMessage, assistantMessage];
+      setMessages(prevMessages => [...prevMessages, assistantMessage]);
+      await saveConversation(user.uid, [userMessage, assistantMessage], currentChatId, { attachedFiles });
   
     } catch (err: any) {
-      const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
+      const errorMessageContent = `Ocorreu um erro: ${err.message}`;
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -796,68 +794,7 @@ export default function ChatPageContent() {
     e.preventDefault();
     submitQuery(input, selectedFiles);
   };
-
-  const handleWebSearch = async () => {
-    if (!lastFailedQuery || isLoading || !user) return;
   
-    const query = lastFailedQuery;
-    setLastFailedQuery(null);
-    
-    setInput('');
-    setIsLoading(true);
-    setError(null);
-  
-    try {
-      const userMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content: query,
-        originalContent: query,
-      };
-  
-      const currentMessagesWithUser = [...messages, userMessage];
-      setMessages(currentMessagesWithUser);
-  
-      const assistantResponse = await askAssistant(query, { useWebSearch: true });
-  
-      if (assistantResponse.error) {
-        throw new Error(assistantResponse.error);
-      }
-  
-      if (!assistantResponse.summary) {
-        throw new Error("A resposta da busca na web foi indefinida.");
-      }
-  
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: assistantResponse.summary,
-        source: assistantResponse.source,
-        sources: assistantResponse.sources,
-        promptTokenCount: assistantResponse.promptTokenCount,
-        candidatesTokenCount: assistantResponse.candidatesTokenCount,
-        latencyMs: assistantResponse.latencyMs,
-      };
-  
-      const finalMessages = [...currentMessagesWithUser, assistantMessage];
-      setMessages(finalMessages);
-      await saveConversation(user.uid, finalMessages, activeChatId);
-  
-    } catch (err: any) {
-      const errorMessageContent = `Ocorreu um erro na busca web: ${'' + err.message}`;
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: errorMessageContent,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      setError(errorMessageContent);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-
   const handleCreateGroup = async (e: FormEvent) => {
     e.preventDefault();
     if (!newGroupName.trim() || !user) return;
@@ -867,7 +804,7 @@ export default function ChatPageContent() {
       setIsNewGroupDialogOpen(false);
       await fetchSidebarData();
     } catch (err: any) {
-      setError(`Erro ao criar o grupo: ${'' + err.message}`);
+      setError(`Erro ao criar o grupo: ${err.message}`);
     }
   };
 
@@ -882,7 +819,7 @@ export default function ChatPageContent() {
       );
       await updateConversationGroup(user.uid, chatId, groupId);
     } catch (err: any) {
-      setError(`Erro ao mover a conversa: ${'' + err.message}`);
+      setError(`Erro ao mover a conversa: ${err.message}`);
       fetchSidebarData();
     }
   };
@@ -898,7 +835,7 @@ export default function ChatPageContent() {
       await deleteGroup(user.uid, groupToDelete);
       await fetchSidebarData(); 
     } catch (err: any)      {
-      setError(`Erro ao excluir o grupo: ${'' + err.message}`);
+      setError(`Erro ao excluir o grupo: ${err.message}`);
     } finally {
       setIsDeleteDialogOpen(false);
       setGroupToDelete(null);
@@ -926,7 +863,7 @@ export default function ChatPageContent() {
         setNewItemName('');
         await fetchSidebarData();
     } catch (err: any) {
-        setError(`Erro ao renomear: ${'' + err.message}`);
+        setError(`Erro ao renomear: ${err.message}`);
     }
   };
 
@@ -944,7 +881,7 @@ export default function ChatPageContent() {
             handleNewChat();
         }
     } catch (err: any) {
-        setError(`Erro ao excluir a conversa: ${'' + err.message}`);
+        setError(`Erro ao excluir a conversa: ${err.message}`);
     } finally {
         setIsDeleteConvoDialogOpen(false);
         setConvoToDelete(null);
@@ -980,7 +917,7 @@ export default function ChatPageContent() {
           await setFeedback(user.uid, activeChatId, message.id, finalRating, userQuery, assistantResponse);
       } catch (err: any) {
           console.error("Error saving feedback:", err);
-          setError(`Erro ao salvar o feedback: ${'' + err.message}`);
+          setError(`Erro ao salvar o feedback: ${err.message}`);
           setFeedbacks(prev => {
               const revertedFeedbacks = { ...prev };
               if (currentRating) {
@@ -1008,17 +945,20 @@ export default function ChatPageContent() {
 
     const userMessage = messages[messageIndex - 1];
     const userQuery = userMessage.originalContent || userMessage.content;
+    const originalSource = userMessage.source || 'rag';
     const newAssistantMessageId = crypto.randomUUID();
 
     setRegeneratingMessageId(assistantMessageId);
     setError(null);
-    setLastFailedQuery(null);
 
     try {
       const result = await regenerateAnswer(
         userQuery,
         activeChat.attachedFiles,
-        { isStandardAnalysis: userMessage.isStandardAnalysis },
+        { 
+          isStandardAnalysis: userMessage.isStandardAnalysis,
+          source: originalSource
+        },
         user.uid,
         activeChatId
       );
@@ -1052,7 +992,7 @@ export default function ChatPageContent() {
       );
 
       if (result.searchFailed) {
-        setLastFailedQuery(userQuery);
+        toast({ title: 'Regeneração Falhou', description: 'Não foi possível gerar uma nova resposta.' });
       }
 
       const updatedMessages = [
@@ -1074,7 +1014,7 @@ export default function ChatPageContent() {
 
     } catch (err: any) {
       setMessages(messages);
-      const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
+      const errorMessageContent = `Ocorreu um erro: ${err.message}`;
       const errorMessage: Message = {
           id: crypto.randomUUID(),
           role: 'assistant',
@@ -1127,7 +1067,7 @@ export default function ChatPageContent() {
 
     } catch (err: any) {
         console.error("Error saving feedback comment:", err);
-        setError(`Erro ao salvar o comentário de feedback: ${'' + err.message}`);
+        setError(`Erro ao salvar o comentário de feedback: ${err.message}`);
     } finally {
         setIsFeedbackDialogOpen(false);
         setFeedbackDetails(null);
@@ -1214,7 +1154,7 @@ export default function ChatPageContent() {
         toast({
             variant: 'destructive',
             title: 'Erro ao Enviar',
-            description: `Não foi possível reportar o problema: ${'' + err.message}`,
+            description: `Não foi possível reportar o problema: ${err.message}`,
         });
     } finally {
         setIsLegalReportDialogOpen(false);
@@ -1681,7 +1621,7 @@ export default function ChatPageContent() {
                   user={user}
                   userName={userName}
                   userInitials={userInitials}
-                  lastFailedQuery={lastFailedQuery}
+                  lastFailedQuery={null} // This is now handled by the source switch
                   feedbacks={feedbacks}
                   regeneratingMessageId={regeneratingMessageId}
                   messagesEndRef={messagesEndRef}
@@ -1690,7 +1630,7 @@ export default function ChatPageContent() {
                   onCopyToClipboard={handleCopyToClipboard}
                   onReportLegalIssueRequest={handleReportLegalIssueRequest}
                   onOpenFeedbackDialog={handleOpenFeedbackDialog}
-                  onWebSearch={handleWebSearch}
+                  onWebSearch={() => {}} // This is now handled by the source switch
                   onSuggestionClick={handleSuggestionClick}
                   activeChat={activeChat}
                   onRemoveFile={handleRemoveFile}
@@ -1704,6 +1644,8 @@ export default function ChatPageContent() {
                     inputRef={inputRef}
                     selectedFiles={selectedFiles}
                     setSelectedFiles={setSelectedFiles}
+                    searchSource={searchSource}
+                    setSearchSource={setSearchSource}
                 />
             </main>
         </SidebarInset>
@@ -1711,4 +1653,3 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
-

@@ -239,6 +239,7 @@ async function callDiscoveryEngine(
           }
       }
 
+      await logQuestionForAnalytics(query);
       const apiResponse = await fetch(url, {
         method: 'POST',
         headers: {
@@ -268,7 +269,7 @@ async function callDiscoveryEngine(
 
       if (!summary || results.length === 0 || summaryHasFailureKeyword) {
           return { 
-              summary: "",
+              summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
               searchFailed: true,
               sources: [],
               promptTokenCount,
@@ -357,6 +358,7 @@ async function callGemini(
         }
         promptParts.push({ text: promptWithContext });
         
+        await logQuestionForAnalytics(query);
         let result = await chat.sendMessage(promptParts);
 
         const functionCalls = result.response.functionCalls();
@@ -429,96 +431,49 @@ export async function logQuestionForAnalytics(query: string): Promise<void> {
     }
 }
 
-async function isQueryForInternalDatabase(query: string): Promise<boolean> {
-    const geminiApiKey = await getGeminiApiKey();
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
-    });
-
-    const prompt = `Analise a seguinte pergunta de um usuário a um assistente corporativo. A base de dados interna contém manuais, tutoriais, informações sobre pessoas (incluindo o organograma), políticas e glossários da empresa "3A RIVA". Responda APENAS com 'SIM' se a pergunta parece que pode ser respondida por essa base de dados, ou APENAS 'NÃO' se a pergunta parece ser de conhecimento geral, notícias, ou exigir uma busca na internet.
-
-Exemplos:
-- "Como alterar minha senha?" -> SIM
-- "Quem é o CEO da 3A RIVA?" -> SIM
-- "Qual o procedimento para resgate de previdência?" -> SIM
-- "Quais as últimas notícias sobre IA?" -> NÃO
-- "Qual a capital da Mongólia?" -> NÃO
-
-Pergunta do usuário: "${query}"`;
-    
-    try {
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text().trim().toUpperCase();
-        return text === 'SIM';
-    } catch (error) {
-        console.error("Error in isQueryForInternalDatabase check:", error);
-        // Em caso de erro na verificação, assumimos que a busca interna deve ser tentada.
-        return true; 
-    }
-}
-
-
 export async function askAssistant(
   query: string,
   options: {
-    useWebSearch?: boolean;
+    source: 'rag' | 'web';
     useStandardAnalysis?: boolean;
     fileDataUris?: { name: string; dataUri: string, mimeType: string }[];
-  } = {}
+  }
 ): Promise<{
   summary?: string;
   searchFailed?: boolean;
-  source?: 'rag' | 'web' | 'transcription' | 'gemini';
+  source?: 'rag' | 'web' | 'gemini';
   sources?: ClientRagSource[];
   promptTokenCount?: number;
   candidatesTokenCount?: number;
   latencyMs?: number;
   error?: string;
 }> {
-    const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [] } = options;
+    const { source, useStandardAnalysis = false, fileDataUris = [] } = options;
     const startTime = Date.now();
     let result;
-    let source: 'rag' | 'web' | 'gemini';
 
     try {
         const attachments: AttachedFile[] = [];
         if (fileDataUris.length > 0) {
             for (const file of fileDataUris) {
                 const content = await getFileContent(file.dataUri, file.mimeType);
-                const { deidentifiedQuery: deidentifiedContent } = await deidentifyQuery(content);
+                // The de-identification is now expected to happen before this function is called.
+                // We just pass the original content for now, assuming it's already de-identified.
                 attachments.push({
                     id: crypto.randomUUID(),
                     fileName: file.name,
                     // @ts-ignore
                     mimeType: file.type,
-                    deidentifiedContent: deidentifiedContent,
+                    deidentifiedContent: content,
                 });
             }
         }
         
         if (useStandardAnalysis) {
-            source = 'gemini';
-            result = await callGemini(query, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
-        } else if (useWebSearch) {
-            source = 'web';
+            result = await callGemini(query, attachments, POSICAO_CONSOLIDADA_PREAMBLE, false);
+        } else if (source === 'web') {
             result = await callGemini(query, attachments, null, true);
-        } else {
-            source = 'rag';
-            
-            const isRelevantForInternalSearch = await isQueryForInternalDatabase(query);
-            if (!isRelevantForInternalSearch) {
-                 return {
-                    summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
-                    searchFailed: true,
-                    source: 'rag',
-                    sources: [],
-                    latencyMs: Date.now() - startTime,
-                };
-            }
-
-            await logQuestionForAnalytics(query);
+        } else { // source === 'rag'
             result = await callDiscoveryEngine(
                 query,
                 attachments,
@@ -530,7 +485,7 @@ export async function askAssistant(
         
         if (!result || result.searchFailed) {
             return {
-                summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
+                summary: "Não foi possível obter uma resposta. Tente refazer a pergunta ou mudar a fonte de busca.",
                 searchFailed: true,
                 source: source,
                 sources: [],
@@ -555,7 +510,7 @@ export async function askAssistant(
         return { 
             summary: errorMessage,
             searchFailed: true,
-            source: useWebSearch ? 'web' : (useStandardAnalysis ? 'gemini' : 'rag'),
+            source: source,
             error: error.message,
             latencyMs,
         };
@@ -602,7 +557,8 @@ export async function regenerateAnswer(
   attachments: AttachedFile[],
   options: {
     isStandardAnalysis?: boolean;
-  } = {},
+    source: 'rag' | 'web';
+  },
   userId?: string,
   chatId?: string,
 ): Promise<{ 
@@ -619,19 +575,20 @@ export async function regenerateAnswer(
   try {
     const startTime = Date.now();
     let result;
-    let source: 'rag' | 'web' | 'gemini';
-
-    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(originalQuery, userId, chatId);
+    
+    // De-identification should happen before calling this function,
+    // so we assume originalQuery is already de-identified.
+    const deidentifiedQuery = originalQuery;
 
     if (userId && chatId) {
         await logRegeneratedQuestion(userId, chatId, deidentifiedQuery, '');
     }
 
     if (options.isStandardAnalysis) {
-        source = 'gemini';
         result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
-    } else {
-        source = 'rag';
+    } else if (options.source === 'web') {
+        result = await callGemini(deidentifiedQuery, attachments, null, true);
+    } else { // source === 'rag'
         result = await callDiscoveryEngine(
             deidentifiedQuery,
             attachments,
@@ -645,7 +602,7 @@ export async function regenerateAnswer(
         return {
             summary: "Não foi possível regenerar uma resposta.",
             searchFailed: true,
-            source: source,
+            source: options.source,
             sources: [],
             latencyMs,
         };
@@ -654,19 +611,19 @@ export async function regenerateAnswer(
     return { 
         summary: result.summary, 
         searchFailed: result.searchFailed, 
-        source: source,
+        source: options.source,
         sources: result.sources || [], 
         promptTokenCount: result.promptTokenCount,
         candidatesTokenCount: result.candidatesTokenCount,
         latencyMs: latencyMs,
-        deidentifiedQuery: originalQuery !== deidentifiedQuery ? deidentifiedQuery : undefined,
+        deidentifiedQuery: originalQuery,
     };
   } catch (error: any) {
     console.error("Error in regenerateAnswer (internal):", error.message);
     return { 
         summary: `Ocorreu um erro ao processar sua solicitação: ${error.message}`,
         searchFailed: true,
-        source: 'rag',
+        source: options.source,
         error: error.message 
     };
   }

@@ -16,24 +16,24 @@ import { User } from 'firebase/auth';
 import {
   AlertTriangle,
   FileText,
-  Lightbulb,
-  Mail,
   MoreHorizontal,
-  Newspaper,
   Paperclip,
-  Pin,
   RefreshCw,
   Search,
   Share2,
   ThumbsDown,
   ThumbsUp,
-  X,
+  Hand,
+  UserPlus,
+  KeyRound,
+  PiggyBank,
+  Wand2,
 } from 'lucide-react';
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { BobIcon } from '@/components/icons/BobIcon';
-import { Badge } from '../ui/badge';
 import rehypeRaw from 'rehype-raw';
+import { POSICAO_CONSOLIDADA_PREAMBLE } from '../../app/chat/preambles';
 
 interface ChatMessageAreaProps {
   messages: Message[];
@@ -56,6 +56,19 @@ interface ChatMessageAreaProps {
   activeChat: Conversation | null;
   onRemoveFile: (fileId: string) => void;
 }
+
+const webSearchSuggestions = [
+    {
+        Icon: KeyRound,
+        title: "Como alterar uma senha",
+        description: "Ajudar um cliente a redefinir o acesso",
+    },
+    {
+        Icon: PiggyBank,
+        title: "Como fazer um resgate de previdência",
+        description: "Consultar as regras e o procedimento",
+    }
+];
 
 export function ChatMessageArea({
   messages,
@@ -85,15 +98,60 @@ export function ChatMessageArea({
       <div className="mx-auto flex h-full max-w-4xl flex-col">
         {messages.length === 0 && !isLoading ? (
           <div className="flex h-full flex-col items-center justify-center">
-            <BobIcon className="mb-6 h-24 w-24" isGreeting={true} />
+            {/* <BobIcon className="mb-6 h-24 w-24" isGreeting={true} /> */}
             <div>
               <div className="text-left">
-                <h1 className="text-4xl font-bold">
-                  Olá, {userName.split(' ')[0]}! 👋
+                <h1 className="flex items-center gap-3 text-4xl font-bold">
+                  <span>Olá, {userName.split(' ')[0]}!</span>
+                  <Hand className="h-10 w-10 animate-wave" style={{ color: '#DFB87F' }} />
                 </h1>
                 <p className="mt-2 text-lg text-muted-foreground">
                   Como posso te ajudar hoje?
                 </p>
+              </div>
+              <div className="mt-12">
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground">
+                    Clique em um card para começar ou digite abaixo:
+                  </p>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick("Faça uma mensagem e uma análise com o nosso padrão")}>
+                    <div className="flex items-start gap-4">
+                      <FileText className="h-6 w-6 text-muted-foreground" />
+                      <div>
+                        <p className="font-semibold">Análise de Relatório de Performance XP</p>
+                        <p className="text-sm text-muted-foreground">
+                          Mensagem de relacionamento com o padrão 3A RIVA
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick(POSICAO_CONSOLIDADA_PREAMBLE)}>
+                    <div className="flex items-start gap-4">
+                      <Wand2 className="h-6 w-6 text-muted-foreground" />
+                      <div>
+                        <p className="font-semibold">Personalizar sua pergunta</p>
+                        <p className="text-sm text-muted-foreground">
+                          Use um prompt avançado como ponto de partida
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                   {webSearchSuggestions.map((suggestion, index) => (
+                      <Card key={index} className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick(suggestion.title)}>
+                        <div className="flex items-start gap-4">
+                          <suggestion.Icon className="h-6 w-6 text-muted-foreground" />
+                          <div>
+                            <p className="font-semibold">{suggestion.title}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {suggestion.description}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                   ))}
+                </div>
               </div>
             </div>
           </div>
@@ -167,6 +225,12 @@ export function ChatMessageArea({
                 ) : (
                   <div className="flex items-start justify-end gap-4">
                     <div className="max-w-[80%] rounded-xl bg-user-bubble p-3 text-user-bubble-foreground shadow-sm">
+                      {msg.fileNames && (
+                          <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-background/50 p-2 text-xs text-muted-foreground">
+                              <Paperclip className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{msg.fileNames.join(', ')}</span>
+                          </div>
+                      )}
                       <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none" rehypePlugins={[rehypeRaw]}>
                         {msg.content}
                       </ReactMarkdown>
@@ -190,14 +254,6 @@ export function ChatMessageArea({
                         Bob está pensando...
                     </p>
                 </div>
-              </div>
-            )}
-            {lastFailedQuery && !isLoading && (
-              <div className="flex justify-center pt-4">
-                <Button variant="secondary" onClick={onWebSearch} disabled={isLoading} className="rounded-full shadow-md">
-                  <Search className="mr-2 h-4 w-4" />
-                  Pesquisar na Web
-                </Button>
               </div>
             )}
             {error && !isLoading && (

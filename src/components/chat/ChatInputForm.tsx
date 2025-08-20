@@ -7,9 +7,12 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { File, Mic, Paperclip, SendHorizontal, X, Lock, Trash2, Square, Loader2 } from 'lucide-react';
+import { File, Mic, Paperclip, SendHorizontal, X, Lock, Trash2, Square, Loader2, Database, Globe } from 'lucide-react';
 import React, { FormEvent, useCallback, useRef, useState, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
+import { SearchSource } from '@/app/chat/ChatPage';
 
 const CustomSoundWave = ({ analyser, isVisible }: { analyser: AnalyserNode | null, isVisible: boolean }) => {
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -84,6 +87,8 @@ interface ChatInputFormProps {
   inputRef: React.RefObject<HTMLTextAreaElement>;
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
+  searchSource: SearchSource;
+  setSearchSource: (source: SearchSource) => void;
 }
 
 export function ChatInputForm({
@@ -94,6 +99,8 @@ export function ChatInputForm({
   inputRef,
   selectedFiles,
   setSelectedFiles,
+  searchSource,
+  setSearchSource,
 }: ChatInputFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -422,6 +429,16 @@ export function ChatInputForm({
                         </Button>
                     )}
                 </div>
+            </div>
+            <div className="flex items-center gap-2 pr-2">
+                <Database className={cn("h-4 w-4", searchSource === 'rag' ? 'text-primary' : 'text-muted-foreground')} />
+                <Switch 
+                    id="search-source" 
+                    checked={searchSource === 'web'} 
+                    onCheckedChange={(checked) => setSearchSource(checked ? 'web' : 'rag')}
+                    disabled={isLoading}
+                />
+                <Globe className={cn("h-4 w-4", searchSource === 'web' ? 'text-primary' : 'text-muted-foreground')} />
             </div>
         </div>
     );
