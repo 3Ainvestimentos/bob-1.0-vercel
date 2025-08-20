@@ -591,39 +591,35 @@ export default function ChatPageContent() {
     const checkAndCreateUser = async () => {
       setIsCheckingTerms(true);
       try {
-        const userDocRef = doc(db, 'users', user.uid);
-        let userDocSnap = await getDoc(userDocRef);
-
-        if (!userDocSnap.exists()) {
-            const validationResult = await validateAndOnboardUser(user.uid, user.email!, user.displayName);
+        const validationResult = await validateAndOnboardUser(user.uid, user.email!, user.displayName);
             
-            if (!validationResult.success) {
-                toast({
-                    variant: 'destructive',
-                    title: 'Acesso Negado',
-                    description: validationResult.error || 'Você não tem permissão para acessar o sistema.',
-                });
-                await handleSignOut();
-                return;
-            }
-            userDocSnap = await getDoc(userDocRef); // Re-fetch after creation
+        if (!validationResult.success) {
+            toast({
+                variant: 'destructive',
+                title: 'Acesso Negado',
+                description: validationResult.error || 'Você não tem permissão para acessar o sistema.',
+            });
+            await handleSignOut();
+            return;
         }
-        
+
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
         const userData = userDocSnap.data();
 
-        if (userData?.termsAccepted === true) {
-            fetchSidebarData();
-            if (userData?.hasCompletedOnboarding === false) {
-                setShowOnboarding(true);
-            }
-        } else {
+        if (userData?.termsAccepted !== true) {
             setShowTermsDialog(true);
+        } else if (userData?.hasCompletedOnboarding !== true) {
+            setShowOnboarding(true);
+            fetchSidebarData();
+        } else {
+            fetchSidebarData();
         }
 
       } catch (err: any) {
         toast({
           variant: 'destructive',
-          title: 'Erro ao verificar termos',
+          title: 'Erro ao verificar o usuário',
           description: err.message,
         });
         await handleSignOut();
@@ -691,7 +687,6 @@ export default function ChatPageContent() {
 
     try {
       const deidentifiedQuery = await deidentifyTextOnly(originalQuery);
-
       const useStandardAnalysis = originalQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
       const fileNames = filesToUpload.map(f => f.name);
   
@@ -1310,12 +1305,12 @@ export default function ChatPageContent() {
             const userDocRef = doc(db, 'users', user.uid);
             await updateDoc(userDocRef, { termsAccepted: true });
             setShowTermsDialog(false);
-            fetchSidebarData();
             
             const userDocSnap = await getDoc(userDocRef);
-            if (userDocSnap.exists() && userDocSnap.data()?.hasCompletedOnboarding === false) {
+            if (userDocSnap.exists() && userDocSnap.data()?.hasCompletedOnboarding !== true) {
                 setShowOnboarding(true);
             }
+             fetchSidebarData();
         } catch (error: any) {
             toast({
                 variant: 'destructive',

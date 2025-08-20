@@ -1365,25 +1365,20 @@ export async function validateAndOnboardUser(
     const adminDb = await getAuthenticatedFirestoreAdmin();
 
     try {
-        // 1. Verificar se o usuário já existe na coleção 'users'
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
         if (userDocSnap.exists()) {
-            // Usuário já existe e está configurado, login permitido.
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
-        // 2. Se não existe, verificar a coleção 'pre_registered_users'
-        const preRegRef = adminDb.collection('pre_registered_users').doc(email);
+        const preRegRef = adminDb.collection('pre_registered_users').doc(email.toLowerCase());
         const preRegSnap = await preRegRef.get();
 
         if (!preRegSnap.exists()) {
-            // E-mail não está na lista de permissões, acesso negado.
             return { success: false, role: null, error: 'Seu e-mail não está autorizado a acessar este sistema.' };
         }
 
-        // 3. Usuário está pré-registrado. Criar o usuário final e remover o pré-registro.
         const role = preRegSnap.data()?.role || 'user';
         const newUserData = {
             uid,
@@ -1392,13 +1387,12 @@ export async function validateAndOnboardUser(
             createdAt: FieldValue.serverTimestamp(),
             role,
             termsAccepted: false,
-            hasCompletedOnboarding: false, // Add this line
+            hasCompletedOnboarding: false,
         };
         
-        // Usar um batch para garantir a atomicidade da operação
         const batch = adminDb.batch();
-        batch.set(userDocRef, newUserData); // Cria o documento do usuário final
-        batch.delete(preRegRef);          // Remove o documento de pré-registro
+        batch.set(userDocRef, newUserData);
+        batch.delete(preRegRef);
         
         await batch.commit();
 
