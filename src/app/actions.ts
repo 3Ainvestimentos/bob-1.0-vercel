@@ -98,25 +98,27 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     
     const request = {
         parent: parent,
-        item: {
-            value: query,
-        },
-        deidentifyConfig: {
-            infoTypeTransformations: {
-                transformations: [
-                    {
-                        infoTypes: infoTypesToDetect,
-                        primitiveTransformation: {
-                            replaceWithInfoTypeConfig: {},
-                        },
-                    },
-                ],
+        requestBody: {
+            item: {
+                value: query,
             },
-        },
-        inspectConfig: {
-            infoTypes: infoTypesToDetect,
-            minLikelihood: 'LIKELY',
-            includeQuote: true,
+            deidentifyConfig: {
+                infoTypeTransformations: {
+                    transformations: [
+                        {
+                            infoTypes: infoTypesToDetect,
+                            primitiveTransformation: {
+                                replaceWithInfoTypeConfig: {},
+                            },
+                        },
+                    ],
+                },
+            },
+            inspectConfig: {
+                infoTypes: infoTypesToDetect,
+                minLikelihood: 'LIKELY',
+                includeQuote: true,
+            },
         },
     };
 
@@ -125,9 +127,6 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
         
         let deidentifiedQuery = response.data.item?.value || query;
         
-        // Mantém o placeholder padrão do DLP, mas garante que o nosso customizado (se aparecer) seja tratado
-        deidentifiedQuery = deidentifiedQuery.replace(/\[CPF_ANONIMIZADO\]/g, '[BRAZIL_CPF_NUMBER]');
-
         const findings = response.data.overview?.transformationSummaries?.[0]?.results || [];
         
         const foundInfoTypes = findings
@@ -1417,5 +1416,3 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
-
-    
