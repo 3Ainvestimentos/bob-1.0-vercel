@@ -98,36 +98,33 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     
     const request = {
         parent: parent,
-        requestBody: {
-            item: {
-                value: query,
-            },
-            deidentifyConfig: {
-                infoTypeTransformations: {
-                    transformations: [
-                        {
-                            infoTypes: infoTypesToDetect,
-                            primitiveTransformation: {
-                                replaceWithInfoTypeConfig: {},
-                            },
+        item: {
+            value: query,
+        },
+        deidentifyConfig: {
+            infoTypeTransformations: {
+                transformations: [
+                    {
+                        infoTypes: infoTypesToDetect,
+                        primitiveTransformation: {
+                            replaceWithInfoTypeConfig: {},
                         },
-                    ],
-                },
+                    },
+                ],
             },
-            inspectConfig: {
-                infoTypes: infoTypesToDetect,
-                minLikelihood: 'LIKELY',
-                includeQuote: true,
-            },
+        },
+        inspectConfig: {
+            infoTypes: infoTypesToDetect,
+            minLikelihood: 'LIKELY',
+            includeQuote: true,
         },
     };
 
     try {
-        const response = await dlp.projects.content.deidentify(request);
+        const [response] = await dlp.projects.content.deidentify(request);
         
-        let deidentifiedQuery = response.data.item?.value || query;
-        
-        const findings = response.data.overview?.transformationSummaries?.[0]?.results || [];
+        const deidentifiedQuery = response.item?.value || query;
+        const findings = response.overview?.transformationSummaries?.[0]?.results || [];
         
         const foundInfoTypes = findings
           .map((result: any) => result.infoType?.name)
@@ -422,6 +419,37 @@ export async function logQuestionForAnalytics(query: string): Promise<void> {
     }
 }
 
+async function isQueryForInternalDatabase(query: string): Promise<boolean> {
+    const geminiApiKey = await getGeminiApiKey();
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash-latest",
+    });
+
+    const prompt = `Analise a seguinte pergunta de um usuário a um assistente corporativo. A base de dados interna contém manuais, tutoriais, organogramas, políticas e glossários da empresa "3A RIVA". Responda APENAS com 'SIM' se a pergunta parece que pode ser respondida por essa base de dados, ou APENAS 'NÃO' se a pergunta parece ser de conhecimento geral, notícias, ou exigir uma busca na internet.
+
+Exemplos:
+- "Como alterar minha senha?" -> SIM
+- "Quem é o CEO da 3A RIVA?" -> SIM
+- "Qual o procedimento para resgate de previdência?" -> SIM
+- "Quais as últimas notícias sobre IA?" -> NÃO
+- "Qual a capital da Mongólia?" -> NÃO
+
+Pergunta do usuário: "${query}"`;
+    
+    try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text().trim().toUpperCase();
+        return text === 'SIM';
+    } catch (error) {
+        console.error("Error in isQueryForInternalDatabase check:", error);
+        // Em caso de erro na verificação, assumimos que a busca interna deve ser tentada.
+        return true; 
+    }
+}
+
+
 export async function askAssistant(
   query: string,
   options: {
@@ -477,6 +505,20 @@ export async function askAssistant(
             result = await callGemini(deidentifiedQuery, attachments, null, true);
         } else {
             source = 'rag';
+            
+            // Etapa de verificação de relevância
+            const isRelevantForInternalSearch = await isQueryForInternalDatabase(deidentifiedQuery);
+            if (!isRelevantForInternalSearch) {
+                 return {
+                    summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
+                    searchFailed: true,
+                    source: 'rag', // Indica que a falha ocorreu na etapa RAG
+                    sources: [],
+                    latencyMs: Date.now() - startTime,
+                    deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
+                };
+            }
+
             await logQuestionForAnalytics(deidentifiedQuery);
             result = await callDiscoveryEngine(
                 deidentifiedQuery,
