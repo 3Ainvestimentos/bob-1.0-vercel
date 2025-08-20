@@ -78,7 +78,7 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
 // A API do Google DLP requer que os parâmetros `item`, `deidentifyConfig` e
 // `inspectConfig` estejam aninhados dentro de um objeto `requestBody`.
 // A remoção desta estrutura causará erros de 400 Bad Request.
-async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
+async function deidentifyQuery(query: string, userId?: string | null, chatId?: string | null): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
     const {google} = require('googleapis');
     const credentials = await getServiceAccountCredentialsFromEnv();
     const projectId = credentials.project_id;
@@ -131,6 +131,10 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
           .map((result: any) => result.infoType?.name)
           .filter(Boolean) as string[];
 
+        if (userId && chatId && foundInfoTypes.length > 0) {
+            await logDlpAlert(userId, chatId, foundInfoTypes);
+        }
+
         return { deidentifiedQuery, foundInfoTypes };
 
     } catch (error: any) {
@@ -144,6 +148,11 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
         console.error("DLP Error: Returning original query.");
         return { deidentifiedQuery: query, foundInfoTypes: [] };
     }
+}
+
+export async function deidentifyTextOnly(query: string): Promise<string> {
+    const { deidentifiedQuery } = await deidentifyQuery(query);
+    return deidentifiedQuery;
 }
 
 async function callDiscoveryEngine(
@@ -478,12 +487,6 @@ export async function askAssistant(
     let source: 'rag' | 'web' | 'gemini';
 
     try {
-        const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(query);
-
-        if (userId && options.chatId && foundInfoTypes.length > 0) {
-            await logDlpAlert(userId, options.chatId, foundInfoTypes);
-        }
-        
         const attachments: AttachedFile[] = [];
         if (fileDataUris.length > 0) {
             for (const file of fileDataUris) {
@@ -501,14 +504,14 @@ export async function askAssistant(
         
         if (useStandardAnalysis) {
             source = 'gemini';
-            result = await callGemini(deidentifiedQuery, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
+            result = await callGemini(query, attachments, POSICAO_CONSOLIDADA_PREAMBLE);
         } else if (useWebSearch) {
             source = 'web';
-            result = await callGemini(deidentifiedQuery, attachments, null, true);
+            result = await callGemini(query, attachments, null, true);
         } else {
             source = 'rag';
             
-            const isRelevantForInternalSearch = await isQueryForInternalDatabase(deidentifiedQuery);
+            const isRelevantForInternalSearch = await isQueryForInternalDatabase(query);
             if (!isRelevantForInternalSearch) {
                  return {
                     summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
@@ -516,13 +519,13 @@ export async function askAssistant(
                     source: 'rag',
                     sources: [],
                     latencyMs: Date.now() - startTime,
-                    deidentifiedQuery: deidentifiedQuery,
+                    deidentifiedQuery: query,
                 };
             }
 
-            await logQuestionForAnalytics(deidentifiedQuery);
+            await logQuestionForAnalytics(query);
             result = await callDiscoveryEngine(
-                deidentifiedQuery,
+                query,
                 attachments,
                 ASSISTENTE_CORPORATIVO_PREAMBLE
             );
@@ -537,7 +540,7 @@ export async function askAssistant(
                 source: source,
                 sources: [],
                 latencyMs,
-                deidentifiedQuery: deidentifiedQuery,
+                deidentifiedQuery: query,
             };
         }
         
@@ -549,7 +552,7 @@ export async function askAssistant(
             promptTokenCount: result.promptTokenCount,
             candidatesTokenCount: result.candidatesTokenCount,
             latencyMs: latencyMs,
-            deidentifiedQuery: deidentifiedQuery,
+            deidentifiedQuery: query,
         };
 
     } catch (error: any) {
@@ -625,12 +628,8 @@ export async function regenerateAnswer(
     let result;
     let source: 'rag' | 'web' | 'gemini';
 
-    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(originalQuery);
+    const { deidentifiedQuery, foundInfoTypes } = await deidentifyQuery(originalQuery, userId, chatId);
 
-    if (userId && chatId && foundInfoTypes.length > 0) {
-        await logDlpAlert(userId, chatId, foundInfoTypes);
-    }
-    
     if (userId && chatId) {
         await logRegeneratedQuestion(userId, chatId, deidentifiedQuery, '');
     }

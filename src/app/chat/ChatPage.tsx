@@ -10,6 +10,7 @@ import {
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import {
   askAssistant,
+  deidentifyTextOnly,
   generateSuggestedQuestions,
   generateTitleForConversation,
   getGreetingMessage,
@@ -755,42 +756,50 @@ export default function ChatPageContent() {
     const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
     const fileNames = filesToUpload.map(f => f.name);
     
-    const userQuery = query || (filesToUpload.length > 0 ? `Analise os arquivos anexados.` : '');
+    const originalUserQuery = query || (filesToUpload.length > 0 ? `Analise os arquivos anexados.` : '');
   
-    const userMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content: userQuery,
-        originalContent: userQuery,
-        fileNames: fileNames.length > 0 ? fileNames : null,
-        isStandardAnalysis: useStandardAnalysis,
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
     setInput('');
     setSelectedFiles([]);
     setIsLoading(true);
     setError(null);
     setLastFailedQuery(null);
   
-    let currentChatId = activeChatId;
-    
     try {
+        // 1. De-identify text first
+        const deidentifiedQuery = await deidentifyTextOnly(originalUserQuery);
+        
+        // 2. Create the user message with both original and de-identified content
+        const userMessage: Message = {
+            id: crypto.randomUUID(),
+            role: 'user',
+            content: deidentifiedQuery,
+            originalContent: originalUserQuery,
+            fileNames: fileNames.length > 0 ? fileNames : null,
+            isStandardAnalysis: useStandardAnalysis,
+        };
+        
+        // 3. Update the UI with the user message
+        const currentMessages = [...messages, userMessage];
+        setMessages(currentMessages);
+
+        // 4. Handle chat creation and file uploads if needed
+        let currentChatId = activeChatId;
         const attachedFiles: AttachedFile[] = [];
+
+        if (!currentChatId) {
+            const tempTitle = await generateTitleForConversation(deidentifiedQuery, fileNames.join(', '));
+            const newId = await saveConversation(user.uid, currentMessages, null, { newChatTitle: tempTitle });
+            currentChatId = newId;
+            const newFullChat = await getFullConversation(user.uid, newId);
+            setActiveChat(newFullChat);
+            await fetchSidebarData();
+        }
+
         if (filesToUpload.length > 0) {
-            if (!currentChatId) {
-                const tempTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
-                const newId = await saveConversation(user.uid, [userMessage], null, { newChatTitle: tempTitle });
-                currentChatId = newId;
-                const newFullChat = await getFullConversation(user.uid, newId);
-                setActiveChat(newFullChat);
-            }
-  
             for (const file of filesToUpload) {
                 const storageRef = ref(storage, `users/${user.uid}/${currentChatId}/${file.name}`);
                 const snapshot = await uploadBytes(storageRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
-  
                 attachedFiles.push({
                     id: crypto.randomUUID(),
                     fileName: file.name,
@@ -803,12 +812,13 @@ export default function ChatPageContent() {
         
         const fileDataUris = await Promise.all(filesToUpload.map(readFileAsDataURL));
   
+        // 5. Call the assistant with the de-identified query
         const assistantResponse = await askAssistant(
-            userQuery,
+            deidentifiedQuery,
             { 
                 fileDataUris,
                 chatId: currentChatId,
-                messageId: userMessage.id, // Re-use user message ID for linking
+                messageId: userMessage.id,
                 useStandardAnalysis,
                 useWebSearch: isWebSearch,
             },
@@ -823,11 +833,6 @@ export default function ChatPageContent() {
           throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
         }
         
-        const updatedUserMessage: Message = {
-            ...userMessage,
-            content: assistantResponse.deidentifiedQuery || userQuery,
-        };
-  
         const assistantMessage: Message = {
             id: crypto.randomUUID(),
             role: 'assistant',
@@ -839,35 +844,13 @@ export default function ChatPageContent() {
             latencyMs: assistantResponse.latencyMs,
         };
         
-        setMessages(prevMessages => {
-            const finalMessages = [...prevMessages.slice(0, -1), updatedUserMessage, assistantMessage];
-            
-            if (currentChatId) {
-                 saveConversation(user.uid, finalMessages, currentChatId, { attachedFiles });
-            }
-
-            return finalMessages;
-        });
+        // 6. Update UI with the final state
+        const finalMessages = [...currentMessages, assistantMessage];
+        setMessages(finalMessages);
+        await saveConversation(user.uid, finalMessages, currentChatId, { attachedFiles });
 
         if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
-            setLastFailedQuery(userQuery);
-        }
-  
-        if (!currentChatId) {
-            const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
-            const newId = await saveConversation(
-                user.uid,
-                messages, // This will be stale, let's fix it
-                null,
-                { newChatTitle: newTitle, attachedFiles }
-            );
-            const newFullChat = await getFullConversation(user.uid, newId);
-            setActiveChat(newFullChat);
-            currentChatId = newId; 
-            await fetchSidebarData();
-        } else {
-            const updatedChat = await getFullConversation(user.uid, currentChatId);
-            setActiveChat(updatedChat);
+            setLastFailedQuery(deidentifiedQuery);
         }
   
     } catch (err: any) {
