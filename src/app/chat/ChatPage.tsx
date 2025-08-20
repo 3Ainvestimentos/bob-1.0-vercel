@@ -1687,7 +1687,7 @@ export default function ChatPageContent() {
                 onDeleteConvoRequest={handleDeleteConvoRequest}
                 setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
                 onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={handleToggleGroup}
+                onToggleGroup={onToggleGroup}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 activeDragItem={activeDragItem}
@@ -1759,4 +1759,3 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
-
