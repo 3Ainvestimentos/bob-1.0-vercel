@@ -94,18 +94,12 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
 
     const parent = `projects/${projectId}/locations/global`;
 
-    const infoTypesToDetect = [{ name: 'PERSON_NAME' }, { name: 'BRAZIL_CPF_NUMBER'}];
-    
     const request = {
         parent: parent,
-        item: {
-            value: query,
-        },
         deidentifyConfig: {
             infoTypeTransformations: {
                 transformations: [
                     {
-                        infoTypes: infoTypesToDetect,
                         primitiveTransformation: {
                             replaceWithInfoTypeConfig: {},
                         },
@@ -114,13 +108,15 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
             },
         },
         inspectConfig: {
-            infoTypes: infoTypesToDetect,
-            minLikelihood: 'LIKELY',
-            includeQuote: true,
+            infoTypes: [{ name: 'PERSON_NAME' }, { name: 'BRAZIL_CPF_NUMBER' }],
+        },
+        item: {
+            value: query,
         },
     };
 
     try {
+        // @ts-ignore
         const [response] = await dlp.projects.content.deidentify(request);
         
         const deidentifiedQuery = response.item?.value || query;
@@ -426,7 +422,7 @@ async function isQueryForInternalDatabase(query: string): Promise<boolean> {
       model: "gemini-1.5-flash-latest",
     });
 
-    const prompt = `Analise a seguinte pergunta de um usuário a um assistente corporativo. A base de dados interna contém manuais, tutoriais, organogramas, políticas e glossários da empresa "3A RIVA". Responda APENAS com 'SIM' se a pergunta parece que pode ser respondida por essa base de dados, ou APENAS 'NÃO' se a pergunta parece ser de conhecimento geral, notícias, ou exigir uma busca na internet.
+    const prompt = `Analise a seguinte pergunta de um usuário a um assistente corporativo. A base de dados interna contém manuais, tutoriais, informações sobre pessoas, organogramas, políticas e glossários da empresa "3A RIVA". Responda APENAS com 'SIM' se a pergunta parece que pode ser respondida por essa base de dados, ou APENAS 'NÃO' se a pergunta parece ser de conhecimento geral, notícias, ou exigir uma busca na internet.
 
 Exemplos:
 - "Como alterar minha senha?" -> SIM
@@ -491,6 +487,7 @@ export async function askAssistant(
                 attachments.push({
                     id: crypto.randomUUID(),
                     fileName: file.name,
+                    // @ts-ignore
                     mimeType: file.type,
                     deidentifiedContent: deidentifiedContent,
                 });
