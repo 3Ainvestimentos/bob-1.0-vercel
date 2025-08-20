@@ -687,37 +687,32 @@ export default function ChatPageContent() {
     setInput('');
     setSelectedFiles([]);
     setError(null);
-    
-    // 1. De-identify query first
-    const deidentifiedQuery = await deidentifyTextOnly(originalQuery);
-
-    const useStandardAnalysis = originalQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
-    const fileNames = filesToUpload.map(f => f.name);
-
-    // 2. Create the user message with both original and de-identified content
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: deidentifiedQuery,
-      originalContent: originalQuery,
-      fileNames: fileNames.length > 0 ? fileNames : null,
-      isStandardAnalysis: useStandardAnalysis,
-      source: searchSource,
-    };
-    
-    // 3. Update the UI with the user message
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
     setIsLoading(true);
 
     try {
-      // 4. Handle chat creation and file uploads if needed
+      const deidentifiedQuery = await deidentifyTextOnly(originalQuery);
+
+      const useStandardAnalysis = originalQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
+      const fileNames = filesToUpload.map(f => f.name);
+  
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: deidentifiedQuery,
+        originalContent: originalQuery,
+        fileNames: fileNames.length > 0 ? fileNames : null,
+        isStandardAnalysis: useStandardAnalysis,
+        source: searchSource,
+      };
+
+      const currentMessages = [...messages, userMessage];
+      setMessages(currentMessages);
+
       let currentChatId = activeChatId;
       const attachedFiles: AttachedFile[] = [];
   
       if (!currentChatId) {
         const tempTitle = await generateTitleForConversation(deidentifiedQuery, fileNames.join(', '));
-        // For a new chat, save the user message immediately to get an ID
         const newId = await saveConversation(user.uid, [userMessage], null, { newChatTitle: tempTitle });
         currentChatId = newId;
         const newFullChat = await getFullConversation(user.uid, newId);
@@ -742,7 +737,6 @@ export default function ChatPageContent() {
       
       const fileDataUris = await Promise.all(filesToUpload.map(readFileAsDataURL));
   
-      // 5. Call the assistant with the de-identified query and selected source
       const assistantResponse = await askAssistant(
         deidentifiedQuery,
         {
@@ -771,8 +765,7 @@ export default function ChatPageContent() {
         latencyMs: assistantResponse.latencyMs,
       };
       
-      // 6. Update UI with the final state and save the whole conversation
-      const finalMessages = [...updatedMessages, assistantMessage];
+      const finalMessages = [...currentMessages, assistantMessage];
       setMessages(finalMessages);
       await saveConversation(user.uid, finalMessages, currentChatId, { attachedFiles });
   
@@ -1319,7 +1312,6 @@ export default function ChatPageContent() {
             setShowTermsDialog(false);
             fetchSidebarData();
             
-            // Check if onboarding needs to be shown
             const userDocSnap = await getDoc(userDocRef);
             if (userDocSnap.exists() && userDocSnap.data()?.hasCompletedOnboarding === false) {
                 setShowOnboarding(true);
