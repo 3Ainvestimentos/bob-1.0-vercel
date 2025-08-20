@@ -1392,6 +1392,7 @@ export async function validateAndOnboardUser(
             createdAt: FieldValue.serverTimestamp(),
             role,
             termsAccepted: false,
+            hasCompletedOnboarding: false, // Add this line
         };
         
         // Usar um batch para garantir a atomicidade da operação

@@ -431,7 +431,7 @@ export function ChatInputForm({
                     )}
                 </div>
             </div>
-            <div className="flex items-center gap-2 pr-2">
+            <div id="search-source-selector" className="flex items-center gap-2 pr-2">
               <Select value={searchSource} onValueChange={(value) => setSearchSource(value as SearchSource)} disabled={isLoading}>
                 <SelectTrigger className="w-[180px] h-8 text-xs focus:ring-0 focus:ring-offset-0">
                     <SelectValue placeholder="Selecione a fonte..." />
@@ -460,6 +460,7 @@ export function ChatInputForm({
   return (
     <div className="sticky bottom-0 w-full bg-background/95 backdrop-blur-sm pt-1">
       <form
+        id="chat-input-form"
         onSubmit={handleSubmit}
         className="pt-2"
       >
@@ -533,5 +534,3 @@ export function ChatInputForm({
     </div>
   );
 }
-
-    

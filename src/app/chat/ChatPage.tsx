@@ -83,6 +83,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { OnboardingTour } from '@/components/chat/OnboardingTour';
 
 
 // ---- Data Types ----
@@ -503,6 +504,7 @@ export default function ChatPageContent() {
   const [isCheckingTerms, setIsCheckingTerms] = useState(true);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const [searchSource, setSearchSource] = useState<SearchSource>('rag');
   
@@ -590,7 +592,7 @@ export default function ChatPageContent() {
       setIsCheckingTerms(true);
       try {
         const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        let userDocSnap = await getDoc(userDocRef);
 
         if (!userDocSnap.exists()) {
             const validationResult = await validateAndOnboardUser(user.uid, user.email!, user.displayName);
@@ -604,13 +606,16 @@ export default function ChatPageContent() {
                 await handleSignOut();
                 return;
             }
+            userDocSnap = await getDoc(userDocRef); // Re-fetch after creation
         }
         
-        // Refetch after potential creation
-        const finalUserDocSnap = await getDoc(userDocRef);
+        const userData = userDocSnap.data();
 
-        if (finalUserDocSnap.exists() && finalUserDocSnap.data()?.termsAccepted === true) {
+        if (userData?.termsAccepted === true) {
             fetchSidebarData();
+            if (userData?.hasCompletedOnboarding === false) {
+                setShowOnboarding(true);
+            }
         } else {
             setShowTermsDialog(true);
         }
@@ -682,11 +687,10 @@ export default function ChatPageContent() {
     setInput('');
     setSelectedFiles([]);
     setError(null);
-    setIsLoading(true);
     
     // 1. De-identify query first
     const deidentifiedQuery = await deidentifyTextOnly(originalQuery);
-    
+
     const useStandardAnalysis = originalQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
     const fileNames = filesToUpload.map(f => f.name);
 
@@ -704,7 +708,8 @@ export default function ChatPageContent() {
     // 3. Update the UI with the user message
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
-    
+    setIsLoading(true);
+
     try {
       // 4. Handle chat creation and file uploads if needed
       let currentChatId = activeChatId;
@@ -1313,6 +1318,12 @@ export default function ChatPageContent() {
             await updateDoc(userDocRef, { termsAccepted: true });
             setShowTermsDialog(false);
             fetchSidebarData();
+            
+            // Check if onboarding needs to be shown
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists() && userDocSnap.data()?.hasCompletedOnboarding === false) {
+                setShowOnboarding(true);
+            }
         } catch (error: any) {
             toast({
                 variant: 'destructive',
@@ -1326,6 +1337,21 @@ export default function ChatPageContent() {
     const handleDeclineTerms = async () => {
         setShowTermsDialog(false);
         await handleSignOut();
+    };
+    
+    const handleFinishOnboarding = async () => {
+        if (!user) return;
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, { hasCompletedOnboarding: true });
+            setShowOnboarding(false);
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: 'Não foi possível salvar o progresso do onboarding.',
+            });
+        }
     };
 
 
@@ -1360,6 +1386,9 @@ export default function ChatPageContent() {
       .join('')
       .substring(0, 2)
       .toUpperCase() ?? 'U';
+
+  const canShowChat = isAuthenticated && !showTermsDialog && !showOnboarding;
+
 
   return (
     <SidebarProvider>
@@ -1562,94 +1591,99 @@ export default function ChatPageContent() {
             </AlertDialogContent>
         </AlertDialog>
 
+        {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
 
-        <Sidebar>
-            <ChatSidebar
-                conversations={conversations}
-                groups={groups}
-                activeChatId={activeChatId}
-                isSidebarLoading={isSidebarLoading}
-                expandedGroups={expandedGroups}
-                onNewChat={handleNewChat}
-                onSelectConversation={handleSelectConversation}
-                onMoveConversation={handleMoveConversation}
-                onRenameRequest={handleRenameRequest}
-                onDeleteConvoRequest={handleDeleteConvoRequest}
-                setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
-                onDeleteGroupRequest={handleDeleteRequest}
-                onToggleGroup={onToggleGroup}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                activeDragItem={activeDragItem}
-                onOpenFaqDialog={() => setIsFaqDialogOpen(true)}
-                isAuthenticated={isAuthenticated}
-                handleSignOut={handleSignOut}
-                user={user}
-            />
-        </Sidebar>
+        {canShowChat && (
+        <>
+            <Sidebar>
+                <ChatSidebar
+                    conversations={conversations}
+                    groups={groups}
+                    activeChatId={activeChatId}
+                    isSidebarLoading={isSidebarLoading}
+                    expandedGroups={expandedGroups}
+                    onNewChat={handleNewChat}
+                    onSelectConversation={handleSelectConversation}
+                    onMoveConversation={handleMoveConversation}
+                    onRenameRequest={handleRenameRequest}
+                    onDeleteConvoRequest={handleDeleteConvoRequest}
+                    setIsNewGroupDialogOpen={setIsNewGroupDialogOpen}
+                    onDeleteGroupRequest={handleDeleteRequest}
+                    onToggleGroup={onToggleGroup}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    activeDragItem={activeDragItem}
+                    onOpenFaqDialog={() => setIsFaqDialogOpen(true)}
+                    isAuthenticated={isAuthenticated}
+                    handleSignOut={handleSignOut}
+                    user={user}
+                />
+            </Sidebar>
 
-        <SidebarInset>
-            <main className="flex h-full flex-1 flex-col bg-background">
-                 <div
-                    className={cn("absolute top-4 right-4 z-10 transition-opacity duration-300",
-                        messages.length > 0 ? 'opacity-0' : 'opacity-100'
-                    )}
-                >
-                    <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <button 
-                              className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
-                              aria-label="Saudação do Bob"
-                              disabled={messages.length > 0}
+            <SidebarInset>
+                <main className="flex h-full flex-1 flex-col bg-background">
+                    <div
+                        className={cn("absolute top-4 right-4 z-10 transition-opacity duration-300",
+                            messages.length > 0 ? 'opacity-0' : 'opacity-100'
+                        )}
+                    >
+                        <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <button 
+                                className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+                                aria-label="Saudação do Bob"
+                                disabled={messages.length > 0}
+                                >
+                                    <RobotIdeaIcon className="h-10 w-10" />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                side="left"
+                                align="center"
+                                className="w-auto max-w-xs text-sm bg-chart-2 text-black shadow-lg border-none rounded-xl"
                             >
-                                <RobotIdeaIcon className="h-10 w-10" />
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                            side="left"
-                            align="center"
-                            className="w-auto max-w-xs text-sm bg-chart-2 text-black shadow-lg border-none rounded-xl"
-                        >
-                           <GreetingPopoverContent onOpenChange={setIsGreetingPopoverOpen} />
-                           <PopoverArrow className="fill-chart-2" />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                <ChatMessageArea
-                  messages={messages}
-                  isLoading={isLoading}
-                  error={error}
-                  user={user}
-                  userName={userName}
-                  userInitials={userInitials}
-                  lastFailedQuery={null} // This is now handled by the source switch
-                  feedbacks={feedbacks}
-                  regeneratingMessageId={regeneratingMessageId}
-                  messagesEndRef={messagesEndRef}
-                  onFeedback={handleFeedback}
-                  onRegenerate={handleRegenerate}
-                  onCopyToClipboard={handleCopyToClipboard}
-                  onReportLegalIssueRequest={handleReportLegalIssueRequest}
-                  onOpenFeedbackDialog={handleOpenFeedbackDialog}
-                  onWebSearch={() => {}} // This is now handled by the source switch
-                  onSuggestionClick={handleSuggestionClick}
-                  activeChat={activeChat}
-                  onRemoveFile={handleRemoveFile}
-                />
-
-                <ChatInputForm
-                    input={input}
-                    setInput={setInput}
-                    handleSubmit={handleSubmit}
+                            <GreetingPopoverContent onOpenChange={setIsGreetingPopoverOpen} />
+                            <PopoverArrow className="fill-chart-2" />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <ChatMessageArea
+                    messages={messages}
                     isLoading={isLoading}
-                    inputRef={inputRef}
-                    selectedFiles={selectedFiles}
-                    setSelectedFiles={setSelectedFiles}
-                    searchSource={searchSource}
-                    setSearchSource={setSearchSource}
-                />
-            </main>
-        </SidebarInset>
+                    error={error}
+                    user={user}
+                    userName={userName}
+                    userInitials={userInitials}
+                    lastFailedQuery={null} // This is now handled by the source switch
+                    feedbacks={feedbacks}
+                    regeneratingMessageId={regeneratingMessageId}
+                    messagesEndRef={messagesEndRef}
+                    onFeedback={handleFeedback}
+                    onRegenerate={handleRegenerate}
+                    onCopyToClipboard={handleCopyToClipboard}
+                    onReportLegalIssueRequest={handleReportLegalIssueRequest}
+                    onOpenFeedbackDialog={handleOpenFeedbackDialog}
+                    onWebSearch={() => {}} // This is now handled by the source switch
+                    onSuggestionClick={handleSuggestionClick}
+                    activeChat={activeChat}
+                    onRemoveFile={handleRemoveFile}
+                    />
+
+                    <ChatInputForm
+                        input={input}
+                        setInput={setInput}
+                        handleSubmit={handleSubmit}
+                        isLoading={isLoading}
+                        inputRef={inputRef}
+                        selectedFiles={selectedFiles}
+                        setSelectedFiles={setSelectedFiles}
+                        searchSource={searchSource}
+                        setSearchSource={setSearchSource}
+                    />
+                </main>
+            </SidebarInset>
+        </>
+        )}
         </div>
     </SidebarProvider>
   );

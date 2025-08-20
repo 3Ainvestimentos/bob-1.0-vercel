@@ -258,7 +258,7 @@ export function ChatSidebar({
 
       <SidebarFooter>
         <SidebarMenu className="group-data-[state=collapsed]:justify-center">
-          <SidebarMenuItem>
+          <SidebarMenuItem id="new-chat-button">
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="Nova Conversa"
@@ -268,7 +268,7 @@ export function ChatSidebar({
               <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
+          <SidebarMenuItem id="new-project-button">
             <SidebarMenuButton
               onClick={() => setIsNewGroupDialogOpen(true)}
               tooltip="Novo Projeto"
