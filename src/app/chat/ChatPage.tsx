@@ -764,9 +764,9 @@ export default function ChatPageContent() {
         fileNames: fileNames.length > 0 ? fileNames : null,
         isStandardAnalysis: useStandardAnalysis,
     };
-
-    const currentMessages = [...messages, userMessage];
-    setMessages(currentMessages);
+    
+    // Optimistic UI update
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
     setSelectedFiles([]);
     setIsLoading(true);
@@ -822,15 +822,16 @@ export default function ChatPageContent() {
             throw new Error(assistantResponse.error);
         }
 
+        if (!assistantResponse.summary) {
+          throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
+        }
+        
+        // Correctly update the user message with deidentified content
         const updatedUserMessage: Message = {
             ...userMessage,
             originalContent: userMessage.content,
             content: assistantResponse.deidentifiedQuery || userMessage.content,
         };
-
-        if (!assistantResponse.summary) {
-          throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
-        }
 
         const assistantMessage: Message = {
             id: assistantMessageId,
@@ -843,8 +844,16 @@ export default function ChatPageContent() {
             latencyMs: assistantResponse.latencyMs,
         };
         
-        const finalMessages = [...currentMessages.slice(0, -1), updatedUserMessage, assistantMessage];
-        setMessages(finalMessages);
+        // Final state update with all new information
+        setMessages(prev => {
+            const newMessages = [...prev];
+            const userMessageIndex = newMessages.findIndex(m => m.id === userMessage.id);
+            if(userMessageIndex > -1) {
+                newMessages[userMessageIndex] = updatedUserMessage;
+            }
+            return [...newMessages, assistantMessage];
+        });
+
 
         if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
             setLastFailedQuery(userQuery);
@@ -854,7 +863,7 @@ export default function ChatPageContent() {
             const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
             const newId = await saveConversation(
                 user.uid,
-                finalMessages,
+                [updatedUserMessage, assistantMessage],
                 null,
                 { newChatTitle: newTitle, attachedFiles }
             );
@@ -864,7 +873,7 @@ export default function ChatPageContent() {
         } else {
             await saveConversation(
                 user.uid,
-                finalMessages,
+                [...messages, updatedUserMessage, assistantMessage],
                 currentChatId,
                 { attachedFiles }
             );
@@ -1759,3 +1768,5 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
+
+    
