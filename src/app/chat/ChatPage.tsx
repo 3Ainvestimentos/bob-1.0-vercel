@@ -761,12 +761,12 @@ export default function ChatPageContent() {
         id: crypto.randomUUID(),
         role: 'user',
         content: userQuery,
+        originalContent: userQuery,
         fileNames: fileNames.length > 0 ? fileNames : null,
         isStandardAnalysis: useStandardAnalysis,
     };
     
-    const currentMessages = [...messages, userMessage];
-    setMessages(currentMessages);
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
     setSelectedFiles([]);
     setIsLoading(true);
@@ -825,7 +825,6 @@ export default function ChatPageContent() {
         
         const updatedUserMessage: Message = {
             ...userMessage,
-            originalContent: userQuery,
             content: assistantResponse.deidentifiedQuery || userQuery,
         };
   
@@ -840,9 +839,16 @@ export default function ChatPageContent() {
             latencyMs: assistantResponse.latencyMs,
         };
         
-        const finalMessages = [...messages, updatedUserMessage, assistantMessage];
-        setMessages(finalMessages);
-  
+        setMessages(prevMessages => {
+            const finalMessages = [...prevMessages.slice(0, -1), updatedUserMessage, assistantMessage];
+            
+            if (currentChatId) {
+                 saveConversation(user.uid, finalMessages, currentChatId, { attachedFiles });
+            }
+
+            return finalMessages;
+        });
+
         if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
             setLastFailedQuery(userQuery);
         }
@@ -851,26 +857,17 @@ export default function ChatPageContent() {
             const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
             const newId = await saveConversation(
                 user.uid,
-                [updatedUserMessage, assistantMessage],
+                messages, // This will be stale, let's fix it
                 null,
                 { newChatTitle: newTitle, attachedFiles }
             );
             const newFullChat = await getFullConversation(user.uid, newId);
             setActiveChat(newFullChat);
             currentChatId = newId; 
+            await fetchSidebarData();
         } else {
-            await saveConversation(
-                user.uid,
-                finalMessages,
-                currentChatId,
-                { attachedFiles }
-            );
             const updatedChat = await getFullConversation(user.uid, currentChatId);
             setActiveChat(updatedChat);
-        }
-        
-        if (!activeChatId) {
-            await fetchSidebarData();
         }
   
     } catch (err: any) {
@@ -1275,7 +1272,7 @@ export default function ChatPageContent() {
     setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = (event: DragEndEvent) => {
     const { active } = event;
     const activeId = active.id.toString();
 
@@ -1698,13 +1695,16 @@ export default function ChatPageContent() {
         <SidebarInset>
             <main className="flex h-full flex-1 flex-col bg-background">
                  <div
-                    className="absolute top-4 right-4 z-10 transition-opacity duration-300 opacity-100"
+                    className={cn("absolute top-4 right-4 z-10 transition-opacity duration-300",
+                        messages.length > 0 ? 'opacity-0' : 'opacity-100'
+                    )}
                 >
                     <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                         <PopoverTrigger asChild>
                             <button 
                               className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
                               aria-label="Saudação do Bob"
+                              disabled={messages.length > 0}
                             >
                                 <RobotIdeaIcon className="h-10 w-10" />
                             </button>

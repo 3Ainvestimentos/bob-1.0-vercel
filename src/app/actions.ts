@@ -508,16 +508,15 @@ export async function askAssistant(
         } else {
             source = 'rag';
             
-            // Etapa de verificação de relevância
             const isRelevantForInternalSearch = await isQueryForInternalDatabase(deidentifiedQuery);
             if (!isRelevantForInternalSearch) {
                  return {
                     summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
                     searchFailed: true,
-                    source: 'rag', // Indica que a falha ocorreu na etapa RAG
+                    source: 'rag',
                     sources: [],
                     latencyMs: Date.now() - startTime,
-                    deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
+                    deidentifiedQuery: deidentifiedQuery,
                 };
             }
 
@@ -538,7 +537,7 @@ export async function askAssistant(
                 source: source,
                 sources: [],
                 latencyMs,
-                deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
+                deidentifiedQuery: deidentifiedQuery,
             };
         }
         
@@ -550,7 +549,7 @@ export async function askAssistant(
             promptTokenCount: result.promptTokenCount,
             candidatesTokenCount: result.candidatesTokenCount,
             latencyMs: latencyMs,
-            deidentifiedQuery: query !== deidentifiedQuery ? deidentifiedQuery : undefined,
+            deidentifiedQuery: deidentifiedQuery,
         };
 
     } catch (error: any) {
