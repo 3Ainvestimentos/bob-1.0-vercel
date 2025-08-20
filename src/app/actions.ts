@@ -436,7 +436,7 @@ async function isQueryForInternalDatabase(query: string): Promise<boolean> {
       model: "gemini-1.5-flash-latest",
     });
 
-    const prompt = `Analise a seguinte pergunta de um usuário a um assistente corporativo. A base de dados interna contém manuais, tutoriais, informações sobre pessoas, organogramas, políticas e glossários da empresa "3A RIVA". Responda APENAS com 'SIM' se a pergunta parece que pode ser respondida por essa base de dados, ou APENAS 'NÃO' se a pergunta parece ser de conhecimento geral, notícias, ou exigir uma busca na internet.
+    const prompt = `Analise a seguinte pergunta de um usuário a um assistente corporativo. A base de dados interna contém manuais, tutoriais, informações sobre pessoas (incluindo o organograma), políticas e glossários da empresa "3A RIVA". Responda APENAS com 'SIM' se a pergunta parece que pode ser respondida por essa base de dados, ou APENAS 'NÃO' se a pergunta parece ser de conhecimento geral, notícias, ou exigir uma busca na internet.
 
 Exemplos:
 - "Como alterar minha senha?" -> SIM
@@ -466,10 +466,7 @@ export async function askAssistant(
     useWebSearch?: boolean;
     useStandardAnalysis?: boolean;
     fileDataUris?: { name: string; dataUri: string, mimeType: string }[];
-    chatId?: string | null;
-    messageId?: string | null;
-  } = {},
-  userId?: string | null
+  } = {}
 ): Promise<{
   summary?: string;
   searchFailed?: boolean;
@@ -478,7 +475,6 @@ export async function askAssistant(
   promptTokenCount?: number;
   candidatesTokenCount?: number;
   latencyMs?: number;
-  deidentifiedQuery?: string;
   error?: string;
 }> {
     const { useWebSearch = false, useStandardAnalysis = false, fileDataUris = [] } = options;
@@ -519,7 +515,6 @@ export async function askAssistant(
                     source: 'rag',
                     sources: [],
                     latencyMs: Date.now() - startTime,
-                    deidentifiedQuery: query,
                 };
             }
 
@@ -540,7 +535,6 @@ export async function askAssistant(
                 source: source,
                 sources: [],
                 latencyMs,
-                deidentifiedQuery: query,
             };
         }
         
@@ -552,7 +546,6 @@ export async function askAssistant(
             promptTokenCount: result.promptTokenCount,
             candidatesTokenCount: result.candidatesTokenCount,
             latencyMs: latencyMs,
-            deidentifiedQuery: query,
         };
 
     } catch (error: any) {

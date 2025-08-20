@@ -673,90 +673,13 @@ export default function ChatPageContent() {
     });
   };
 
-  const continueQuery = async (query: string, files: File[], isWebSearch: boolean) => {
-    if (isLoading || !user) return;
-
-    const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
-    const fileNames = files.map(f => f.name);
-
-    setIsLoading(true);
-    setError(null);
-    setLastFailedQuery(null);
-    
-    let currentChatId = activeChatId;
-    let assistantMessageId = crypto.randomUUID();
-
-    try {
-        const fileDataUris = await Promise.all(files.map(readFileAsDataURL));
-        
-        const assistantResponse = await askAssistant(
-            query,
-            { 
-                fileDataUris,
-                chatId: currentChatId,
-                messageId: assistantMessageId,
-                useStandardAnalysis,
-                useWebSearch: isWebSearch,
-            },
-            user.uid
-        );
-
-        if (assistantResponse.error) {
-            throw new Error(assistantResponse.error);
-        }
-
-        if (!assistantResponse.summary) {
-            throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
-        }
-
-        const assistantMessage: Message = {
-            id: assistantMessageId,
-            role: 'assistant',
-            content: assistantResponse.summary,
-            source: assistantResponse.source,
-            sources: assistantResponse.sources,
-            promptTokenCount: assistantResponse.promptTokenCount,
-            candidatesTokenCount: assistantResponse.candidatesTokenCount,
-            latencyMs: assistantResponse.latencyMs,
-        };
-
-        if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
-            setLastFailedQuery(query);
-        }
-
-        const finalMessages = [...messages, assistantMessage];
-        setMessages(finalMessages);
-
-        if (currentChatId) {
-            await saveConversation(user.uid, finalMessages, currentChatId);
-        } else {
-            console.error("Tried to continue a query without an active chat ID.");
-            setError("Erro: Não foi possível salvar a continuação da conversa.");
-        }
-        
-    } catch (err: any) {
-        const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
-        const errorMessage: Message = {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: errorMessageContent,
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-        setError(errorMessageContent);
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
-
   const submitQuery = async (query: string, filesToUpload: File[], isWebSearch: boolean = false) => {
     if (!query.trim() && filesToUpload.length === 0) return;
     if (isLoading || !user) return;
   
-    const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
-    const fileNames = filesToUpload.map(f => f.name);
-    
     const originalUserQuery = query || (filesToUpload.length > 0 ? `Analise os arquivos anexados.` : '');
+    const useStandardAnalysis = originalUserQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
+    const fileNames = filesToUpload.map(f => f.name);
   
     setInput('');
     setSelectedFiles([]);
@@ -765,105 +688,102 @@ export default function ChatPageContent() {
     setLastFailedQuery(null);
   
     try {
-        // 1. De-identify text first
-        const deidentifiedQuery = await deidentifyTextOnly(originalUserQuery);
-        
-        // 2. Create the user message with both original and de-identified content
-        const userMessage: Message = {
+      // 1. De-identify query first
+      const deidentifiedQuery = await deidentifyTextOnly(originalUserQuery);
+  
+      // 2. Create the user message with both original and de-identified content
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: deidentifiedQuery,
+        originalContent: originalUserQuery,
+        fileNames: fileNames.length > 0 ? fileNames : null,
+        isStandardAnalysis: useStandardAnalysis,
+      };
+      
+      // 3. Update the UI with the user message (now containing the anonymized version)
+      const currentMessagesWithUser = [...messages, userMessage];
+      setMessages(currentMessagesWithUser);
+  
+      // 4. Handle chat creation and file uploads if needed
+      let currentChatId = activeChatId;
+      const attachedFiles: AttachedFile[] = [];
+  
+      if (!currentChatId) {
+        const tempTitle = await generateTitleForConversation(deidentifiedQuery, fileNames.join(', '));
+        const newId = await saveConversation(user.uid, currentMessagesWithUser, null, { newChatTitle: tempTitle });
+        currentChatId = newId;
+        const newFullChat = await getFullConversation(user.uid, newId);
+        setActiveChat(newFullChat);
+        await fetchSidebarData();
+      }
+  
+      if (filesToUpload.length > 0) {
+        for (const file of filesToUpload) {
+          const storageRef = ref(storage, `users/${user.uid}/${currentChatId}/${file.name}`);
+          const snapshot = await uploadBytes(storageRef, file);
+          const downloadURL = await getDownloadURL(snapshot.ref);
+          attachedFiles.push({
             id: crypto.randomUUID(),
-            role: 'user',
-            content: deidentifiedQuery,
-            originalContent: originalUserQuery,
-            fileNames: fileNames.length > 0 ? fileNames : null,
-            isStandardAnalysis: useStandardAnalysis,
-        };
-        
-        // 3. Update the UI with the user message
-        const currentMessages = [...messages, userMessage];
-        setMessages(currentMessages);
-
-        // 4. Handle chat creation and file uploads if needed
-        let currentChatId = activeChatId;
-        const attachedFiles: AttachedFile[] = [];
-
-        if (!currentChatId) {
-            const tempTitle = await generateTitleForConversation(deidentifiedQuery, fileNames.join(', '));
-            const newId = await saveConversation(user.uid, currentMessages, null, { newChatTitle: tempTitle });
-            currentChatId = newId;
-            const newFullChat = await getFullConversation(user.uid, newId);
-            setActiveChat(newFullChat);
-            await fetchSidebarData();
+            fileName: file.name,
+            mimeType: file.type,
+            storagePath: snapshot.ref.fullPath,
+            downloadURL: downloadURL,
+          });
         }
-
-        if (filesToUpload.length > 0) {
-            for (const file of filesToUpload) {
-                const storageRef = ref(storage, `users/${user.uid}/${currentChatId}/${file.name}`);
-                const snapshot = await uploadBytes(storageRef, file);
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                attachedFiles.push({
-                    id: crypto.randomUUID(),
-                    fileName: file.name,
-                    mimeType: file.type,
-                    storagePath: snapshot.ref.fullPath,
-                    downloadURL: downloadURL,
-                });
-            }
-        }
-        
-        const fileDataUris = await Promise.all(filesToUpload.map(readFileAsDataURL));
+      }
+      
+      const fileDataUris = await Promise.all(filesToUpload.map(readFileAsDataURL));
   
-        // 5. Call the assistant with the de-identified query
-        const assistantResponse = await askAssistant(
-            deidentifiedQuery,
-            { 
-                fileDataUris,
-                chatId: currentChatId,
-                messageId: userMessage.id,
-                useStandardAnalysis,
-                useWebSearch: isWebSearch,
-            },
-            user.uid
-        );
+      // 5. Call the assistant with the de-identified query
+      const assistantResponse = await askAssistant(
+        deidentifiedQuery,
+        {
+          fileDataUris,
+          useStandardAnalysis,
+          useWebSearch,
+        }
+      );
   
-        if (assistantResponse.error) {
-            throw new Error(assistantResponse.error);
-        }
+      if (assistantResponse.error) {
+        throw new Error(assistantResponse.error);
+      }
   
-        if (!assistantResponse.summary) {
-          throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
-        }
-        
-        const assistantMessage: Message = {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: assistantResponse.summary,
-            source: assistantResponse.source,
-            sources: assistantResponse.sources,
-            promptTokenCount: assistantResponse.promptTokenCount,
-            candidatesTokenCount: assistantResponse.candidatesTokenCount,
-            latencyMs: assistantResponse.latencyMs,
-        };
-        
-        // 6. Update UI with the final state
-        const finalMessages = [...currentMessages, assistantMessage];
-        setMessages(finalMessages);
-        await saveConversation(user.uid, finalMessages, currentChatId, { attachedFiles });
-
-        if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
-            setLastFailedQuery(deidentifiedQuery);
-        }
+      if (!assistantResponse.summary) {
+        throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
+      }
+      
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: assistantResponse.summary,
+        source: assistantResponse.source,
+        sources: assistantResponse.sources,
+        promptTokenCount: assistantResponse.promptTokenCount,
+        candidatesTokenCount: assistantResponse.candidatesTokenCount,
+        latencyMs: assistantResponse.latencyMs,
+      };
+      
+      // 6. Update UI with the final state
+      const finalMessages = [...currentMessagesWithUser, assistantMessage];
+      setMessages(finalMessages);
+      await saveConversation(user.uid, finalMessages, currentChatId, { attachedFiles });
+  
+      if (assistantResponse.searchFailed) {
+        setLastFailedQuery(deidentifiedQuery);
+      }
   
     } catch (err: any) {
-        const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
-        const errorMessage: Message = {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: errorMessageContent,
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-        setError(errorMessageContent);
+      const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: errorMessageContent,
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      setError(errorMessageContent);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
   
@@ -883,8 +803,61 @@ export default function ChatPageContent() {
   
     const query = lastFailedQuery;
     setLastFailedQuery(null);
-    await continueQuery(query, [], true);
+    
+    setInput('');
+    setIsLoading(true);
+    setError(null);
+  
+    try {
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: query,
+        originalContent: query,
+      };
+  
+      const currentMessagesWithUser = [...messages, userMessage];
+      setMessages(currentMessagesWithUser);
+  
+      const assistantResponse = await askAssistant(query, { useWebSearch: true });
+  
+      if (assistantResponse.error) {
+        throw new Error(assistantResponse.error);
+      }
+  
+      if (!assistantResponse.summary) {
+        throw new Error("A resposta da busca na web foi indefinida.");
+      }
+  
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: assistantResponse.summary,
+        source: assistantResponse.source,
+        sources: assistantResponse.sources,
+        promptTokenCount: assistantResponse.promptTokenCount,
+        candidatesTokenCount: assistantResponse.candidatesTokenCount,
+        latencyMs: assistantResponse.latencyMs,
+      };
+  
+      const finalMessages = [...currentMessagesWithUser, assistantMessage];
+      setMessages(finalMessages);
+      await saveConversation(user.uid, finalMessages, activeChatId);
+  
+    } catch (err: any) {
+      const errorMessageContent = `Ocorreu um erro na busca web: ${'' + err.message}`;
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: errorMessageContent,
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      setError(errorMessageContent);
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
 
   const handleCreateGroup = async (e: FormEvent) => {
     e.preventDefault();
