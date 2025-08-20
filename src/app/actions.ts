@@ -74,7 +74,10 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
     }
 }
 
-
+// IMPORTANTE: NÃO REMOVA o objeto `requestBody` da função deidentifyQuery.
+// A API do Google DLP requer que os parâmetros `item`, `deidentifyConfig` e
+// `inspectConfig` estejam aninhados dentro de um objeto `requestBody`.
+// A remoção desta estrutura causará erros de 400 Bad Request.
 async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
     const {google} = require('googleapis');
     const credentials = await getServiceAccountCredentialsFromEnv();
@@ -96,7 +99,7 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
 
     const request = {
         parent: parent,
-        resource: {
+        requestBody: {
             deidentifyConfig: {
                 infoTypeTransformations: {
                     transformations: [

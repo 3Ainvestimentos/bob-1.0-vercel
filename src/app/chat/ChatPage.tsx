@@ -764,9 +764,8 @@ export default function ChatPageContent() {
         fileNames: fileNames.length > 0 ? fileNames : null,
         isStandardAnalysis: useStandardAnalysis,
     };
-    const newMessages = [...messages, userMessage];
 
-    setMessages(newMessages);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setSelectedFiles([]);
     setIsLoading(true);
@@ -783,7 +782,7 @@ export default function ChatPageContent() {
             // Ensure a chat ID exists before uploading
             if (!currentChatId) {
                 const tempTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
-                const newId = await saveConversation(user.uid, newMessages, null, { newChatTitle: tempTitle });
+                const newId = await saveConversation(user.uid, [userMessage], null, { newChatTitle: tempTitle });
                 currentChatId = newId;
                 const newFullChat = await getFullConversation(user.uid, newId);
                 setActiveChat(newFullChat);
@@ -822,13 +821,11 @@ export default function ChatPageContent() {
             throw new Error(assistantResponse.error);
         }
         
-        if (assistantResponse.deidentifiedQuery) {
-            const lastUserMessage = newMessages[newMessages.length - 1];
-            if(lastUserMessage) {
-                lastUserMessage.originalContent = lastUserMessage.content;
-                lastUserMessage.content = assistantResponse.deidentifiedQuery;
-            }
-        }
+        const userMessageWithDeidentification: Message = {
+            ...userMessage,
+            content: assistantResponse.deidentifiedQuery || userQuery,
+            originalContent: userMessage.content,
+        };
 
         if (!assistantResponse.summary) {
           throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
@@ -848,12 +845,15 @@ export default function ChatPageContent() {
         if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
             setLastFailedQuery(userQuery);
         }
+        
+        const finalMessages = [...messages, userMessageWithDeidentification, assistantMessage];
+        setMessages(finalMessages);
 
          if (!currentChatId) {
             const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
             const newId = await saveConversation(
                 user.uid,
-                [...newMessages, assistantMessage],
+                [userMessageWithDeidentification, assistantMessage],
                 null,
                 { newChatTitle: newTitle, attachedFiles }
             );
@@ -863,7 +863,7 @@ export default function ChatPageContent() {
         } else {
             await saveConversation(
                 user.uid,
-                [...newMessages, assistantMessage],
+                finalMessages,
                 currentChatId,
                 { attachedFiles }
             );
@@ -871,9 +871,6 @@ export default function ChatPageContent() {
             const updatedChat = await getFullConversation(user.uid, currentChatId);
             setActiveChat(updatedChat);
         }
-
-        const finalMessages = [...newMessages, assistantMessage];
-        setMessages(finalMessages);
         
         if (!activeChatId) {
             await fetchSidebarData();
