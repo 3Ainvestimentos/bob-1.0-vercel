@@ -98,27 +98,25 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
     
     const request = {
         parent: parent,
-        requestBody: {
-            item: {
-                value: query,
-            },
-            deidentifyConfig: {
-                infoTypeTransformations: {
-                    transformations: [
-                        {
-                            infoTypes: infoTypesToDetect,
-                            primitiveTransformation: {
-                                replaceWithInfoTypeConfig: {},
-                            },
+        item: {
+            value: query,
+        },
+        deidentifyConfig: {
+            infoTypeTransformations: {
+                transformations: [
+                    {
+                        infoTypes: infoTypesToDetect,
+                        primitiveTransformation: {
+                            replaceWithInfoTypeConfig: {},
                         },
-                    ],
-                },
+                    },
+                ],
             },
-            inspectConfig: {
-                infoTypes: infoTypesToDetect,
-                minLikelihood: 'LIKELY',
-                includeQuote: true,
-            },
+        },
+        inspectConfig: {
+            infoTypes: infoTypesToDetect,
+            minLikelihood: 'LIKELY',
+            includeQuote: true,
         },
     };
 
@@ -1416,7 +1414,3 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
-
-    
-
-    
