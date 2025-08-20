@@ -96,23 +96,25 @@ async function deidentifyQuery(query: string): Promise<{ deidentifiedQuery: stri
 
     const request = {
         parent: parent,
-        deidentifyConfig: {
-            infoTypeTransformations: {
-                transformations: [
-                    {
-                        primitiveTransformation: {
-                            replaceWithInfoTypeConfig: {},
+        resource: {
+            deidentifyConfig: {
+                infoTypeTransformations: {
+                    transformations: [
+                        {
+                            primitiveTransformation: {
+                                replaceWithInfoTypeConfig: {},
+                            },
                         },
-                    },
-                ],
+                    ],
+                },
             },
-        },
-        inspectConfig: {
-            infoTypes: [{ name: 'PERSON_NAME' }, { name: 'BRAZIL_CPF_NUMBER' }],
-        },
-        item: {
-            value: query,
-        },
+            inspectConfig: {
+                infoTypes: [{ name: 'PERSON_NAME' }, { name: 'BRAZIL_CPF_NUMBER' }],
+            },
+            item: {
+                value: query,
+            },
+        }
     };
 
     try {
