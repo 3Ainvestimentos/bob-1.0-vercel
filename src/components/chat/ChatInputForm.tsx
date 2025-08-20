@@ -13,6 +13,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { SearchSource } from '@/app/chat/ChatPage';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const CustomSoundWave = ({ analyser, isVisible }: { analyser: AnalyserNode | null, isVisible: boolean }) => {
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -431,14 +432,25 @@ export function ChatInputForm({
                 </div>
             </div>
             <div className="flex items-center gap-2 pr-2">
-                <Database className={cn("h-4 w-4", searchSource === 'rag' ? 'text-primary' : 'text-muted-foreground')} />
-                <Switch 
-                    id="search-source" 
-                    checked={searchSource === 'web'} 
-                    onCheckedChange={(checked) => setSearchSource(checked ? 'web' : 'rag')}
-                    disabled={isLoading}
-                />
-                <Globe className={cn("h-4 w-4", searchSource === 'web' ? 'text-primary' : 'text-muted-foreground')} />
+              <Select value={searchSource} onValueChange={(value) => setSearchSource(value as SearchSource)} disabled={isLoading}>
+                <SelectTrigger className="w-[180px] h-8 text-xs focus:ring-0 focus:ring-offset-0">
+                    <SelectValue placeholder="Selecione a fonte..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="rag">
+                        <div className='flex items-center gap-2'>
+                           <Database className="h-4 w-4 text-muted-foreground" />
+                           <span>Base de Dados 3A RIVA</span>
+                        </div>
+                    </SelectItem>
+                    <SelectItem value="web">
+                         <div className='flex items-center gap-2'>
+                           <Globe className="h-4 w-4 text-muted-foreground" />
+                           <span>Pesquisa na Web</span>
+                        </div>
+                    </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
         </div>
     );
@@ -521,3 +533,5 @@ export function ChatInputForm({
     </div>
   );
 }
+
+    
