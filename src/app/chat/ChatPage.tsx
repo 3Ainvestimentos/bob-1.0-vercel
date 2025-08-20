@@ -821,7 +821,7 @@ export default function ChatPageContent() {
         if (assistantResponse.error) {
             throw new Error(assistantResponse.error);
         }
-        
+
         const updatedUserMessage: Message = {
             ...userMessage,
             originalContent: userMessage.content,
@@ -842,13 +842,13 @@ export default function ChatPageContent() {
             candidatesTokenCount: assistantResponse.candidatesTokenCount,
             latencyMs: assistantResponse.latencyMs,
         };
+        
+        const finalMessages = [...currentMessages.slice(0, -1), updatedUserMessage, assistantMessage];
+        setMessages(finalMessages);
 
         if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
             setLastFailedQuery(userQuery);
         }
-        
-        const finalMessages = [...currentMessages.slice(0, -1), updatedUserMessage, assistantMessage];
-        setMessages(finalMessages);
 
          if (!currentChatId) {
             const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
@@ -1274,7 +1274,7 @@ export default function ChatPageContent() {
     }
   };
 
-  const handleToggleGroup = (groupId: string) => {
+  const onToggleGroup = (groupId: string) => {
     setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
