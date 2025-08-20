@@ -751,12 +751,12 @@ export default function ChatPageContent() {
   const submitQuery = async (query: string, filesToUpload: File[], isWebSearch: boolean = false) => {
     if (!query.trim() && filesToUpload.length === 0) return;
     if (isLoading || !user) return;
-
+  
     const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
     const fileNames = filesToUpload.map(f => f.name);
     
     const userQuery = query || (filesToUpload.length > 0 ? `Analise os arquivos anexados.` : '');
-
+  
     const userMessage: Message = {
         id: crypto.randomUUID(),
         role: 'user',
@@ -765,22 +765,19 @@ export default function ChatPageContent() {
         isStandardAnalysis: useStandardAnalysis,
     };
     
-    // Optimistic UI update
-    setMessages(prev => [...prev, userMessage]);
+    const currentMessages = [...messages, userMessage];
+    setMessages(currentMessages);
     setInput('');
     setSelectedFiles([]);
     setIsLoading(true);
     setError(null);
     setLastFailedQuery(null);
-
+  
     let currentChatId = activeChatId;
-    let assistantMessageId = crypto.randomUUID();
     
     try {
-        // Handle file uploads if they exist
         const attachedFiles: AttachedFile[] = [];
         if (filesToUpload.length > 0) {
-            // Ensure a chat ID exists before uploading
             if (!currentChatId) {
                 const tempTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
                 const newId = await saveConversation(user.uid, [userMessage], null, { newChatTitle: tempTitle });
@@ -788,12 +785,12 @@ export default function ChatPageContent() {
                 const newFullChat = await getFullConversation(user.uid, newId);
                 setActiveChat(newFullChat);
             }
-
+  
             for (const file of filesToUpload) {
                 const storageRef = ref(storage, `users/${user.uid}/${currentChatId}/${file.name}`);
                 const snapshot = await uploadBytes(storageRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
-
+  
                 attachedFiles.push({
                     id: crypto.randomUUID(),
                     fileName: file.name,
@@ -805,36 +802,35 @@ export default function ChatPageContent() {
         }
         
         const fileDataUris = await Promise.all(filesToUpload.map(readFileAsDataURL));
-
+  
         const assistantResponse = await askAssistant(
             userQuery,
             { 
                 fileDataUris,
                 chatId: currentChatId,
-                messageId: assistantMessageId,
+                messageId: userMessage.id, // Re-use user message ID for linking
                 useStandardAnalysis,
                 useWebSearch: isWebSearch,
             },
             user.uid
         );
-
+  
         if (assistantResponse.error) {
             throw new Error(assistantResponse.error);
         }
-
+  
         if (!assistantResponse.summary) {
           throw new Error("A resposta do assistente foi indefinida. Verifique o backend.");
         }
         
-        // Correctly update the user message with deidentified content
         const updatedUserMessage: Message = {
             ...userMessage,
-            originalContent: userMessage.content,
-            content: assistantResponse.deidentifiedQuery || userMessage.content,
+            originalContent: userQuery,
+            content: assistantResponse.deidentifiedQuery || userQuery,
         };
-
+  
         const assistantMessage: Message = {
-            id: assistantMessageId,
+            id: crypto.randomUUID(),
             role: 'assistant',
             content: assistantResponse.summary,
             source: assistantResponse.source,
@@ -844,22 +840,14 @@ export default function ChatPageContent() {
             latencyMs: assistantResponse.latencyMs,
         };
         
-        // Final state update with all new information
-        setMessages(prev => {
-            const newMessages = [...prev];
-            const userMessageIndex = newMessages.findIndex(m => m.id === userMessage.id);
-            if(userMessageIndex > -1) {
-                newMessages[userMessageIndex] = updatedUserMessage;
-            }
-            return [...newMessages, assistantMessage];
-        });
-
-
+        const finalMessages = [...messages, updatedUserMessage, assistantMessage];
+        setMessages(finalMessages);
+  
         if (assistantResponse.searchFailed && assistantResponse.source !== 'web') {
             setLastFailedQuery(userQuery);
         }
-
-         if (!currentChatId) {
+  
+        if (!currentChatId) {
             const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
             const newId = await saveConversation(
                 user.uid,
@@ -873,11 +861,10 @@ export default function ChatPageContent() {
         } else {
             await saveConversation(
                 user.uid,
-                [...messages, updatedUserMessage, assistantMessage],
+                finalMessages,
                 currentChatId,
                 { attachedFiles }
             );
-             // Refresh active chat to show new files
             const updatedChat = await getFullConversation(user.uid, currentChatId);
             setActiveChat(updatedChat);
         }
@@ -885,7 +872,7 @@ export default function ChatPageContent() {
         if (!activeChatId) {
             await fetchSidebarData();
         }
-
+  
     } catch (err: any) {
         const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
         const errorMessage: Message = {
@@ -899,6 +886,7 @@ export default function ChatPageContent() {
         setIsLoading(false);
     }
   };
+  
   
   const handleSuggestionClick = (suggestion: string) => {
     setInput(suggestion);
@@ -1768,5 +1756,3 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
-
-    
