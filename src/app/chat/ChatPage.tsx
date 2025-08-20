@@ -673,13 +673,9 @@ export default function ChatPageContent() {
     });
   };
 
-  const submitQuery = async (query: string, filesToUpload: File[], isWebSearch: boolean = false) => {
+  const submitQuery = async (query: string, filesToUpload: File[]) => {
     if (!query.trim() && filesToUpload.length === 0) return;
     if (isLoading || !user) return;
-  
-    const originalUserQuery = query || (filesToUpload.length > 0 ? `Analise os arquivos anexados.` : '');
-    const useStandardAnalysis = originalUserQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
-    const fileNames = filesToUpload.map(f => f.name);
   
     setInput('');
     setSelectedFiles([]);
@@ -689,19 +685,21 @@ export default function ChatPageContent() {
   
     try {
       // 1. De-identify query first
-      const deidentifiedQuery = await deidentifyTextOnly(originalUserQuery);
+      const deidentifiedQuery = await deidentifyTextOnly(query);
+      const useStandardAnalysis = query.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
+      const fileNames = filesToUpload.map(f => f.name);
   
       // 2. Create the user message with both original and de-identified content
       const userMessage: Message = {
         id: crypto.randomUUID(),
         role: 'user',
         content: deidentifiedQuery,
-        originalContent: originalUserQuery,
+        originalContent: query,
         fileNames: fileNames.length > 0 ? fileNames : null,
         isStandardAnalysis: useStandardAnalysis,
       };
       
-      // 3. Update the UI with the user message (now containing the anonymized version)
+      // 3. Update the UI with the user message
       const currentMessagesWithUser = [...messages, userMessage];
       setMessages(currentMessagesWithUser);
   
@@ -734,6 +732,7 @@ export default function ChatPageContent() {
       }
       
       const fileDataUris = await Promise.all(filesToUpload.map(readFileAsDataURL));
+      const useWebSearch = false; // Define default value here
   
       // 5. Call the assistant with the de-identified query
       const assistantResponse = await askAssistant(
@@ -1712,3 +1711,4 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
+
