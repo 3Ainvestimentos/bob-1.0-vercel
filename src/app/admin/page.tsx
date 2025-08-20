@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage, setUserRole, deleteUser, createUser, getPreRegisteredUsers } from '@/app/actions';
+import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, getGreetingMessage, setGreetingMessage, setUserRole, deleteUser, createUser, getPreRegisteredUsers, setUserOnboardingStatus } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,6 +58,7 @@ interface AdminUser {
     displayName?: string;
     role: UserRole;
     createdAt: string;
+    hasCompletedOnboarding: boolean;
 }
 
 interface PreRegisteredUser {
@@ -189,7 +190,7 @@ export default function AdminPage() {
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
 
-            if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+            if (userDocSnap.exists() && userDocSnap.data()?.role === 'admin') {
                 setIsAuthorized(true);
                 fetchAdminData();
             } else {
@@ -328,6 +329,18 @@ export default function AdminPage() {
             // We don't need to refetch data as the user list won't change until they log in.
         } else {
             toast({ variant: 'destructive', title: 'Erro ao Pré-registrar', description: result.error });
+        }
+    };
+    
+    const handleOnboardingToggle = async (userId: string, newStatus: boolean) => {
+        const result = await setUserOnboardingStatus(userId, newStatus);
+        if (result.success) {
+            setAllUsers(prevUsers => 
+                prevUsers.map(u => u.uid === userId ? { ...u, hasCompletedOnboarding: newStatus } : u)
+            );
+            toast({ title: 'Sucesso', description: `Status do onboarding do usuário atualizado.` });
+        } else {
+            toast({ variant: 'destructive', title: 'Erro', description: result.error });
         }
     };
 
@@ -960,6 +973,7 @@ export default function AdminPage() {
                                     <TableHead>Usuário</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Papel</TableHead>
+                                    <TableHead>Tour Concluído</TableHead>
                                     <TableHead>Data de Criação</TableHead>
                                     <TableHead className="text-right">Ações</TableHead>
                                 </TableRow>
@@ -973,6 +987,13 @@ export default function AdminPage() {
                                             <Badge className={cn(roleDisplay[u.role]?.className)}>
                                                 {roleDisplay[u.role]?.label || 'Usuário'}
                                             </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Switch
+                                                checked={u.hasCompletedOnboarding}
+                                                onCheckedChange={(checked) => handleOnboardingToggle(u.uid, checked)}
+                                                aria-label="Status do onboarding"
+                                            />
                                         </TableCell>
                                         <TableCell>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                                         <TableCell className="text-right">
@@ -1346,5 +1367,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    

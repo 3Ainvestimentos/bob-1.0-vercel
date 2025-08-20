@@ -987,6 +987,7 @@ export async function getUsersWithRoles(): Promise<any> {
                 displayName: user.displayName,
                 role: userData?.role || 'user',
                 createdAt: (userData?.createdAt as import('firebase-admin/firestore').Timestamp)?.toDate().toISOString() || user.metadata.creationTime,
+                hasCompletedOnboarding: userData?.hasCompletedOnboarding ?? false,
             };
         });
 
@@ -1072,6 +1073,24 @@ export async function setUserRole(userId: string, role: UserRole): Promise<{succ
         return { success: true };
     } catch (error: any) {
         console.error(`Error setting role for user ${userId}:`, error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function setUserOnboardingStatus(userId: string, status: boolean): Promise<{success: boolean, error?: string}> {
+    if (!userId) {
+        return { success: false, error: "UserID é obrigatório." };
+    }
+
+    try {
+        const adminDb = await getAuthenticatedFirestoreAdmin();
+        const userRef = adminDb.collection('users').doc(userId);
+        
+        await userRef.set({ hasCompletedOnboarding: status }, { merge: true });
+
+        return { success: true };
+    } catch (error: any) {
+        console.error(`Error setting onboarding status for user ${userId}:`, error);
         return { success: false, error: error.message };
     }
 }
@@ -1368,14 +1387,14 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists()) {
+        if (userDocSnap.exists) {
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
         const preRegRef = adminDb.collection('pre_registered_users').doc(email.toLowerCase());
         const preRegSnap = await preRegRef.get();
 
-        if (!preRegSnap.exists()) {
+        if (!preRegSnap.exists) {
             return { success: false, role: null, error: 'Seu e-mail não está autorizado a acessar este sistema.' };
         }
 
@@ -1403,3 +1422,5 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
+
+    
