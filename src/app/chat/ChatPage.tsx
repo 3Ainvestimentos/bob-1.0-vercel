@@ -765,7 +765,8 @@ export default function ChatPageContent() {
         isStandardAnalysis: useStandardAnalysis,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const currentMessages = [...messages, userMessage];
+    setMessages(currentMessages);
     setInput('');
     setSelectedFiles([]);
     setIsLoading(true);
@@ -821,10 +822,10 @@ export default function ChatPageContent() {
             throw new Error(assistantResponse.error);
         }
         
-        const userMessageWithDeidentification: Message = {
+        const updatedUserMessage: Message = {
             ...userMessage,
-            content: assistantResponse.deidentifiedQuery || userQuery,
             originalContent: userMessage.content,
+            content: assistantResponse.deidentifiedQuery || userMessage.content,
         };
 
         if (!assistantResponse.summary) {
@@ -846,14 +847,14 @@ export default function ChatPageContent() {
             setLastFailedQuery(userQuery);
         }
         
-        const finalMessages = [...messages, userMessageWithDeidentification, assistantMessage];
+        const finalMessages = [...currentMessages.slice(0, -1), updatedUserMessage, assistantMessage];
         setMessages(finalMessages);
 
          if (!currentChatId) {
             const newTitle = await generateTitleForConversation(userQuery, fileNames.join(', '));
             const newId = await saveConversation(
                 user.uid,
-                [userMessageWithDeidentification, assistantMessage],
+                finalMessages,
                 null,
                 { newChatTitle: newTitle, attachedFiles }
             );
@@ -1758,3 +1759,4 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
+
