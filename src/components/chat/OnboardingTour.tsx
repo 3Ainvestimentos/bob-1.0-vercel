@@ -13,7 +13,7 @@ const tourSteps = [
         elementSelector: null, // No element for the welcome step
     },
     {
-        elementSelector: '#new-chat-button',
+        elementSelector: '#new-buttons-container',
         title: "Inicie ou Organize suas Conversas",
         content: "Use estes botões para começar uma nova conversa ou para agrupar seus chats em projetos, mantendo tudo organizado.",
         position: 'right',
@@ -29,6 +29,12 @@ const tourSteps = [
         title: "Escolha sua Fonte de Busca",
         content: "Alterne entre a nossa base de conhecimento interna para respostas seguras ou a web para informações atualizadas.",
         position: 'top-end',
+    },
+    {
+        elementSelector: '#suggestion-cards',
+        title: "Sugestões Rápidas",
+        content: "Não sabe por onde começar? Clique em um destes cards para fazer uma pergunta pré-programada e ver o Bob em ação.",
+        position: 'bottom',
     },
     {
         title: "Pronto para Começar!",
@@ -57,6 +63,9 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                     setElementRect(element.getBoundingClientRect());
                     element.style.setProperty('z-index', '1001', 'important');
                     element.style.setProperty('position', 'relative', 'important');
+                } else {
+                    // If element not found, move to the next step
+                    handleNext();
                 }
             } else {
                 setHighlightedElement(null);
@@ -65,7 +74,7 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
         };
 
         // Give the DOM a moment to update before trying to find the element
-        const timer = setTimeout(updateElement, 100);
+        const timer = setTimeout(updateElement, 150);
 
         return () => {
             clearTimeout(timer);
@@ -74,7 +83,7 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 highlightedElement.style.removeProperty('position');
             }
         };
-    }, [stepIndex, currentStep.elementSelector, highlightedElement]);
+    }, [stepIndex, currentStep.elementSelector]);
 
     const handleNext = () => {
         if (stepIndex < tourSteps.length - 1) {
@@ -151,7 +160,7 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 <div className="flex items-center justify-between px-6 py-4 bg-muted/50 rounded-b-lg">
                     <Button variant="ghost" size="sm" onClick={onFinish}>Pular</Button>
                     <div className="flex items-center gap-2">
-                        {stepIndex > 0 && (
+                        {stepIndex > 0 && stepIndex < tourSteps.length -1 && (
                             <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrev}>
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>

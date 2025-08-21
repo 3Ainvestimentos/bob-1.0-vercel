@@ -257,27 +257,31 @@ export function ChatSidebar({
       </DndContext>
 
       <SidebarFooter>
-        <SidebarMenu className="group-data-[state=collapsed]:justify-center">
-          <SidebarMenuItem id="new-chat-button">
-            <SidebarMenuButton
-              onClick={onNewChat}
-              tooltip="Nova Conversa"
-              className="h-9 w-full justify-start font-semibold rounded-xl bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80"
-            >
-              <Pencil className="h-4 w-4 group-data-[state=collapsed]:h-5 group-data-[state=collapsed]:w-5" />
-              <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem id="new-project-button">
-            <SidebarMenuButton
-              onClick={() => setIsNewGroupDialogOpen(true)}
-              tooltip="Novo Projeto"
-              className="h-9 w-full justify-start font-semibold rounded-xl bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80"
-            >
-              <FolderPlus className="h-4 w-4 group-data-[state=collapsed]:h-5 group-data-[state=collapsed]:w-5" />
-              <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+        <div id="new-buttons-container" className='space-y-2'>
+            <SidebarMenu className="group-data-[state=collapsed]:justify-center">
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={onNewChat}
+                  tooltip="Nova Conversa"
+                  className="h-9 w-full justify-start font-semibold rounded-xl bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80"
+                >
+                  <Pencil className="h-4 w-4 group-data-[state=collapsed]:h-5 group-data-[state=collapsed]:w-5" />
+                  <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setIsNewGroupDialogOpen(true)}
+                  tooltip="Novo Projeto"
+                  className="h-9 w-full justify-start font-semibold rounded-xl bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80"
+                >
+                  <FolderPlus className="h-4 w-4 group-data-[state=collapsed]:h-5 group-data-[state=collapsed]:w-5" />
+                  <SidebarMenuButton.Text>Novo projeto</SidebarMenuButton.Text>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+        </div>
+        <SidebarMenu className="group-data-[state=collapsed]:justify-center pt-2">
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onOpenFaqDialog}

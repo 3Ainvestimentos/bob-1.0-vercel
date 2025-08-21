@@ -115,7 +115,7 @@ export function ChatMessageArea({
                     Clique em um card para começar ou digite abaixo:
                   </p>
                 </div>
-                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div id="suggestion-cards" className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                    <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick("Faça uma mensagem e uma análise com o nosso padrão")}>
                     <div className="flex items-start gap-4">
                       <FileText className="h-6 w-6 text-muted-foreground" />
@@ -254,14 +254,6 @@ export function ChatMessageArea({
                         Bob está pensando...
                     </p>
                 </div>
-              </div>
-            )}
-            {lastFailedQuery && !isLoading && (
-              <div className="flex justify-center pt-4">
-                <Button variant="secondary" onClick={onWebSearch} disabled={isLoading} className="rounded-full shadow-md">
-                  <Search className="mr-2 h-4 w-4" />
-                  Pesquisar na Web
-                </Button>
               </div>
             )}
             {error && !isLoading && (
