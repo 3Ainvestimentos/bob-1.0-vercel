@@ -12,7 +12,7 @@ import React, { FormEvent, useCallback, useRef, useState, useEffect } from 'reac
 import TextareaAutosize from 'react-textarea-autosize';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
-import { SearchSource } from '@/app/chat/ChatPage';
+import { SearchSource } from '@/app/chat/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectSeparator, SelectGroup } from '@/components/ui/select';
 
 const CustomSoundWave = ({ analyser, isVisible }: { analyser: AnalyserNode | null, isVisible: boolean }) => {
@@ -454,7 +454,7 @@ export function ChatInputForm({
                             <span>{searchOptions[searchSource].label}</span>
                         </div>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="transform-none">
                         <SelectGroup>
                             <SelectLabel>Escolha a fonte da busca</SelectLabel>
                             <SelectSeparator />
