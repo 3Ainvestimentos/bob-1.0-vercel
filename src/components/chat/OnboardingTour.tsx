@@ -49,37 +49,29 @@ interface OnboardingTourProps {
 
 export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
     const [stepIndex, setStepIndex] = useState(0);
-    const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
     const [elementRect, setElementRect] = useState<DOMRect | null>(null);
 
     const currentStep = tourSteps[stepIndex];
 
     useEffect(() => {
+        let highlightedElement: HTMLElement | null = null;
         const updateElement = () => {
-            // Clear previous highlight
-            if (highlightedElement) {
-                highlightedElement.style.removeProperty('z-index');
-                highlightedElement.style.removeProperty('position');
-            }
-
             if (currentStep.elementSelector) {
                 const element = document.querySelector(currentStep.elementSelector) as HTMLElement;
                 if (element) {
-                    setHighlightedElement(element);
+                    highlightedElement = element;
                     setElementRect(element.getBoundingClientRect());
-                    // Elevate the element above the dark overlay
                     element.style.setProperty('z-index', '1001', 'important');
                     element.style.setProperty('position', 'relative', 'important');
                 } else {
-                    handleNext();
+                    setElementRect(null);
                 }
             } else {
-                setHighlightedElement(null);
                 setElementRect(null);
             }
         };
 
-        const timer = setTimeout(updateElement, 150);
+        const timer = setTimeout(updateElement, 50);
 
         return () => {
             clearTimeout(timer);
@@ -88,7 +80,6 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 highlightedElement.style.removeProperty('position');
             }
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stepIndex, currentStep.elementSelector]);
 
     const handleNext = () => {
@@ -106,61 +97,69 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
     };
 
     const highlightStyle = useMemo(() => {
-        if (!elementRect) {
-            // When no element is highlighted, we don't need a hole.
-            return {};
-        }
         const padding = 10;
+        const rect = elementRect || { top: -padding, left: -padding, width: 0, height: 0 };
         return {
-            width: `${elementRect.width + padding * 2}px`,
-            height: `${elementRect.height + padding * 2}px`,
-            top: `${elementRect.top - padding}px`,
-            left: `${elementRect.left - padding}px`,
-            // This creates the "hole" by clearing the shadow from this area
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
+            width: `${rect.width + padding * 2}px`,
+            height: `${rect.height + padding * 2}px`,
+            top: `${rect.top - padding}px`,
+            left: `${rect.left - padding}px`,
+            boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.6)`,
             borderRadius: '0.75rem',
+            opacity: elementRect ? 1 : 0,
         };
     }, [elementRect]);
     
-    const popoverPositionClass = useMemo(() => {
-        if (!elementRect) return 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+    const popoverPositionStyle = useMemo(() => {
+        if (!elementRect) {
+            return {
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+            };
+        }
         
+        const padding = 10;
+        const popoverRect = { width: 320, height: 180 }; // Approx popover size
+        let top = 0, left = 0;
+
         switch (currentStep.position) {
             case 'right':
-                return 'top-1/2 -translate-y-1/2 left-[calc(100%+1rem)]';
+                top = elementRect.top + elementRect.height / 2;
+                left = elementRect.right + padding;
+                return { top, left, transform: 'translateY(-50%)' };
             case 'left':
-                return 'top-1/2 -translate-y-1/2 right-[calc(100%+1rem)]';
+                top = elementRect.top + elementRect.height / 2;
+                left = elementRect.left - padding;
+                return { top, left, transform: 'translate(-100%, -50%)' };
             case 'bottom':
-                return 'left-1/2 -translate-x-1/2 top-[calc(100%+1rem)]';
+                top = elementRect.bottom + padding;
+                left = elementRect.left + elementRect.width / 2;
+                return { top, left, transform: 'translateX(-50%)' };
             case 'top-end':
-                 return 'left-auto right-0 bottom-[calc(100%+1rem)]';
+                top = elementRect.top - padding;
+                left = elementRect.right;
+                return { top, left, transform: 'translate(-100%, -100%)' };
             case 'top':
             default:
-                return 'left-1/2 -translate-x-1/2 bottom-[calc(100%+1rem)]';
+                top = elementRect.top - padding;
+                left = elementRect.left + elementRect.width / 2;
+                return { top, left, transform: 'translate(-50%, -100%)' };
         }
     }, [elementRect, currentStep.position]);
 
 
     return (
-        <div className="fixed inset-0 z-[1000] transition-opacity duration-300">
-            {/* The dark overlay is now part of the main container or managed by the highlight */}
-            {/* The element below creates the "hole" in the overlay */}
+        <div className="fixed inset-0 z-[1000]">
+            <div className="absolute inset-0 bg-black/60 transition-opacity duration-300" />
             <div
                 className="absolute pointer-events-none transition-all duration-300 ease-in-out"
                 style={highlightStyle}
             />
-            {/* If no element is highlighted, we still need the dark overlay */}
-            {!elementRect && (
-                <div className="absolute inset-0 bg-black/60" />
-            )}
 
-            {/* Popover content */}
             <div
-                className={`absolute z-[1002] w-80 max-w-sm rounded-lg bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out ${popoverPositionClass}`}
-                style={{
-                    opacity: 1,
-                    transform: 'scale(1)',
-                }}
+                className={`absolute z-[1002] w-80 max-w-sm rounded-lg bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out`}
+                style={{ ...popoverPositionStyle }}
             >
                 <div className="p-6 space-y-4">
                     <div className="flex items-center gap-3">
@@ -172,7 +171,7 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 <div className="flex items-center justify-between px-6 py-4 bg-muted/50 rounded-b-lg">
                     <Button variant="ghost" size="sm" onClick={onFinish}>Pular</Button>
                     <div className="flex items-center gap-2">
-                        {stepIndex > 0 && stepIndex < tourSteps.length -1 && (
+                        {stepIndex > 0 && (
                             <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrev}>
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
