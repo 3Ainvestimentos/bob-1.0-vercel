@@ -2,7 +2,7 @@
 'use server';
 
 import { GoogleAuth } from 'google-auth-library';
-import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part } from '@google-cloud/generative-ai';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseAdminApp, getServiceAccountCredentialsFromEnv } from '@/lib/server/firebase';
 import { AttachedFile, UserRole } from '@/types';
@@ -29,6 +29,8 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
     - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Ex: [Título](url).
     - **Visual:** Para transcrições literais, use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
     - **Jamais Responda "A resposta está no documento X".** Você DEVE abrir o documento e COPIAR o conteúdo relevante.
+
+5.  **Hierarquia e Falha:** Responda estritamente com base nos documentos. Se a resposta não estiver neles, afirme clara e diretamente que a informação não foi encontrada na base de conhecimento interna e instrua o usuário a realizar a busca na web. NÃO tente adivinhar a resposta.
 
 ### EXEMPLO DE RESPOSTA OBRIGATÓRIA PARA A QUERY DO TIPO 'COMO FAZER':
 
@@ -1387,7 +1389,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists) {
+        if (userDocSnap.exists()) {
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
