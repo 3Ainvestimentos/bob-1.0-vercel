@@ -1389,7 +1389,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists()) {
+        if (userDocSnap.exists) {
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
@@ -1424,5 +1424,3 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
     }
 }
-
-    
