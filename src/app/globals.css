@@ -10,8 +10,8 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 170 60% 45%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 220 15% 90%;
     --secondary-foreground: 220 10% 20%;
     --muted: 220 20% 94%;
@@ -22,7 +22,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 220 20% 88%;
     --input: 220 20% 88%;
-    --ring: 240 5.9% 10%;
+    --ring: 170 60% 45%;
     --chart-1: 45 93% 58%;
     --chart-2: 170 60% 50%;
     --user-bubble: 220 20% 93%;
@@ -46,8 +46,8 @@
     --card-foreground: 210 40% 98%;
     --popover: 220 13% 18%;
     --popover-foreground: 210 40% 98%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 170 60% 50%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 220 12% 22%;
     --secondary-foreground: 210 20% 90%;
     --muted: 220 13% 22%;
@@ -58,7 +58,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 220 13% 30%;
     --input: 220 13% 30%;
-    --ring: 210 40% 98%;
+    --ring: 170 60% 50%;
     --chart-1: 45 93% 58%;
     --chart-2: 170 60% 50%;
     --user-bubble: 220 13% 28%;
@@ -76,26 +76,26 @@
   }
 
   .theme-blue {
-    --primary: 210 89% 55%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 170 60% 45%;
+    --primary-foreground: 0 0% 100%;
     --user-bubble-foreground: 210 40% 98%;
   }
 
   .dark.theme-blue {
-    --primary: 210 89% 65%;
-    --primary-foreground: 220 10% 10%;
+    --primary: 170 60% 50%;
+    --primary-foreground: 0 0% 100%;
     --user-bubble-foreground: 220 10% 10%;
   }
 
   .theme-green {
-    --primary: 142 76% 36%;
-    --primary-foreground: 142 76% 96%;
+    --primary: 170 60% 45%;
+    --primary-foreground: 0 0% 100%;
     --user-bubble-foreground: 142 76% 96%;
   }
 
   .dark.theme-green {
-    --primary: 142 66% 46%;
-    --primary-foreground: 142 76% 96%;
+    --primary: 170 60% 50%;
+    --primary-foreground: 0 0% 100%;
     --user-bubble-foreground: 142 76% 96%;
   }
 
