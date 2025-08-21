@@ -48,13 +48,13 @@ export default function LoginPage() {
                     const userDocRef = doc(db, 'users', user.uid);
                     const userDocSnap = await getDoc(userDocRef);
                     
-                    if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+                    if (userDocSnap.exists && userDocSnap.data().role === 'admin') {
                         router.push('/chat');
                         return;
                     }
 
                     if (isMaintenanceMode) {
-                        if (userDocSnap.exists() && userDocSnap.data().role === 'beta') {
+                        if (userDocSnap.exists && userDocSnap.data().role === 'beta') {
                            router.push('/chat');
                         } else {
                            await signOut(auth);
