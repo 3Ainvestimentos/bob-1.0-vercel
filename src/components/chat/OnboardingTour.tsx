@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BobIcon } from '../icons/BobIcon';
+import { cn } from '@/lib/utils';
 
 const tourSteps = [
     {
@@ -54,12 +55,12 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
     const currentStep = tourSteps[stepIndex];
 
     useEffect(() => {
-        let highlightedElement: HTMLElement | null = null;
+        let animationFrameId: number;
+
         const updateElement = () => {
             if (currentStep.elementSelector) {
                 const element = document.querySelector(currentStep.elementSelector) as HTMLElement;
                 if (element) {
-                    highlightedElement = element;
                     setElementRect(element.getBoundingClientRect());
                     element.style.setProperty('z-index', '1001', 'important');
                     element.style.setProperty('position', 'relative', 'important');
@@ -70,17 +71,22 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 setElementRect(null);
             }
         };
-        
-        const timer = setTimeout(updateElement, 50);
+
+        // Schedule the update on the next animation frame
+        animationFrameId = requestAnimationFrame(updateElement);
 
         return () => {
-            clearTimeout(timer);
-            if (highlightedElement) {
-                highlightedElement.style.removeProperty('z-index');
-                highlightedElement.style.removeProperty('position');
+            cancelAnimationFrame(animationFrameId);
+            if (currentStep.elementSelector) {
+                const element = document.querySelector(currentStep.elementSelector) as HTMLElement;
+                if (element) {
+                    element.style.removeProperty('z-index');
+                    element.style.removeProperty('position');
+                }
             }
         };
     }, [stepIndex, currentStep.elementSelector]);
+
 
     const handleNext = () => {
         if (stepIndex < tourSteps.length - 1) {
@@ -98,27 +104,27 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
 
     const highlightStyle = useMemo(() => {
         const padding = 10;
-        const rect = elementRect || { top: 0, left: 0, width: 0, height: 0 };
+        const rect = elementRect || { top: 0, left: 0, width: 0, height: 0, right: 0, bottom: 0 };
         
-        if (!elementRect) {
-             return {
-                width: `0px`,
-                height: `0px`,
-                top: `50%`,
-                left: `50%`,
-                boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.6)`,
-                transform: 'translate(-50%, -50%)',
-             };
-        }
-
-        return {
+        const style: React.CSSProperties = {
             width: `${rect.width + padding * 2}px`,
             height: `${rect.height + padding * 2}px`,
             top: `${rect.top - padding}px`,
             left: `${rect.left - padding}px`,
             boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.6)`,
             borderRadius: '0.75rem',
+            transition: 'top 0.3s ease-in-out, left 0.3s ease-in-out, width 0.3s ease-in-out, height 0.3s ease-in-out',
         };
+
+        if (!elementRect) {
+            style.width = '0px';
+            style.height = '0px';
+            style.top = '50%';
+            style.left = '50%';
+        }
+        
+        return style;
+
     }, [elementRect]);
     
     const popoverPositionStyle = useMemo(() => {
@@ -138,7 +144,6 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
         switch (currentStep.position) {
             case 'right':
                 if (elementRect.right + popoverWidth + padding > window.innerWidth) {
-                    // Se não couber à direita, coloque à esquerda
                     finalPosition = { top: elementRect.top, left: elementRect.left - padding, transform: 'translateX(-100%)' };
                 } else {
                     finalPosition = { top: elementRect.top, left: elementRect.right + padding };
@@ -165,12 +170,14 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
     return (
         <div className="fixed inset-0 z-[1000]">
             <div
-                className="absolute pointer-events-none transition-all duration-300 ease-in-out"
+                className="absolute pointer-events-none"
                 style={highlightStyle}
             />
 
             <div
-                className={`absolute z-[1002] w-80 max-w-sm bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out overflow-hidden rounded-lg`}
+                className={cn("absolute z-[1002] w-80 max-w-sm bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out overflow-hidden",
+                   "rounded-lg"
+                )}
                 style={popoverPositionStyle}
             >
                 <div className="p-6 space-y-4">
@@ -190,7 +197,8 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                         )}
                         <Button 
                             onClick={handleNext} 
-                            className="h-8 bg-[hsl(var(--chart-2))] text-black hover:bg-[hsl(var(--chart-2))] hover:opacity-90"
+                            className="h-8 text-black hover:opacity-90"
+                            style={{ backgroundColor: 'hsl(var(--chart-2))', color: 'black' }}
                         >
                             {stepIndex === tourSteps.length - 1 ? 'Finalizar' : 'Próximo'}
                             {stepIndex < tourSteps.length - 1 && <ChevronRight className="ml-1 h-4 w-4" />}
