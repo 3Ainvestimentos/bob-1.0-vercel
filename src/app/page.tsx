@@ -45,24 +45,30 @@ export default function LoginPage() {
         if (user && user.email) {
             const handleUserLogin = async () => {
                 try {
-                    const userDocRef = doc(db, 'users', user.uid);
-                    const userDocSnap = await getDoc(userDocRef);
-                    
-                    if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
-                        router.push('/chat');
+                    const validationResult = await validateAndOnboardUser(user.uid, user.email, user.displayName);
+
+                    if (!validationResult.success) {
+                        await signOut(auth);
+                        toast({
+                            variant: 'destructive',
+                            title: 'Acesso Negado',
+                            description: validationResult.error || 'Você não tem permissão para acessar o sistema.',
+                        });
                         return;
                     }
 
+                    const userRole = validationResult.role;
+
                     if (isMaintenanceMode) {
-                        if (userDocSnap.exists() && userDocSnap.data().role === 'beta') {
-                           router.push('/chat');
+                        if (userRole === 'admin' || userRole === 'beta') {
+                            router.push('/chat');
                         } else {
-                           await signOut(auth);
-                           toast({
-                               variant: 'destructive',
-                               title: 'Acesso Negado',
-                               description: 'O sistema está em manutenção. Apenas usuários beta e administradores podem acessar.',
-                           });
+                            await signOut(auth);
+                            toast({
+                                variant: 'destructive',
+                                title: 'Acesso Negado',
+                                description: 'O sistema está em manutenção. Apenas usuários beta e administradores podem acessar.',
+                            });
                         }
                     } else {
                         router.push('/chat');
@@ -73,7 +79,7 @@ export default function LoginPage() {
                     toast({
                         variant: 'destructive',
                         title: 'Erro de Autenticação',
-                        description: `Ocorreu um erro inesperado: ${'' + err.message}`,
+                        description: `Ocorreu um erro inesperado: ${err.message}`,
                     });
                 }
             };
