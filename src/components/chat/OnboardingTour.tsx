@@ -10,7 +10,7 @@ const tourSteps = [
     {
         title: "Bem-vindo ao Bob!",
         content: "Sou seu novo assistente de IA. Deixe-me mostrar rapidamente como posso te ajudar a otimizar seu trabalho.",
-        elementSelector: null, // No element for the welcome step
+        elementSelector: null,
     },
     {
         elementSelector: '#new-buttons-container',
@@ -39,7 +39,7 @@ const tourSteps = [
     {
         title: "Pronto para Começar!",
         content: "É isso! Agora você está pronto para explorar todo o potencial do Bob. Se tiver dúvidas, clique em 'Guias e FAQ' no menu.",
-        elementSelector: null, // No element for the final step
+        elementSelector: null, 
     },
 ];
 
@@ -56,15 +56,21 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
 
     useEffect(() => {
         const updateElement = () => {
+            // Clear previous highlight
+            if (highlightedElement) {
+                highlightedElement.style.removeProperty('z-index');
+                highlightedElement.style.removeProperty('position');
+            }
+
             if (currentStep.elementSelector) {
                 const element = document.querySelector(currentStep.elementSelector) as HTMLElement;
                 if (element) {
                     setHighlightedElement(element);
                     setElementRect(element.getBoundingClientRect());
+                    // Elevate the element above the dark overlay
                     element.style.setProperty('z-index', '1001', 'important');
                     element.style.setProperty('position', 'relative', 'important');
                 } else {
-                    // If element not found, move to the next step
                     handleNext();
                 }
             } else {
@@ -73,7 +79,6 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
             }
         };
 
-        // Give the DOM a moment to update before trying to find the element
         const timer = setTimeout(updateElement, 150);
 
         return () => {
@@ -83,6 +88,7 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 highlightedElement.style.removeProperty('position');
             }
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stepIndex, currentStep.elementSelector]);
 
     const handleNext = () => {
@@ -100,14 +106,18 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
     };
 
     const highlightStyle = useMemo(() => {
-        if (!elementRect) return {};
+        if (!elementRect) {
+            // When no element is highlighted, we don't need a hole.
+            return {};
+        }
         const padding = 10;
         return {
             width: `${elementRect.width + padding * 2}px`,
             height: `${elementRect.height + padding * 2}px`,
             top: `${elementRect.top - padding}px`,
             left: `${elementRect.left - padding}px`,
-            boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.6)`,
+            // This creates the "hole" by clearing the shadow from this area
+            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
             borderRadius: '0.75rem',
         };
     }, [elementRect]);
@@ -133,11 +143,16 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
 
     return (
         <div className="fixed inset-0 z-[1000] transition-opacity duration-300">
-            {/* Highlighted element area */}
+            {/* The dark overlay is now part of the main container or managed by the highlight */}
+            {/* The element below creates the "hole" in the overlay */}
             <div
                 className="absolute pointer-events-none transition-all duration-300 ease-in-out"
-                style={elementRect ? highlightStyle : {}}
+                style={highlightStyle}
             />
+            {/* If no element is highlighted, we still need the dark overlay */}
+            {!elementRect && (
+                <div className="absolute inset-0 bg-black/60" />
+            )}
 
             {/* Popover content */}
             <div
