@@ -98,7 +98,19 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
 
     const highlightStyle = useMemo(() => {
         const padding = 10;
-        const rect = elementRect || { top: -padding, left: -padding, width: 0, height: 0 };
+        const rect = elementRect || { top: 0, left: 0, width: 0, height: 0 };
+        
+        if (!elementRect) {
+             return {
+                width: `0px`,
+                height: `0px`,
+                top: `50%`,
+                left: `50%`,
+                boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.6)`,
+                transform: 'translate(-50%, -50%)',
+             };
+        }
+
         return {
             width: `${rect.width + padding * 2}px`,
             height: `${rect.height + padding * 2}px`,
@@ -118,20 +130,35 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
             };
         }
         
-        const padding = 20; // Increased padding
+        const padding = 20;
+        const popoverWidth = 320; // Corresponde a w-80
+
+        let finalPosition: React.CSSProperties = {};
+
         switch (currentStep.position) {
             case 'right':
-                return { top: elementRect.top, left: elementRect.right + padding };
+                if (elementRect.right + popoverWidth + padding > window.innerWidth) {
+                    // Se não couber à direita, coloque à esquerda
+                    finalPosition = { top: elementRect.top, left: elementRect.left - padding, transform: 'translateX(-100%)' };
+                } else {
+                    finalPosition = { top: elementRect.top, left: elementRect.right + padding };
+                }
+                break;
             case 'left':
-                return { top: elementRect.top, left: elementRect.left - padding, transform: 'translateX(-100%)' };
+                finalPosition = { top: elementRect.top, left: elementRect.left - padding, transform: 'translateX(-100%)' };
+                break;
             case 'bottom':
-                return { top: elementRect.bottom + padding, left: elementRect.left };
+                finalPosition = { top: elementRect.bottom + padding, left: elementRect.left };
+                break;
             case 'top-end':
-                return { top: elementRect.top - padding, left: elementRect.right, transform: 'translate(-100%, -100%)' };
+                finalPosition = { top: elementRect.top - padding, left: elementRect.right, transform: 'translate(-100%, -100%)' };
+                break;
             case 'top':
             default:
-                return { top: elementRect.top - padding, left: elementRect.left, transform: 'translateY(-100%)' };
+                finalPosition = { top: elementRect.top - padding, left: elementRect.left, transform: 'translateY(-100%)' };
+                break;
         }
+        return finalPosition;
     }, [elementRect, currentStep.position]);
 
 
