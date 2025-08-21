@@ -468,9 +468,6 @@ export function ChatInputForm({
                                                 <p className="text-xs text-muted-foreground">{option.description}</p>
                                             </div>
                                         </div>
-                                        {searchSource === key && (
-                                            <CheckCircle2 className="h-5 w-5 text-primary" />
-                                        )}
                                     </div>
                                 </SelectItem>
                             ))}
@@ -560,5 +557,3 @@ export function ChatInputForm({
     </div>
   );
 }
-
-    
