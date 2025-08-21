@@ -1376,9 +1376,6 @@ export default function ChatPageContent() {
       .substring(0, 2)
       .toUpperCase() ?? 'U';
 
-  const canShowChat = isAuthenticated && !showTermsDialog && !showOnboarding;
-
-
   return (
     <SidebarProvider>
         <div 
@@ -1582,7 +1579,7 @@ export default function ChatPageContent() {
 
         {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
 
-        {canShowChat && (
+        {isAuthenticated && !showTermsDialog && (
         <>
             <Sidebar>
                 <ChatSidebar
