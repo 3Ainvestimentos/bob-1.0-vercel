@@ -61,6 +61,7 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 if (element) {
                     highlightedElement = element;
                     setElementRect(element.getBoundingClientRect());
+                    // Ensure the highlighted element is above the overlay's shadow
                     element.style.setProperty('z-index', '1001', 'important');
                     element.style.setProperty('position', 'relative', 'important');
                 } else {
@@ -70,12 +71,14 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 setElementRect(null);
             }
         };
-
+        
+        // Delay to allow the UI to render before getting the element's position
         const timer = setTimeout(updateElement, 50);
 
         return () => {
             clearTimeout(timer);
             if (highlightedElement) {
+                // Cleanup styles when the element is no longer highlighted
                 highlightedElement.style.removeProperty('z-index');
                 highlightedElement.style.removeProperty('position');
             }
@@ -106,7 +109,7 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
             left: `${rect.left - padding}px`,
             boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.6)`,
             borderRadius: '0.75rem',
-            opacity: elementRect ? 1 : 0,
+            opacity: 1, // Always visible to maintain the dark overlay
         };
     }, [elementRect]);
     
@@ -120,46 +123,32 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
         }
         
         const padding = 10;
-        const popoverRect = { width: 320, height: 180 }; // Approx popover size
-        let top = 0, left = 0;
-
         switch (currentStep.position) {
             case 'right':
-                top = elementRect.top + elementRect.height / 2;
-                left = elementRect.right + padding;
-                return { top, left, transform: 'translateY(-50%)' };
+                return { top: elementRect.top + elementRect.height / 2, left: elementRect.right + padding, transform: 'translateY(-50%)' };
             case 'left':
-                top = elementRect.top + elementRect.height / 2;
-                left = elementRect.left - padding;
-                return { top, left, transform: 'translate(-100%, -50%)' };
+                return { top: elementRect.top + elementRect.height / 2, left: elementRect.left - padding, transform: 'translate(-100%, -50%)' };
             case 'bottom':
-                top = elementRect.bottom + padding;
-                left = elementRect.left + elementRect.width / 2;
-                return { top, left, transform: 'translateX(-50%)' };
+                return { top: elementRect.bottom + padding, left: elementRect.left + elementRect.width / 2, transform: 'translateX(-50%)' };
             case 'top-end':
-                top = elementRect.top - padding;
-                left = elementRect.right;
-                return { top, left, transform: 'translate(-100%, -100%)' };
+                return { top: elementRect.top - padding, left: elementRect.right, transform: 'translate(-100%, -100%)' };
             case 'top':
             default:
-                top = elementRect.top - padding;
-                left = elementRect.left + elementRect.width / 2;
-                return { top, left, transform: 'translate(-50%, -100%)' };
+                return { top: elementRect.top - padding, left: elementRect.left + elementRect.width / 2, transform: 'translate(-50%, -100%)' };
         }
     }, [elementRect, currentStep.position]);
 
 
     return (
         <div className="fixed inset-0 z-[1000]">
-            <div className="absolute inset-0 bg-black/60 transition-opacity duration-300" />
             <div
-                className="absolute pointer-events-none transition-all duration-300 ease-in-out"
+                className="absolute transition-all duration-300 ease-in-out pointer-events-none"
                 style={highlightStyle}
             />
 
             <div
-                className={`absolute z-[1002] w-80 max-w-sm rounded-lg bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out`}
-                style={{ ...popoverPositionStyle }}
+                className={`absolute z-[1002] w-80 max-w-sm bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out rounded-lg overflow-hidden`}
+                style={popoverPositionStyle}
             >
                 <div className="p-6 space-y-4">
                     <div className="flex items-center gap-3">
@@ -168,7 +157,7 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                     </div>
                     <p className="text-sm text-muted-foreground">{currentStep.content}</p>
                 </div>
-                <div className="flex items-center justify-between px-6 py-4 bg-muted/50 rounded-b-lg">
+                <div className="flex items-center justify-between px-6 py-4 bg-muted/50">
                     <Button variant="ghost" size="sm" onClick={onFinish}>Pular</Button>
                     <div className="flex items-center gap-2">
                         {stepIndex > 0 && (
