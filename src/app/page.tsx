@@ -47,40 +47,36 @@ export default function LoginPage() {
                 try {
                     const validationResult = await validateAndOnboardUser(user.uid, user.email, user.displayName);
 
-                    if (!validationResult.success) {
-                        await signOut(auth);
+                    if (!validationResult.success || !validationResult.role) {
                         toast({
                             variant: 'destructive',
                             title: 'Acesso Negado',
                             description: validationResult.error || 'Você não tem permissão para acessar o sistema.',
                         });
+                        await signOut(auth);
+                        return;
+                    }
+                    
+                    if (isMaintenanceMode && validationResult.role !== 'admin' && validationResult.role !== 'beta') {
+                        toast({
+                            variant: 'destructive',
+                            title: 'Acesso Negado',
+                            description: 'O sistema está em manutenção. Apenas usuários beta e administradores podem acessar.',
+                        });
+                        await signOut(auth);
                         return;
                     }
 
-                    const userRole = validationResult.role;
-
-                    if (isMaintenanceMode) {
-                        if (userRole === 'admin' || userRole === 'beta') {
-                            router.push('/chat');
-                        } else {
-                            await signOut(auth);
-                            toast({
-                                variant: 'destructive',
-                                title: 'Acesso Negado',
-                                description: 'O sistema está em manutenção. Apenas usuários beta e administradores podem acessar.',
-                            });
-                        }
-                    } else {
-                        router.push('/chat');
-                    }
+                    // If all checks pass, redirect to chat
+                    router.push('/chat');
 
                 } catch (err: any) {
-                    await signOut(auth);
                     toast({
                         variant: 'destructive',
                         title: 'Erro de Autenticação',
                         description: `Ocorreu um erro inesperado: ${err.message}`,
                     });
+                    await signOut(auth);
                 }
             };
             handleUserLogin();
