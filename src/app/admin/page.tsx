@@ -190,7 +190,7 @@ export default function AdminPage() {
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
 
-            if (userDocSnap.exists && userDocSnap.data()?.role === 'admin') {
+            if (userDocSnap.exists() && userDocSnap.data()?.role === 'admin') {
                 setIsAuthorized(true);
                 fetchAdminData();
             } else {
