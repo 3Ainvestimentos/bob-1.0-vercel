@@ -61,7 +61,6 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 if (element) {
                     highlightedElement = element;
                     setElementRect(element.getBoundingClientRect());
-                    // Ensure the highlighted element is above the overlay's shadow
                     element.style.setProperty('z-index', '1001', 'important');
                     element.style.setProperty('position', 'relative', 'important');
                 } else {
@@ -72,13 +71,11 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
             }
         };
         
-        // Delay to allow the UI to render before getting the element's position
         const timer = setTimeout(updateElement, 50);
 
         return () => {
             clearTimeout(timer);
             if (highlightedElement) {
-                // Cleanup styles when the element is no longer highlighted
                 highlightedElement.style.removeProperty('z-index');
                 highlightedElement.style.removeProperty('position');
             }
@@ -109,7 +106,6 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
             left: `${rect.left - padding}px`,
             boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.6)`,
             borderRadius: '0.75rem',
-            opacity: 1, // Always visible to maintain the dark overlay
         };
     }, [elementRect]);
     
@@ -122,19 +118,19 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
             };
         }
         
-        const padding = 10;
+        const padding = 20; // Increased padding
         switch (currentStep.position) {
             case 'right':
-                return { top: elementRect.top + elementRect.height / 2, left: elementRect.right + padding, transform: 'translateY(-50%)' };
+                return { top: elementRect.top, left: elementRect.right + padding };
             case 'left':
-                return { top: elementRect.top + elementRect.height / 2, left: elementRect.left - padding, transform: 'translate(-100%, -50%)' };
+                return { top: elementRect.top, left: elementRect.left - padding, transform: 'translateX(-100%)' };
             case 'bottom':
-                return { top: elementRect.bottom + padding, left: elementRect.left + elementRect.width / 2, transform: 'translateX(-50%)' };
+                return { top: elementRect.bottom + padding, left: elementRect.left };
             case 'top-end':
                 return { top: elementRect.top - padding, left: elementRect.right, transform: 'translate(-100%, -100%)' };
             case 'top':
             default:
-                return { top: elementRect.top - padding, left: elementRect.left + elementRect.width / 2, transform: 'translate(-50%, -100%)' };
+                return { top: elementRect.top - padding, left: elementRect.left, transform: 'translateY(-100%)' };
         }
     }, [elementRect, currentStep.position]);
 
@@ -142,12 +138,12 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
     return (
         <div className="fixed inset-0 z-[1000]">
             <div
-                className="absolute transition-all duration-300 ease-in-out pointer-events-none"
+                className="absolute pointer-events-none transition-all duration-300 ease-in-out"
                 style={highlightStyle}
             />
 
             <div
-                className={`absolute z-[1002] w-80 max-w-sm bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out rounded-lg overflow-hidden`}
+                className={`absolute z-[1002] w-80 max-w-sm bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out overflow-hidden rounded-lg`}
                 style={popoverPositionStyle}
             >
                 <div className="p-6 space-y-4">
@@ -165,7 +161,10 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
                         )}
-                        <Button onClick={handleNext} className="h-8">
+                        <Button 
+                            onClick={handleNext} 
+                            className="h-8 bg-[hsl(var(--chart-2))] text-black hover:bg-[hsl(var(--chart-2))] hover:opacity-90"
+                        >
                             {stepIndex === tourSteps.length - 1 ? 'Finalizar' : 'Próximo'}
                             {stepIndex < tourSteps.length - 1 && <ChevronRight className="ml-1 h-4 w-4" />}
                         </Button>
