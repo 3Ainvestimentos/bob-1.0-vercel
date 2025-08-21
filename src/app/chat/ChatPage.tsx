@@ -606,14 +606,14 @@ export default function ChatPageContent() {
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
         const userData = userDocSnap.data();
+        
+        await fetchSidebarData();
 
         if (userData?.termsAccepted !== true) {
             setShowTermsDialog(true);
         } else if (userData?.hasCompletedOnboarding !== true) {
-            setShowOnboarding(true);
-            fetchSidebarData();
-        } else {
-            fetchSidebarData();
+             // Use a timeout to ensure the UI has rendered before starting the tour
+             setTimeout(() => setShowOnboarding(true), 150);
         }
 
       } catch (err: any) {
@@ -708,11 +708,13 @@ export default function ChatPageContent() {
   
       if (!currentChatId) {
         const tempTitle = await generateTitleForConversation(deidentifiedQuery, fileNames.join(', '));
-        const newId = await saveConversation(user.uid, [userMessage], null, { newChatTitle: tempTitle });
+        const newId = await saveConversation(user.uid, currentMessages, null, { newChatTitle: tempTitle });
         currentChatId = newId;
         const newFullChat = await getFullConversation(user.uid, newId);
         setActiveChat(newFullChat);
         await fetchSidebarData();
+      } else {
+        await saveConversation(user.uid, currentMessages, currentChatId);
       }
   
       if (filesToUpload.length > 0) {
@@ -1308,9 +1310,9 @@ export default function ChatPageContent() {
             
             const userDocSnap = await getDoc(userDocRef);
             if (userDocSnap.exists() && userDocSnap.data()?.hasCompletedOnboarding !== true) {
-                setShowOnboarding(true);
+                // Use a timeout to ensure the UI has rendered before starting the tour
+                setTimeout(() => setShowOnboarding(true), 150);
             }
-             fetchSidebarData();
         } catch (error: any) {
             toast({
                 variant: 'destructive',
