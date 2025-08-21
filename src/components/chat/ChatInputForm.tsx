@@ -13,7 +13,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { SearchSource } from '@/app/chat/ChatPage';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectSeparator } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectSeparator, SelectGroup } from '@/components/ui/select';
 
 const CustomSoundWave = ({ analyser, isVisible }: { analyser: AnalyserNode | null, isVisible: boolean }) => {
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -455,24 +455,26 @@ export function ChatInputForm({
                         </div>
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectLabel>Escolha a fonte da busca</SelectLabel>
-                        <SelectSeparator />
-                        {Object.entries(searchOptions).map(([key, option]) => (
-                            <SelectItem key={key} value={key} className="focus:bg-accent focus:text-accent-foreground">
-                                <div className="flex items-center justify-between w-full">
-                                    <div className="flex items-center gap-3">
-                                        <option.icon className="h-5 w-5 text-muted-foreground" />
-                                        <div className="flex flex-col items-start">
-                                            <p className="font-semibold">{option.title}</p>
-                                            <p className="text-xs text-muted-foreground">{option.description}</p>
+                        <SelectGroup>
+                            <SelectLabel>Escolha a fonte da busca</SelectLabel>
+                            <SelectSeparator />
+                            {Object.entries(searchOptions).map(([key, option]) => (
+                                <SelectItem key={key} value={key} className="focus:bg-accent focus:text-accent-foreground">
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-3">
+                                            <option.icon className="h-5 w-5 text-muted-foreground" />
+                                            <div className="flex flex-col items-start">
+                                                <p className="font-semibold">{option.title}</p>
+                                                <p className="text-xs text-muted-foreground">{option.description}</p>
+                                            </div>
                                         </div>
+                                        {searchSource === key && (
+                                            <CheckCircle2 className="h-5 w-5 text-primary" />
+                                        )}
                                     </div>
-                                    {searchSource === key && (
-                                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                                    )}
-                                </div>
-                            </SelectItem>
-                        ))}
+                                </SelectItem>
+                            ))}
+                        </SelectGroup>
                     </SelectContent>
                 </Select>
             </div>
@@ -558,3 +560,5 @@ export function ChatInputForm({
     </div>
   );
 }
+
+    
