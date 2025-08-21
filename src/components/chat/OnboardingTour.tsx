@@ -139,9 +139,6 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 style={elementRect ? highlightStyle : {}}
             />
 
-             {/* Dark overlay for steps without a highlighted element */}
-            {!elementRect && <div className="absolute inset-0 bg-black/60" />}
-
             {/* Popover content */}
             <div
                 className={`absolute z-[1002] w-80 max-w-sm rounded-lg bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out ${popoverPositionClass}`}
