@@ -7,13 +7,13 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { File, Mic, Paperclip, SendHorizontal, X, Lock, Trash2, Square, Loader2, Database, Globe } from 'lucide-react';
+import { File, Mic, Paperclip, SendHorizontal, X, Lock, Trash2, Square, Loader2, Database, Globe, CheckCircle2 } from 'lucide-react';
 import React, { FormEvent, useCallback, useRef, useState, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { SearchSource } from '@/app/chat/ChatPage';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectSeparator } from '@/components/ui/select';
 
 const CustomSoundWave = ({ analyser, isVisible }: { analyser: AnalyserNode | null, isVisible: boolean }) => {
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -90,6 +90,21 @@ interface ChatInputFormProps {
   setSelectedFiles: (files: File[]) => void;
   searchSource: SearchSource;
   setSearchSource: (source: SearchSource) => void;
+}
+
+const searchOptions = {
+    rag: {
+        label: "Base de Dados",
+        icon: Database,
+        title: "Base de Dados 3A RIVA",
+        description: "Respostas seguras com dados internos."
+    },
+    web: {
+        label: "Web",
+        icon: Globe,
+        title: "Pesquisa na Web",
+        description: "Informações atualizadas e de mercado."
+    }
 }
 
 export function ChatInputForm({
@@ -431,26 +446,35 @@ export function ChatInputForm({
                     )}
                 </div>
             </div>
-            <div id="search-source-selector" className="flex items-center gap-2 pr-2">
-              <Select value={searchSource} onValueChange={(value) => setSearchSource(value as SearchSource)} disabled={isLoading}>
-                <SelectTrigger className="w-[180px] h-8 text-xs focus:ring-0 focus:ring-offset-0">
-                    <SelectValue placeholder="Selecione a fonte..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="rag">
-                        <div className='flex items-center gap-2'>
-                           <Database className="h-4 w-4 text-muted-foreground" />
-                           <span>Base de Dados 3A RIVA</span>
+             <div id="search-source-selector" className="flex items-center gap-2 pr-2">
+                <Select value={searchSource} onValueChange={(value) => setSearchSource(value as SearchSource)} disabled={isLoading}>
+                    <SelectTrigger className="w-auto h-8 text-xs focus:ring-0 focus:ring-offset-0 bg-secondary text-secondary-foreground border-none">
+                        <div className="flex items-center gap-2">
+                            {React.createElement(searchOptions[searchSource].icon, { className: "h-4 w-4" })}
+                            <span>{searchOptions[searchSource].label}</span>
                         </div>
-                    </SelectItem>
-                    <SelectItem value="web">
-                         <div className='flex items-center gap-2'>
-                           <Globe className="h-4 w-4 text-muted-foreground" />
-                           <span>Pesquisa na Web</span>
-                        </div>
-                    </SelectItem>
-                </SelectContent>
-              </Select>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectLabel>Escolha a fonte da busca</SelectLabel>
+                        <SelectSeparator />
+                        {Object.entries(searchOptions).map(([key, option]) => (
+                            <SelectItem key={key} value={key} className="focus:bg-accent focus:text-accent-foreground">
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-3">
+                                        <option.icon className="h-5 w-5 text-muted-foreground" />
+                                        <div className="flex flex-col items-start">
+                                            <p className="font-semibold">{option.title}</p>
+                                            <p className="text-xs text-muted-foreground">{option.description}</p>
+                                        </div>
+                                    </div>
+                                    {searchSource === key && (
+                                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                                    )}
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
         </div>
     );
