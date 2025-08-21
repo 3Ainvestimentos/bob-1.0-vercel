@@ -72,7 +72,6 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
             }
         };
 
-        // Schedule the update on the next animation frame
         animationFrameId = requestAnimationFrame(updateElement);
 
         return () => {
@@ -117,10 +116,8 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
         };
 
         if (!elementRect) {
-            style.width = '0px';
-            style.height = '0px';
-            style.top = '50%';
-            style.left = '50%';
+            style.opacity = 0;
+            style.pointerEvents = 'none';
         }
         
         return style;
@@ -137,16 +134,20 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
         }
         
         const padding = 20;
-        const popoverWidth = 320; // Corresponde a w-80
+        const popoverWidth = 320; 
 
         let finalPosition: React.CSSProperties = {};
 
         switch (currentStep.position) {
             case 'right':
+                const isSecondStep = stepIndex === 1;
+                const topPosition = isSecondStep ? elementRect.bottom : elementRect.top;
+                const transformY = isSecondStep ? 'translateY(-100%)' : 'translateY(0)';
+                
                 if (elementRect.right + popoverWidth + padding > window.innerWidth) {
-                    finalPosition = { top: elementRect.top, left: elementRect.left - padding, transform: 'translateX(-100%)' };
+                    finalPosition = { top: topPosition, left: elementRect.left - padding, transform: `translateX(-100%) ${transformY}` };
                 } else {
-                    finalPosition = { top: elementRect.top, left: elementRect.right + padding };
+                    finalPosition = { top: topPosition, left: elementRect.right + padding, transform: transformY };
                 }
                 break;
             case 'left':
@@ -164,19 +165,19 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                 break;
         }
         return finalPosition;
-    }, [elementRect, currentStep.position]);
+    }, [elementRect, currentStep.position, stepIndex]);
 
 
     return (
         <div className="fixed inset-0 z-[1000]">
+            <div className="fixed inset-0 bg-black/60" />
             <div
                 className="absolute pointer-events-none"
                 style={highlightStyle}
             />
 
             <div
-                className={cn("absolute z-[1002] w-80 max-w-sm bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out overflow-hidden",
-                   "rounded-lg"
+                className={cn("absolute z-[1002] w-80 max-w-sm bg-card text-card-foreground shadow-2xl transition-all duration-300 ease-in-out overflow-hidden rounded-lg",
                 )}
                 style={popoverPositionStyle}
             >
@@ -197,7 +198,7 @@ export const OnboardingTour = ({ onFinish }: OnboardingTourProps) => {
                         )}
                         <Button 
                             onClick={handleNext} 
-                            className="h-8 text-black hover:opacity-90"
+                            className="h-8 hover:opacity-90"
                             style={{ backgroundColor: 'hsl(var(--chart-2))', color: 'black' }}
                         >
                             {stepIndex === tourSteps.length - 1 ? 'Finalizar' : 'Próximo'}
