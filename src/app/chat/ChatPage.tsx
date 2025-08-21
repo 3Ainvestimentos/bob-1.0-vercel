@@ -1612,7 +1612,7 @@ export default function ChatPageContent() {
                         <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                             <PopoverTrigger asChild>
                                 <button 
-                                className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+                                className="cursor-pointer transition-opacity hover:opacity-100 opacity-80"
                                 aria-label="Saudação do Bob"
                                 disabled={messages.length > 0}
                                 >
@@ -1622,7 +1622,7 @@ export default function ChatPageContent() {
                             <PopoverContent
                                 side="left"
                                 align="center"
-                                className="w-auto max-w-xs text-sm bg-chart-2 text-black shadow-lg border-none rounded-xl"
+                                className="w-auto max-w-xs text-sm bg-chart-2 text-white shadow-lg border-none rounded-xl"
                             >
                             <GreetingPopoverContent onOpenChange={setIsGreetingPopoverOpen} />
                             <PopoverArrow className="fill-chart-2" />
