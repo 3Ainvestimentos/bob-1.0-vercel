@@ -1612,7 +1612,10 @@ export default function ChatPageContent() {
                         <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                             <PopoverTrigger asChild>
                                 <button 
-                                className="cursor-pointer transition-opacity hover:opacity-100 opacity-80"
+                                className={cn(
+                                    'cursor-pointer transition-opacity hover:opacity-100',
+                                    messages.length > 0 ? 'opacity-0' : 'opacity-80'
+                                )}
                                 aria-label="Saudação do Bob"
                                 disabled={messages.length > 0}
                                 >
