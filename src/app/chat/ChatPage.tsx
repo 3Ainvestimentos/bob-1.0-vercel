@@ -425,7 +425,7 @@ async function deleteConversation(userId: string, chatId: string): Promise<void>
             await batch.commit();
 
         } else {
-            console.warn(`Conversation with ID ${chatId} not found to archive.`);
+            console.warn(`Conversation with ID ${'' + chatId} not found to archive.`);
         }
     } catch (error) {
         console.error("Error archiving and deleting conversation:", error);
@@ -551,7 +551,7 @@ export default function ChatPageContent() {
         return newExpanded;
       });
     } catch (err: any) {
-      setError(`Erro ao carregar o histórico: ${err.message}`);
+      setError(`Erro ao carregar o histórico: ${'' + err.message}`);
       toast({
           variant: "destructive",
           title: "Erro de Carregamento",
@@ -655,7 +655,7 @@ export default function ChatPageContent() {
             });
         }
     } catch (err: any) {
-      setError(`Erro ao carregar a conversa: ${err.message}`);
+      setError(`Erro ao carregar a conversa: ${'' + err.message}`);
       setMessages([]);
     } finally {
       setIsLoading(false);
@@ -767,7 +767,7 @@ export default function ChatPageContent() {
       await saveConversation(user.uid, finalMessages, currentChatId, { attachedFiles });
   
     } catch (err: any) {
-      const errorMessageContent = `Ocorreu um erro: ${err.message}`;
+      const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -800,7 +800,7 @@ export default function ChatPageContent() {
       setIsNewGroupDialogOpen(false);
       await fetchSidebarData();
     } catch (err: any) {
-      setError(`Erro ao criar o grupo: ${err.message}`);
+      setError(`Erro ao criar o grupo: ${'' + err.message}`);
     }
   };
 
@@ -815,7 +815,7 @@ export default function ChatPageContent() {
       );
       await updateConversationGroup(user.uid, chatId, groupId);
     } catch (err: any) {
-      setError(`Erro ao mover a conversa: ${err.message}`);
+      setError(`Erro ao mover a conversa: ${'' + err.message}`);
       fetchSidebarData();
     }
   };
@@ -831,7 +831,7 @@ export default function ChatPageContent() {
       await deleteGroup(user.uid, groupToDelete);
       await fetchSidebarData(); 
     } catch (err: any)      {
-      setError(`Erro ao excluir o grupo: ${err.message}`);
+      setError(`Erro ao excluir o grupo: ${'' + err.message}`);
     } finally {
       setIsDeleteDialogOpen(false);
       setGroupToDelete(null);
@@ -859,7 +859,7 @@ export default function ChatPageContent() {
         setNewItemName('');
         await fetchSidebarData();
     } catch (err: any) {
-        setError(`Erro ao renomear: ${err.message}`);
+        setError(`Erro ao renomear: ${'' + err.message}`);
     }
   };
 
@@ -877,7 +877,7 @@ export default function ChatPageContent() {
             handleNewChat();
         }
     } catch (err: any) {
-        setError(`Erro ao excluir a conversa: ${err.message}`);
+        setError(`Erro ao excluir a conversa: ${'' + err.message}`);
     } finally {
         setIsDeleteConvoDialogOpen(false);
         setConvoToDelete(null);
@@ -913,7 +913,7 @@ export default function ChatPageContent() {
           await setFeedback(user.uid, activeChatId, message.id, finalRating, userQuery, assistantResponse);
       } catch (err: any) {
           console.error("Error saving feedback:", err);
-          setError(`Erro ao salvar o feedback: ${err.message}`);
+          setError(`Erro ao salvar o feedback: ${'' + err.message}`);
           setFeedbacks(prev => {
               const revertedFeedbacks = { ...prev };
               if (currentRating) {
@@ -1010,7 +1010,7 @@ export default function ChatPageContent() {
 
     } catch (err: any) {
       setMessages(messages);
-      const errorMessageContent = `Ocorreu um erro: ${err.message}`;
+      const errorMessageContent = `Ocorreu um erro: ${'' + err.message}`;
       const errorMessage: Message = {
           id: crypto.randomUUID(),
           role: 'assistant',
@@ -1063,7 +1063,7 @@ export default function ChatPageContent() {
 
     } catch (err: any) {
         console.error("Error saving feedback comment:", err);
-        setError(`Erro ao salvar o comentário de feedback: ${err.message}`);
+        setError(`Erro ao salvar o comentário de feedback: ${'' + err.message}`);
     } finally {
         setIsFeedbackDialogOpen(false);
         setFeedbackDetails(null);
@@ -1150,7 +1150,7 @@ export default function ChatPageContent() {
         toast({
             variant: 'destructive',
             title: 'Erro ao Enviar',
-            description: `Não foi possível reportar o problema: ${err.message}`,
+            description: `Não foi possível reportar o problema: ${'' + err.message}`,
         });
     } finally {
         setIsLegalReportDialogOpen(false);
@@ -1317,7 +1317,7 @@ export default function ChatPageContent() {
             toast({
                 variant: 'destructive',
                 title: 'Erro',
-                description: `Não foi possível salvar sua preferência: ${error.message}`,
+                description: `Não foi possível salvar sua preferência: ${'' + error.message}`,
             });
             await handleSignOut();
         }
@@ -1608,11 +1608,7 @@ export default function ChatPageContent() {
 
             <SidebarInset>
                 <main className="flex h-full flex-1 flex-col bg-background">
-                    <div
-                        className={cn("absolute top-4 right-4 z-10 transition-opacity duration-300",
-                            messages.length > 0 ? 'opacity-0' : 'opacity-100'
-                        )}
-                    >
+                    <div className="absolute top-4 right-4 z-10">
                         <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
                             <PopoverTrigger asChild>
                                 <button 
