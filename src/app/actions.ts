@@ -67,7 +67,8 @@ Você é um assistente de extração de dados altamente preciso. Sua única tare
     -   'detractors': Na **página 5**, na seção 'Posição Detalhada dos Ativos', encontre **TODOS** os ativos cuja rentabilidade em **%CDI no MÊS** foi **inferior a 100,00% OU que seja negativa**. Agrupe-os por **classe de ativo**. Para cada um, extraia o nome do ativo ('asset') e a rentabilidade em %CDI ('cdiPercentage'). O resultado deve ser um objeto onde as chaves são as classes de ativos.
 2.  **Formato de Saída:** A resposta DEVE ser um objeto JSON válido, contendo apenas os campos listados acima. Não inclua nenhum texto, explicação, ou formatação Markdown. Apenas o JSON.
 3.  **Valores Numéricos:** Mantenha os valores exatamente como aparecem no texto (ex: "1,23%", "R$ 1.234,56").
-4.  **Precisão:** Seja extremamente preciso. Se um valor não for encontrado, retorne uma string vazia ("") ou um objeto/array vazio para aquele campo.
+4.  **Valores Nulos (Regra Importante):** Se um valor numérico for representado por parênteses, como em "(0,00)" ou " -   ", desconsidere-o. Trate-o como um valor nulo e não o inclua na lista de detratores ou destaques.
+5.  **Precisão:** Seja extremamente preciso. Se um valor não for encontrado, retorne uma string vazia ("") ou um objeto/array vazio para aquele campo.
 `;
 
 
@@ -776,7 +777,7 @@ export async function removeFileFromConversation(
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
         const chatSnap = await chatRef.get();
 
-        if (!chatSnap.exists()) {
+        if (!chatSnap.exists) {
             throw new Error("Conversation not found.");
         }
 
