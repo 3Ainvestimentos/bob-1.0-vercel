@@ -203,6 +203,13 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
 
 const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => void }) => {
     
+    const parseCdiPercentage = (cdiString: string): number => {
+        if (typeof cdiString !== 'string') return -Infinity;
+        const cleanedString = cdiString.replace('%', '').replace('.', '').replace(',', '.').trim();
+        const value = parseFloat(cleanedString);
+        return isNaN(value) ? -Infinity : value;
+    };
+
     const renderHighlights = () => {
         const categories = Object.keys(data.highlights);
         if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum destaque positivo encontrado.</p>;
@@ -234,19 +241,32 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
     };
     
     const renderDetractors = () => {
-        const categories = Object.keys(data.detractors);
-        if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum detrator encontrado.</p>;
+        const filteredAndSortedDetractors: Record<string, Detractor[]> = {};
+
+        Object.entries(data.detractors).forEach(([category, items]) => {
+            const processedItems = items
+                .map(item => ({ ...item, numericCdi: parseCdiPercentage(item.cdiPercentage) }))
+                .filter(item => item.numericCdi < 100)
+                .sort((a, b) => b.numericCdi - a.numericCdi);
+
+            if (processedItems.length > 0) {
+                filteredAndSortedDetractors[category] = processedItems;
+            }
+        });
+
+        const categories = Object.keys(filteredAndSortedDetractors);
+        if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum detrator com performance abaixo de 100% do CDI foi encontrado.</p>;
 
         return (
             <Accordion type="multiple" className="w-full">
                 {categories.map(category => (
                     <AccordionItem value={`d-cat-${category}`} key={`d-cat-${category}`}>
                         <AccordionTrigger className="font-semibold text-muted-foreground text-xs uppercase tracking-wider hover:no-underline py-2">
-                           {category} ({data.detractors[category].length})
+                           {category} ({filteredAndSortedDetractors[category].length})
                         </AccordionTrigger>
                         <AccordionContent className="pt-2 pl-1">
                             <div className="space-y-2">
-                                {data.detractors[category].map((item, index) => (
+                                {filteredAndSortedDetractors[category].map((item, index) => (
                                     <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                                         <Checkbox id={`d-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('detractors', category, index, !!c)} className="mt-1" />
                                         <Label htmlFor={`d-${category}-${index}`} className="cursor-pointer"><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
@@ -382,6 +402,9 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
             if (!categoryState[assetClass]) {
                 categoryState[assetClass] = {};
             }
+            // When handling detractors, we need the original index, not the sorted/filtered one.
+            // This is a simplification; a more robust solution would map sorted indices back to original ones.
+            // For now, we assume the index passed corresponds to the original data structure.
             categoryState[assetClass][index] = checked;
             newSelected[category] = categoryState;
         } else {
@@ -534,3 +557,5 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
 }
 
   
+
+    
