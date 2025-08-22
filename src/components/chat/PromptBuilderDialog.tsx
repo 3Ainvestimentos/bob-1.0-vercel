@@ -46,7 +46,7 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const newFiles = e.target.files;
         if (!newFiles) return;
 
@@ -104,6 +104,7 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+             <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple />
             <div 
                 className={cn("flex flex-col border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors",
                     isDraggingOver && "border-primary bg-primary/10"
@@ -112,7 +113,6 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
             >
-                 <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} multiple />
                 {selectedFiles.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full">
                         <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
@@ -452,7 +452,7 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
         </div>
 
         {phase === 'selection' && (
-            <DialogFooter className="p-6 pt-4 border-t mt-auto bg-background sticky bottom-0">
+            <DialogFooter className="p-6 pt-4 border-t bg-background shrink-0">
                 <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
                 <Button type="button" onClick={handleGeneratePrompt} disabled={phase !== 'selection' || Object.values(selectedFields).every(v => typeof v === 'boolean' ? !v : Object.values(v).every(subV => !subV))}>
                     <MessageSquareQuote className="mr-2 h-4 w-4" />
