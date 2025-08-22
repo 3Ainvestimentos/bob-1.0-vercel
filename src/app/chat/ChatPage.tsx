@@ -84,6 +84,7 @@ import { Label } from '@/components/ui/label';
 import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { OnboardingTour } from '@/components/chat/OnboardingTour';
+import { PromptBuilderDialog } from '@/components/chat/PromptBuilderDialog';
 
 
 // ---- Data Types ----
@@ -507,6 +508,8 @@ export default function ChatPageContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const [searchSource, setSearchSource] = useState<SearchSource>('rag');
+  const [isPromptBuilderOpen, setIsPromptBuilderOpen] = useState(false);
+
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -782,9 +785,14 @@ export default function ChatPageContent() {
   
   
   const handleSuggestionClick = (suggestion: string) => {
-    setInput(suggestion);
-    inputRef.current?.focus();
+      if (suggestion === 'open_prompt_builder') {
+          setIsPromptBuilderOpen(true);
+          return;
+      }
+      setInput(suggestion);
+      inputRef.current?.focus();
   };
+
   
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -1343,6 +1351,12 @@ export default function ChatPageContent() {
         }
     };
 
+    const handlePromptGenerated = (prompt: string) => {
+        setInput(prompt);
+        setIsPromptBuilderOpen(false);
+        setTimeout(() => inputRef.current?.focus(), 100);
+    };
+
 
   if (authLoading || isCheckingTerms) {
     return (
@@ -1579,6 +1593,12 @@ export default function ChatPageContent() {
 
         {showOnboarding && <OnboardingTour onFinish={handleFinishOnboarding} />}
 
+        <PromptBuilderDialog
+            open={isPromptBuilderOpen}
+            onOpenChange={setIsPromptBuilderOpen}
+            onPromptGenerated={handlePromptGenerated}
+        />
+
         {isAuthenticated && !showTermsDialog && (
         <>
             <Sidebar>
@@ -1650,6 +1670,7 @@ export default function ChatPageContent() {
                     onOpenFeedbackDialog={handleOpenFeedbackDialog}
                     onWebSearch={() => {}} // This is now handled by the source switch
                     onSuggestionClick={handleSuggestionClick}
+                    onOpenPromptBuilder={() => setIsPromptBuilderOpen(true)}
                     activeChat={activeChat}
                     onRemoveFile={handleRemoveFile}
                     />
@@ -1673,3 +1694,5 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
+
+    
