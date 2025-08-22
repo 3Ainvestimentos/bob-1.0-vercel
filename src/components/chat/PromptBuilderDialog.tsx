@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { extractDataFromXpReport } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, Building, BarChart, TrendingUp, TrendingDown, Star, MessageSquareQuote } from 'lucide-react';
+import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, Building, BarChart, TrendingUp, TrendingDown, Star, MessageSquareQuote, CalendarDays } from 'lucide-react';
 import { Separator } from '../ui/separator';
 
 interface PromptBuilderDialogProps {
@@ -19,6 +19,7 @@ interface PromptBuilderDialogProps {
 }
 
 type ExtractedData = {
+    reportMonth: string;
     monthlyReturn: string;
     monthlyCdi: string;
     monthlyGain: string;
@@ -106,7 +107,7 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: P
     if (!extractedData) return;
 
     let promptParts: string[] = [];
-    promptParts.push("Com base nos seguintes dados extraídos de um relatório de performance da XP:");
+    promptParts.push(`Com base nos seguintes dados do mês de ${extractedData.reportMonth}, extraídos de um relatório de performance da XP:`);
 
     if (selectedFields.monthlyReturn) promptParts.push(`- Rentabilidade do Mês: ${extractedData.monthlyReturn}`);
     if (selectedFields.monthlyCdi) promptParts.push(`- Performance vs. CDI no Mês: ${extractedData.monthlyCdi}`);
@@ -186,6 +187,14 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: P
 
             {phase === 'selection' && extractedData && (
                 <div className="space-y-6">
+                    {extractedData.reportMonth && (
+                        <div className="flex items-center gap-2 text-muted-foreground bg-muted p-3 rounded-lg">
+                            <CalendarDays className="h-5 w-5" />
+                            <h3 className="text-base font-semibold text-foreground">
+                                Selecione os dados para a análise de <span className="text-primary">{extractedData.reportMonth}</span>
+                            </h3>
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Card>
                              <CardHeader>
