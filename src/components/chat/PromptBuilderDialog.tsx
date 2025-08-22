@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { extractDataFromXpReport } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star } from 'lucide-react';
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, DragEvent } from 'react';
+import { cn } from '@/lib/utils';
 
 // ---- Types ----
 
@@ -40,8 +41,29 @@ interface PromptBuilderDialogProps {
 
 // ---- Sub-components for each phase ----
 
-const UploadPhase = ({ onFileChange }: { onFileChange: (e: ChangeEvent<HTMLInputElement>) => void }) => (
-    <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/30 rounded-xl p-12 text-center h-full">
+const UploadPhase = ({ onFileChange, isDraggingOver }: { onFileChange: (file: File) => void, isDraggingOver: boolean }) => {
+    const handleLocalDrop = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            onFileChange(e.dataTransfer.files[0]);
+            e.dataTransfer.clearData();
+        }
+    };
+    
+    const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    return (
+    <div 
+        className={cn("flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/30 rounded-xl p-12 text-center h-full transition-colors",
+            isDraggingOver && "border-primary bg-primary/10"
+        )}
+        onDrop={handleLocalDrop}
+        onDragOver={handleDragOver}
+    >
         <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
         <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
         <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
@@ -49,9 +71,9 @@ const UploadPhase = ({ onFileChange }: { onFileChange: (e: ChangeEvent<HTMLInput
             <FileText className="mr-2 h-4 w-4" />
             Selecionar Arquivo PDF
         </Button>
-        <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={onFileChange} />
+        <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files && onFileChange(e.target.files[0])} />
     </div>
-);
+)};
 
 const LoadingPhase = () => (
     <div className="flex flex-col items-center justify-center text-center h-full">
@@ -151,6 +173,7 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: P
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [selectedFields, setSelectedFields] = useState<SelectedFields>({});
   const [error, setError] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const { toast } = useToast();
 
   const resetState = () => {
@@ -159,11 +182,8 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: P
     setSelectedFields({});
     setError(null);
   };
-
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  
+  const processFile = async (file: File) => {
     if (file.type !== 'application/pdf') {
         toast({
             variant: 'destructive',
@@ -196,6 +216,11 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: P
         setError(err.message);
         setPhase('error');
     }
+  }
+
+  const handleFileChange = (file: File | null) => {
+    if (!file) return;
+    processFile(file);
   };
 
   const handleCheckboxChange = (category: keyof ExtractedData, index: number | null = null, checked: boolean) => {
@@ -278,11 +303,31 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
     resetState();
     onOpenChange(false);
   }
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFileChange(e.dataTransfer.files[0]);
+        e.dataTransfer.clearData();
+    }
+  };
   
   const renderContent = () => {
     switch (phase) {
         case 'upload':
-            return <UploadPhase onFileChange={handleFileChange} />;
+            return <UploadPhase onFileChange={handleFileChange} isDraggingOver={isDraggingOver} />;
         case 'loading':
             return <LoadingPhase />;
         case 'error':
@@ -299,8 +344,13 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); else onOpenChange(true); }}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent 
+        className="sm:max-w-4xl max-h-[90vh] flex flex-col"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <DialogHeader className='p-6 pb-4 border-b shrink-0'>
           <div className="flex items-center gap-3">
             <Wand2 className="h-6 w-6" style={{ color: '#DFB87F' }} />
             <DialogTitle className="text-xl">Assistente de Prompt Estruturado</DialogTitle>
@@ -310,11 +360,11 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto p-6">
             {renderContent()}
         </div>
 
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="p-6 pt-4 border-t mt-auto">
           <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
           <Button type="button" onClick={handleGeneratePrompt} disabled={phase !== 'selection' || Object.values(selectedFields).every(v => typeof v === 'boolean' ? !v : Object.values(v).every(subV => !subV))}>
              <MessageSquareQuote className="mr-2 h-4 w-4" />
