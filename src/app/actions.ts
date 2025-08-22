@@ -1283,7 +1283,7 @@ export async function getMaintenanceMode(): Promise<any> {
         const settingsRef = adminDb.collection('system_settings').doc('config');
         const docSnap = await settingsRef.get();
 
-        if (docSnap.exists()) {
+        if (docSnap.exists) {
             return { isMaintenanceMode: docSnap.data()?.isMaintenanceMode || false };
         }
         // Default to not in maintenance if the document doesn't exist
@@ -1477,5 +1477,7 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
         return { success: false, error: `Falha ao extrair dados do relatório: ${error.message}` };
     }
 }
+
+    
 
     
