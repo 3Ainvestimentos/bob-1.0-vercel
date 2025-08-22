@@ -410,7 +410,15 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); else onOpenChange(true); }}>
       <DialogContent 
-        className="sm:max-w-4xl max-h-[90vh] flex flex-col"
+        className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0"
+        onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }}
+        onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }}
       >
         <DialogHeader className='p-6 pb-4 border-b shrink-0'>
           <div className="flex items-center gap-3">
@@ -426,13 +434,15 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
             {renderContent()}
         </div>
 
-        <DialogFooter className="p-6 pt-4 border-t mt-auto bg-background sticky bottom-0">
-          <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button type="button" onClick={handleGeneratePrompt} disabled={phase !== 'selection' || Object.values(selectedFields).every(v => typeof v === 'boolean' ? !v : Object.values(v).every(subV => !subV))}>
-             <MessageSquareQuote className="mr-2 h-4 w-4" />
-             Gerar Prompt e Usar
-          </Button>
-        </DialogFooter>
+        {phase === 'selection' && (
+            <DialogFooter className="p-6 pt-4 border-t mt-auto bg-background sticky bottom-0">
+                <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
+                <Button type="button" onClick={handleGeneratePrompt} disabled={phase !== 'selection' || Object.values(selectedFields).every(v => typeof v === 'boolean' ? !v : Object.values(v).every(subV => !subV))}>
+                    <MessageSquareQuote className="mr-2 h-4 w-4" />
+                    Gerar Prompt e Usar
+                </Button>
+            </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
