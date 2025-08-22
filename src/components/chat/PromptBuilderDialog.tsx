@@ -49,6 +49,7 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         const newFiles = e.target.files;
         if (!newFiles) return;
+
         const pdfFiles = Array.from(newFiles).filter(file => file.type === 'application/pdf');
         
         setSelectedFiles(prev => {
@@ -111,6 +112,7 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
             >
+                 <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} multiple />
                 {selectedFiles.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full">
                         <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
@@ -120,7 +122,6 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
                             <FileText className="mr-2 h-4 w-4" />
                             Selecionar Arquivo PDF
                         </Button>
-                        <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} multiple />
                     </div>
                 ) : (
                     <div className="flex flex-col h-full w-full">
@@ -435,15 +436,6 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); else onOpenChange(true); }}>
       <DialogContent 
         className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0"
-        onDrop={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onFileDrop();
-        }}
-        onDragOver={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        }}
       >
         <DialogHeader className='p-6 pb-4 border-b shrink-0'>
           <div className="flex items-center gap-3">
