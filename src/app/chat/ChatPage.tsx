@@ -304,7 +304,7 @@ async function getFullConversation(userId: string, chatId: string): Promise<Conv
         const chatRef = doc(db, 'users', userId, 'chats', chatId);
         const chatSnap = await getDoc(chatRef);
 
-        if (chatSnap.exists) {
+        if (chatSnap.exists()) {
             const data = chatSnap.data();
             const firestoreTimestamp = data.createdAt as Timestamp;
             const messagesWithIds = (data.messages || []).map((m: any) => ({
@@ -609,14 +609,16 @@ export default function ChatPageContent() {
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
         const userData = userDocSnap.data();
-        
-        await fetchSidebarData();
 
-        if (userData?.termsAccepted !== true) {
-            setShowTermsDialog(true);
-        } else if (userData?.hasCompletedOnboarding !== true) {
-             // Use a timeout to ensure the UI has rendered before starting the tour
-             setTimeout(() => setShowOnboarding(true), 150);
+        if (userDocSnap.exists()) {
+            await fetchSidebarData();
+    
+            if (userData?.termsAccepted !== true) {
+                setShowTermsDialog(true);
+            } else if (userData?.hasCompletedOnboarding !== true) {
+                 // Use a timeout to ensure the UI has rendered before starting the tour
+                 setTimeout(() => setShowOnboarding(true), 150);
+            }
         }
 
       } catch (err: any) {
@@ -1707,3 +1709,5 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
+
+    

@@ -1477,3 +1477,5 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
         return { success: false, error: `Falha ao extrair dados do relatório: ${error.message}` };
     }
 }
+
+    
