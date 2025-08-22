@@ -72,7 +72,16 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
     </div>
 );
 
-const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, index: number | null, checked: boolean) => void }) => (
+const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, index: number | null, checked: boolean) => void }) => {
+    
+    const parseReturn = (returnStr: string): number => {
+        if (!returnStr) return -Infinity;
+        return parseFloat(returnStr.replace('%', '').replace(',', '.').trim());
+    };
+
+    const sortedHighlights = [...data.highlights].sort((a, b) => parseReturn(b.return) - parseReturn(a.return));
+
+    return (
     <div className="space-y-6">
         {data.reportMonth && (
             <div className="flex items-center gap-2 text-muted-foreground bg-muted p-3 rounded-lg">
@@ -111,7 +120,7 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 <div className="space-y-3">
                    <h4 className="font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4 text-green-500" />Maiores Retornos</h4>
-                   {data.highlights.map((item, index) => (
+                   {sortedHighlights.map((item, index) => (
                        <div key={`h-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                            <Checkbox id={`h-${index}`} onCheckedChange={(c) => onCheckboxChange('highlights', index, !!c)} className="mt-1" />
                            <Label htmlFor={`h-${index}`} className="flex flex-col">
@@ -133,7 +142,8 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
             </CardContent>
         </Card>
     </div>
-);
+    );
+};
 
 
 export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: PromptBuilderDialogProps) {
@@ -286,5 +296,3 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: P
     </Dialog>
   );
 }
-
-    
