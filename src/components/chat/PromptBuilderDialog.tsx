@@ -24,7 +24,7 @@ type ExtractedData = {
     yearlyCdi: string;
     yearlyGain: string;
     highlights: { asset: string; return: string; reason: string }[];
-    detractors: { asset: string; return: string }[];
+    detractors: { asset: string; cdiPercentage: string }[];
 };
 
 type SelectedFields = {
@@ -260,7 +260,7 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
                    {data.detractors.map((item, index) => (
                        <div key={`d-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                            <Checkbox id={`d-${index}`} onCheckedChange={(c) => onCheckboxChange('detractors', index, !!c)} className="mt-1" />
-                           <Label htmlFor={`d-${index}`}><strong>{item.asset}</strong> ({item.return})</Label>
+                           <Label htmlFor={`d-${index}`}><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
                        </div>
                    ))}
                 </div>
@@ -384,7 +384,7 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
     if (selectedDetractors.length > 0) {
         prompt += "\n- **Principais Detratores:**";
         selectedDetractors.forEach(d => {
-            prompt += `\n  - Classe: ${d.asset}, Rentabilidade: ${d.return}`;
+            prompt += `\n  - Classe: ${d.asset}, % CDI: ${d.cdiPercentage}`;
         });
     }
 
@@ -399,7 +399,7 @@ Os principais destaques foram:
 ${selectedHighlights.length > 0 ? selectedHighlights.map(h => `*${h.asset}*, com *${h.return}*, *${h.reason}*`).join('\n') : '*[Classe 1]*, com *[rentabilidade]*, *[justificativa]*\n*[Classe 2]*, com *[rentabilidade]*, *[justificativa]*'}
 
 Os principais detratores foram:
-${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${d.return}*`).join('\n') : '*[Classe 1]*: *[rentabilidade]*\n*[Classe 2]*: *[rentabilidade]*'}
+${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${d.cdiPercentage}*`).join('\n') : '*[Classe 1]*: *[rentabilidade]*\n*[Classe 2]*: *[rentabilidade]*'}
 
 [INSIRA AQUI O PARÁGRAFO DE ANÁLISE DO CENÁRIO ECONÔMICO]
 `;
@@ -452,7 +452,7 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
         </div>
 
         {phase === 'selection' && (
-            <DialogFooter className="p-6 pt-4 border-t bg-background shrink-0">
+             <DialogFooter className="p-6 pt-4 border-t bg-background shrink-0">
                 <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
                 <Button type="button" onClick={handleGeneratePrompt} disabled={phase !== 'selection' || Object.values(selectedFields).every(v => typeof v === 'boolean' ? !v : Object.values(v).every(subV => !subV))}>
                     <MessageSquareQuote className="mr-2 h-4 w-4" />
