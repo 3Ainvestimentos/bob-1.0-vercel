@@ -204,10 +204,16 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
 const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => void }) => {
     
     const parseCdiPercentage = (cdiString: string): number => {
-        if (typeof cdiString !== 'string') return -Infinity;
-        const cleanedString = cdiString.replace('%', '').replace('.', '').replace(',', '.').trim();
+        if (typeof cdiString !== 'string') return NaN;
+        
+        const trimmedString = cdiString.trim();
+        if (trimmedString === '(0,00)' || trimmedString === '00,00%') {
+            return NaN;
+        }
+
+        const cleanedString = trimmedString.replace('%', '').replace('.', '').replace(',', '.');
         const value = parseFloat(cleanedString);
-        return isNaN(value) ? -Infinity : value;
+        return isNaN(value) ? NaN : value;
     };
 
     const renderHighlights = () => {
@@ -246,7 +252,7 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         Object.entries(data.detractors).forEach(([category, items]) => {
             const processedItems = items
                 .map(item => ({ ...item, numericCdi: parseCdiPercentage(item.cdiPercentage) }))
-                .filter(item => item.numericCdi < 100)
+                .filter(item => !isNaN(item.numericCdi) && item.numericCdi < 100)
                 .sort((a, b) => b.numericCdi - a.numericCdi);
 
             if (processedItems.length > 0) {
@@ -555,7 +561,3 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
     </Dialog>
   );
 }
-
-  
-
-    
