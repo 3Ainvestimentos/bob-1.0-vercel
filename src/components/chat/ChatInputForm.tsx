@@ -448,7 +448,7 @@ export function ChatInputForm({
             </div>
              <div id="search-source-selector" className="flex items-center gap-2 pr-2">
                 <Select value={searchSource} onValueChange={(value) => setSearchSource(value as SearchSource)} disabled={isLoading}>
-                    <SelectTrigger className="w-auto h-8 text-xs focus:ring-0 focus:ring-offset-0 bg-secondary text-secondary-foreground border-none rounded-full">
+                    <SelectTrigger className="w-auto h-8 text-xs focus:ring-0 focus:ring-offset-0 bg-primary/10 text-primary border-none rounded-full">
                         <div className="flex items-center gap-2">
                             {React.createElement(searchOptions[searchSource].icon, { className: "h-4 w-4" })}
                             <span>{searchOptions[searchSource].label}</span>
