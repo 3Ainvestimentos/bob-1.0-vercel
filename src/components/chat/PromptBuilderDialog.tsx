@@ -15,6 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 // ---- Types ----
 
+type Highlight = { asset: string; return: string; reason: string };
+type Detractor = { asset: string; cdiPercentage: string };
+
 type ExtractedData = {
     reportMonth: string;
     monthlyReturn: string;
@@ -23,12 +26,12 @@ type ExtractedData = {
     yearlyReturn: string;
     yearlyCdi: string;
     yearlyGain: string;
-    highlights: { asset: string; return: string; reason: string }[];
-    detractors: { asset: string; cdiPercentage: string }[];
+    highlights: Record<string, Highlight[]>;
+    detractors: Record<string, Detractor[]>;
 };
 
 type SelectedFields = {
-    [key in keyof ExtractedData]?: boolean | { [index: number]: boolean };
+    [key in keyof ExtractedData]?: boolean | { [category: string]: { [index: number]: boolean } };
 };
 
 type PromptBuilderPhase = 'upload' | 'loading' | 'selection' | 'error';
@@ -58,7 +61,6 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
             return [...prev, ...uniqueNewFiles];
         });
         
-        // Reset the input value to allow selecting the same file again
         e.target.value = '';
     };
 
@@ -104,7 +106,7 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-             <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple />
+            <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple />
             <div 
                 className={cn("flex flex-col border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors",
                     isDraggingOver && "border-primary bg-primary/10"
@@ -197,14 +199,44 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
     </div>
 );
 
-const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, index: number | null, checked: boolean) => void }) => {
+const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => void }) => {
     
-    const parseReturn = (returnStr: string): number => {
-        if (!returnStr) return -Infinity;
-        return parseFloat(returnStr.replace('%', '').replace(',', '.').trim());
-    };
+    const renderHighlights = () => {
+        const categories = Object.keys(data.highlights);
+        if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum destaque positivo encontrado.</p>;
 
-    const sortedHighlights = [...data.highlights].sort((a, b) => parseReturn(b.return) - parseReturn(a.return));
+        return categories.map(category => (
+            <div key={`h-cat-${category}`} className="space-y-2">
+                <h5 className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">{category}</h5>
+                {data.highlights[category].map((item, index) => (
+                    <div key={`h-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                        <Checkbox id={`h-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('highlights', category, index, !!c)} className="mt-1" />
+                        <Label htmlFor={`h-${category}-${index}`} className="flex flex-col">
+                            <span><strong>{item.asset}</strong> ({item.return})</span>
+                            <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
+                        </Label>
+                    </div>
+                ))}
+            </div>
+        ));
+    };
+    
+    const renderDetractors = () => {
+        const categories = Object.keys(data.detractors);
+        if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum detrator encontrado.</p>;
+
+        return categories.map(category => (
+            <div key={`d-cat-${category}`} className="space-y-2">
+                <h5 className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">{category}</h5>
+                {data.detractors[category].map((item, index) => (
+                    <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                        <Checkbox id={`d-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('detractors', category, index, !!c)} className="mt-1" />
+                        <Label htmlFor={`d-${category}-${index}`}><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
+                    </div>
+                ))}
+            </div>
+        ));
+    };
 
     return (
     <div className="space-y-6">
@@ -222,9 +254,9 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
                     <CardTitle className="flex items-center gap-2 text-base"><BarChart className="h-5 w-5" style={{ color: '#DFB87F' }} />Resultados do Mês</CardTitle>
                  </CardHeader>
                  <CardContent className="space-y-4 text-sm">
-                    <div className="flex items-center space-x-3"><Checkbox id="monthlyReturn" onCheckedChange={(c) => onCheckboxChange('monthlyReturn', null, !!c)} /><Label htmlFor="monthlyReturn">Rentabilidade: <strong>{data.monthlyReturn}</strong></Label></div>
-                    <div className="flex items-center space-x-3"><Checkbox id="monthlyCdi" onCheckedChange={(c) => onCheckboxChange('monthlyCdi', null, !!c)} /><Label htmlFor="monthlyCdi">% CDI: <strong>{data.monthlyCdi}</strong></Label></div>
-                    <div className="flex items-center space-x-3"><Checkbox id="monthlyGain" onCheckedChange={(c) => onCheckboxChange('monthlyGain', null, !!c)} /><Label htmlFor="monthlyGain">Ganho Financeiro: <strong>{data.monthlyGain}</strong></Label></div>
+                    <div className="flex items-center space-x-3"><Checkbox id="monthlyReturn" onCheckedChange={(c) => onCheckboxChange('monthlyReturn', '', -1, !!c)} /><Label htmlFor="monthlyReturn">Rentabilidade: <strong>{data.monthlyReturn}</strong></Label></div>
+                    <div className="flex items-center space-x-3"><Checkbox id="monthlyCdi" onCheckedChange={(c) => onCheckboxChange('monthlyCdi', '', -1, !!c)} /><Label htmlFor="monthlyCdi">% CDI: <strong>{data.monthlyCdi}</strong></Label></div>
+                    <div className="flex items-center space-x-3"><Checkbox id="monthlyGain" onCheckedChange={(c) => onCheckboxChange('monthlyGain', '', -1, !!c)} /><Label htmlFor="monthlyGain">Ganho Financeiro: <strong>{data.monthlyGain}</strong></Label></div>
                  </CardContent>
             </Card>
             <Card>
@@ -232,9 +264,9 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
                     <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5" style={{ color: '#DFB87F' }} />Resultados do Ano</CardTitle>
                  </CardHeader>
                  <CardContent className="space-y-4 text-sm">
-                    <div className="flex items-center space-x-3"><Checkbox id="yearlyReturn" onCheckedChange={(c) => onCheckboxChange('yearlyReturn', null, !!c)} /><Label htmlFor="yearlyReturn">Rentabilidade: <strong>{data.yearlyReturn}</strong></Label></div>
-                    <div className="flex items-center space-x-3"><Checkbox id="yearlyCdi" onCheckedChange={(c) => onCheckboxChange('yearlyCdi', null, !!c)} /><Label htmlFor="yearlyCdi">% CDI: <strong>{data.yearlyCdi}</strong></Label></div>
-                    <div className="flex items-center space-x-3"><Checkbox id="yearlyGain" onCheckedChange={(c) => onCheckboxChange('yearlyGain', null, !!c)} /><Label htmlFor="yearlyGain">Ganho Financeiro: <strong>{data.yearlyGain}</strong></Label></div>
+                    <div className="flex items-center space-x-3"><Checkbox id="yearlyReturn" onCheckedChange={(c) => onCheckboxChange('yearlyReturn', '', -1, !!c)} /><Label htmlFor="yearlyReturn">Rentabilidade: <strong>{data.yearlyReturn}</strong></Label></div>
+                    <div className="flex items-center space-x-3"><Checkbox id="yearlyCdi" onCheckedChange={(c) => onCheckboxChange('yearlyCdi', '', -1, !!c)} /><Label htmlFor="yearlyCdi">% CDI: <strong>{data.yearlyCdi}</strong></Label></div>
+                    <div className="flex items-center space-x-3"><Checkbox id="yearlyGain" onCheckedChange={(c) => onCheckboxChange('yearlyGain', '', -1, !!c)} /><Label htmlFor="yearlyGain">Ganho Financeiro: <strong>{data.yearlyGain}</strong></Label></div>
                  </CardContent>
             </Card>
         </div>
@@ -245,24 +277,11 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 <div className="space-y-3">
                    <h4 className="font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4 text-green-500" />Maiores Retornos</h4>
-                   {sortedHighlights.map((item, index) => (
-                       <div key={`h-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                           <Checkbox id={`h-${index}`} onCheckedChange={(c) => onCheckboxChange('highlights', index, !!c)} className="mt-1" />
-                           <Label htmlFor={`h-${index}`} className="flex flex-col">
-                                <span><strong>{item.asset}</strong> ({item.return})</span>
-                                <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
-                            </Label>
-                       </div>
-                   ))}
+                   {renderHighlights()}
                 </div>
                 <div className="space-y-3">
                     <h4 className="font-semibold flex items-center gap-2"><TrendingDown className="h-4 w-4 text-red-500" />Performance Inferior ao CDI</h4>
-                   {data.detractors.map((item, index) => (
-                       <div key={`d-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                           <Checkbox id={`d-${index}`} onCheckedChange={(c) => onCheckboxChange('detractors', index, !!c)} className="mt-1" />
-                           <Label htmlFor={`d-${index}`}><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
-                       </div>
-                   ))}
+                    {renderDetractors()}
                 </div>
             </CardContent>
         </Card>
@@ -333,21 +352,24 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
     processFiles(files);
   };
 
-  const handleCheckboxChange = (category: keyof ExtractedData, index: number | null = null, checked: boolean) => {
+  const handleCheckboxChange = (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => {
     setSelectedFields(prev => {
         const newSelected = { ...prev };
-        if (index !== null) {
-            // @ts-ignore
-            const categoryState = newSelected[category] && typeof newSelected[category] === 'object' ? newSelected[category] : {};
-            // @ts-ignore
-            categoryState[index] = checked;
+        if (index > -1) {
+            const categoryState = (newSelected[category] as Record<string, Record<number, boolean>>) || {};
+            if (!categoryState[assetClass]) {
+                categoryState[assetClass] = {};
+            }
+            categoryState[assetClass][index] = checked;
             newSelected[category] = categoryState;
         } else {
+            // This is for top-level fields like monthlyReturn
             newSelected[category] = checked;
         }
         return newSelected;
     });
-  };
+};
+
 
   const handleGeneratePrompt = () => {
     if (!extractedData) return;
@@ -372,7 +394,18 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
     if (selectedFields.yearlyCdi) prompt += `\n- **Rentabilidade em %CDI do Ano:** ${extractedData.yearlyCdi}`;
     if (selectedFields.yearlyGain) prompt += `\n- **Ganho Financeiro do Ano:** ${extractedData.yearlyGain}`;
 
-    const selectedHighlights = extractedData.highlights.filter((_, i) => selectedFields.highlights && (selectedFields.highlights as any)[i]);
+    
+    const selectedHighlights: Highlight[] = [];
+    if (selectedFields.highlights && typeof selectedFields.highlights === 'object') {
+        for (const category in selectedFields.highlights) {
+            for (const index in selectedFields.highlights[category]) {
+                if (selectedFields.highlights[category][index]) {
+                    selectedHighlights.push(extractedData.highlights[category][parseInt(index, 10)]);
+                }
+            }
+        }
+    }
+    
     if (selectedHighlights.length > 0) {
         prompt += "\n- **Principais Destaques Positivos:**";
         selectedHighlights.forEach(h => {
@@ -380,7 +413,16 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
         });
     }
 
-    const selectedDetractors = extractedData.detractors.filter((_, i) => selectedFields.detractors && (selectedFields.detractors as any)[i]);
+    const selectedDetractors: Detractor[] = [];
+    if (selectedFields.detractors && typeof selectedFields.detractors === 'object') {
+        for (const category in selectedFields.detractors) {
+            for (const index in selectedFields.detractors[category]) {
+                if (selectedFields.detractors[category][index]) {
+                    selectedDetractors.push(extractedData.detractors[category][parseInt(index, 10)]);
+                }
+            }
+        }
+    }
     if (selectedDetractors.length > 0) {
         prompt += "\n- **Principais Detratores:**";
         selectedDetractors.forEach(d => {
@@ -454,7 +496,11 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
         {phase === 'selection' && (
              <DialogFooter className="p-6 pt-4 border-t bg-background shrink-0">
                 <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
-                <Button type="button" onClick={handleGeneratePrompt} disabled={phase !== 'selection' || Object.values(selectedFields).every(v => typeof v === 'boolean' ? !v : Object.values(v).every(subV => !subV))}>
+                <Button type="button" onClick={handleGeneratePrompt} disabled={phase !== 'selection' || Object.values(selectedFields).every(v => {
+                    if (typeof v === 'boolean') return !v;
+                    if (typeof v === 'object') return Object.values(v).every(cat => Object.values(cat).every(subV => !subV));
+                    return true;
+                })}>
                     <MessageSquareQuote className="mr-2 h-4 w-4" />
                     Gerar Prompt e Usar
                 </Button>

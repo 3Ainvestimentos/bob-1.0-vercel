@@ -63,11 +63,11 @@ Você é um assistente de extração de dados altamente preciso. Sua única tare
     -   'yearlyReturn': RENTABILIDADE PERCENTUAL DO ANO.
     -   'yearlyCdi': RENTABILIDADE EM %CDI DO ANO.
     -   'yearlyGain': GANHO FINANCEIRO DO ANO.
-    -   'highlights': Na **página 5**, na seção 'Posição Detalhada dos Ativos', encontre e extraia uma lista com os dois ativos com a **maior** rentabilidade no mês. Para cada um, extraia o nome do ativo ('asset'), o percentual de retorno ('return'), e a justificativa ('reason').
-    -   'detractors': Na **página 5**, na seção 'Posição Detalhada dos Ativos', encontre e extraia uma lista com **TODOS** os ativos cuja rentabilidade em **%CDI** foi **inferior a 100%**. Para cada um, extraia o nome do ativo ('asset') e a rentabilidade em %CDI ('cdiPercentage').
+    -   'highlights': Na **página 5**, na seção 'Posição Detalhada dos Ativos', encontre os ativos com a **maior** rentabilidade no mês. Agrupe-os por **classe de ativo** (ex: "Renda Fixa", "Ações"). Para cada ativo, extraia seu nome ('asset'), o percentual de retorno ('return'), e a justificativa ('reason'). O resultado deve ser um objeto onde as chaves são as classes de ativos.
+    -   'detractors': Na **página 5**, na seção 'Posição Detalhada dos Ativos', encontre **TODOS** os ativos cuja rentabilidade em **%CDI** foi **inferior a 100%**. Agrupe-os por **classe de ativo**. Para cada um, extraia o nome do ativo ('asset') e a rentabilidade em %CDI ('cdiPercentage'). O resultado deve ser um objeto onde as chaves são as classes de ativos.
 2.  **Formato de Saída:** A resposta DEVE ser um objeto JSON válido, contendo apenas os campos listados acima. Não inclua nenhum texto, explicação, ou formatação Markdown. Apenas o JSON.
 3.  **Valores Numéricos:** Mantenha os valores exatamente como aparecem no texto (ex: "1,23%", "R$ 1.234,56").
-4.  **Precisão:** Seja extremamente preciso. Se um valor não for encontrado, retorne uma string vazia ("") para aquele campo.
+4.  **Precisão:** Seja extremamente preciso. Se um valor não for encontrado, retorne uma string vazia ("") ou um objeto/array vazio para aquele campo.
 `;
 
 
@@ -1283,7 +1283,7 @@ export async function getMaintenanceMode(): Promise<any> {
         const settingsRef = adminDb.collection('system_settings').doc('config');
         const docSnap = await settingsRef.get();
 
-        if (docSnap.exists) {
+        if (docSnap.exists()) {
             return { isMaintenanceMode: docSnap.data()?.isMaintenanceMode || false };
         }
         // Default to not in maintenance if the document doesn't exist
