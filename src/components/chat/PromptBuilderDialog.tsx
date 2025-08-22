@@ -47,25 +47,28 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
+    const handleFileChange = (newFiles: FileList) => {
+        const pdfFiles = Array.from(newFiles).filter(file => file.type === 'application/pdf');
+        setSelectedFiles(prev => {
+            const existingFileNames = new Set(prev.map(f => f.name));
+            const uniqueNewFiles = pdfFiles.filter(f => !existingFileNames.has(f.name));
+            return [...prev, ...uniqueNewFiles];
+        });
+    };
+
     const handleLocalDrop = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDraggingOver(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            if (file.type === 'application/pdf') {
-                setSelectedFiles([file]); // For now, only one file is supported
-            }
+            handleFileChange(e.dataTransfer.files);
             e.dataTransfer.clearData();
         }
     };
 
     const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-             if (file.type === 'application/pdf') {
-                setSelectedFiles([file]); // For now, only one file is supported
-            }
+           handleFileChange(e.target.files);
         }
     };
     
@@ -112,12 +115,12 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
                             <FileText className="mr-2 h-4 w-4" />
                             Selecionar Arquivo PDF
                         </Button>
-                        <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} />
+                        <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple />
                     </div>
                 ) : (
                     <div className="flex flex-col h-full w-full">
-                         <h3 className="font-semibold text-lg text-left text-foreground mb-4">Arquivo Anexado</h3>
-                         <div className="space-y-2">
+                         <h3 className="font-semibold text-lg text-left text-foreground mb-4">Arquivos Anexados ({selectedFiles.length})</h3>
+                         <div className="space-y-2 flex-1 overflow-y-auto pr-2">
                             {selectedFiles.map((file, index) => (
                                 <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-lg text-sm">
                                     <div className="flex items-center gap-2 overflow-hidden">
@@ -130,8 +133,7 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
                                 </div>
                             ))}
                          </div>
-                         {/* Placeholder for future multi-file upload button */}
-                         {/* <Button variant="outline" size="sm" className="mt-auto">Adicionar outro arquivo</Button> */}
+                         <Button variant="outline" size="sm" className="mt-4" onClick={() => document.getElementById('file-upload-prompt-builder')?.click()}>Adicionar outro arquivo</Button>
                     </div>
                 )}
             </div>
@@ -283,7 +285,7 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
   
   const processFiles = async (files: File[]) => {
     if (files.length === 0) return;
-    const file = files[0]; // For now, only process the first file
+    const file = files[0]; // For now, only process the first file for individual analysis
 
     if (file.type !== 'application/pdf') {
         toast({
