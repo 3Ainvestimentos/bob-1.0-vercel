@@ -43,9 +43,9 @@ interface PromptBuilderDialogProps {
 
 // ---- Sub-components for each phase ----
 
-const UploadPhase = ({ onFileChange, setReportType, setAnalysisType }: { onFileChange: (file: File) => void; setReportType: (value: string) => void; setAnalysisType: (value: string) => void; }) => {
+const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFilesChange: (files: File[]) => void; setReportType: (value: string) => void; setAnalysisType: (value: string) => void; }) => {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
     const handleLocalDrop = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -54,7 +54,7 @@ const UploadPhase = ({ onFileChange, setReportType, setAnalysisType }: { onFileC
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
             if (file.type === 'application/pdf') {
-                setSelectedFile(file);
+                setSelectedFiles([file]); // For now, only one file is supported
             }
             e.dataTransfer.clearData();
         }
@@ -64,7 +64,7 @@ const UploadPhase = ({ onFileChange, setReportType, setAnalysisType }: { onFileC
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
              if (file.type === 'application/pdf') {
-                setSelectedFile(file);
+                setSelectedFiles([file]); // For now, only one file is supported
             }
         }
     };
@@ -84,33 +84,27 @@ const UploadPhase = ({ onFileChange, setReportType, setAnalysisType }: { onFileC
     };
 
     const handleContinue = () => {
-        if (selectedFile) {
-            onFileChange(selectedFile);
+        if (selectedFiles.length > 0) {
+            onFilesChange(selectedFiles);
         }
+    };
+
+    const handleRemoveFile = (fileToRemove: File) => {
+        setSelectedFiles(currentFiles => currentFiles.filter(file => file !== fileToRemove));
     };
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
             <div 
-                className={cn("flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors",
+                className={cn("flex flex-col border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors",
                     isDraggingOver && "border-primary bg-primary/10"
                 )}
                 onDrop={handleLocalDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
             >
-                {selectedFile ? (
-                    <div className="flex flex-col items-center justify-center h-full w-full">
-                         <FileText className="h-16 w-16 text-primary mb-4" />
-                         <p className="font-semibold text-foreground break-all">{selectedFile.name}</p>
-                         <p className="text-sm text-muted-foreground">{(selectedFile.size / 1024).toFixed(2)} KB</p>
-                         <Button variant="ghost" size="sm" className="mt-4 text-destructive hover:text-destructive" onClick={() => setSelectedFile(null)}>
-                             <X className="mr-2 h-4 w-4" />
-                             Remover
-                         </Button>
-                    </div>
-                ) : (
-                    <>
+                {selectedFiles.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full">
                         <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
                         <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
                         <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
@@ -119,7 +113,26 @@ const UploadPhase = ({ onFileChange, setReportType, setAnalysisType }: { onFileC
                             Selecionar Arquivo PDF
                         </Button>
                         <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} />
-                    </>
+                    </div>
+                ) : (
+                    <div className="flex flex-col h-full w-full">
+                         <h3 className="font-semibold text-lg text-left text-foreground mb-4">Arquivo Anexado</h3>
+                         <div className="space-y-2">
+                            {selectedFiles.map((file, index) => (
+                                <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-lg text-sm">
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                        <FileText className="h-5 w-5 text-primary shrink-0" />
+                                        <span className="font-medium text-foreground truncate">{file.name}</span>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0" onClick={() => handleRemoveFile(file)}>
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                         </div>
+                         {/* Placeholder for future multi-file upload button */}
+                         {/* <Button variant="outline" size="sm" className="mt-auto">Adicionar outro arquivo</Button> */}
+                    </div>
                 )}
             </div>
             <div className="space-y-6 flex flex-col justify-between">
@@ -148,13 +161,14 @@ const UploadPhase = ({ onFileChange, setReportType, setAnalysisType }: { onFileC
                         </Select>
                     </div>
                 </div>
-                <Button type="button" onClick={handleContinue} disabled={!selectedFile}>
+                <Button type="button" onClick={handleContinue} disabled={selectedFiles.length === 0}>
                     Continuar e Processar
                 </Button>
             </div>
         </div>
     );
 };
+
 
 const LoadingPhase = () => (
     <div className="flex flex-col items-center justify-center text-center h-full">
@@ -267,7 +281,10 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
     setError(null);
   };
   
-  const processFile = async (file: File) => {
+  const processFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    const file = files[0]; // For now, only process the first file
+
     if (file.type !== 'application/pdf') {
         toast({
             variant: 'destructive',
@@ -302,10 +319,10 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
     }
   }
 
-  const handleFileChange = (file: File | null) => {
-    if (!file) return;
+  const handleFilesChange = (files: File[]) => {
+    if (files.length === 0) return;
     onFileDrop(); // Notify parent to reset its dragging state
-    processFile(file);
+    processFiles(files);
   };
 
   const handleCheckboxChange = (category: keyof ExtractedData, index: number | null = null, checked: boolean) => {
@@ -392,7 +409,7 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
   const renderContent = () => {
     switch (phase) {
         case 'upload':
-            return <UploadPhase onFileChange={handleFileChange} setReportType={setReportType} setAnalysisType={setAnalysisType} />;
+            return <UploadPhase onFilesChange={handleFilesChange} setReportType={setReportType} setAnalysisType={setAnalysisType} />;
         case 'loading':
             return <LoadingPhase />;
         case 'error':
