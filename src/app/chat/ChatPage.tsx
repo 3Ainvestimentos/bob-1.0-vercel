@@ -304,7 +304,7 @@ async function getFullConversation(userId: string, chatId: string): Promise<Conv
         const chatRef = doc(db, 'users', userId, 'chats', chatId);
         const chatSnap = await getDoc(chatRef);
 
-        if (chatSnap.exists()) {
+        if (chatSnap.exists) {
             const data = chatSnap.data();
             const firestoreTimestamp = data.createdAt as Timestamp;
             const messagesWithIds = (data.messages || []).map((m: any) => ({
