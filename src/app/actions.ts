@@ -51,6 +51,25 @@ Com base nos documentos encontrados, aqui estão os procedimentos:
 - ...
 `;
 
+const EXTRACT_XP_REPORT_PREAMBLE = `
+Você é um assistente de extração de dados altamente preciso. Sua única tarefa é analisar o texto de um relatório de investimentos da XP e extrair informações específicas, retornando-as em um formato JSON.
+
+**REGRAS ESTRITAS:**
+1.  **Extraia os seguintes campos do texto:**
+    -   'monthlyReturn': RENTABILIDADE PERCENTUAL DO MÊS.
+    -   'monthlyCdi': RENTABILIDADE EM %CDI DO MÊS.
+    -   'monthlyGain': GANHO FINANCEIRO DO MÊS.
+    -   'yearlyReturn': RENTABILIDADE PERCENTUAL DO ANO.
+    -   'yearlyCdi': RENTABILIDADE EM %CDI DO ANO.
+    -   'yearlyGain': GANHO FINANCEIRO DO ANO.
+    -   'highlights': Uma lista com as duas classes de ativos com a **maior** rentabilidade no mês. Para cada uma, extraia o nome ('asset'), o percentual de retorno ('return'), e a justificativa ('reason').
+    -   'detractors': Uma lista com as duas classes de ativos com rentabilidade **inferior** ao CDI. Para cada uma, extraia o nome ('asset') e o percentual de retorno ('return').
+2.  **Formato de Saída:** A resposta DEVE ser um objeto JSON válido, contendo apenas os campos listados acima. Não inclua nenhum texto, explicação, ou formatação Markdown. Apenas o JSON.
+3.  **Valores Numéricos:** Mantenha os valores exatamente como aparecem no texto (ex: "1,23%", "R$ 1.234,56").
+4.  **Precisão:** Seja extremamente preciso. Se um valor não for encontrado, retorne uma string vazia ("") para aquele campo.
+`;
+
+
 async function getGeminiApiKey(): Promise<string> {
     if (process.env.GEMINI_API_KEY) {
         return process.env.GEMINI_API_KEY;
@@ -323,7 +342,8 @@ async function callGemini(
     query: string,
     attachments: AttachedFile[] = [],
     preamble: string | null = null,
-    enableWebSearch: boolean = false
+    enableWebSearch: boolean = false,
+    jsonOutput: boolean = false
 ): Promise<{ summary: string; searchFailed: boolean; sources: ClientRagSource[]; promptTokenCount?: number; candidatesTokenCount?: number; }> {
     const geminiApiKey = await getGeminiApiKey();
 
@@ -334,10 +354,18 @@ async function callGemini(
             "google_search_retrieval": {}
         }] : [];
 
-        const model = genAI.getGenerativeModel({
+        const modelConfig: any = {
             model: "gemini-1.5-pro-latest",
             tools: tools as any,
-        });
+        };
+
+        if (jsonOutput) {
+            modelConfig.generationConfig = {
+                responseMimeType: "application/json",
+            };
+        }
+
+        const model = genAI.getGenerativeModel(modelConfig);
 
         const chat = model.startChat();
         
@@ -438,7 +466,7 @@ export async function askAssistant(
   options: {
     source: 'rag' | 'web';
     useStandardAnalysis?: boolean;
-    fileDataUris?: { name: string; dataUri: string, mimeType: string }[];
+    fileDataUris?: { name: string; dataUri: string; mimeType: string }[];
   }
 ): Promise<{
   summary?: string;
@@ -1390,16 +1418,20 @@ export async function validateAndOnboardUser(
         const userDocSnap = await userDocRef.get();
 
         if (userDocSnap.exists) {
+            // User already exists, just return their role
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
+        // New user, check pre-registration
         const preRegRef = adminDb.collection('pre_registered_users').doc(email.toLowerCase());
         const preRegSnap = await preRegRef.get();
 
         if (!preRegSnap.exists) {
+            // Not pre-registered
             return { success: false, role: null, error: 'Seu e-mail não está autorizado a acessar este sistema.' };
         }
 
+        // Pre-registered, create user document and delete pre-registration
         const role = preRegSnap.data()?.role || 'user';
         const newUserData = {
             uid,
@@ -1422,5 +1454,25 @@ export async function validateAndOnboardUser(
     } catch (error: any) {
         console.error('Erro durante a validação e onboarding do usuário:', error);
         return { success: false, role: null, error: `Ocorreu um erro no servidor: ${error.message}` };
+    }
+}
+
+
+export async function extractDataFromXpReport(fileDataUri: { name: string; dataUri: string, mimeType: string }): Promise<any> {
+    try {
+        const textContent = await getFileContent(fileDataUri.dataUri, fileDataUri.mimeType);
+
+        const result = await callGemini(textContent, [], EXTRACT_XP_REPORT_PREAMBLE, false, true);
+
+        if (result.searchFailed || !result.summary) {
+            throw new Error("A extração de dados do relatório falhou. A IA não retornou um JSON válido.");
+        }
+
+        const jsonData = JSON.parse(result.summary);
+        return { success: true, data: jsonData };
+
+    } catch (error: any) {
+        console.error("Error in extractDataFromXpReport:", error);
+        return { success: false, error: `Falha ao extrair dados do relatório: ${error.message}` };
     }
 }
