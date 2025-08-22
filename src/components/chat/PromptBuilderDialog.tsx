@@ -217,33 +217,62 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: P
   const handleGeneratePrompt = () => {
     if (!extractedData) return;
 
-    let promptParts: string[] = [];
-    promptParts.push(`Com base nos seguintes dados do mês de ${extractedData.reportMonth}, extraídos de um relatório de performance da XP:`);
+    let prompt = `Você é um especialista em finanças. Sua tarefa é usar os dados extraídos de um relatório de investimentos da XP para formatar uma mensagem para WhatsApp, seguindo um modelo específico.
 
-    if (selectedFields.monthlyReturn) promptParts.push(`- Rentabilidade do Mês: ${extractedData.monthlyReturn}`);
-    if (selectedFields.monthlyCdi) promptParts.push(`- Performance vs. CDI no Mês: ${extractedData.monthlyCdi}`);
-    if (selectedFields.monthlyGain) promptParts.push(`- Ganho Financeiro no Mês: ${extractedData.monthlyGain}`);
-    if (selectedFields.yearlyReturn) promptParts.push(`- Rentabilidade do Ano: ${extractedData.yearlyReturn}`);
-    if (selectedFields.yearlyCdi) promptParts.push(`- Performance vs. CDI no Ano: ${extractedData.yearlyCdi}`);
-    if (selectedFields.yearlyGain) promptParts.push(`- Ganho Financeiro no Ano: ${extractedData.yearlyGain}`);
+**REGRAS ESTRITAS:**
+1.  **Use os dados fornecidos** para preencher os placeholders no modelo de mensagem.
+2.  **Mantenha a formatação EXATA** do modelo, incluindo quebras de linha e asteriscos para negrito.
+3.  **Não inclua** \`\`\`, Markdown, ou qualquer outra formatação que não seja a do modelo.
+4.  **Adicione um parágrafo final** com uma análise do cenário econômico para contextualizar a performance.
+5.  **Substitua o placeholder [NOME]** pelo nome do cliente (você pode deixar como está se não for fornecido).
+
+---
+**DADOS EXTRAÍDOS PARA USO:**
+- **Mês de Referência:** ${extractedData.reportMonth}`;
+
+    if (selectedFields.monthlyReturn) prompt += `\n- **Rentabilidade Percentual do Mês:** ${extractedData.monthlyReturn}`;
+    if (selectedFields.monthlyCdi) prompt += `\n- **Rentabilidade em %CDI do Mês:** ${extractedData.monthlyCdi}`;
+    if (selectedFields.monthlyGain) prompt += `\n- **Ganho Financeiro do Mês:** ${extractedData.monthlyGain}`;
+    if (selectedFields.yearlyReturn) prompt += `\n- **Rentabilidade Percentual do Ano:** ${extractedData.yearlyReturn}`;
+    if (selectedFields.yearlyCdi) prompt += `\n- **Rentabilidade em %CDI do Ano:** ${extractedData.yearlyCdi}`;
+    if (selectedFields.yearlyGain) prompt += `\n- **Ganho Financeiro do Ano:** ${extractedData.yearlyGain}`;
 
     const selectedHighlights = extractedData.highlights.filter((_, i) => selectedFields.highlights && (selectedFields.highlights as any)[i]);
     if (selectedHighlights.length > 0) {
-        promptParts.push("\nPrincipais destaques positivos:");
-        selectedHighlights.forEach(h => promptParts.push(`- Ativo: ${h.asset}, Retorno: ${h.return}, Motivo: ${h.reason}`));
+        prompt += "\n- **Principais Destaques Positivos:**";
+        selectedHighlights.forEach(h => {
+            prompt += `\n  - Classe: ${h.asset}, Rentabilidade: ${h.return}, Justificativa: ${h.reason}`;
+        });
     }
-    
+
     const selectedDetractors = extractedData.detractors.filter((_, i) => selectedFields.detractors && (selectedFields.detractors as any)[i]);
     if (selectedDetractors.length > 0) {
-        promptParts.push("\nPrincipais detratores (ativos com performance abaixo do CDI):");
-        selectedDetractors.forEach(d => promptParts.push(`- Ativo: ${d.asset}, Retorno: ${d.return}`));
+        prompt += "\n- **Principais Detratores:**";
+        selectedDetractors.forEach(d => {
+            prompt += `\n  - Classe: ${d.asset}, Rentabilidade: ${d.return}`;
+        });
     }
+
+    prompt += `
+---
+**MODELO OBRIGATÓRIO DA MENSAGEM (PREENCHA COM OS DADOS ACIMA):**
+
+Olá, [NOME]!
+Em ${extractedData.reportMonth} sua carteira rendeu *${selectedFields.monthlyReturn ? extractedData.monthlyReturn : '[RENTABILIDADE PERCENTUAL DO MÊS]'}*, o que equivale a *${selectedFields.monthlyCdi ? extractedData.monthlyCdi : '[RENTABILIDADE EM %CDI DO MÊS]'}*, um ganho bruto de *${selectedFields.monthlyGain ? extractedData.monthlyGain : '[GANHO FINANCEIRO DO MÊS]'}*! No ano, estamos com uma rentabilidade de *${selectedFields.yearlyReturn ? extractedData.yearlyReturn : '[RENTABILIDADE PERCENTUAL DO ANO]'}*, o que equivale a uma performance de *${selectedFields.yearlyCdi ? extractedData.yearlyCdi : '[RENTABILIDADE EM %CDI DO ANO]'}* e um ganho financeiro de *${selectedFields.yearlyGain ? extractedData.yearlyGain : '[GANHO FINANCEIRO DO ANO]'}*!
+
+Os principais destaques foram:
+${selectedHighlights.length > 0 ? selectedHighlights.map(h => `*${h.asset}*, com *${h.return}*, *${h.reason}*`).join('\n') : '*[Classe 1]*, com *[rentabilidade]*, *[justificativa]*\n*[Classe 2]*, com *[rentabilidade]*, *[justificativa]*'}
+
+Os principais detratores foram:
+${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${d.return}*`).join('\n') : '*[Classe 1]*: *[rentabilidade]*\n*[Classe 2]*: *[rentabilidade]*'}
+
+[INSIRA AQUI O PARÁGRAFO DE ANÁLISE DO CENÁRIO ECONÔMICO]
+`;
     
-    promptParts.push(`\n\nGere uma mensagem amigável e profissional para o cliente, no padrão de comunicação da 3A RIVA, resumindo os pontos selecionados e adicionando uma breve análise sobre o cenário econômico atual para contextualizar a performance.`);
-    
-    onPromptGenerated(promptParts.join('\n'));
+    onPromptGenerated(prompt);
     handleClose();
   };
+
 
   const handleClose = () => {
     resetState();
