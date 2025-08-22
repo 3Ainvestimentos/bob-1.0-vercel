@@ -41,10 +41,13 @@ interface PromptBuilderDialogProps {
 
 // ---- Sub-components for each phase ----
 
-const UploadPhase = ({ onFileChange, isDraggingOver }: { onFileChange: (file: File) => void, isDraggingOver: boolean }) => {
+const UploadPhase = ({ onFileChange }: { onFileChange: (file: File) => void }) => {
+    const [isDraggingOver, setIsDraggingOver] = useState(false);
+
     const handleLocalDrop = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
+        setIsDraggingOver(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             onFileChange(e.dataTransfer.files[0]);
             e.dataTransfer.clearData();
@@ -54,6 +57,13 @@ const UploadPhase = ({ onFileChange, isDraggingOver }: { onFileChange: (file: Fi
     const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
+        setIsDraggingOver(true);
+    };
+
+    const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOver(false);
     };
 
     return (
@@ -63,6 +73,7 @@ const UploadPhase = ({ onFileChange, isDraggingOver }: { onFileChange: (file: Fi
         )}
         onDrop={handleLocalDrop}
         onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
     >
         <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
         <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
@@ -173,7 +184,6 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: P
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [selectedFields, setSelectedFields] = useState<SelectedFields>({});
   const [error, setError] = useState<string | null>(null);
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const { toast } = useToast();
 
   const resetState = () => {
@@ -303,31 +313,11 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
     resetState();
     onOpenChange(false);
   }
-
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(true);
-  };
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-  };
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        handleFileChange(e.dataTransfer.files[0]);
-        e.dataTransfer.clearData();
-    }
-  };
   
   const renderContent = () => {
     switch (phase) {
         case 'upload':
-            return <UploadPhase onFileChange={handleFileChange} isDraggingOver={isDraggingOver} />;
+            return <UploadPhase onFileChange={handleFileChange} />;
         case 'loading':
             return <LoadingPhase />;
         case 'error':
@@ -346,9 +336,6 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); else onOpenChange(true); }}>
       <DialogContent 
         className="sm:max-w-4xl max-h-[90vh] flex flex-col"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
       >
         <DialogHeader className='p-6 pb-4 border-b shrink-0'>
           <div className="flex items-center gap-3">
