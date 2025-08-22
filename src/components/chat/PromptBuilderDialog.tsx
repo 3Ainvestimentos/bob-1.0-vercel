@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+
 
 // ---- Types ----
 
@@ -205,37 +207,57 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         const categories = Object.keys(data.highlights);
         if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum destaque positivo encontrado.</p>;
 
-        return categories.map(category => (
-            <div key={`h-cat-${category}`} className="space-y-2">
-                <h5 className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">{category}</h5>
-                {data.highlights[category].map((item, index) => (
-                    <div key={`h-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                        <Checkbox id={`h-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('highlights', category, index, !!c)} className="mt-1" />
-                        <Label htmlFor={`h-${category}-${index}`} className="flex flex-col">
-                            <span><strong>{item.asset}</strong> ({item.return})</span>
-                            <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
-                        </Label>
-                    </div>
+        return (
+            <Accordion type="multiple" className="w-full">
+                {categories.map(category => (
+                    <AccordionItem value={`h-cat-${category}`} key={`h-cat-${category}`}>
+                        <AccordionTrigger className="font-semibold text-muted-foreground text-xs uppercase tracking-wider hover:no-underline py-2">
+                            {category} ({data.highlights[category].length})
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-2 pl-1">
+                            <div className="space-y-2">
+                                {data.highlights[category].map((item, index) => (
+                                    <div key={`h-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                        <Checkbox id={`h-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('highlights', category, index, !!c)} className="mt-1" />
+                                        <Label htmlFor={`h-${category}-${index}`} className="flex flex-col">
+                                            <span><strong>{item.asset}</strong> ({item.return})</span>
+                                            <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
                 ))}
-            </div>
-        ));
+            </Accordion>
+        );
     };
     
     const renderDetractors = () => {
         const categories = Object.keys(data.detractors);
         if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum detrator encontrado.</p>;
 
-        return categories.map(category => (
-            <div key={`d-cat-${category}`} className="space-y-2">
-                <h5 className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">{category}</h5>
-                {data.detractors[category].map((item, index) => (
-                    <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                        <Checkbox id={`d-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('detractors', category, index, !!c)} className="mt-1" />
-                        <Label htmlFor={`d-${category}-${index}`}><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
-                    </div>
+        return (
+            <Accordion type="multiple" className="w-full">
+                {categories.map(category => (
+                    <AccordionItem value={`d-cat-${category}`} key={`d-cat-${category}`}>
+                        <AccordionTrigger className="font-semibold text-muted-foreground text-xs uppercase tracking-wider hover:no-underline py-2">
+                           {category} ({data.detractors[category].length})
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-2 pl-1">
+                            <div className="space-y-2">
+                                {data.detractors[category].map((item, index) => (
+                                    <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                        <Checkbox id={`d-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('detractors', category, index, !!c)} className="mt-1" />
+                                        <Label htmlFor={`d-${category}-${index}`} className="cursor-pointer"><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
                 ))}
-            </div>
-        ));
+            </Accordion>
+        );
     };
 
     return (
@@ -510,3 +532,5 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
     </Dialog>
   );
 }
+
+  
