@@ -115,7 +115,7 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         </div>
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base"><Star className="h-5 w-5 text-primary" />Destaques da Carteira</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base"><Star className="h-5 w-5 text-primary" />Destaques Mensais da carteira</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 <div className="space-y-3">
