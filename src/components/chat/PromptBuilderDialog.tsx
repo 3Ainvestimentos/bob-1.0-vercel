@@ -47,7 +47,8 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-    const handleFileChange = (newFiles: FileList) => {
+    const handleFileChange = (newFiles: FileList | null) => {
+        if (!newFiles) return;
         const pdfFiles = Array.from(newFiles).filter(file => file.type === 'application/pdf');
         setSelectedFiles(prev => {
             const existingFileNames = new Set(prev.map(f => f.name));
@@ -433,6 +434,7 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
         onDrop={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            onFileDrop();
         }}
         onDragOver={(e) => {
             e.preventDefault();
