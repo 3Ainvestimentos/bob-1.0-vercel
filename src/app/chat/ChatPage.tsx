@@ -1609,6 +1609,7 @@ export default function ChatPageContent() {
             open={isPromptBuilderOpen}
             onOpenChange={setIsPromptBuilderOpen}
             onPromptGenerated={handlePromptGenerated}
+            onFileDrop={() => setIsDraggingOver(false)}
         />
 
         {isAuthenticated && !showTermsDialog && (

@@ -37,6 +37,7 @@ interface PromptBuilderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onPromptGenerated: (prompt: string) => void;
+  onFileDrop: () => void;
 }
 
 // ---- Sub-components for each phase ----
@@ -179,7 +180,7 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
 };
 
 
-export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: PromptBuilderDialogProps) {
+export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onFileDrop }: PromptBuilderDialogProps) {
   const [phase, setPhase] = useState<PromptBuilderPhase>('upload');
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [selectedFields, setSelectedFields] = useState<SelectedFields>({});
@@ -230,6 +231,7 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated }: P
 
   const handleFileChange = (file: File | null) => {
     if (!file) return;
+    onFileDrop(); // Notify parent to reset its dragging state
     processFile(file);
   };
 
