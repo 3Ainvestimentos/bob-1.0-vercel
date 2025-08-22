@@ -1709,5 +1709,3 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
-
-    
