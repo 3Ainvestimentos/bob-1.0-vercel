@@ -1357,6 +1357,14 @@ export default function ChatPageContent() {
         setTimeout(() => inputRef.current?.focus(), 100);
     };
 
+    const handleStartTour = () => {
+        setIsFaqDialogOpen(false);
+        // Use a timeout to ensure the dialog has closed before starting the tour
+        setTimeout(() => {
+            setShowOnboarding(true);
+        }, 150);
+    };
+
 
   if (authLoading || isCheckingTerms) {
     return (
@@ -1561,7 +1569,11 @@ export default function ChatPageContent() {
             </DialogContent>
         </Dialog>
         
-        <FaqDialog open={isFaqDialogOpen} onOpenChange={setIsFaqDialogOpen} />
+        <FaqDialog 
+            open={isFaqDialogOpen} 
+            onOpenChange={setIsFaqDialogOpen} 
+            onStartTour={handleStartTour}
+        />
         
         <AlertDialog open={showTermsDialog}>
             <AlertDialogContent>
@@ -1694,5 +1706,3 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
-
-    

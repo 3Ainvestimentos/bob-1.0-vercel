@@ -10,13 +10,17 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '../ui/button';
+import { PlayCircle } from 'lucide-react';
 
 interface FaqDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onStartTour: () => void;
 }
 
 const faqData = [
@@ -109,7 +113,7 @@ const faqData = [
   },
 ];
 
-export function FaqDialog({ open, onOpenChange }: FaqDialogProps) {
+export function FaqDialog({ open, onOpenChange, onStartTour }: FaqDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl flex flex-col p-0 max-h-[80vh]">
@@ -134,6 +138,12 @@ export function FaqDialog({ open, onOpenChange }: FaqDialogProps) {
             </Accordion>
           </div>
         </div>
+        <DialogFooter className="p-6 pt-4 border-t mt-auto">
+            <Button variant="outline" onClick={onStartTour}>
+                <PlayCircle className="mr-2 h-4 w-4" />
+                Refazer o Tour Guiado
+            </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
