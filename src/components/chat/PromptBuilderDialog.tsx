@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, ChangeEvent, DragEvent } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { extractDataFromXpReport } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X } from 'lucide-react';
-import type { ChangeEvent, DragEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
@@ -47,14 +46,19 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-    const handleFileChange = (newFiles: FileList | null) => {
+    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const newFiles = e.target.files;
         if (!newFiles) return;
         const pdfFiles = Array.from(newFiles).filter(file => file.type === 'application/pdf');
+        
         setSelectedFiles(prev => {
             const existingFileNames = new Set(prev.map(f => f.name));
             const uniqueNewFiles = pdfFiles.filter(f => !existingFileNames.has(f.name));
             return [...prev, ...uniqueNewFiles];
         });
+        
+        // Reset the input value to allow selecting the same file again
+        e.target.value = '';
     };
 
     const handleLocalDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -62,14 +66,14 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
         e.stopPropagation();
         setIsDraggingOver(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFileChange(e.dataTransfer.files);
-            e.dataTransfer.clearData();
-        }
-    };
-
-    const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-           handleFileChange(e.target.files);
+           const droppedFiles = e.dataTransfer.files;
+           const pdfFiles = Array.from(droppedFiles).filter(file => file.type === 'application/pdf');
+            setSelectedFiles(prev => {
+                const existingFileNames = new Set(prev.map(f => f.name));
+                const uniqueNewFiles = pdfFiles.filter(f => !existingFileNames.has(f.name));
+                return [...prev, ...uniqueNewFiles];
+            });
+           e.dataTransfer.clearData();
         }
     };
     
@@ -112,11 +116,11 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
                         <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
                         <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
                         <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
-                        <Button type="button" onClick={() => document.getElementById('file-upload-prompt-builder')?.click()}>
+                        <Button type="button" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()}>
                             <FileText className="mr-2 h-4 w-4" />
                             Selecionar Arquivo PDF
                         </Button>
-                        <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple />
+                        <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} multiple />
                     </div>
                 ) : (
                     <div className="flex flex-col h-full w-full">
@@ -134,7 +138,7 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
                                 </div>
                             ))}
                          </div>
-                         <Button variant="outline" size="sm" className="mt-4" onClick={() => document.getElementById('file-upload-prompt-builder')?.click()}>Adicionar outro arquivo</Button>
+                         <Button variant="outline" size="sm" className="mt-4" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()}>Adicionar outro arquivo</Button>
                     </div>
                 )}
             </div>
