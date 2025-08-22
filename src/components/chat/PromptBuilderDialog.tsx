@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star } from 'lucide-react';
 import type { ChangeEvent, DragEvent } from 'react';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 // ---- Types ----
 
@@ -42,7 +43,7 @@ interface PromptBuilderDialogProps {
 
 // ---- Sub-components for each phase ----
 
-const UploadPhase = ({ onFileChange }: { onFileChange: (file: File) => void }) => {
+const UploadPhase = ({ onFileChange, setReportType, setAnalysisType }: { onFileChange: (file: File) => void; setReportType: (value: string) => void; setAnalysisType: (value: string) => void; }) => {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
 
     const handleLocalDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -58,7 +59,9 @@ const UploadPhase = ({ onFileChange }: { onFileChange: (file: File) => void }) =
     const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
-        setIsDraggingOver(true);
+        if (e.dataTransfer.types.includes('Files')) {
+            setIsDraggingOver(true);
+        }
     };
 
     const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
@@ -68,22 +71,49 @@ const UploadPhase = ({ onFileChange }: { onFileChange: (file: File) => void }) =
     };
 
     return (
-    <div 
-        className={cn("flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/30 rounded-xl p-12 text-center h-full transition-colors",
-            isDraggingOver && "border-primary bg-primary/10"
-        )}
-        onDrop={handleLocalDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-    >
-        <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
-        <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
-        <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
-        <Button type="button" onClick={() => document.getElementById('file-upload-prompt-builder')?.click()}>
-            <FileText className="mr-2 h-4 w-4" />
-            Selecionar Arquivo PDF
-        </Button>
-        <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files && onFileChange(e.target.files[0])} />
+    <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="report-type">Relatórios Disponíveis</Label>
+                <Select defaultValue="performance" onValueChange={setReportType}>
+                    <SelectTrigger id="report-type">
+                        <SelectValue placeholder="Selecione o relatório" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="performance">Relatório de Performance</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="analysis-type">Quantidade de Itens</Label>
+                <Select defaultValue="individual" onValueChange={setAnalysisType}>
+                    <SelectTrigger id="analysis-type">
+                        <SelectValue placeholder="Selecione a quantidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="individual">Individual</SelectItem>
+                        <SelectItem value="batch">Lote</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+        <div 
+            className={cn("flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/30 rounded-xl p-12 text-center h-full transition-colors",
+                isDraggingOver && "border-primary bg-primary/10"
+            )}
+            onDrop={handleLocalDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+        >
+            <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
+            <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
+            <Button type="button" onClick={() => document.getElementById('file-upload-prompt-builder')?.click()}>
+                <FileText className="mr-2 h-4 w-4" />
+                Selecionar Arquivo PDF
+            </Button>
+            <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files && onFileChange(e.target.files[0])} />
+        </div>
     </div>
 )};
 
@@ -186,6 +216,10 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
   const [selectedFields, setSelectedFields] = useState<SelectedFields>({});
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const [reportType, setReportType] = useState('performance');
+  const [analysisType, setAnalysisType] = useState('individual');
+
 
   const resetState = () => {
     setPhase('upload');
@@ -319,7 +353,7 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
   const renderContent = () => {
     switch (phase) {
         case 'upload':
-            return <UploadPhase onFileChange={handleFileChange} />;
+            return <UploadPhase onFileChange={handleFileChange} setReportType={setReportType} setAnalysisType={setAnalysisType} />;
         case 'loading':
             return <LoadingPhase />;
         case 'error':
