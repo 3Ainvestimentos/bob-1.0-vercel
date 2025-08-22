@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { extractDataFromXpReport } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star } from 'lucide-react';
+import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X } from 'lucide-react';
 import type { ChangeEvent, DragEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -45,14 +45,27 @@ interface PromptBuilderDialogProps {
 
 const UploadPhase = ({ onFileChange, setReportType, setAnalysisType }: { onFileChange: (file: File) => void; setReportType: (value: string) => void; setAnalysisType: (value: string) => void; }) => {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const handleLocalDrop = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDraggingOver(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            onFileChange(e.dataTransfer.files[0]);
+            const file = e.dataTransfer.files[0];
+            if (file.type === 'application/pdf') {
+                setSelectedFile(file);
+            }
             e.dataTransfer.clearData();
+        }
+    };
+
+    const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+             if (file.type === 'application/pdf') {
+                setSelectedFile(file);
+            }
         }
     };
     
@@ -70,52 +83,78 @@ const UploadPhase = ({ onFileChange, setReportType, setAnalysisType }: { onFileC
         setIsDraggingOver(false);
     };
 
+    const handleContinue = () => {
+        if (selectedFile) {
+            onFileChange(selectedFile);
+        }
+    };
+
     return (
-    <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-                <Label htmlFor="report-type">Relatórios Disponíveis</Label>
-                <Select defaultValue="performance" onValueChange={setReportType}>
-                    <SelectTrigger id="report-type">
-                        <SelectValue placeholder="Selecione o relatório" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="performance">Relatório de Performance</SelectItem>
-                    </SelectContent>
-                </Select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+            <div 
+                className={cn("flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors",
+                    isDraggingOver && "border-primary bg-primary/10"
+                )}
+                onDrop={handleLocalDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+            >
+                {selectedFile ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full">
+                         <FileText className="h-16 w-16 text-primary mb-4" />
+                         <p className="font-semibold text-foreground break-all">{selectedFile.name}</p>
+                         <p className="text-sm text-muted-foreground">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+                         <Button variant="ghost" size="sm" className="mt-4 text-destructive hover:text-destructive" onClick={() => setSelectedFile(null)}>
+                             <X className="mr-2 h-4 w-4" />
+                             Remover
+                         </Button>
+                    </div>
+                ) : (
+                    <>
+                        <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                        <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
+                        <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
+                        <Button type="button" onClick={() => document.getElementById('file-upload-prompt-builder')?.click()}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Selecionar Arquivo PDF
+                        </Button>
+                        <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} />
+                    </>
+                )}
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="analysis-type">Quantidade de Itens</Label>
-                <Select defaultValue="individual" onValueChange={setAnalysisType}>
-                    <SelectTrigger id="analysis-type">
-                        <SelectValue placeholder="Selecione a quantidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="individual">Individual</SelectItem>
-                        <SelectItem value="batch">Lote</SelectItem>
-                    </SelectContent>
-                </Select>
+            <div className="space-y-6 flex flex-col justify-between">
+                <div className="space-y-4">
+                    <div>
+                        <Label htmlFor="report-type" className="font-semibold">Relatórios Disponíveis</Label>
+                        <Select defaultValue="performance" onValueChange={setReportType}>
+                            <SelectTrigger id="report-type" className="mt-2">
+                                <SelectValue placeholder="Selecione o relatório" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="performance">Relatório de Performance</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label htmlFor="analysis-type" className="font-semibold">Quantidade de Itens</Label>
+                        <Select defaultValue="individual" onValueChange={setAnalysisType}>
+                            <SelectTrigger id="analysis-type" className="mt-2">
+                                <SelectValue placeholder="Selecione a quantidade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="individual">Individual</SelectItem>
+                                <SelectItem value="batch" disabled>Lote (em breve)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <Button type="button" onClick={handleContinue} disabled={!selectedFile}>
+                    Continuar e Processar
+                </Button>
             </div>
         </div>
-        <div 
-            className={cn("flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/30 rounded-xl p-12 text-center h-full transition-colors",
-                isDraggingOver && "border-primary bg-primary/10"
-            )}
-            onDrop={handleLocalDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-        >
-            <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
-            <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
-            <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
-            <Button type="button" onClick={() => document.getElementById('file-upload-prompt-builder')?.click()}>
-                <FileText className="mr-2 h-4 w-4" />
-                Selecionar Arquivo PDF
-            </Button>
-            <input id="file-upload-prompt-builder" type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files && onFileChange(e.target.files[0])} />
-        </div>
-    </div>
-)};
+    );
+};
 
 const LoadingPhase = () => (
     <div className="flex flex-col items-center justify-center text-center h-full">
@@ -387,7 +426,7 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
             {renderContent()}
         </div>
 
-        <DialogFooter className="p-6 pt-4 border-t mt-auto">
+        <DialogFooter className="p-6 pt-4 border-t mt-auto bg-background sticky bottom-0">
           <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
           <Button type="button" onClick={handleGeneratePrompt} disabled={phase !== 'selection' || Object.values(selectedFields).every(v => typeof v === 'boolean' ? !v : Object.values(v).every(subV => !subV))}>
              <MessageSquareQuote className="mr-2 h-4 w-4" />
