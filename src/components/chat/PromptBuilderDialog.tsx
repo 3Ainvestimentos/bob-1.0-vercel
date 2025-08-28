@@ -37,19 +37,21 @@ type SelectedFields = {
 };
 
 type PromptBuilderPhase = 'upload' | 'loading' | 'selection' | 'error';
+type AnalysisType = 'individual' | 'batch';
 
 interface PromptBuilderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onPromptGenerated: (prompt: string) => void;
-  onFileDrop: () => void;
+  onBatchSubmit: (files: File[]) => void;
 }
 
 // ---- Sub-components for each phase ----
 
-const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFilesChange: (files: File[]) => void; setReportType: (value: string) => void; setAnalysisType: (value: string) => void; }) => {
+const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (files: File[]) => void; onBatchSubmit: (files: File[]) => void; files: File[] }) => {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
-    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>(files);
+    const [analysisType, setAnalysisType] = useState<AnalysisType>('individual');
 
     const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const newFiles = e.target.files;
@@ -97,8 +99,11 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
     };
 
     const handleContinue = () => {
-        if (selectedFiles.length > 0) {
+        if (selectedFiles.length === 0) return;
+        if (analysisType === 'individual') {
             onFilesChange(selectedFiles);
+        } else {
+            onBatchSubmit(selectedFiles);
         }
     };
 
@@ -151,7 +156,7 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
                 <div className="space-y-4">
                     <div>
                         <Label htmlFor="report-type" className="font-semibold">Relatórios Disponíveis</Label>
-                        <Select defaultValue="performance" onValueChange={setReportType}>
+                        <Select defaultValue="performance">
                             <SelectTrigger id="report-type" className="mt-2">
                                 <SelectValue placeholder="Selecione o relatório" />
                             </SelectTrigger>
@@ -162,13 +167,13 @@ const UploadPhase = ({ onFilesChange, setReportType, setAnalysisType }: { onFile
                     </div>
                     <div>
                         <Label htmlFor="analysis-type" className="font-semibold">Quantidade de Itens</Label>
-                        <Select defaultValue="individual" onValueChange={setAnalysisType}>
+                        <Select value={analysisType} onValueChange={(value) => setAnalysisType(value as AnalysisType)}>
                             <SelectTrigger id="analysis-type" className="mt-2">
                                 <SelectValue placeholder="Selecione a quantidade" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="individual">Individual</SelectItem>
-                                <SelectItem value="batch" disabled>Lote (em breve)</SelectItem>
+                                <SelectItem value="batch">Lote</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -338,27 +343,25 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
 };
 
 
-export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onFileDrop }: PromptBuilderDialogProps) {
+export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onBatchSubmit }: PromptBuilderDialogProps) {
   const [phase, setPhase] = useState<PromptBuilderPhase>('upload');
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [selectedFields, setSelectedFields] = useState<SelectedFields>({});
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const [reportType, setReportType] = useState('performance');
-  const [analysisType, setAnalysisType] = useState('individual');
-
-
   const resetState = () => {
     setPhase('upload');
+    setUploadedFiles([]);
     setExtractedData(null);
     setSelectedFields({});
     setError(null);
   };
   
-  const processFiles = async (files: File[]) => {
+  const processIndividualFile = async (files: File[]) => {
     if (files.length === 0) return;
-    const file = files[0]; // For now, only process the first file for individual analysis
+    const file = files[0];
 
     if (file.type !== 'application/pdf') {
         toast({
@@ -395,9 +398,13 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
   }
 
   const handleFilesChange = (files: File[]) => {
-    if (files.length === 0) return;
-    onFileDrop(); // Notify parent to reset its dragging state
-    processFiles(files);
+    setUploadedFiles(files);
+    processIndividualFile(files);
+  };
+  
+  const handleBatchSubmit = (files: File[]) => {
+    onBatchSubmit(files);
+    handleClose();
   };
 
   const handleCheckboxChange = (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => {
@@ -408,13 +415,9 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onF
             if (!categoryState[assetClass]) {
                 categoryState[assetClass] = {};
             }
-            // When handling detractors, we need the original index, not the sorted/filtered one.
-            // This is a simplification; a more robust solution would map sorted indices back to original ones.
-            // For now, we assume the index passed corresponds to the original data structure.
             categoryState[assetClass][index] = checked;
             newSelected[category] = categoryState;
         } else {
-            // This is for top-level fields like monthlyReturn
             newSelected[category] = checked;
         }
         return newSelected;
@@ -510,7 +513,7 @@ ${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${
   const renderContent = () => {
     switch (phase) {
         case 'upload':
-            return <UploadPhase onFilesChange={handleFilesChange} setReportType={setReportType} setAnalysisType={setAnalysisType} />;
+            return <UploadPhase onFilesChange={handleFilesChange} onBatchSubmit={handleBatchSubmit} files={uploadedFiles} />;
         case 'loading':
             return <LoadingPhase />;
         case 'error':

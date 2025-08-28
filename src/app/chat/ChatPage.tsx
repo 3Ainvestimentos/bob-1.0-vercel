@@ -692,7 +692,7 @@ export default function ChatPageContent() {
 
     try {
       const deidentifiedQuery = await deidentifyTextOnly(originalQuery);
-      const useStandardAnalysis = originalQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão");
+      const useStandardAnalysis = originalQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão") || originalQuery === POSICAO_CONSOLIDADA_PREAMBLE;
       const fileNames = filesToUpload.map(f => f.name);
   
       const userMessage: Message = {
@@ -794,6 +794,20 @@ export default function ChatPageContent() {
       setInput(suggestion);
       inputRef.current?.focus();
   };
+
+  const handleBatchSubmit = (files: File[]) => {
+    if (files.length === 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Nenhum Arquivo',
+            description: 'Por favor, anexe um ou mais relatórios para análise em lote.',
+        });
+        return;
+    }
+    const query = POSICAO_CONSOLIDADA_PREAMBLE;
+    submitQuery(query, files);
+    setIsPromptBuilderOpen(false);
+};
 
   
   const handleSubmit = async (e: FormEvent) => {
@@ -1611,7 +1625,7 @@ export default function ChatPageContent() {
             open={isPromptBuilderOpen}
             onOpenChange={setIsPromptBuilderOpen}
             onPromptGenerated={handlePromptGenerated}
-            onFileDrop={() => setIsDraggingOver(false)}
+            onBatchSubmit={handleBatchSubmit}
         />
 
         {isAuthenticated && !showTermsDialog && (
