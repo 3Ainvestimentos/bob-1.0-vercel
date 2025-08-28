@@ -9,7 +9,7 @@ import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { SpeechClient } from '@google-cloud/speech';
 import { estimateTokens, getFileContent, formatTutorialToMarkdown } from '@/lib/server/utils';
-import { POSICAO_CONSOLIDADA_PREAMBLE } from '@/app/chat/preambles';
+import { POSICAO_CONSOLIDADA_PREAMBLE, XP_REPORT_EXTRACTION_PREAMBLE } from '@/app/chat/preambles';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
@@ -50,28 +50,6 @@ Com base nos documentos encontrados, aqui estão os procedimentos:
 - Clique em "SEGURANÇA".
 - ...
 `;
-
-const EXTRACT_XP_REPORT_PREAMBLE = `
-Você é um assistente de extração de dados altamente preciso. Sua única tarefa é analisar o texto de um relatório de investimentos da XP e extrair informações específicas, retornando-as em um formato JSON.
-
-**REGRAS ESTRITAS:**
-1.  **Estrutura do Relatório:** O relatório organiza os ativos sob uma "Estratégia" (ex: "Pós Fixado"). Você deve reconhecer esta "Estratégia" como a **classe de ativo** e os itens listados abaixo dela como os ativos individuais pertencentes a essa classe.
-2.  **Extraia os seguintes campos do texto:**
-    -   'reportMonth': O MÊS de referência do relatório. Esta informação geralmente aparece próxima aos dados de rentabilidade mensal. Extraia o nome do mês (ex: 'Julho', 'Agosto').
-    -   'monthlyReturn': RENTABILIDADE PERCENTUAL DO MÊS.
-    -   'monthlyCdi': RENTABILIDADE EM %CDI DO MÊS.
-    -   'monthlyGain': GANHO FINANCEIRO DO MÊS.
-    -   'yearlyReturn': RENTABILIDADE PERCENTUAL DO ANO.
-    -   'yearlyCdi': RENTABILIDADE EM %CDI DO ANO.
-    -   'yearlyGain': GANHO FINANCEIRO DO ANO.
-    -   'highlights': Na **página 5**, na seção 'Posição Detalhada dos Ativos', encontre os ativos com a **maior** rentabilidade no mês. Agrupe-os pela sua respectiva **classe de ativo** (Estratégia). Para cada ativo, extraia seu nome ('asset'), o percentual de retorno ('return'), e a justificativa ('reason'). O resultado deve ser um objeto onde as chaves são as classes de ativos.
-    -   'detractors': Na **página 5**, na seção 'Posição Detalhada dos Ativos', encontre **TODOS** os ativos listados. Agrupe-os pela sua respectiva **classe de ativo** (Estratégia). Para cada ativo, extraia o nome do ativo ('asset') e a rentabilidade em %CDI no mês ('cdiPercentage'). O resultado deve ser um objeto onde as chaves são as classes de ativos.
-3.  **Formato de Saída:** A resposta DEVE ser um objeto JSON válido, contendo apenas os campos listados acima. Não inclua nenhum texto, explicação, ou formatação Markdown. Apenas o JSON.
-4.  **Valores Numéricos:** Mantenha os valores exatamente como aparecem no texto (ex: "1,23%", "R$ 1.234,56").
-5.  **Valores Nulos (Regra Importante):** Se um valor numérico for representado por parênteses, como em "(0,00)" ou " -   ", desconsidere-o. Trate-o como um valor nulo e não o inclua na lista de detratores ou destaques.
-6.  **Precisão:** Seja extremamente preciso. Se um valor não for encontrado, retorne uma string vazia ("") ou um objeto/array vazio para aquele campo.
-`;
-
 
 async function getGeminiApiKey(): Promise<string> {
     if (process.env.GEMINI_API_KEY) {
@@ -1465,7 +1443,7 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     try {
         const textContent = await getFileContent(fileDataUri.dataUri, fileDataUri.mimeType);
 
-        const result = await callGemini(textContent, [], EXTRACT_XP_REPORT_PREAMBLE, false, true);
+        const result = await callGemini(textContent, [], XP_REPORT_EXTRACTION_PREAMBLE, false, true);
 
         if (result.searchFailed || !result.summary) {
             throw new Error("A extração de dados do relatório falhou. A IA não retornou um JSON válido.");
