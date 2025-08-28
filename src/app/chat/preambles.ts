@@ -8,10 +8,11 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
         -   Da **página 5**: As duas classes de ativos com a **maior** rentabilidade no mês (nome, percentual, justificativa) e as duas com rentabilidade **inferior** ao CDI (nome, percentual).
     -   **FORMATE A MENSAGEM:** Siga o modelo abaixo **EXATAMENTE**. Use quebras de linha e asteriscos para negrito. NÃO use \`\`\`, Markdown ou qualquer outra formatação.
 2.  **SEPARADOR:** Após formatar a mensagem completa para um relatório, insira uma linha com "---" antes de começar a processar o próximo relatório.
+3.  **NOTA IMPORTANTE:** Ao final de cada mensagem gerada, substitua o "Olá, !" pelo nome do cliente correspondente.
 
 **MODELO OBRIGATÓRIO DA MENSAGEM (PREENCHA OS CAMPOS PARA CADA RELATÓRIO):**
 
-Olá, [NOME]!
+Olá, !
 Em [mes de referencia] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]*, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* e um ganho financeiro de *[GANHO FINANCEIRO DO ANO]*!
 
 Os principais destaques foram:
