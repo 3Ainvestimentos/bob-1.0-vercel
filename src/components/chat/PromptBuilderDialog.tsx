@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, ChangeEvent, DragEvent } from 'react';
+import { useState, useMemo, ChangeEvent, DragEvent, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -52,6 +52,12 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>(files);
     const [analysisType, setAnalysisType] = useState<AnalysisType>('individual');
+
+    useEffect(() => {
+        if (selectedFiles.length > 1) {
+            setAnalysisType('batch');
+        }
+    }, [selectedFiles]);
 
     const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const newFiles = e.target.files;
@@ -167,7 +173,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                     </div>
                     <div>
                         <Label htmlFor="analysis-type" className="font-semibold">Quantidade de Itens</Label>
-                        <Select value={analysisType} onValueChange={(value) => setAnalysisType(value as AnalysisType)}>
+                        <Select value={analysisType} onValueChange={(value) => setAnalysisType(value as AnalysisType)} disabled={selectedFiles.length > 1}>
                             <SelectTrigger id="analysis-type" className="mt-2">
                                 <SelectValue placeholder="Selecione a quantidade" />
                             </SelectTrigger>
