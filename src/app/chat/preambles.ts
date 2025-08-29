@@ -14,7 +14,7 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
 **MODELO OBRIGATÓRIO DA MENSAGEM (PREENCHA OS CAMPOS PARA CADA RELATÓRIO):**
 
 Olá!
-Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]*, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* e um ganho financeiro de *[GANHO FINANCEIRO DO ANO]*!
+Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]*, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* e um ganho financeiro de *[GANHO FINANCEiro DO ANO]*!
 
 Os principais destaques foram:
 *[Classe 1]*, com *[rentabilidade]*, *[justificativa]*
