@@ -1369,6 +1369,7 @@ export default function ChatPageContent() {
 
     const handlePromptGenerated = (prompt: string) => {
         setInput(prompt);
+        setSearchSource('web');
         setIsPromptBuilderOpen(false);
         setTimeout(() => inputRef.current?.focus(), 100);
     };
