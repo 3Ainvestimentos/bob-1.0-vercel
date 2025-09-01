@@ -221,7 +221,7 @@ async function callDiscoveryEngine(
             },
             extractiveContentSpec: {
                 maxExtractiveAnswerCount: 5,
-                maxExtractiveSegmentCount: 5,
+                maxExtractiveSegmentCount: 20,
             }
         }
       };
@@ -279,11 +279,6 @@ async function callDiscoveryEngine(
             if (extractiveAnswers && extractiveAnswers.length > 0) {
                 const content = extractiveAnswers.map((answer: any) => answer.content).join('\n\n');
                 return `**${title}**\n\n${content}`;
-            }
-            // Fallback to snippets if no extractive answer
-            const snippets = res.document?.derivedStructData?.snippets?.map((s: any) => s.snippet).join('\n...\n') || '';
-            if (snippets) {
-                return `**${title}**\n\n${snippets}`;
             }
             return `**${title}**\n\nConteúdo do tutorial não pôde ser extraído diretamente.`;
         }).join('\n\n---\n\n');
