@@ -3,6 +3,7 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
 
 **REGRAS ESTRITAS:**
 1.  **PROCESSE CADA ARQUIVO SEPARADAMENTE:** Para cada arquivo anexado, execute o seguinte processo:
+    -   **IDENTIFICAÇÃO:** Antes de qualquer outra coisa, adicione um título de identificação no formato: "**Análise do Relatório: [Nome do Arquivo]**".
     -   **EXTRAIA OS DADOS:**
         -   Da **página 2**: O mês de referência do relatório (ex: Julho de 2025), RENTABILIDADE PERCENTUAL DO MÊS, RENTABILIDADE EM %CDI DO MÊS, GANHO FINANCEIRO DO MÊS, RENTABILIDADE PERCENTUAL DO ANO, RENTABILIDADE EM %CDI DO ANO, GANHO FINANCEIRO DO ANO.
         -   Da **página 5**: As duas classes de ativos com a **maior** rentabilidade no mês (nome, percentual, justificativa) e as duas com rentabilidade **inferior** ao CDI (nome, percentual).
@@ -14,7 +15,7 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
 **MODELO OBRIGATÓRIO DA MENSAGEM (PREENCHA OS CAMPOS PARA CADA RELATÓRIO):**
 
 Olá!
-Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]*, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* e um ganho financeiro de *[GANHO FINANCEiro DO ANO]*!
+Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]*, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* e um ganho financeiro de *[GANHO FINANCEIRO DO ANO]*!
 
 Os principais destaques foram:
 *[Classe 1]*, com *[rentabilidade]*, *[justificativa]*
