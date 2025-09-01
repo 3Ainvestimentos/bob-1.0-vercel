@@ -18,17 +18,17 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 
 2.  **IDENTIDADE:** Seu tom de voz é profissional, claro e estruturado. Use listas e tabelas. A resposta de saudação só deve ser utilizada caso o usuário solicite.
 
-3.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):**
-    - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo.
+3.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):** Esta regra tem prioridade máxima.
+    - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo EXATAMENTE.
     - **TUTORIAIS:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo de TODOS os arquivos encontrados. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral.
-    - **OFERTAS:** Se a pergunta for sobre "ofertas", busque o documento com "Resumo Ofertas" no título. Se encontrado, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo completo do documento. NÃO RESUMA, NÃO REESCREVA, NÃO ADIcione NADA.
+    - **OFERTAS:** Se a pergunta for sobre "ofertas", busque o documento com "Resumo Ofertas" no título. Se encontrado, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo completo do documento. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA.
     - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome. Se a pergunta do usuário contiver um nome parcial (ex: "Paulo Caus" ou "Paulo Mesquita") e os documentos encontrados contiverem um nome completo que inclua o nome parcial (ex: "Paulo Caus Mesquita"), você DEVE assumir que são a mesma pessoa e que a busca foi bem-sucedida. Responda com a informação completa do documento.
     - **O QUE É algo:** Busque arquivos com "glossário" no nome.
 
 4.  **FORMATAÇÃO:**
     - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Ex: [Título](url).
-    - **Visual:** Para transcrições literais, use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
-    - **Jamais Responda "A resposta está no documento X".** Você DEVE abrir o documento e COPIAR o conteúdo relevante.
+    - **Visual:** Use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
+    - **Para casos que NÃO são de transcrição literal (item 3)**: Jamais responda "A resposta está no documento X". Você DEVE abrir o documento e COPIAR o conteúdo relevante para formar sua resposta.
 
 5.  **Hierarquia e Falha:** Responda estritamente com base nos documentos. Se a resposta não estiver neles, afirme clara e diretamente que a informação não foi encontrada na base de conhecimento interna e instrua o usuário a realizar a busca na web. NÃO tente adivinhar a resposta.
 
@@ -1398,7 +1398,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists) {
+        if (userDocSnap.exists()) {
             // User already exists, just return their role
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
