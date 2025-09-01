@@ -8,7 +8,7 @@ import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseA
 import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { SpeechClient } from '@google-cloud/speech';
-import { estimateTokens, getFileContent, formatTutorialToMarkdown } from '@/lib/server/utils';
+import { estimateTokens, getFileContent } from '@/lib/server/utils';
 import { POSICAO_CONSOLIDADA_PREAMBLE, XP_REPORT_EXTRACTION_PREAMBLE } from '@/app/chat/preambles';
 
 
@@ -25,12 +25,14 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
     - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome. Se a pergunta do usuário contiver um nome parcial (ex: "Paulo Caus" ou "Paulo Mesquita") e os documentos encontrados contiverem um nome completo que inclua o nome parcial (ex: "Paulo Caus Mesquita"), você DEVE assumir que são a mesma pessoa e que a busca foi bem-sucedida. Responda com a informação completa do documento.
     - **O QUE É algo:** Busque arquivos com "glossário" no nome.
 
-4.  **FORMATAÇÃO:**
+4.  **HIERARQUIA DE FONTES (IMPORTANTE):** Se o primeiro documento retornado pela busca contiver uma resposta completa e direta para a pergunta do usuário, priorize-o de forma absoluta. Use os outros documentos apenas para contexto adicional, se for estritamente necessário. NÃO misture informações de outros documentos se a resposta principal já estiver clara e completa no primeiro.
+
+5.  **FORMATAÇÃO:**
     - **Links:** Se a fonte de dados for um link, formate-o como um hyperlink em Markdown. Ex: [Título](url).
     - **Visual:** Use listas com marcadores ('*') e negrito ('**') para organizar e destacar os tópicos, melhorando a legibilidade.
     - **Para casos que NÃO são de transcrição literal (item 3)**: Jamais responda "A resposta está no documento X". Você DEVE abrir o documento e COPIAR o conteúdo relevante para formar sua resposta.
 
-5.  **Hierarquia e Falha:** Responda estritamente com base nos documentos. Se a resposta não estiver neles, afirme clara e diretamente que a informação não foi encontrada na base de conhecimento interna e instrua o usuário a realizar a busca na web. NÃO tente adivinhar a resposta.
+6.  **Hierarquia e Falha:** Responda estritamente com base nos documentos. Se a resposta não estiver neles, afirme clara e diretamente que a informação não foi encontrada na base de conhecimento interna e instrua o usuário a realizar a busca na web. NÃO tente adivinhar a resposta.
 
 ### EXEMPLO DE RESPOSTA OBRIGATÓRIA PARA A QUERY DO TIPO 'COMO FAZER':
 
@@ -735,7 +737,7 @@ export async function removeFileFromConversation(
     try {
         const adminDb = await getAuthenticatedFirestoreAdmin();
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
-        const chatSnap = await getDoc(chatRef);
+        const chatSnap = await chatRef.get();
 
         if (!chatSnap.exists) {
             throw new Error("Conversation not found.");
@@ -1379,7 +1381,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists) {
+        if (userDocSnap.exists()) {
             // User already exists, just return their role
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
@@ -1438,18 +1440,3 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
         return { success: false, error: `Falha ao extrair dados do relatório: ${error.message}` };
     }
 }
-
-    
-
-    
-
-    
-
-  
-
-
-    
-
-    
-
-    
