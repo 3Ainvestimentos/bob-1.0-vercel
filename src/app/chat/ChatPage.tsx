@@ -1466,10 +1466,10 @@ export default function ChatPageContent() {
                 <form onSubmit={handleRenameSubmit}>
                     <DialogHeader>
                         <DialogTitle>Renomear {itemToRename?.type === 'group' ? 'Projeto' : 'Conversa'}</DialogTitle>
+                        <DialogDescription>
+                            Digite o novo nome para "{itemToRename?.currentName}".
+                        </DialogDescription>
                     </DialogHeader>
-                    <DialogDescription>
-                        Digite o novo nome para "{itemToRename?.currentName}".
-                    </DialogDescription>
                     <div className="grid gap-4 py-4">
                     <Input
                         id="newName"
@@ -1683,25 +1683,25 @@ export default function ChatPageContent() {
                         </Popover>
                     </div>
                     <ChatMessageArea
-                    messages={messages}
-                    isLoading={isLoading}
-                    error={error}
-                    user={user}
-                    userName={userName}
-                    userInitials={userInitials}
-                    lastFailedQuery={null} // This is now handled by the source switch
-                    feedbacks={feedbacks}
-                    regeneratingMessageId={regeneratingMessageId}
-                    messagesEndRef={messagesEndRef}
-                    onFeedback={handleFeedback}
-                    onRegenerate={handleRegenerate}
-                    onCopyToClipboard={handleCopyToClipboard}
-                    onReportLegalIssueRequest={handleReportLegalIssueRequest}
-                    onOpenFeedbackDialog={handleOpenFeedbackDialog}
-                    onWebSearch={() => {}} // This is now handled by the source switch
-                    onSuggestionClick={handleSuggestionClick}
-                    activeChat={activeChat}
-                    onRemoveFile={handleRemoveFile}
+                        messages={messages}
+                        isLoading={isLoading}
+                        error={error}
+                        user={user}
+                        userName={userName}
+                        userInitials={userInitials}
+                        lastFailedQuery={null}
+                        feedbacks={feedbacks}
+                        regeneratingMessageId={regeneratingMessageId}
+                        messagesEndRef={messagesEndRef}
+                        onFeedback={handleFeedback}
+                        onRegenerate={handleRegenerate}
+                        onCopyToClipboard={handleCopyToClipboard}
+                        onReportLegalIssueRequest={handleReportLegalIssueRequest}
+                        onOpenFeedbackDialog={handleOpenFeedbackDialog}
+                        onWebSearch={() => {}}
+                        onSuggestionClick={handleSuggestionClick}
+                        activeChat={activeChat}
+                        onRemoveFile={handleRemoveFile}
                     />
 
                     <ChatInputForm
@@ -1723,3 +1723,5 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
+
+    

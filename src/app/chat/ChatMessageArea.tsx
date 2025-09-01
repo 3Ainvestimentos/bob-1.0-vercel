@@ -53,7 +53,6 @@ interface ChatMessageAreaProps {
   onOpenFeedbackDialog: (message: Message) => void;
   onWebSearch: () => void;
   onSuggestionClick: (suggestion: string) => void;
-  onOpenPromptBuilder: () => void;
   activeChat: Conversation | null;
   onRemoveFile: (fileId: string) => void;
 }
@@ -89,7 +88,6 @@ export function ChatMessageArea({
   onOpenFeedbackDialog,
   onWebSearch,
   onSuggestionClick,
-  onOpenPromptBuilder,
   activeChat,
   onRemoveFile,
 }: ChatMessageAreaProps) {
@@ -129,7 +127,7 @@ export function ChatMessageArea({
                       </div>
                     </div>
                   </Card>
-                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={onOpenPromptBuilder}>
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick('open_prompt_builder')}>
                     <div className="flex items-start gap-4">
                       <Wand2 className="h-6 w-6 text-muted-foreground" />
                       <div>
@@ -280,5 +278,7 @@ export function ChatMessageArea({
     </div>
   );
 }
+
+    
 
     
