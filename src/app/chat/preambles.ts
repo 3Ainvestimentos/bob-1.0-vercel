@@ -49,3 +49,5 @@ Você é um assistente de extração de dados altamente preciso. Sua única tare
 5.  **Valores Nulos (Regra Importante):** Se um valor numérico for representado por parênteses, como em "(0,00)" ou " -   ", desconsidere-o. Trate-o como um valor nulo e não o inclua na lista de detratores ou destaques.
 6.  **Precisão:** Seja extremamente preciso. Se um valor não for encontrado, retorne uma string vazia ("") ou um objeto/array vazio para aquele campo.
 `;
+
+    

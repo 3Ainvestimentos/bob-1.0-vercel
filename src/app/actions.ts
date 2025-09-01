@@ -267,31 +267,6 @@ async function callDiscoveryEngine(
       const summary = data.summary?.summaryText;
       const results = data.results || [];
 
-      // Logic to handle tutorial transcription
-      const tutorialResults = results.filter((r: any) => 
-        r.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
-      );
-
-      if (tutorialResults.length > 0) {
-        const tutorialContent = tutorialResults.map((res: any) => {
-            const title = (res.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim();
-            const extractiveAnswers = res.document?.derivedStructData?.extractive_answers;
-            if (extractiveAnswers && extractiveAnswers.length > 0) {
-                const content = extractiveAnswers.map((answer: any) => answer.content).join('\n\n');
-                return `**${title}**\n\n${content}`;
-            }
-            return `**${title}**\n\nConteúdo do tutorial não pôde ser extraído diretamente.`;
-        }).join('\n\n---\n\n');
-
-        const finalSummary = `Com base nos documentos encontrados, aqui estão os procedimentos:\n\n${tutorialContent}`;
-        sources = tutorialResults.map((result: any) => ({
-            title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim(),
-            uri: result.document?.derivedStructData?.link || 'URI não encontrada',
-        }));
-        const candidatesTokenCount = await estimateTokens(finalSummary);
-        return { summary: finalSummary, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
-      }
-      
       const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar", "não encontrei", "não tenho como", "não foram encontradas"];
       const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
 
@@ -309,9 +284,20 @@ async function callDiscoveryEngine(
           title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim(),
           uri: result.document?.derivedStructData?.link || 'URI não encontrada',
       }));
+
+      // Logic to handle tutorial transcription and formatting
+      const isTutorialSearch = results.some((r: any) => 
+        r.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
+      );
+
+      let finalSummary = summary;
+      if (isTutorialSearch) {
+          const tutorialTitle = results.find((r: any) => r.document?.derivedStructData?.title?.toLowerCase().includes('tutorial'))?.document?.derivedStructData?.title || "Tutorial";
+          finalSummary = await formatTutorialToMarkdown(summary, tutorialTitle);
+      }
       
-      const candidatesTokenCount = await estimateTokens(summary);
-      return { summary, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
+      const candidatesTokenCount = await estimateTokens(finalSummary);
+      return { summary: finalSummary, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
 
     } catch (error: any) {
       console.error("Error in callDiscoveryEngine:", error.message);
@@ -760,7 +746,7 @@ export async function removeFileFromConversation(
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
         const chatSnap = await getDoc(chatRef);
 
-        if (!chatSnap.exists) {
+        if (!chatSnap.exists()) {
             throw new Error("Conversation not found.");
         }
 
@@ -1470,6 +1456,8 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
 
   
 
+
+    
 
     
 
