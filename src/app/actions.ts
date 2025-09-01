@@ -8,7 +8,7 @@ import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseA
 import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { SpeechClient } from '@google-cloud/speech';
-import { estimateTokens, getFileContent } from '@/lib/server/utils';
+import { estimateTokens, getFileContent, formatTutorialToMarkdown } from '@/lib/server/utils';
 import { POSICAO_CONSOLIDADA_PREAMBLE, XP_REPORT_EXTRACTION_PREAMBLE } from '@/app/chat/preambles';
 
 
@@ -268,6 +268,37 @@ async function callDiscoveryEngine(
       let sources: ClientRagSource[] = [];
       const summary = data.summary?.summaryText;
       const results = data.results || [];
+
+      const tutorialResults = results.filter((result: any) => 
+          result.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
+      );
+
+      if (tutorialResults.length > 0) {
+          let combinedContent = "Com base nos documentos encontrados, aqui estão os procedimentos:\n\n";
+          let tutorialSources: ClientRagSource[] = [];
+
+          const tutorialContents = await Promise.all(tutorialResults.map(async (result: any) => {
+              const title = (result.document?.derivedStructData?.title || 'Tutorial').replace(/tutorial - /gi, '').trim();
+              const extractiveAnswers = result.document?.derivedStructData?.extractive_answers;
+              
+              let rawContent = "Conteúdo do tutorial não pôde ser extraído diretamente.";
+              if (extractiveAnswers && extractiveAnswers.length > 0) {
+                  rawContent = extractiveAnswers.map((ans: any) => ans.content).join("\n\n");
+              }
+              
+              tutorialSources.push({
+                  title: title,
+                  uri: result.document?.derivedStructData?.link || 'URI não encontrada',
+              });
+              
+              return `**${title.toUpperCase()}**\n\n${rawContent}`;
+          }));
+          
+          combinedContent += tutorialContents.join('\n\n---\n\n');
+          const candidatesTokenCount = await estimateTokens(combinedContent);
+          
+          return { summary: combinedContent, searchFailed: false, sources: tutorialSources, promptTokenCount, candidatesTokenCount };
+      }
 
       const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar", "não encontrei", "não tenho como", "não foram encontradas"];
       const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
@@ -739,7 +770,7 @@ export async function removeFileFromConversation(
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
         const chatSnap = await chatRef.get();
 
-        if (!chatSnap.exists) {
+        if (!chatSnap.exists()) {
             throw new Error("Conversation not found.");
         }
 
@@ -1038,7 +1069,7 @@ export async function createUser(email: string, role: UserRole): Promise<{ succe
 
         const preRegRef = adminDb.collection('pre_registered_users').doc(email.toLowerCase());
         const preRegDoc = await preRegRef.get();
-        if (preRegDoc.exists) {
+        if (preRegDoc.exists()) {
             return { success: false, error: 'Este e-mail já está pré-registrado.' };
         }
 
@@ -1390,7 +1421,7 @@ export async function validateAndOnboardUser(
         const preRegRef = adminDb.collection('pre_registered_users').doc(email.toLowerCase());
         const preRegSnap = await preRegRef.get();
 
-        if (!preRegSnap.exists) {
+        if (!preRegSnap.exists()) {
             // Not pre-registered
             return { success: false, role: null, error: 'Seu e-mail não está autorizado a acessar este sistema.' };
         }
