@@ -221,6 +221,7 @@ async function callDiscoveryEngine(
             },
             extractiveContentSpec: {
                 maxExtractiveAnswerCount: 5,
+                maxExtractiveSegmentCount: 1,
             }
         }
       };
@@ -266,18 +267,16 @@ async function callDiscoveryEngine(
       const summary = data.summary?.summaryText;
       const results = data.results || [];
       
-      // Handle "Tutorial" special case
       const tutorialResults = results.filter((result: any) => 
         result.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
       );
-
+      
       if (tutorialResults.length > 0) {
           let tutorialContent = "Com base nos documentos encontrados, aqui estão os procedimentos:\n\n";
           const formattedTutorials = await Promise.all(tutorialResults.map(async (result: any) => {
               const title = (result.document?.derivedStructData?.title || 'Tutorial').replace(/tutorial -/gi, '').trim();
-              
-              // Prioritize extractive_answers for direct content
-              const rawContent = result.document?.derivedStructData?.extractive_answers?.[0]?.content;
+              const snippets = result.document?.derivedStructData?.snippets || [];
+              const rawContent = snippets.map((s: any) => s.snippet).join('\n...\n');
               
               if (!rawContent) {
                   return `**${title.toUpperCase()}**\n\nConteúdo do tutorial não pôde ser extraído diretamente.`;
@@ -298,7 +297,6 @@ async function callDiscoveryEngine(
           return { summary: tutorialContent, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
       }
       
-      // Default behavior for non-tutorial queries
       const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar", "não encontrei", "não tenho como", "não foram encontradas"];
       const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
 
