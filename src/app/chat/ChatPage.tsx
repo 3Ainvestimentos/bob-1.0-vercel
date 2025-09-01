@@ -1466,10 +1466,10 @@ export default function ChatPageContent() {
                 <form onSubmit={handleRenameSubmit}>
                     <DialogHeader>
                         <DialogTitle>Renomear {itemToRename?.type === 'group' ? 'Projeto' : 'Conversa'}</DialogTitle>
-                        <DialogDescription>
-                            Digite o novo nome para "{itemToRename?.currentName}".
-                        </DialogDescription>
                     </DialogHeader>
+                    <DialogDescription>
+                        Digite o novo nome para "{itemToRename?.currentName}".
+                    </DialogDescription>
                     <div className="grid gap-4 py-4">
                     <Input
                         id="newName"
@@ -1507,7 +1507,7 @@ export default function ChatPageContent() {
         <AlertDialog open={isDeleteConvoDialogOpen} onOpenChange={setIsDeleteConvoDialogOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <DialogTitle>Excluir conversa?</DialogTitle>
+                    <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
                     <AlertDialogDescription>
                         Esta ação não pode ser desfeita. A conversa será excluída permanentemente.
                     </AlertDialogDescription>
@@ -1723,4 +1723,3 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
-
