@@ -221,7 +221,7 @@ async function callDiscoveryEngine(
             },
             extractiveContentSpec: {
                 maxExtractiveAnswerCount: 5,
-                maxExtractiveSegmentCount: 20,
+                maxExtractiveSegmentCount: 10,
             }
         }
       };
@@ -1470,5 +1470,7 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
 
   
 
+
+    
 
     
