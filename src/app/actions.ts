@@ -770,7 +770,7 @@ export async function removeFileFromConversation(
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
         const chatSnap = await chatRef.get();
 
-        if (!chatSnap.exists()) {
+        if (!chatSnap.exists) {
             throw new Error("Conversation not found.");
         }
 
@@ -1412,7 +1412,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists()) {
+        if (userDocSnap.exists) {
             // User already exists, just return their role
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
@@ -1421,7 +1421,7 @@ export async function validateAndOnboardUser(
         const preRegRef = adminDb.collection('pre_registered_users').doc(email.toLowerCase());
         const preRegSnap = await preRegRef.get();
 
-        if (!preRegSnap.exists()) {
+        if (!preRegSnap.exists) {
             // Not pre-registered
             return { success: false, role: null, error: 'Seu e-mail não está autorizado a acessar este sistema.' };
         }
