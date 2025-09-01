@@ -49,7 +49,6 @@ interface PromptBuilderDialogProps {
 // ---- Sub-components for each phase ----
 
 const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (files: File[]) => void; onBatchSubmit: (files: File[]) => void; files: File[] }) => {
-    const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>(files);
     const [analysisType, setAnalysisType] = useState<AnalysisType>('individual');
 
@@ -73,37 +72,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
         
         e.target.value = '';
     };
-
-    const handleLocalDrop = (e: DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDraggingOver(false);
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-           const droppedFiles = e.dataTransfer.files;
-           const pdfFiles = Array.from(droppedFiles).filter(file => file.type === 'application/pdf');
-            setSelectedFiles(prev => {
-                const existingFileNames = new Set(prev.map(f => f.name));
-                const uniqueNewFiles = pdfFiles.filter(f => !existingFileNames.has(f.name));
-                return [...prev, ...uniqueNewFiles];
-            });
-           e.dataTransfer.clearData();
-        }
-    };
     
-    const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer.types.includes('Files')) {
-            setIsDraggingOver(true);
-        }
-    };
-
-    const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDraggingOver(false);
-    };
-
     const handleContinue = () => {
         if (selectedFiles.length === 0) return;
         if (analysisType === 'individual') {
@@ -121,12 +90,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
             <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple />
             <div 
-                className={cn("flex flex-col border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors",
-                    isDraggingOver && "border-primary bg-primary/10"
-                )}
-                onDrop={handleLocalDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
+                className="flex flex-col border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors"
             >
                 {selectedFiles.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full">
