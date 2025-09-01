@@ -610,7 +610,7 @@ export default function ChatPageContent() {
         const userDocSnap = await getDoc(userDocRef);
         const userData = userDocSnap.data();
 
-        if (userDocSnap.exists()) {
+        if (userDocSnap.exists) {
             await fetchSidebarData();
     
             if (userData?.termsAccepted !== true) {
