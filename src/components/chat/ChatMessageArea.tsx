@@ -127,7 +127,7 @@ export function ChatMessageArea({
                       </div>
                     </div>
                   </Card>
-                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick(POSICAO_CONSOLIDADA_PREAMBLE)}>
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick('open_prompt_builder')}>
                     <div className="flex items-start gap-4">
                       <Wand2 className="h-6 w-6 text-muted-foreground" />
                       <div>
