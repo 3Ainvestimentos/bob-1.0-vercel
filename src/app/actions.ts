@@ -1069,7 +1069,7 @@ export async function createUser(email: string, role: UserRole): Promise<{ succe
 
         const preRegRef = adminDb.collection('pre_registered_users').doc(email.toLowerCase());
         const preRegDoc = await preRegRef.get();
-        if (preRegDoc.exists()) {
+        if (preRegDoc.exists) {
             return { success: false, error: 'Este e-mail já está pré-registrado.' };
         }
 
@@ -1412,7 +1412,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists) {
+        if (userDocSnap.exists()) {
             // User already exists, just return their role
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
