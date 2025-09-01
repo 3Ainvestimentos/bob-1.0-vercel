@@ -24,7 +24,9 @@ Os principais detratores foram:
 *[Classe 1]*: *[rentabilidade]*
 *[Classe 2]*: *[rentabilidade]*
 
-[INSIRA AQUI O PARÁGRAFO GERADO SOBRE O CENÁRIO ECONÔMICO NACIONAL E INTERNACIONAL]`;
+[Gere aqui um breve parágrafo sobre o cenário econômico nacional para o mês de referência.]
+
+[Gere aqui um breve parágrafo sobre o cenário econômico internacional para o mês de referência.]`;
 
 export const XP_REPORT_EXTRACTION_PREAMBLE = `
 Você é um assistente de extração de dados altamente preciso. Sua única tarefa é analisar o texto de um relatório de investimentos da XP e extrair informações específicas, retornando-as em um formato JSON.
