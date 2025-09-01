@@ -267,36 +267,6 @@ async function callDiscoveryEngine(
       const summary = data.summary?.summaryText;
       const results = data.results || [];
       
-      const tutorialResults = results.filter((result: any) => 
-        result.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
-      );
-      
-      if (tutorialResults.length > 0) {
-          let tutorialContent = "Com base nos documentos encontrados, aqui estão os procedimentos:\n\n";
-          const formattedTutorials = await Promise.all(tutorialResults.map(async (result: any) => {
-              const title = (result.document?.derivedStructData?.title || 'Tutorial').replace(/tutorial -/gi, '').trim();
-              const snippets = result.document?.derivedStructData?.snippets || [];
-              const rawContent = snippets.map((s: any) => s.snippet).join('\n...\n');
-              
-              if (!rawContent) {
-                  return `**${title.toUpperCase()}**\n\nConteúdo do tutorial não pôde ser extraído diretamente.`;
-              }
-              
-              const formattedContent = await formatTutorialToMarkdown(rawContent, title);
-              return `**${title.toUpperCase()}**\n\n${formattedContent}`;
-          }));
-          
-          tutorialContent += formattedTutorials.join('\n\n---\n\n');
-          
-          sources = tutorialResults.map((result: any) => ({
-              title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial -/gi, '').trim(),
-              uri: result.document?.derivedStructData?.link || 'URI não encontrada',
-          }));
-          
-          const candidatesTokenCount = await estimateTokens(tutorialContent);
-          return { summary: tutorialContent, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
-      }
-      
       const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar", "não encontrei", "não tenho como", "não foram encontradas"];
       const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
 
@@ -763,7 +733,7 @@ export async function removeFileFromConversation(
     try {
         const adminDb = await getAuthenticatedFirestoreAdmin();
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
-        const chatSnap = await chatRef.get();
+        const chatSnap = await getDoc(chatRef);
 
         if (!chatSnap.exists) {
             throw new Error("Conversation not found.");
