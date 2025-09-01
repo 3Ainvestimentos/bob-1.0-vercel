@@ -51,6 +51,7 @@ interface PromptBuilderDialogProps {
 const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (files: File[]) => void; onBatchSubmit: (files: File[]) => void; files: File[] }) => {
     const [selectedFiles, setSelectedFiles] = useState<File[]>(files);
     const [analysisType, setAnalysisType] = useState<AnalysisType>('individual');
+    const [isDraggingOver, setIsDraggingOver] = useState(false);
 
     useEffect(() => {
         if (selectedFiles.length > 1) {
@@ -58,18 +59,46 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
         }
     }, [selectedFiles]);
 
-    const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const newFiles = e.target.files;
-        if (!newFiles) return;
+    const handleFileDrop = (droppedFiles: FileList) => {
+        if (!droppedFiles) return;
 
-        const pdfFiles = Array.from(newFiles).filter(file => file.type === 'application/pdf');
+        const pdfFiles = Array.from(droppedFiles).filter(file => file.type === 'application/pdf');
         
         setSelectedFiles(prev => {
             const existingFileNames = new Set(prev.map(f => f.name));
             const uniqueNewFiles = pdfFiles.filter(f => !existingFileNames.has(f.name));
             return [...prev, ...uniqueNewFiles];
         });
-        
+    }
+
+    const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOver(true);
+    };
+
+    const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOver(false);
+    };
+
+    const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOver(false);
+        handleFileDrop(e.dataTransfer.files);
+    };
+    
+    const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const newFiles = e.target.files;
+        if (!newFiles) return;
+        handleFileDrop(newFiles);
         e.target.value = '';
     };
     
@@ -90,7 +119,14 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
             <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple />
             <div 
-                className="flex flex-col border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors"
+                className={cn(
+                    "flex flex-col border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors",
+                    isDraggingOver && 'border-primary bg-primary/10'
+                )}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
             >
                 {selectedFiles.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full">
