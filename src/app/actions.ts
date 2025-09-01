@@ -221,7 +221,7 @@ async function callDiscoveryEngine(
             },
             extractiveContentSpec: {
                 maxExtractiveAnswerCount: 5,
-                maxExtractiveSegmentCount: 1,
+                maxExtractiveSegmentCount: 5,
             }
         }
       };
@@ -274,18 +274,18 @@ async function callDiscoveryEngine(
 
       if (tutorialResults.length > 0) {
         const tutorialContent = tutorialResults.map((res: any) => {
-          const title = (res.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim();
-          // Attempt to get content from extractive_answers first
-          const extractiveContent = res.document?.derivedStructData?.extractive_answers?.[0]?.content;
-          if (extractiveContent) {
-            return `**${title}**\n\n${extractiveContent}`;
-          }
-          // Fallback to snippets if no extractive answer
-          const snippets = res.document?.derivedStructData?.snippets?.map((s: any) => s.snippet).join('\n...\n') || '';
-          if (snippets) {
-            return `**${title}**\n\n${snippets}`;
-          }
-          return `**${title}**\n\nConteúdo do tutorial não pôde ser extraído diretamente.`;
+            const title = (res.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim();
+            const extractiveAnswers = res.document?.derivedStructData?.extractive_answers;
+            if (extractiveAnswers && extractiveAnswers.length > 0) {
+                const content = extractiveAnswers.map((answer: any) => answer.content).join('\n\n');
+                return `**${title}**\n\n${content}`;
+            }
+            // Fallback to snippets if no extractive answer
+            const snippets = res.document?.derivedStructData?.snippets?.map((s: any) => s.snippet).join('\n...\n') || '';
+            if (snippets) {
+                return `**${title}**\n\n${snippets}`;
+            }
+            return `**${title}**\n\nConteúdo do tutorial não pôde ser extraído diretamente.`;
         }).join('\n\n---\n\n');
 
         const finalSummary = `Com base nos documentos encontrados, aqui estão os procedimentos:\n\n${tutorialContent}`;
@@ -765,7 +765,7 @@ export async function removeFileFromConversation(
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
         const chatSnap = await getDoc(chatRef);
 
-        if (!chatSnap.exists()) {
+        if (!chatSnap.exists) {
             throw new Error("Conversation not found.");
         }
 
@@ -1474,3 +1474,6 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     
 
   
+
+
+    
