@@ -205,7 +205,7 @@ async function callDiscoveryEngine(
 
       const requestBody: any = {
         query: query,
-        pageSize: 5,
+        pageSize: 3,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
         languageCode: 'pt-BR',
