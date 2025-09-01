@@ -610,7 +610,7 @@ export default function ChatPageContent() {
         const userDocSnap = await getDoc(userDocRef);
         const userData = userDocSnap.data();
 
-        if (userDocSnap.exists) {
+        if (userDocSnap.exists()) {
             await fetchSidebarData();
     
             if (userData?.termsAccepted !== true) {
@@ -1456,34 +1456,34 @@ export default function ChatPageContent() {
         </Dialog>
 
         <Dialog open={isRenameDialogOpen} onOpenChange={(open) => {
-            setIsRenameDialogOpen(open);
             if (!open) {
                 setItemToRename(null);
                 setNewItemName('');
             }
+            setIsRenameDialogOpen(open);
         }}>
             <DialogContent className="sm:max-w-[425px]">
-            <form onSubmit={handleRenameSubmit}>
-                <DialogHeader>
-                    <DialogTitle>Renomear {itemToRename?.type === 'group' ? 'Projeto' : 'Conversa'}</DialogTitle>
-                    <DialogDescription>
-                    Digite o novo nome para "{itemToRename?.currentName}".
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                <Input
-                    id="newName"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    placeholder="Novo nome"
-                />
-                </div>
-                <DialogFooter>
-                <Button type="submit" disabled={!newItemName.trim() || isLoading}>
-                    Salvar
-                </Button>
-                </DialogFooter>
-            </form>
+                <form onSubmit={handleRenameSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>Renomear {itemToRename?.type === 'group' ? 'Projeto' : 'Conversa'}</DialogTitle>
+                        <DialogDescription>
+                            Digite o novo nome para "{itemToRename?.currentName}".
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                    <Input
+                        id="newName"
+                        value={newItemName}
+                        onChange={(e) => setNewItemName(e.target.value)}
+                        placeholder="Novo nome"
+                    />
+                    </div>
+                    <DialogFooter>
+                    <Button type="submit" disabled={!newItemName.trim() || isLoading}>
+                        Salvar
+                    </Button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
         
@@ -1522,11 +1522,11 @@ export default function ChatPageContent() {
         </AlertDialog>
         
         <Dialog open={isLegalReportDialogOpen} onOpenChange={(open) => {
-            setIsLegalReportDialogOpen(open);
             if (!open) {
                 setMessageToReport(null);
                 setLegalReportComment('');
             }
+            setIsLegalReportDialogOpen(open);
         }}>
             <DialogContent className="sm:max-w-[425px]">
                 <form onSubmit={handleConfirmLegalReport}>
@@ -1700,7 +1700,6 @@ export default function ChatPageContent() {
                     onOpenFeedbackDialog={handleOpenFeedbackDialog}
                     onWebSearch={() => {}} // This is now handled by the source switch
                     onSuggestionClick={handleSuggestionClick}
-                    onOpenPromptBuilder={() => setIsPromptBuilderOpen(true)}
                     activeChat={activeChat}
                     onRemoveFile={handleRemoveFile}
                     />
@@ -1724,3 +1723,4 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
+
