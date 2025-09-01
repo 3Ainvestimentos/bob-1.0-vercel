@@ -285,16 +285,7 @@ async function callDiscoveryEngine(
           uri: result.document?.derivedStructData?.link || 'URI não encontrada',
       }));
 
-      // Logic to handle tutorial transcription and formatting
-      const isTutorialSearch = results.some((r: any) => 
-        r.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
-      );
-
-      let finalSummary = summary;
-      if (isTutorialSearch) {
-          const tutorialTitle = results.find((r: any) => r.document?.derivedStructData?.title?.toLowerCase().includes('tutorial'))?.document?.derivedStructData?.title || "Tutorial";
-          finalSummary = await formatTutorialToMarkdown(summary, tutorialTitle);
-      }
+      const finalSummary = summary;
       
       const candidatesTokenCount = await estimateTokens(finalSummary);
       return { summary: finalSummary, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
@@ -746,7 +737,7 @@ export async function removeFileFromConversation(
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
         const chatSnap = await getDoc(chatRef);
 
-        if (!chatSnap.exists()) {
+        if (!chatSnap.exists) {
             throw new Error("Conversation not found.");
         }
 
@@ -1462,3 +1453,4 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     
 
     
+
