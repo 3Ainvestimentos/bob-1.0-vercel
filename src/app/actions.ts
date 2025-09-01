@@ -266,6 +266,36 @@ async function callDiscoveryEngine(
       let sources: ClientRagSource[] = [];
       const summary = data.summary?.summaryText;
       const results = data.results || [];
+
+      // Logic to handle tutorial transcription
+      const tutorialResults = results.filter((r: any) => 
+        r.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
+      );
+
+      if (tutorialResults.length > 0) {
+        const tutorialContent = tutorialResults.map((res: any) => {
+          const title = (res.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim();
+          // Attempt to get content from extractive_answers first
+          const extractiveContent = res.document?.derivedStructData?.extractive_answers?.[0]?.content;
+          if (extractiveContent) {
+            return `**${title}**\n\n${extractiveContent}`;
+          }
+          // Fallback to snippets if no extractive answer
+          const snippets = res.document?.derivedStructData?.snippets?.map((s: any) => s.snippet).join('\n...\n') || '';
+          if (snippets) {
+            return `**${title}**\n\n${snippets}`;
+          }
+          return `**${title}**\n\nConteúdo do tutorial não pôde ser extraído diretamente.`;
+        }).join('\n\n---\n\n');
+
+        const finalSummary = `Com base nos documentos encontrados, aqui estão os procedimentos:\n\n${tutorialContent}`;
+        sources = tutorialResults.map((result: any) => ({
+            title: (result.document?.derivedStructData?.title || 'Título não encontrado').replace(/tutorial - /gi, '').trim(),
+            uri: result.document?.derivedStructData?.link || 'URI não encontrada',
+        }));
+        const candidatesTokenCount = await estimateTokens(finalSummary);
+        return { summary: finalSummary, searchFailed: false, sources, promptTokenCount, candidatesTokenCount };
+      }
       
       const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar", "não encontrei", "não tenho como", "não foram encontradas"];
       const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
@@ -735,7 +765,7 @@ export async function removeFileFromConversation(
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
         const chatSnap = await getDoc(chatRef);
 
-        if (!chatSnap.exists) {
+        if (!chatSnap.exists()) {
             throw new Error("Conversation not found.");
         }
 
