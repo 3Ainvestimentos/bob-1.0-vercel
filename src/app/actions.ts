@@ -770,7 +770,7 @@ export async function removeFileFromConversation(
         const chatRef = adminDb.doc(`users/${userId}/chats/${chatId}`);
         const chatSnap = await chatRef.get();
 
-        if (!chatSnap.exists()) {
+        if (!chatSnap.exists) {
             throw new Error("Conversation not found.");
         }
 
@@ -1277,7 +1277,7 @@ export async function getMaintenanceMode(): Promise<any> {
         const settingsRef = adminDb.collection('system_settings').doc('config');
         const docSnap = await settingsRef.get();
 
-        if (docSnap.exists()) {
+        if (docSnap.exists) {
             return { isMaintenanceMode: docSnap.data()?.isMaintenanceMode || false };
         }
         // Default to not in maintenance if the document doesn't exist

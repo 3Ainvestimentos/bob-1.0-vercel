@@ -154,3 +154,4 @@ O `POSICAO_CONSOLIDADA_PREAMBLE` é um conjunto de instruções altamente espec�
 -   Montar uma mensagem formatada para WhatsApp com os dados extraídos e um texto padrão sobre o cenário econômico.
 
 Este preamble demonstra a capacidade do sistema de alternar para um "modo de especialista" com base em uma palavra-chave, aplicando uma lógica de negócio bem definida a um tipo de documento específico.
+
