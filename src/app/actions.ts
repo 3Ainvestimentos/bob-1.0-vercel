@@ -997,15 +997,16 @@ export async function getUsersWithRoles(): Promise<any> {
         
         const usersFromAuth = listUsersResult.users;
         
-        const userDocsPromises = usersFromAuth.map(user => 
-            adminDb.collection('users').doc(user.uid).get()
-        );
-        
-        const userDocsSnapshots = await Promise.all(userDocsPromises);
+        if (usersFromAuth.length === 0) {
+            return [];
+        }
+
+        const userDocRefs = usersFromAuth.map(user => adminDb.collection('users').doc(user.uid));
+        const userDocsSnapshots = await adminDb.getAll(...userDocRefs);
         
         const usersWithRoles = usersFromAuth.map((user, index) => {
             const userDoc = userDocsSnapshots[index];
-            const userData = userDoc.data();
+            const userData = userDoc.exists ? userDoc.data() : null;
             return {
                 uid: user.uid,
                 email: user.email,
@@ -1412,7 +1413,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists()) {
+        if (userDocSnap.exists) {
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
