@@ -1004,8 +1004,8 @@ export async function getUsersWithRoles(): Promise<any> {
         const userDocRefs = usersFromAuth.map(user => adminDb.collection('users').doc(user.uid));
         const userDocsSnapshots = await adminDb.getAll(...userDocRefs);
         
-        const usersWithRoles = usersFromAuth.map((user, index) => {
-            const userDoc = userDocsSnapshots[index];
+        const usersWithRoles = userDocsSnapshots.map((userDoc, index) => {
+            const user = usersFromAuth[index];
             const userData = userDoc.exists ? userDoc.data() : null;
             return {
                 uid: user.uid,
@@ -1414,9 +1414,11 @@ export async function validateAndOnboardUser(
         const userDocSnap = await userDocRef.get();
 
         if (userDocSnap.exists) {
+            // User exists, return their role
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
+        // New user, automatically create a document for them.
         const role: UserRole = 'user';
         const newUserData = {
             uid,

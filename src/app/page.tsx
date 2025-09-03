@@ -57,17 +57,18 @@ export default function LoginPage() {
                         return;
                     }
                     
-                    if (isMaintenanceMode && validationResult.role !== 'admin' && validationResult.role !== 'beta') {
+                    // Manter a verificação para o modo de manutenção
+                    if (isMaintenanceMode && validationResult.role !== 'admin') {
                         toast({
                             variant: 'destructive',
                             title: 'Acesso Negado',
-                            description: 'O sistema está em manutenção. Apenas usuários beta e administradores podem acessar.',
+                            description: 'O sistema está em manutenção. Apenas administradores podem acessar.',
                         });
                         await signOut(auth);
                         return;
                     }
 
-                    // If all checks pass, redirect to chat
+                    // Se todas as verificações passarem, redirecione para o chat
                     router.push('/chat');
 
                 } catch (err: any) {
