@@ -116,13 +116,13 @@ export function ChatMessageArea({
                   </p>
                 </div>
                 <div id="suggestion-cards" className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick("Faça uma mensagem e uma análise com o nosso padrão")}>
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick("Como acessar o informe de rendimentos")}>
                     <div className="flex items-start gap-4">
                       <FileText className="h-6 w-6 text-muted-foreground" />
                       <div>
-                        <p className="font-semibold">Análise de Relatório de Performance XP</p>
+                        <p className="font-semibold">Como acessar o informe de rendimentos</p>
                         <p className="text-sm text-muted-foreground">
-                          Mensagem de relacionamento com o padrão 3A RIVA
+                          Encontre o passo-a-passo para obter o documento
                         </p>
                       </div>
                     </div>
@@ -131,9 +131,9 @@ export function ChatMessageArea({
                     <div className="flex items-start gap-4">
                       <Wand2 className="h-6 w-6 text-muted-foreground" />
                       <div>
-                        <p className="font-semibold">Personalizar sua pergunta</p>
+                        <p className="font-semibold">Análise de Relatório XP</p>
                         <p className="text-sm text-muted-foreground">
-                          Use um prompt avançado como ponto de partida
+                          Use o assistente para extrair dados de relatórios.
                         </p>
                       </div>
                     </div>
