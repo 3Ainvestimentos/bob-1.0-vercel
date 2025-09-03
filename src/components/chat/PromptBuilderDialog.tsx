@@ -198,7 +198,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                             <Label htmlFor="report-type" className="font-semibold">Relatórios Disponíveis</Label>
                              <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p>Selecione o tipo de documento que será analisado.</p>
@@ -219,7 +219,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                             <Label htmlFor="analysis-type" className="font-semibold">Quantidade de Itens</Label>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p>Escolha entre analisar um único arquivo ou múltiplos em lote.</p>
@@ -241,7 +241,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                             <Label htmlFor="personalize-prompt" className="font-semibold">Personalizar Prompt</Label>
                              <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p>Selecione "Sim" para escolher os dados da análise ou "Não" para usar a mensagem automática.</p>
