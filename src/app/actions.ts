@@ -1413,11 +1413,9 @@ export async function validateAndOnboardUser(
         const userDocSnap = await userDocRef.get();
 
         if (userDocSnap.exists()) {
-            // User already exists, just return their role
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
-        // New user, create their document with a default role
         const role: UserRole = 'user';
         const newUserData = {
             uid,
