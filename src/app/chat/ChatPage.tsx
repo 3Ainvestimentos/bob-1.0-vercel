@@ -18,7 +18,7 @@ import {
   regenerateAnswer,
   removeFileFromConversation,
   transcribeLiveAudio,
-  validateAndOnboardUser
+  setUserOnboardingStatus
 } from '@/app/actions';
 import {
   AlertDialog,
@@ -591,34 +591,29 @@ export default function ChatPageContent() {
       return;
     }
     
-    const checkAndCreateUser = async () => {
+    const checkUserStatus = async () => {
       setIsCheckingTerms(true);
       try {
-        const validationResult = await validateAndOnboardUser(user.uid, user.email!, user.displayName);
-            
-        if (!validationResult.success) {
-            toast({
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (!userDocSnap.exists()) {
+             toast({
                 variant: 'destructive',
-                title: 'Acesso Negado',
-                description: validationResult.error || 'Você não tem permissão para acessar o sistema.',
+                title: 'Erro de Autenticação',
+                description: 'Seu usuário não foi encontrado. Por favor, faça login novamente.',
             });
             await handleSignOut();
             return;
         }
 
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
         const userData = userDocSnap.data();
+        await fetchSidebarData();
 
-        if (userDocSnap.exists()) {
-            await fetchSidebarData();
-    
-            if (userData?.termsAccepted !== true) {
-                setShowTermsDialog(true);
-            } else if (userData?.hasCompletedOnboarding !== true) {
-                 // Use a timeout to ensure the UI has rendered before starting the tour
-                 setTimeout(() => setShowOnboarding(true), 150);
-            }
+        if (userData?.termsAccepted !== true) {
+            setShowTermsDialog(true);
+        } else if (userData?.hasCompletedOnboarding !== true) {
+             setTimeout(() => setShowOnboarding(true), 150);
         }
 
       } catch (err: any) {
@@ -632,7 +627,7 @@ export default function ChatPageContent() {
         setIsCheckingTerms(false);
       }
     };
-    checkAndCreateUser();
+    checkUserStatus();
   }, [user, authLoading, router, toast, handleSignOut, fetchSidebarData]);
 
 
@@ -1355,8 +1350,7 @@ export default function ChatPageContent() {
     const handleFinishOnboarding = async () => {
         if (!user) return;
         try {
-            const userDocRef = doc(db, 'users', user.uid);
-            await updateDoc(userDocRef, { hasCompletedOnboarding: true });
+            await setUserOnboardingStatus(user.uid, true);
             setShowOnboarding(false);
         } catch (error: any) {
             toast({
