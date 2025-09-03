@@ -129,11 +129,11 @@ export function ChatMessageArea({
                   </Card>
                    <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick('open_prompt_builder')}>
                     <div className="flex items-start gap-4">
-                      <Wand2 className="h-6 w-6 text-muted-foreground" />
+                      <Wand2 className="h-6 w-6 text-muted-foreground" style={{ color: '#DFB87F' }} />
                       <div>
-                        <p className="font-semibold">Análise de Relatório XP</p>
+                        <p className="font-semibold">Análise de Relatório de Perfomance XP</p>
                         <p className="text-sm text-muted-foreground">
-                          Use o assistente para extrair dados de relatórios.
+                          Mensagem de relacionamento com o padrão 3A RIVA
                         </p>
                       </div>
                     </div>
@@ -278,7 +278,3 @@ export function ChatMessageArea({
     </div>
   );
 }
-
-    
-
-    
