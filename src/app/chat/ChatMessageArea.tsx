@@ -116,17 +116,6 @@ export function ChatMessageArea({
                   </p>
                 </div>
                 <div id="suggestion-cards" className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick("Como acessar o informe de rendimentos")}>
-                    <div className="flex items-start gap-4">
-                      <FileText className="h-6 w-6 text-muted-foreground" />
-                      <div>
-                        <p className="font-semibold">Como acessar o informe de rendimentos</p>
-                        <p className="text-sm text-muted-foreground">
-                          Encontre o passo-a-passo para obter o documento
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
                    <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick('open_prompt_builder')}>
                     <div className="flex items-start gap-4">
                       <Wand2 className="h-6 w-6 text-muted-foreground" style={{ color: '#DFB87F' }} />
@@ -134,6 +123,17 @@ export function ChatMessageArea({
                         <p className="font-semibold">Análise de Relatório de Perfomance XP</p>
                         <p className="text-sm text-muted-foreground">
                           Mensagem de relacionamento com o padrão 3A RIVA
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick("Como acessar o informe de rendimentos")}>
+                    <div className="flex items-start gap-4">
+                      <FileText className="h-6 w-6 text-muted-foreground" />
+                      <div>
+                        <p className="font-semibold">Como acessar o informe de rendimentos</p>
+                        <p className="text-sm text-muted-foreground">
+                          Encontre o passo-a-passo para obter o documento
                         </p>
                       </div>
                     </div>
