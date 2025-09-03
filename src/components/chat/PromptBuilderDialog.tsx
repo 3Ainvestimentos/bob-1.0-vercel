@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { extractDataFromXpReport } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X, Info } from 'lucide-react';
+import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X, Info, ChevronsRight, ChevronsDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
@@ -290,6 +290,8 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
 
 const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => void }) => {
     
+    const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
+
     const parseCdiPercentage = (cdiString: string): number => {
         if (typeof cdiString !== 'string') return NaN;
         
@@ -303,12 +305,37 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         return isNaN(value) ? NaN : value;
     };
 
+    const filteredDetractors = useMemo(() => {
+        const result: Record<string, Detractor[]> = {};
+        Object.entries(data.detractors).forEach(([category, items]) => {
+            const processedItems = items
+                .map(item => ({ ...item, numericCdi: parseCdiPercentage(item.cdiPercentage) }))
+                .filter(item => !isNaN(item.numericCdi) && item.numericCdi < 100)
+                .sort((a, b) => b.numericCdi - a.numericCdi);
+
+            if (processedItems.length > 0) {
+                result[category] = processedItems;
+            }
+        });
+        return result;
+    }, [data.detractors]);
+
+    const allAccordionKeys = useMemo(() => {
+        const highlightKeys = Object.keys(data.highlights).map(cat => `h-cat-${cat}`);
+        const detractorKeys = Object.keys(filteredDetractors).map(cat => `d-cat-${cat}`);
+        return [...highlightKeys, ...detractorKeys];
+    }, [data.highlights, filteredDetractors]);
+
+    const handleExpandAll = () => setOpenAccordionItems(allAccordionKeys);
+    const handleCollapseAll = () => setOpenAccordionItems([]);
+
+
     const renderHighlights = () => {
         const categories = Object.keys(data.highlights);
         if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum destaque positivo encontrado.</p>;
 
         return (
-            <Accordion type="multiple" className="w-full">
+            <Accordion type="multiple" className="w-full" value={openAccordionItems} onValueChange={setOpenAccordionItems}>
                 {categories.map(category => (
                     <AccordionItem value={`h-cat-${category}`} key={`h-cat-${category}`}>
                         <AccordionTrigger className="font-semibold text-muted-foreground text-xs uppercase tracking-wider hover:no-underline py-2">
@@ -334,32 +361,19 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
     };
     
     const renderDetractors = () => {
-        const filteredAndSortedDetractors: Record<string, Detractor[]> = {};
-
-        Object.entries(data.detractors).forEach(([category, items]) => {
-            const processedItems = items
-                .map(item => ({ ...item, numericCdi: parseCdiPercentage(item.cdiPercentage) }))
-                .filter(item => !isNaN(item.numericCdi) && item.numericCdi < 100)
-                .sort((a, b) => b.numericCdi - a.numericCdi);
-
-            if (processedItems.length > 0) {
-                filteredAndSortedDetractors[category] = processedItems;
-            }
-        });
-
-        const categories = Object.keys(filteredAndSortedDetractors);
+        const categories = Object.keys(filteredDetractors);
         if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum detrator com performance abaixo de 100% do CDI foi encontrado.</p>;
 
         return (
-            <Accordion type="multiple" className="w-full">
+            <Accordion type="multiple" className="w-full" value={openAccordionItems} onValueChange={setOpenAccordionItems}>
                 {categories.map(category => (
                     <AccordionItem value={`d-cat-${category}`} key={`d-cat-${category}`}>
                         <AccordionTrigger className="font-semibold text-muted-foreground text-xs uppercase tracking-wider hover:no-underline py-2">
-                           {category} ({filteredAndSortedDetractors[category].length})
+                           {category} ({filteredDetractors[category].length})
                         </AccordionTrigger>
                         <AccordionContent className="pt-2 pl-1">
                             <div className="space-y-2">
-                                {filteredAndSortedDetractors[category].map((item, index) => (
+                                {filteredDetractors[category].map((item, index) => (
                                     <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                                         <Checkbox id={`d-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('detractors', category, index, !!c)} className="mt-1" />
                                         <Label htmlFor={`d-${category}-${index}`} className="cursor-pointer"><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
@@ -407,7 +421,19 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         </div>
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base"><Star className="h-5 w-5" style={{ color: '#DFB87F' }} />Destaques Mensais da carteira</CardTitle>
+                <div className="flex justify-between items-center">
+                    <CardTitle className="flex items-center gap-2 text-base"><Star className="h-5 w-5" style={{ color: '#DFB87F' }} />Destaques Mensais da carteira</CardTitle>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
+                            <ChevronsDown className="mr-1 h-4 w-4" />
+                            Expandir Todos
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={handleCollapseAll} className="text-xs text-muted-foreground">
+                            <ChevronsRight className="mr-1 h-4 w-4" />
+                            Recolher Todos
+                        </Button>
+                    </div>
+                </div>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 <div className="space-y-3">
@@ -649,3 +675,5 @@ ${economicScenarioText}
     </Dialog>
   );
 }
+
+    
