@@ -38,6 +38,7 @@ type SelectedFields = {
 
 type PromptBuilderPhase = 'upload' | 'loading' | 'selection' | 'error';
 type AnalysisType = 'individual' | 'batch';
+type PersonalizePrompt = 'yes' | 'no';
 
 interface PromptBuilderDialogProps {
   open: boolean;
@@ -51,11 +52,13 @@ interface PromptBuilderDialogProps {
 const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (files: File[]) => void; onBatchSubmit: (files: File[]) => void; files: File[] }) => {
     const [selectedFiles, setSelectedFiles] = useState<File[]>(files);
     const [analysisType, setAnalysisType] = useState<AnalysisType>('individual');
+    const [personalize, setPersonalize] = useState<PersonalizePrompt>('yes');
     const [isDraggingOver, setIsDraggingOver] = useState(false);
 
     useEffect(() => {
         if (selectedFiles.length > 1) {
             setAnalysisType('batch');
+            setPersonalize('no');
         }
     }, [selectedFiles]);
 
@@ -104,7 +107,8 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     
     const handleContinue = () => {
         if (selectedFiles.length === 0) return;
-        if (analysisType === 'individual') {
+
+        if (personalize === 'yes' && analysisType === 'individual') {
             onFilesChange(selectedFiles);
         } else {
             onBatchSubmit(selectedFiles);
@@ -180,6 +184,18 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                             <SelectContent>
                                 <SelectItem value="individual">Individual</SelectItem>
                                 <SelectItem value="batch">Lote (Máximo 10 volumes)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div>
+                        <Label htmlFor="personalize-prompt" className="font-semibold">Personalizar Prompt</Label>
+                        <Select value={personalize} onValueChange={(value) => setPersonalize(value as PersonalizePrompt)} disabled={analysisType === 'batch'}>
+                            <SelectTrigger id="personalize-prompt" className="mt-2">
+                                <SelectValue placeholder="Deseja personalizar?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="yes">Sim</SelectItem>
+                                <SelectItem value="no">Não (usar mensagem automática)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
