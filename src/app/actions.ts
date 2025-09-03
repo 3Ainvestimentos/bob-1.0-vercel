@@ -9,7 +9,7 @@ import { AttachedFile, UserRole } from '@/types';
 import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { SpeechClient } from '@google-cloud/speech';
 import { estimateTokens, getFileContent, formatTutorialToMarkdown } from '@/lib/server/utils';
-import { POSICAO_CONSOLIDADA_PREAMBLE, XP_REPORT_EXTRACTION_PREAMBLE } from '@/app/chat/preambles';
+import { POSICAO_CONSOLIDADA_PREAMBLE, XP_REPORT_EXTRACTION_PREAMBLE } from './chat/preambles';
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
@@ -1417,17 +1417,8 @@ export async function validateAndOnboardUser(
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
-        // New user, check pre-registration
-        const preRegRef = adminDb.collection('pre_registered_users').doc(email.toLowerCase());
-        const preRegSnap = await preRegRef.get();
-
-        if (!preRegSnap.exists) {
-            // Not pre-registered
-            return { success: false, role: null, error: 'Seu e-mail não está autorizado a acessar este sistema.' };
-        }
-
-        // Pre-registered, create user document and delete pre-registration
-        const role = preRegSnap.data()?.role || 'user';
+        // New user, create their document with a default role
+        const role: UserRole = 'user';
         const newUserData = {
             uid,
             email,
@@ -1438,11 +1429,7 @@ export async function validateAndOnboardUser(
             hasCompletedOnboarding: false,
         };
         
-        const batch = adminDb.batch();
-        batch.set(userDocRef, newUserData);
-        batch.delete(preRegRef);
-        
-        await batch.commit();
+        await userDocRef.set(newUserData);
 
         return { success: true, role };
 
