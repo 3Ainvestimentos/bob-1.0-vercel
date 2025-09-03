@@ -47,9 +47,12 @@ interface PromptBuilderDialogProps {
   onBatchSubmit: (files: File[]) => void;
 }
 
+const BATCH_LIMIT = 5;
+
 // ---- Sub-components for each phase ----
 
 const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (files: File[]) => void; onBatchSubmit: (files: File[]) => void; files: File[] }) => {
+    const { toast } = useToast();
     const [selectedFiles, setSelectedFiles] = useState<File[]>(files);
     const [analysisType, setAnalysisType] = useState<AnalysisType>('individual');
     const [personalize, setPersonalize] = useState<PersonalizePrompt>('yes');
@@ -59,8 +62,10 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
         if (selectedFiles.length > 1) {
             setAnalysisType('batch');
             setPersonalize('no');
+        } else if (selectedFiles.length <= 1 && analysisType === 'batch') {
+            setAnalysisType('individual');
         }
-    }, [selectedFiles]);
+    }, [selectedFiles, analysisType]);
 
     const handleFileDrop = (droppedFiles: FileList) => {
         if (!droppedFiles) return;
@@ -68,9 +73,28 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
         const pdfFiles = Array.from(droppedFiles).filter(file => file.type === 'application/pdf');
         
         setSelectedFiles(prev => {
+            const totalFiles = prev.length + pdfFiles.length;
+            if (totalFiles > BATCH_LIMIT && prev.length < BATCH_LIMIT) {
+                toast({
+                    title: 'Limite de Arquivos Atingido',
+                    description: `Você só pode analisar ${BATCH_LIMIT} relatórios por vez. Apenas os primeiros arquivos foram adicionados.`,
+                    variant: 'default',
+                });
+            } else if (prev.length >= BATCH_LIMIT) {
+                toast({
+                    title: 'Limite de Arquivos Atingido',
+                    description: `Você já atingiu o limite de ${BATCH_LIMIT} relatórios.`,
+                    variant: 'default',
+                });
+                return prev;
+            }
+            
             const existingFileNames = new Set(prev.map(f => f.name));
             const uniqueNewFiles = pdfFiles.filter(f => !existingFileNames.has(f.name));
-            return [...prev, ...uniqueNewFiles];
+            
+            const filesToAdd = uniqueNewFiles.slice(0, BATCH_LIMIT - prev.length);
+
+            return [...prev, ...filesToAdd];
         });
     }
 
@@ -118,14 +142,17 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     const handleRemoveFile = (fileToRemove: File) => {
         setSelectedFiles(currentFiles => currentFiles.filter(file => file !== fileToRemove));
     };
+    
+    const isAddFileDisabled = selectedFiles.length >= BATCH_LIMIT;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-            <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple />
+            <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple disabled={isAddFileDisabled} />
             <div 
                 className={cn(
                     "flex flex-col border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors",
-                    isDraggingOver && 'border-primary bg-primary/10'
+                    isDraggingOver && 'border-primary bg-primary/10',
+                    isAddFileDisabled && 'bg-muted/50 border-muted-foreground/10'
                 )}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
@@ -136,7 +163,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                     <div className="flex flex-col items-center justify-center h-full">
                         <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
                         <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
-                        <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
+                        <p className="text-muted-foreground text-sm mb-6">Arraste e solte os arquivos PDF aqui ou clique para selecionar.</p>
                         <Button type="button" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()}>
                             <FileText className="mr-2 h-4 w-4" />
                             Selecionar Arquivo PDF
@@ -144,7 +171,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                     </div>
                 ) : (
                     <div className="flex flex-col h-full w-full">
-                         <h3 className="font-semibold text-lg text-left text-foreground mb-4">Arquivos Anexados ({selectedFiles.length})</h3>
+                         <h3 className="font-semibold text-lg text-left text-foreground mb-4">Arquivos Anexados ({selectedFiles.length}/{BATCH_LIMIT})</h3>
                          <div className="space-y-2 flex-1 overflow-y-auto pr-2">
                             {selectedFiles.map((file, index) => (
                                 <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-lg text-sm">
@@ -158,7 +185,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                                 </div>
                             ))}
                          </div>
-                         <Button variant="outline" size="sm" className="mt-4" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()}>Adicionar outro arquivo</Button>
+                         <Button variant="outline" size="sm" className="mt-4" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()} disabled={isAddFileDisabled}>Adicionar outro arquivo</Button>
                     </div>
                 )}
             </div>
@@ -183,7 +210,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="individual">Individual</SelectItem>
-                                <SelectItem value="batch">Lote (Máximo 10 volumes)</SelectItem>
+                                <SelectItem value="batch">Lote (Máximo {BATCH_LIMIT} volumes)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
