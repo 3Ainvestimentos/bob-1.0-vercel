@@ -9,10 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { extractDataFromXpReport } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X } from 'lucide-react';
+import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 // ---- Types ----
@@ -190,11 +191,22 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                 )}
             </div>
             <div className="space-y-6 flex flex-col justify-between">
+            <TooltipProvider>
                 <div className="space-y-4">
                     <div>
-                        <Label htmlFor="report-type" className="font-semibold">Relatórios Disponíveis</Label>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Label htmlFor="report-type" className="font-semibold">Relatórios Disponíveis</Label>
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Selecione o tipo de documento que será analisado.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <Select defaultValue="performance">
-                            <SelectTrigger id="report-type" className="mt-2">
+                            <SelectTrigger id="report-type">
                                 <SelectValue placeholder="Selecione o relatório" />
                             </SelectTrigger>
                             <SelectContent>
@@ -203,9 +215,19 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                         </Select>
                     </div>
                     <div>
-                        <Label htmlFor="analysis-type" className="font-semibold">Quantidade de Itens</Label>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Label htmlFor="analysis-type" className="font-semibold">Quantidade de Itens</Label>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Escolha entre analisar um único arquivo ou múltiplos em lote.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <Select value={analysisType} onValueChange={(value) => setAnalysisType(value as AnalysisType)} disabled={selectedFiles.length > 1}>
-                            <SelectTrigger id="analysis-type" className="mt-2">
+                            <SelectTrigger id="analysis-type">
                                 <SelectValue placeholder="Selecione a quantidade" />
                             </SelectTrigger>
                             <SelectContent>
@@ -215,9 +237,19 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                         </Select>
                     </div>
                      <div>
-                        <Label htmlFor="personalize-prompt" className="font-semibold">Personalizar Prompt</Label>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Label htmlFor="personalize-prompt" className="font-semibold">Personalizar Prompt</Label>
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Selecione "Sim" para escolher os dados da análise ou "Não" para usar a mensagem automática.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <Select value={personalize} onValueChange={(value) => setPersonalize(value as PersonalizePrompt)} disabled={analysisType === 'batch'}>
-                            <SelectTrigger id="personalize-prompt" className="mt-2">
+                            <SelectTrigger id="personalize-prompt">
                                 <SelectValue placeholder="Deseja personalizar?" />
                             </SelectTrigger>
                             <SelectContent>
@@ -227,6 +259,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                         </Select>
                     </div>
                 </div>
+            </TooltipProvider>
                 <Button type="button" onClick={handleContinue} disabled={selectedFiles.length === 0}>
                     Continuar e Processar
                 </Button>
