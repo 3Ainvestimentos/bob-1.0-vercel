@@ -162,9 +162,9 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
             >
                 {selectedFiles.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full">
-                        <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                        <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" style={{ strokeWidth: 1.5 }} />
                         <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
-                        <p className="text-muted-foreground text-sm mb-6">Arraste e solte os arquivos PDF aqui ou clique para selecionar.</p>
+                        <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
                         <Button type="button" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()}>
                             <FileText className="mr-2 h-4 w-4" />
                             Selecionar Arquivo PDF
