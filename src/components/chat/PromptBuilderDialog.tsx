@@ -391,16 +391,16 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
     <div className="space-y-6">
         {data.reportMonth && (
             <div className="flex items-center gap-2 text-muted-foreground bg-muted p-3 rounded-lg">
-                <CalendarDays className="h-5 w-5" style={{ color: '#DFB87F' }} />
+                <CalendarDays className="h-5 w-5" />
                 <h3 className="text-base font-semibold text-foreground">
-                    Selecione os dados para a análise de <span style={{ color: '#DFB87F' }}>{data.reportMonth}</span>
+                    Selecione os dados para a análise de <span>{data.reportMonth}</span>
                 </h3>
             </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base"><BarChart className="h-5 w-5" style={{ color: '#DFB87F' }} />Resultados do Mês</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base"><BarChart className="h-5 w-5" />Resultados do Mês</CardTitle>
                  </CardHeader>
                  <CardContent className="space-y-4 text-sm">
                     <div className="flex items-center space-x-3"><Checkbox id="monthlyReturn" onCheckedChange={(c) => onCheckboxChange('monthlyReturn', '', -1, !!c)} /><Label htmlFor="monthlyReturn">Rentabilidade: <strong>{data.monthlyReturn}</strong></Label></div>
@@ -410,7 +410,7 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
             </Card>
             <Card>
                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5" style={{ color: '#DFB87F' }} />Resultados do Ano</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5" />Resultados do Ano</CardTitle>
                  </CardHeader>
                  <CardContent className="space-y-4 text-sm">
                     <div className="flex items-center space-x-3"><Checkbox id="yearlyReturn" onCheckedChange={(c) => onCheckboxChange('yearlyReturn', '', -1, !!c)} /><Label htmlFor="yearlyReturn">Rentabilidade: <strong>{data.yearlyReturn}</strong></Label></div>
@@ -422,7 +422,7 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         <Card>
             <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="flex items-center gap-2 text-base"><Star className="h-5 w-5" style={{ color: '#DFB87F' }} />Destaques Mensais da carteira</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base"><Star className="h-5 w-5" />Destaques Mensais da carteira</CardTitle>
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
                             <ChevronsDown className="mr-1 h-4 w-4" />
@@ -646,7 +646,7 @@ ${economicScenarioText}
       >
         <DialogHeader className='p-6 pb-4 border-b shrink-0'>
           <div className="flex items-center gap-3">
-            <Wand2 className="h-6 w-6" style={{ color: '#DFB87F' }} />
+            <Wand2 className="h-6 w-6" />
             <DialogTitle className="text-xl">Assistente de Prompt Estruturado</DialogTitle>
           </div>
           <DialogDescription>
