@@ -165,7 +165,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                         <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" style={{ strokeWidth: 1.5 }} />
                         <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
                         <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
-                        <Button type="button" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()}>
+                        <Button type="button" variant="outline" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()}>
                             <FileText className="mr-2 h-4 w-4" />
                             Selecionar Arquivo PDF
                         </Button>
