@@ -311,7 +311,7 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
             const processedItems = items
                 .map(item => ({ ...item, numericCdi: parseCdiPercentage(item.cdiPercentage) }))
                 .filter(item => !isNaN(item.numericCdi) && item.numericCdi < 100)
-                .sort((a, b) => b.numericCdi - a.numericCdi);
+                .sort((a, b) => a.numericCdi - b.numericCdi);
 
             if (processedItems.length > 0) {
                 result[category] = processedItems;
@@ -393,7 +393,8 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
             <div className="flex items-center gap-2 text-muted-foreground bg-muted p-3 rounded-lg">
                 <CalendarDays className="h-5 w-5" />
                 <h3 className="text-base text-foreground">
-                    Selecione os dados para a análise de <span className="font-semibold">{data.reportMonth}</span>
+                    Selecione os dados para a análise de{' '}
+                    <span className="font-semibold">{data.reportMonth}</span>
                 </h3>
             </div>
         )}
