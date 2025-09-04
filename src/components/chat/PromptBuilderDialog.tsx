@@ -271,7 +271,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
 
 const LoadingPhase = () => (
     <div className="flex flex-col items-center justify-center text-center h-full">
-        <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
+        <Loader2 className="h-16 w-16 text-muted-foreground animate-spin mb-4" />
         <h3 className="font-semibold text-lg text-foreground">Analisando Relatório...</h3>
         <p className="text-muted-foreground text-sm">Aguarde, estamos extraindo os dados do seu documento.</p>
     </div>
@@ -675,5 +675,3 @@ ${economicScenarioText}
     </Dialog>
   );
 }
-
-    
