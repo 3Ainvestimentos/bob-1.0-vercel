@@ -1669,6 +1669,7 @@ export default function ChatPageContent() {
                             <PopoverContent
                                 side="left"
                                 align="center"
+                                sideOffset={10}
                                 className="w-auto max-w-xs text-sm bg-chart-2 text-white shadow-lg border-none rounded-xl"
                             >
                             <GreetingPopoverContent onOpenChange={setIsGreetingPopoverOpen} />
