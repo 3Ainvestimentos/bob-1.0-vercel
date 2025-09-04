@@ -35,7 +35,7 @@ const tourSteps = [
         elementSelector: '#suggestion-cards',
         title: "Sugestões Rápidas",
         content: "Não sabe por onde começar? Clique em um destes cards para fazer uma pergunta pré-programada e ver o Bob em ação.",
-        position: 'bottom',
+        position: 'top',
     },
     {
         title: "Pronto para Começar!",
