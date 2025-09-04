@@ -392,8 +392,8 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         {data.reportMonth && (
             <div className="flex items-center gap-2 text-muted-foreground bg-muted p-3 rounded-lg">
                 <CalendarDays className="h-5 w-5" />
-                <h3 className="text-base font-semibold text-foreground">
-                    Selecione os dados para a análise de <span>{data.reportMonth}</span>
+                <h3 className="text-base text-foreground">
+                    Selecione os dados para a análise de <span className="font-semibold">{data.reportMonth}</span>
                 </h3>
             </div>
         )}
