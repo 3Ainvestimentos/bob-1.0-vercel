@@ -177,7 +177,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                             {selectedFiles.map((file, index) => (
                                 <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-lg text-sm">
                                     <div className="flex items-center gap-2 overflow-hidden">
-                                        <FileText className="h-5 w-5 text-primary shrink-0" />
+                                        <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                                         <span className="font-medium text-foreground truncate">{file.name}</span>
                                     </div>
                                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0" onClick={() => handleRemoveFile(file)}>
