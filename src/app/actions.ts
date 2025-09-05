@@ -1301,39 +1301,6 @@ export async function setMaintenanceMode(isMaintenanceMode: boolean): Promise<an
     }
 }
 
-export async function getGreetingMessage(): Promise<string> {
-    const defaultMessage = 'Olá! Eu sou o Bob, o Assistente Corporativo da 3A RIVA.';
-    try {
-        const adminDb = await getAuthenticatedFirestoreAdmin();
-        const contentRef = adminDb.collection('system_settings').doc('content');
-        const docSnap = await contentRef.get();
-
-        if (docSnap.exists) {
-            return docSnap.data()?.greetingMessage || defaultMessage;
-        }
-        return defaultMessage;
-    } catch (error: any) {
-        console.error("Error getting greeting message:", error);
-        return defaultMessage;
-    }
-}
-
-export async function setGreetingMessage(greetingMessage: string): Promise<{ success: boolean, error?: string }> {
-    if (!greetingMessage) {
-        return { success: false, error: 'A mensagem de saudação não pode estar vazia.' };
-    }
-    try {
-        const adminDb = await getAuthenticatedFirestoreAdmin();
-        const contentRef = adminDb.collection('system_settings').doc('content');
-        await contentRef.set({ greetingMessage }, { merge: true });
-        return { success: true };
-    } catch (error: any) {
-        console.error("Error setting greeting message:", error);
-        return { success: false, error: error.message };
-    }
-}
-
-
 export async function runApiHealthCheck(): Promise<any> {
     const results = [];
     
@@ -1459,3 +1426,5 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
         return { success: false, error: `Falha ao extrair dados do relatório: ${error.message}` };
     }
 }
+
+    
