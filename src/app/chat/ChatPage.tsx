@@ -13,7 +13,6 @@ import {
   deidentifyTextOnly,
   generateSuggestedQuestions,
   generateTitleForConversation,
-  getGreetingMessage,
   logRegeneratedQuestion,
   regenerateAnswer,
   removeFileFromConversation,
@@ -77,8 +76,6 @@ import { FaqDialog } from '@/components/chat/FaqDialog';
 import { FileUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AttachedFile, UserRole } from '@/types';
-import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { RobotIdeaIcon } from '@/components/icons/RobotIdeaIcon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
@@ -443,19 +440,6 @@ const FileDropOverlay = () => (
     </div>
 );
 
-const GreetingPopoverContent = ({ onOpenChange }: { onOpenChange: (isOpen: boolean) => void }) => {
-    const [greeting, setGreeting] = useState('Carregando...');
-    
-    useEffect(() => {
-        getGreetingMessage()
-            .then(message => setGreeting(message))
-            .catch(() => setGreeting('Não foi possível carregar a saudação.'));
-    }, []);
-
-    return <>{greeting}</>;
-};
-
-
 export default function ChatPageContent() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -501,7 +485,6 @@ export default function ChatPageContent() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   
-  const [isGreetingPopoverOpen, setIsGreetingPopoverOpen] = useState(false);
   const [isCheckingTerms, setIsCheckingTerms] = useState(true);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -1652,31 +1635,6 @@ export default function ChatPageContent() {
 
             <SidebarInset>
                 <main className="flex h-full flex-1 flex-col bg-background">
-                    <div className="absolute top-4 right-4 z-10">
-                        <Popover open={isGreetingPopoverOpen} onOpenChange={setIsGreetingPopoverOpen}>
-                            <PopoverTrigger asChild>
-                                <button 
-                                className={cn(
-                                    'cursor-pointer transition-opacity hover:opacity-100',
-                                    messages.length > 0 ? 'opacity-0' : 'opacity-80'
-                                )}
-                                aria-label="Saudação do Bob"
-                                disabled={messages.length > 0}
-                                >
-                                    <RobotIdeaIcon className="h-10 w-10" />
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                                side="left"
-                                align="center"
-                                sideOffset={10}
-                                className="w-auto max-w-md text-sm bg-chart-2 text-white shadow-lg border-none rounded-xl"
-                            >
-                            <GreetingPopoverContent onOpenChange={setIsGreetingPopoverOpen} />
-                            <PopoverArrow className="fill-chart-2" />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
                     <ChatMessageArea
                         messages={messages}
                         isLoading={isLoading}
@@ -1718,5 +1676,3 @@ export default function ChatPageContent() {
     </SidebarProvider>
   );
 }
-
-    
