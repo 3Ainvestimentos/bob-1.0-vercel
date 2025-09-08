@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { extractDataFromXpReport } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X, Info, ChevronsRight, ChevronsDown } from 'lucide-react';
+import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X, Info, ChevronsRight, ChevronsDown, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
@@ -18,8 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 // ---- Types ----
 
-type Highlight = { asset: string; return: string; reason: string };
-type Detractor = { asset: string; cdiPercentage: string };
+type Asset = { asset: string; return: string; cdiPercentage: string; reason?: string; };
 
 type ExtractedData = {
     reportMonth: string;
@@ -29,8 +28,8 @@ type ExtractedData = {
     yearlyReturn: string;
     yearlyCdi: string;
     yearlyGain: string;
-    highlights: Record<string, Highlight[]>;
-    detractors: Record<string, Detractor[]>;
+    highlights: Record<string, Asset[]>;
+    detractors: Record<string, Asset[]>;
 };
 
 type SelectedFields = {
@@ -291,6 +290,7 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
 const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => void, selectedFields: SelectedFields }) => {
     
     const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
+    const [detractorView, setDetractorView] = useState<'cdi' | 'return'>('cdi');
     
     const parseReturnPercentage = (returnString: string): number => {
         if (typeof returnString !== 'string') return -Infinity;
@@ -324,7 +324,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
     }, [data.highlights]);
 
     const filteredDetractors = useMemo(() => {
-        const result: Record<string, Detractor[]> = {};
+        const result: Record<string, Asset[]> = {};
         Object.entries(data.detractors).forEach(([category, items]) => {
             const processedItems = items
                 .map(item => ({ ...item, numericCdi: parseCdiPercentage(item.cdiPercentage) }))
@@ -344,7 +344,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 ...item,
                 category,
                 originalIndex: data.detractors[category].findIndex(originalItem => originalItem.asset === item.asset),
-                numericCdi: parseCdiPercentage(item.cdiPercentage)
+                numericCdi: parseCdiPercentage(item.cdiPercentage),
+                numericReturn: parseReturnPercentage(item.return)
             }))
          ).sort((a,b) => (a.numericCdi ?? Infinity) - (b.numericCdi ?? Infinity));
     }, [filteredDetractors, data.detractors]);
@@ -490,7 +491,21 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             </Card>
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base text-red-600"><TrendingDown className="h-5 w-5" />Top 3 Detratores</CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-base text-red-600"><TrendingDown className="h-5 w-5" />Top 3 Detratores</CardTitle>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => setDetractorView(v => v === 'cdi' ? 'return' : 'cdi')}>
+                                        <Repeat className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Alternar entre % CDI e Rent. %</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                     {bottomThreeDetractors.map((item) => (
@@ -502,7 +517,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 className="mt-1"
                             />
                              <Label htmlFor={`summary-d-${item.category}-${item.originalIndex}`} className="cursor-pointer">
-                                <strong>{item.asset}</strong> ({item.cdiPercentage})
+                                <strong>{item.asset}</strong> ({detractorView === 'cdi' ? item.cdiPercentage : item.return})
                              </Label>
                         </div>
                     ))}
@@ -641,7 +656,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
 **DADOS EXTRAÍDOS PARA USO:**
 - **Mês de Referência:** ${extractedData.reportMonth}`;
 
-    const selectedHighlights: Highlight[] = [];
+    const selectedHighlights: Asset[] = [];
     if (selectedFields.highlights && typeof selectedFields.highlights === 'object') {
         for (const category in selectedFields.highlights) {
             for (const index in selectedFields.highlights[category]) {
@@ -652,7 +667,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
         }
     }
     
-    const selectedDetractors: Detractor[] = [];
+    const selectedDetractors: Asset[] = [];
     if (selectedFields.detractors && typeof selectedFields.detractors === 'object') {
         for (const category in selectedFields.detractors) {
             for (const index in selectedFields.detractors[category]) {
