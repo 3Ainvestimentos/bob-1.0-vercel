@@ -291,7 +291,14 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
 const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => void }) => {
     
     const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
-
+    
+    const parseReturnPercentage = (returnString: string): number => {
+        if (typeof returnString !== 'string') return -Infinity;
+        const cleanedString = returnString.trim().replace('%', '').replace(',', '.');
+        const value = parseFloat(cleanedString);
+        return isNaN(value) ? -Infinity : value;
+    };
+    
     const parseCdiPercentage = (cdiString: string): number => {
         if (typeof cdiString !== 'string') return NaN;
         
@@ -304,6 +311,10 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         const value = parseFloat(cleanedString);
         return isNaN(value) ? NaN : value;
     };
+
+    const allHighlights = useMemo(() => {
+        return Object.values(data.highlights).flat().map(item => ({...item, numericReturn: parseReturnPercentage(item.return) })).sort((a,b) => b.numericReturn - a.numericReturn);
+    }, [data.highlights]);
 
     const filteredDetractors = useMemo(() => {
         const result: Record<string, Detractor[]> = {};
@@ -319,6 +330,14 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         });
         return result;
     }, [data.detractors]);
+    
+    const allDetractors = useMemo(() => {
+         return Object.values(filteredDetractors).flat().map(item => ({...item, numericCdi: parseCdiPercentage(item.cdiPercentage) })).sort((a,b) => a.numericCdi - b.numericCdi);
+    }, [filteredDetractors]);
+
+    const topTwoHighlights = allHighlights.slice(0, 2);
+    const bottomTwoDetractors = allDetractors.slice(0, 2);
+
 
     const allAccordionKeys = useMemo(() => {
         const highlightKeys = Object.keys(data.highlights).map(cat => `h-cat-${cat}`);
@@ -418,6 +437,33 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
                     <div className="flex items-center space-x-3"><Checkbox id="yearlyCdi" onCheckedChange={(c) => onCheckboxChange('yearlyCdi', '', -1, !!c)} /><Label htmlFor="yearlyCdi">% CDI: <strong>{data.yearlyCdi}</strong></Label></div>
                     <div className="flex items-center space-x-3"><Checkbox id="yearlyGain" onCheckedChange={(c) => onCheckboxChange('yearlyGain', '', -1, !!c)} /><Label htmlFor="yearlyGain">Ganho Financeiro: <strong>{data.yearlyGain}</strong></Label></div>
                  </CardContent>
+            </Card>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base text-green-600"><TrendingUp className="h-5 w-5" />Top 2 Destaques</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                    {topTwoHighlights.length > 0 ? topTwoHighlights.map((item, index) => (
+                        <div key={`top-h-${index}`} className="p-2 rounded-md bg-muted/50">
+                            <p><strong>{item.asset}</strong> ({item.return})</p>
+                            <p className="text-xs text-muted-foreground italic">"{item.reason}"</p>
+                        </div>
+                    )) : <p className="text-xs text-muted-foreground">Nenhum destaque positivo encontrado.</p>}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base text-red-600"><TrendingDown className="h-5 w-5" />Top 2 Detratores</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                    {bottomTwoDetractors.length > 0 ? bottomTwoDetractors.map((item, index) => (
+                        <div key={`bottom-d-${index}`} className="p-2 rounded-md bg-muted/50">
+                             <p><strong>{item.asset}</strong> ({item.cdiPercentage})</p>
+                        </div>
+                    )) : <p className="text-xs text-muted-foreground">Nenhum detrator com performance abaixo de 100% do CDI foi encontrado.</p>}
+                </CardContent>
             </Card>
         </div>
         <Card>
@@ -564,10 +610,17 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     
     const selectedDetractors: Detractor[] = [];
     if (selectedFields.detractors && typeof selectedFields.detractors === 'object') {
+        const allDetractors: Detractor[] = Object.values(extractedData.detractors).flat();
         for (const category in selectedFields.detractors) {
             for (const index in selectedFields.detractors[category]) {
                 if (selectedFields.detractors[category][index]) {
-                    selectedDetractors.push(extractedData.detractors[category][parseInt(index, 10)]);
+                    // This logic is tricky. Let's assume the index maps to the flattened, sorted list.
+                    // A better approach would be to pass the item itself, not index.
+                    // For now, let's find the item by name if possible.
+                    const detractorItem = allDetractors.find(d => d.asset === Object.values(extractedData.detractors[category])[parseInt(index, 10)].asset);
+                    if (detractorItem) {
+                        selectedDetractors.push(detractorItem);
+                    }
                 }
             }
         }
