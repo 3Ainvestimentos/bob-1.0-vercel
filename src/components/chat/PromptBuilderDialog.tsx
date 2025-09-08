@@ -291,6 +291,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
     
     const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
     const [detractorView, setDetractorView] = useState<'cdi' | 'return'>('cdi');
+    const [highlightView, setHighlightView] = useState<'cdi' | 'return'>('return');
     
     const parseReturnPercentage = (returnString: string): number => {
         if (typeof returnString !== 'string') return -Infinity;
@@ -318,10 +319,11 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 ...item,
                 category,
                 index,
-                numericReturn: parseReturnPercentage(item.return)
+                numericReturn: parseReturnPercentage(item.return),
+                numericCdi: parseCdiPercentage(item.cdiPercentage)
             }))
-        ).sort((a,b) => b.numericReturn - a.numericReturn);
-    }, [data.highlights]);
+        ).sort((a,b) => (highlightView === 'return' ? (b.numericReturn - a.numericReturn) : (b.numericCdi - a.numericCdi)));
+    }, [data.highlights, highlightView]);
 
     const filteredDetractors = useMemo(() => {
         const result: Record<string, Asset[]> = {};
@@ -469,7 +471,31 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base text-green-600"><TrendingUp className="h-5 w-5" />Top 3 Destaques</CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-base text-green-600"><TrendingUp className="h-5 w-5" />Top 3 Destaques</CardTitle>
+                        <div className="flex items-center p-0.5 bg-muted rounded-lg">
+                             <Button 
+                                size="sm" 
+                                className={cn(
+                                    "text-xs h-7 px-2", 
+                                    highlightView === 'return' ? 'bg-background shadow-sm' : 'bg-transparent text-muted-foreground'
+                                )}
+                                onClick={() => setHighlightView('return')}
+                            >
+                                Rent. %
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                className={cn(
+                                    "text-xs h-7 px-2", 
+                                    highlightView === 'cdi' ? 'bg-background shadow-sm' : 'bg-transparent text-muted-foreground'
+                                )}
+                                onClick={() => setHighlightView('cdi')}
+                            >
+                                % CDI
+                            </Button>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                     {topThreeHighlights.map((item) => (
@@ -481,7 +507,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 className="mt-1"
                             />
                             <Label htmlFor={`summary-h-${item.category}-${item.index}`} className="flex flex-col cursor-pointer">
-                                <span><strong>{item.asset}</strong> ({item.return})</span>
+                                <span><strong>{item.asset}</strong> ({highlightView === 'return' ? item.return : item.cdiPercentage})</span>
                                 <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
                             </Label>
                         </div>
