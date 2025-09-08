@@ -202,6 +202,8 @@ async function callDiscoveryEngine(
       }
       
       const modelPrompt = `${preamble}${fileContextPreamble}`;
+      
+      // -- CONDIÇÃO --
       const isOffersQuery = query.toLowerCase().includes('ofertas');
 
       const requestBody: any = {
@@ -269,11 +271,12 @@ async function callDiscoveryEngine(
       let sources: ClientRagSource[] = [];
       const results = data.results || [];
       
+      // -- AÇÃO e RESPOSTA para OFERTAS --
       if (isOffersQuery && results.length > 0) {
-        const offerResult = results.find((result: any) =>
-            result.document?.derivedStructData?.title?.toLowerCase().includes('alocacao') &&
-            result.document?.derivedStructData?.title?.toLowerCase().includes('ofertas')
-        );
+        const offerResult = results.find((result: any) => {
+            const title = result.document?.derivedStructData?.title?.toLowerCase();
+            return title && title.includes('alocacao') && title.includes('ofertas');
+        });
 
         if (offerResult && offerResult.document?.derivedStructData?.extractive_answers) {
             const fullContent = offerResult.document.derivedStructData.extractive_answers
@@ -1454,4 +1457,5 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     
 
     
+
 
