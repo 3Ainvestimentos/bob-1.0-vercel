@@ -20,7 +20,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 
 3.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):** Esta regra tem prioridade máxima.
     - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo EXATAMENTE.
-    - **TUTORIALS:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo de TODOS os arquivos encontrados. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral. Esta regra prevalece sobre a regra 4.
+    - **TUTORIAIS:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo de TODOS os arquivos encontrados. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral. Esta regra prevalece sobre a regra 4.
     - **OFERTAS:** Se a pergunta for sobre "ofertas", busque o documento com "Resumo Ofertas" no título. Se encontrado, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo completo do documento. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA.
     - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome. Se a pergunta do usuário contiver um nome parcial (ex: "Paulo Caus" ou "Paulo Mesquita") e os documentos encontrados contiverem um nome completo que inclua o nome parcial (ex: "Paulo Caus Mesquita"), você DEVE assumir que são a mesma pessoa e que a busca foi bem-sucedida. Responda com a informação completa do documento.
     - **O QUE É algo:** Busque arquivos com "glossário" no nome.
@@ -202,10 +202,11 @@ async function callDiscoveryEngine(
       }
       
       const modelPrompt = `${preamble}${fileContextPreamble}`;
+      const isOffersQuery = query.toLowerCase().includes('ofertas');
 
       const requestBody: any = {
         query: query,
-        pageSize: 3,
+        pageSize: 5,
         queryExpansionSpec: { condition: 'AUTO' },
         spellCorrectionSpec: { mode: 'AUTO' },
         languageCode: 'pt-BR',
@@ -223,7 +224,7 @@ async function callDiscoveryEngine(
             },
             extractiveContentSpec: {
                 maxExtractiveAnswerCount: 5,
-                maxExtractiveSegmentCount: 10,
+                maxExtractiveSegmentCount: 1,
             }
         }
       };
@@ -266,8 +267,30 @@ async function callDiscoveryEngine(
       const promptTokenCount = await estimateTokens(promptForTokenCount);
       
       let sources: ClientRagSource[] = [];
-      const summary = data.summary?.summaryText;
       const results = data.results || [];
+      
+      // Handle "ofertas" query by returning the full extracted content
+      if (isOffersQuery && results.length > 0) {
+        const offerResult = results.find((result: any) =>
+            result.document?.derivedStructData?.title?.toLowerCase().includes('resumo ofertas')
+        );
+
+        if (offerResult && offerResult.document?.derivedStructData?.extractive_answers) {
+            const fullContent = offerResult.document.derivedStructData.extractive_answers
+                .map((ans: any) => ans.content)
+                .join("\n\n---\n\n");
+            
+            if (fullContent) {
+                const offerSources: ClientRagSource[] = [{
+                    title: offerResult.document.derivedStructData.title,
+                    uri: offerResult.document.derivedStructData.link || 'URI não encontrada',
+                }];
+                const candidatesTokenCount = await estimateTokens(fullContent);
+                return { summary: fullContent, searchFailed: false, sources: offerSources, promptTokenCount, candidatesTokenCount };
+            }
+        }
+      }
+
 
       const tutorialResults = results.filter((result: any) => 
           result.document?.derivedStructData?.title?.toLowerCase().includes('tutorial')
@@ -299,7 +322,8 @@ async function callDiscoveryEngine(
           
           return { summary: combinedContent, searchFailed: false, sources: tutorialSources, promptTokenCount, candidatesTokenCount };
       }
-
+      
+      const summary = data.summary?.summaryText;
       const failureKeywords = ["não tenho informações", "não consigo responder", "não é possível", "não foi possível encontrar", "não encontrei", "não tenho como", "não foram encontradas"];
       const summaryHasFailureKeyword = summary && failureKeywords.some(keyword => summary.toLowerCase().includes(keyword));
 
