@@ -536,31 +536,21 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onB
 
   const handleGeneratePrompt = () => {
     if (!extractedData) return;
-    
+
     const economicScenarioText = `Em agosto de 2025, o Copom manteve a Selic em 15% a.a., sinalizando prudência diante das incertezas e preservando a âncora monetária. A leitura do IPCA-15 em deflação de 0,14% ajudou a reduzir a percepção de pressões de curto prazo, reforçando a decisão de estabilidade dos juros e melhorando o apetite ao risco doméstico. Nesse ambiente, o Ibovespa avançou 6,28% no mês e atingiu recorde nominal de 141.422 pontos, movimento sustentado por rotação para ativos de risco e pela leitura de que o ciclo de política monetária se encerrou com a inflação cedendo na margem.
 No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal Reserve de vigilância ao mercado de trabalho, com ênfase em flexibilidade na condução da política — comunicação interpretada como ligeiramente “dovish”. Esse tom contribuiu para a melhora das condições financeiras globais e para a sustentação dos índices de ações, com o S&P 500 registrando alta de 1,9% no mês. O pano de fundo externo mais benigno, combinado ao alívio inflacionário local, criou um vetor positivo para ativos brasileiros, conectando a narrativa de juros estáveis, inflação mais comportada e valorização de bolsas no Brasil e nos Estados Unidos.`;
 
     let prompt = `Você é um especialista em finanças. Sua tarefa é usar os dados extraídos de um relatório de investimentos da XP para formatar uma mensagem para WhatsApp, seguindo um modelo específico.
 
 **REGRAS ESTRITAS:**
-1.  **Use os dados fornecidos** para preencher os placeholders no modelo de mensagem.
+1.  **Use APENAS os dados fornecidos** para preencher a mensagem. Se um dado não foi fornecido, omita a frase correspondente.
 2.  **Mantenha a formatação EXATA** do modelo, incluindo quebras de linha e asteriscos para negrito.
 3.  **Não inclua** \`\`\`, Markdown, ou qualquer outra formatação que não seja a do modelo.
-4.  **Adicione um parágrafo final** com uma análise do cenário econômico para contextualizar a performance.
-5.  **Substitua o placeholder [NOME]** pelo nome do cliente (você pode deixar como está se não for fornecido).
 
 ---
 **DADOS EXTRAÍDOS PARA USO:**
 - **Mês de Referência:** ${extractedData.reportMonth}`;
 
-    if (selectedFields.monthlyReturn) prompt += `\n- **Rentabilidade Percentual do Mês:** ${extractedData.monthlyReturn}`;
-    if (selectedFields.monthlyCdi) prompt += `\n- **Rentabilidade em %CDI do Mês:** ${extractedData.monthlyCdi}`;
-    if (selectedFields.monthlyGain) prompt += `\n- **Ganho Financeiro do Mês:** ${extractedData.monthlyGain}`;
-    if (selectedFields.yearlyReturn) prompt += `\n- **Rentabilidade Percentual do Ano:** ${extractedData.yearlyReturn}`;
-    if (selectedFields.yearlyCdi) prompt += `\n- **Rentabilidade em %CDI do Ano:** ${extractedData.yearlyCdi}`;
-    if (selectedFields.yearlyGain) prompt += `\n- **Ganho Financeiro do Ano:** ${extractedData.yearlyGain}`;
-
-    
     const selectedHighlights: Highlight[] = [];
     if (selectedFields.highlights && typeof selectedFields.highlights === 'object') {
         for (const category in selectedFields.highlights) {
@@ -572,13 +562,6 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
         }
     }
     
-    if (selectedHighlights.length > 0) {
-        prompt += "\n- **Principais Destaques Positivos:**";
-        selectedHighlights.forEach(h => {
-            prompt += `\n  - Classe: ${h.asset}, Rentabilidade: ${h.return}, Justificativa: ${h.reason}`;
-        });
-    }
-
     const selectedDetractors: Detractor[] = [];
     if (selectedFields.detractors && typeof selectedFields.detractors === 'object') {
         for (const category in selectedFields.detractors) {
@@ -589,28 +572,70 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
             }
         }
     }
-    if (selectedDetractors.length > 0) {
-        prompt += "\n- **Principais Detratores:**";
-        selectedDetractors.forEach(d => {
-            prompt += `\n  - Classe: ${d.asset}, % CDI: ${d.cdiPercentage}`;
+
+    const dataPairs = [
+        { key: 'monthlyReturn', data: extractedData.monthlyReturn },
+        { key: 'monthlyCdi', data: extractedData.monthlyCdi },
+        { key: 'monthlyGain', data: extractedData.monthlyGain },
+        { key: 'yearlyReturn', data: extractedData.yearlyReturn },
+        { key: 'yearlyCdi', data: extractedData.yearlyCdi },
+        { key: 'yearlyGain', data: extractedData.yearlyGain }
+    ];
+
+    dataPairs.forEach(pair => {
+        if (selectedFields[pair.key as keyof SelectedFields]) {
+            prompt += `\n- **${pair.key}:** ${pair.data}`;
+        }
+    });
+
+    if (selectedHighlights.length > 0) {
+        prompt += "\n- **Principais Destaques Positivos:**";
+        selectedHighlights.forEach(h => {
+            prompt += `\n  - ${h.asset} (${h.return}): ${h.reason}`;
         });
     }
 
-    prompt += `
----
-**MODELO OBRIGATÓRIO DA MENSAGEM (PREENCHA COM OS DADOS ACIMA):**
+    if (selectedDetractors.length > 0) {
+        prompt += "\n- **Principais Detratores:**";
+        selectedDetractors.forEach(d => {
+            prompt += `\n  - ${d.asset} (${d.cdiPercentage})`;
+        });
+    }
 
-Olá, [NOME]!
-Em ${extractedData.reportMonth} sua carteira rendeu *${selectedFields.monthlyReturn ? extractedData.monthlyReturn : '[RENTABILIDADE PERCENTUAL DO MÊS]'}*, o que equivale a *${selectedFields.monthlyCdi ? extractedData.monthlyCdi : '[RENTABILIDADE EM %CDI DO MÊS]'}*, um ganho bruto de *${selectedFields.monthlyGain ? extractedData.monthlyGain : '[GANHO FINANCEIRO DO MÊS]'}*! No ano, estamos com uma rentabilidade de *${selectedFields.yearlyReturn ? extractedData.yearlyReturn : '[RENTABILIDADE PERCENTUAL DO ANO]'}*, o que equivale a uma performance de *${selectedFields.yearlyCdi ? extractedData.yearlyCdi : '[RENTABILIDADE EM %CDI DO ANO]'}* e um ganho financeiro de *${selectedFields.yearlyGain ? extractedData.yearlyGain : '[GANHO FINANCEIRO DO ANO]'}*!
+    // --- Dynamic Message Construction ---
+    let messageBody = `Olá, [NOME]!\n`;
+    
+    let monthlyPerformanceParts: string[] = [];
+    if (selectedFields.monthlyReturn) monthlyPerformanceParts.push(`rendeu *${extractedData.monthlyReturn}*`);
+    if (selectedFields.monthlyCdi) monthlyPerformanceParts.push(`o que equivale a *${extractedData.monthlyCdi}* do CDI`);
+    if (selectedFields.monthlyGain) monthlyPerformanceParts.push(`um ganho bruto de *${extractedData.monthlyGain}*`);
+    
+    if (monthlyPerformanceParts.length > 0) {
+        messageBody += `Em ${extractedData.reportMonth} sua carteira ${monthlyPerformanceParts.join(', ')}!\n`;
+    }
 
-Os principais destaques foram:
-${selectedHighlights.length > 0 ? selectedHighlights.map(h => `*${h.asset}*, com *${h.return}*, *${h.reason}*`).join('\n') : '*[Classe 1]*, com *[rentabilidade]*, *[justificativa]*\n*[Classe 2]*, com *[rentabilidade]*, *[justificativa]*'}
+    let yearlyPerformanceParts: string[] = [];
+    if (selectedFields.yearlyReturn) yearlyPerformanceParts.push(`rentabilidade de *${extractedData.yearlyReturn}*`);
+    if (selectedFields.yearlyCdi) yearlyPerformanceParts.push(`uma performance de *${extractedData.yearlyCdi}* do CDI`);
+    if (selectedFields.yearlyGain) yearlyPerformanceParts.push(`um ganho financeiro de *${extractedData.yearlyGain}*`);
 
-Os principais detratores foram:
-${selectedDetractors.length > 0 ? selectedDetractors.map(d => `*${d.asset}*: *${d.cdiPercentage}*`).join('\n') : '*[Classe 1]*: *[rentabilidade]*\n*[Classe 2]*: *[rentabilidade]*'}
+    if (yearlyPerformanceParts.length > 0) {
+        messageBody += `No ano, estamos com ${yearlyPerformanceParts.join(', ')}!\n`;
+    }
 
-${economicScenarioText}
-`;
+    if (selectedHighlights.length > 0) {
+        messageBody += `\nOs principais destaques foram:\n`;
+        messageBody += selectedHighlights.map(h => `*${h.asset}*, com *${h.return}*`).join('\n');
+    }
+
+    if (selectedDetractors.length > 0) {
+        messageBody += `\n\nOs principais detratores foram:\n`;
+        messageBody += selectedDetractors.map(d => `*${d.asset}*: *${d.cdiPercentage}*`).join('\n');
+    }
+
+    messageBody += `\n\n${economicScenarioText}`;
+
+    prompt += `\n---\n**MODELO OBRIGATÓRIO DA MENSAGEM (PREENCHA COM OS DADOS ACIMA):**\n\n${messageBody}`;
     
     onPromptGenerated(prompt);
     handleClose();
