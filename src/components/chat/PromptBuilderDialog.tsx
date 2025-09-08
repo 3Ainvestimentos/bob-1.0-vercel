@@ -329,7 +329,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         const result: Record<string, Asset[]> = {};
         Object.entries(data.detractors).forEach(([category, items]) => {
             const processedItems = items
-                .map(item => ({ ...item, numericCdi: parseCdiPercentage(item.cdiPercentage) }))
+                .map(item => ({ ...item, numericReturn: parseReturnPercentage(item.return), numericCdi: parseCdiPercentage(item.cdiPercentage) }))
                 .filter(item => !isNaN(item.numericCdi) && item.numericCdi < 100)
                 .sort((a, b) => a.numericCdi - b.numericCdi);
 
@@ -346,10 +346,10 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 ...item,
                 category,
                 originalIndex: data.detractors[category].findIndex(originalItem => originalItem.asset === item.asset),
-                numericCdi: parseCdiPercentage(item.cdiPercentage),
-                numericReturn: parseReturnPercentage(item.return)
+                numericCdi: item.numericCdi,
+                numericReturn: item.numericReturn
             }))
-         ).sort((a,b) => (detractorView === 'cdi' ? a.numericCdi : a.numericReturn) - (detractorView === 'cdi' ? b.numericCdi : b.numericReturn));
+         ).sort((a,b) => (detractorView === 'return' ? (a.numericReturn - b.numericReturn) : (a.numericCdi - b.numericCdi)));
     }, [filteredDetractors, data.detractors, detractorView]);
 
     const topThreeHighlights = useMemo(() => allHighlights.slice(0, 3), [allHighlights]);
@@ -472,13 +472,13 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2 text-base text-green-600"><TrendingUp className="h-5 w-5" />Top 3 Destaques</CardTitle>
+                        <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5" />Top 3 Destaques</CardTitle>
                         <div className="flex items-center p-0.5 bg-muted rounded-lg">
                              <Button 
                                 size="sm" 
                                 className={cn(
                                     "text-xs h-7 px-2", 
-                                    highlightView === 'return' ? 'bg-background shadow-sm' : 'bg-transparent text-muted-foreground'
+                                    highlightView === 'return' ? 'bg-background shadow-sm text-foreground' : 'bg-transparent text-muted-foreground'
                                 )}
                                 onClick={() => setHighlightView('return')}
                             >
@@ -488,7 +488,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 size="sm" 
                                 className={cn(
                                     "text-xs h-7 px-2", 
-                                    highlightView === 'cdi' ? 'bg-background shadow-sm' : 'bg-transparent text-muted-foreground'
+                                    highlightView === 'cdi' ? 'bg-background shadow-sm text-foreground' : 'bg-transparent text-muted-foreground'
                                 )}
                                 onClick={() => setHighlightView('cdi')}
                             >
@@ -518,13 +518,13 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2 text-base text-red-600"><TrendingDown className="h-5 w-5" />Top 3 Detratores</CardTitle>
+                        <CardTitle className="flex items-center gap-2 text-base"><TrendingDown className="h-5 w-5" />Top 3 Detratores</CardTitle>
                         <div className="flex items-center p-0.5 bg-muted rounded-lg">
                              <Button 
                                 size="sm" 
                                 className={cn(
                                     "text-xs h-7 px-2", 
-                                    detractorView === 'return' ? 'bg-background shadow-sm' : 'bg-transparent text-muted-foreground'
+                                    detractorView === 'return' ? 'bg-background shadow-sm text-foreground' : 'bg-transparent text-muted-foreground'
                                 )}
                                 onClick={() => setDetractorView('return')}
                             >
@@ -534,7 +534,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 size="sm" 
                                 className={cn(
                                     "text-xs h-7 px-2", 
-                                    detractorView === 'cdi' ? 'bg-background shadow-sm' : 'bg-transparent text-muted-foreground'
+                                    detractorView === 'cdi' ? 'bg-background shadow-sm text-foreground' : 'bg-transparent text-muted-foreground'
                                 )}
                                 onClick={() => setDetractorView('cdi')}
                             >
