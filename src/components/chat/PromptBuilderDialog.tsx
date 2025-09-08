@@ -288,7 +288,7 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
     </div>
 );
 
-const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => void }) => {
+const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => void, selectedFields: SelectedFields }) => {
     
     const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
     
@@ -313,7 +313,14 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
     };
 
     const allHighlights = useMemo(() => {
-        return Object.values(data.highlights).flat().map(item => ({...item, numericReturn: parseReturnPercentage(item.return) })).sort((a,b) => b.numericReturn - a.numericReturn);
+        return Object.entries(data.highlights).flatMap(([category, items]) => 
+            items.map((item, index) => ({
+                ...item,
+                category,
+                index,
+                numericReturn: parseReturnPercentage(item.return)
+            }))
+        ).sort((a,b) => b.numericReturn - a.numericReturn);
     }, [data.highlights]);
 
     const filteredDetractors = useMemo(() => {
@@ -332,11 +339,18 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
     }, [data.detractors]);
     
     const allDetractors = useMemo(() => {
-         return Object.values(filteredDetractors).flat().map(item => ({...item, numericCdi: parseCdiPercentage(item.cdiPercentage) })).sort((a,b) => a.numericCdi - b.numericCdi);
-    }, [filteredDetractors]);
+         return Object.entries(filteredDetractors).flatMap(([category, items]) =>
+            items.map((item, index) => ({
+                ...item,
+                category,
+                originalIndex: data.detractors[category].findIndex(originalItem => originalItem.asset === item.asset),
+                numericCdi: parseCdiPercentage(item.cdiPercentage)
+            }))
+         ).sort((a,b) => (a.numericCdi ?? Infinity) - (b.numericCdi ?? Infinity));
+    }, [filteredDetractors, data.detractors]);
 
-    const topTwoHighlights = allHighlights.slice(0, 2);
-    const bottomTwoDetractors = allDetractors.slice(0, 2);
+    const topThreeHighlights = allHighlights.slice(0, 3);
+    const bottomThreeDetractors = allDetractors.slice(0, 3);
 
 
     const allAccordionKeys = useMemo(() => {
@@ -364,7 +378,12 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
                             <div className="space-y-2">
                                 {data.highlights[category].map((item, index) => (
                                     <div key={`h-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                        <Checkbox id={`h-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('highlights', category, index, !!c)} className="mt-1" />
+                                        <Checkbox 
+                                            id={`h-${category}-${index}`} 
+                                            onCheckedChange={(c) => onCheckboxChange('highlights', category, index, !!c)} 
+                                            className="mt-1" 
+                                            checked={!!(selectedFields.highlights as any)?.[category]?.[index]}
+                                        />
                                         <Label htmlFor={`h-${category}-${index}`} className="flex flex-col">
                                             <span><strong>{item.asset}</strong> ({item.return})</span>
                                             <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
@@ -392,12 +411,20 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
                         </AccordionTrigger>
                         <AccordionContent className="pt-2 pl-1">
                             <div className="space-y-2">
-                                {filteredDetractors[category].map((item, index) => (
-                                    <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                        <Checkbox id={`d-${category}-${index}`} onCheckedChange={(c) => onCheckboxChange('detractors', category, index, !!c)} className="mt-1" />
-                                        <Label htmlFor={`d-${category}-${index}`} className="cursor-pointer"><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
-                                    </div>
-                                ))}
+                                {filteredDetractors[category].map((item, index) => {
+                                    const originalDetractorIndex = data.detractors[category].findIndex(originalItem => originalItem.asset === item.asset);
+                                    return (
+                                        <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                            <Checkbox 
+                                                id={`d-${category}-${originalDetractorIndex}`} 
+                                                onCheckedChange={(c) => onCheckboxChange('detractors', category, originalDetractorIndex, !!c)} 
+                                                className="mt-1" 
+                                                checked={!!(selectedFields.detractors as any)?.[category]?.[originalDetractorIndex]}
+                                            />
+                                            <Label htmlFor={`d-${category}-${originalDetractorIndex}`} className="cursor-pointer"><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </AccordionContent>
                     </AccordionItem>
@@ -442,25 +469,41 @@ const SelectionPhase = ({ data, onCheckboxChange }: { data: ExtractedData, onChe
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base text-green-600"><TrendingUp className="h-5 w-5" />Top 2 Destaques</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base text-green-600"><TrendingUp className="h-5 w-5" />Top 3 Destaques</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
-                    {topTwoHighlights.length > 0 ? topTwoHighlights.map((item, index) => (
-                        <div key={`top-h-${index}`} className="p-2 rounded-md bg-muted/50">
-                            <p><strong>{item.asset}</strong> ({item.return})</p>
-                            <p className="text-xs text-muted-foreground italic">"{item.reason}"</p>
+                    {topThreeHighlights.length > 0 ? topThreeHighlights.map((item) => (
+                        <div key={`top-h-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                             <Checkbox 
+                                id={`summary-h-${item.category}-${item.index}`}
+                                onCheckedChange={(c) => onCheckboxChange('highlights', item.category, item.index, !!c)}
+                                checked={!!(selectedFields.highlights as any)?.[item.category]?.[item.index]}
+                                className="mt-1"
+                            />
+                            <Label htmlFor={`summary-h-${item.category}-${item.index}`} className="flex flex-col cursor-pointer">
+                                <span><strong>{item.asset}</strong> ({item.return})</span>
+                                <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
+                            </Label>
                         </div>
                     )) : <p className="text-xs text-muted-foreground">Nenhum destaque positivo encontrado.</p>}
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base text-red-600"><TrendingDown className="h-5 w-5" />Top 2 Detratores</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base text-red-600"><TrendingDown className="h-5 w-5" />Top 3 Detratores</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
-                    {bottomTwoDetractors.length > 0 ? bottomTwoDetractors.map((item, index) => (
-                        <div key={`bottom-d-${index}`} className="p-2 rounded-md bg-muted/50">
-                             <p><strong>{item.asset}</strong> ({item.cdiPercentage})</p>
+                    {bottomThreeDetractors.length > 0 ? bottomThreeDetractors.map((item) => (
+                        <div key={`bottom-d-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                            <Checkbox 
+                                id={`summary-d-${item.category}-${item.originalIndex}`}
+                                onCheckedChange={(c) => onCheckboxChange('detractors', item.category, item.originalIndex, !!c)}
+                                checked={!!(selectedFields.detractors as any)?.[item.category]?.[item.originalIndex]}
+                                className="mt-1"
+                            />
+                             <Label htmlFor={`summary-d-${item.category}-${item.originalIndex}`} className="cursor-pointer">
+                                <strong>{item.asset}</strong> ({item.cdiPercentage})
+                             </Label>
                         </div>
                     )) : <p className="text-xs text-muted-foreground">Nenhum detrator com performance abaixo de 100% do CDI foi encontrado.</p>}
                 </CardContent>
@@ -610,17 +653,10 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     
     const selectedDetractors: Detractor[] = [];
     if (selectedFields.detractors && typeof selectedFields.detractors === 'object') {
-        const allDetractors: Detractor[] = Object.values(extractedData.detractors).flat();
         for (const category in selectedFields.detractors) {
             for (const index in selectedFields.detractors[category]) {
                 if (selectedFields.detractors[category][index]) {
-                    // This logic is tricky. Let's assume the index maps to the flattened, sorted list.
-                    // A better approach would be to pass the item itself, not index.
-                    // For now, let's find the item by name if possible.
-                    const detractorItem = allDetractors.find(d => d.asset === Object.values(extractedData.detractors[category])[parseInt(index, 10)].asset);
-                    if (detractorItem) {
-                        selectedDetractors.push(detractorItem);
-                    }
+                     selectedDetractors.push(extractedData.detractors[category][parseInt(index, 10)]);
                 }
             }
         }
@@ -710,7 +746,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
             return <ErrorPhase error={error} onRetry={resetState} />;
         case 'selection':
             if (extractedData) {
-                return <SelectionPhase data={extractedData} onCheckboxChange={handleCheckboxChange} />;
+                return <SelectionPhase data={extractedData} onCheckboxChange={handleCheckboxChange} selectedFields={selectedFields} />;
             }
             return <ErrorPhase error="Não foi possível exibir os dados extraídos." onRetry={resetState} />;
         default:
@@ -754,3 +790,4 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     </Dialog>
   );
 }
+
