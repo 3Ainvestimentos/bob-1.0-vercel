@@ -21,7 +21,10 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 3.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):** Esta regra tem prioridade máxima.
     - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo EXATAMENTE.
     - **TUTORIAIS:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo de TODOS os arquivos encontrados. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral. Esta regra prevalece sobre a regra 4.
-    - **OFERTAS:** Se a pergunta for sobre "ofertas", busque documentos com "alocacao", "ofertas" e "mes" no título. Se encontrados, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo completo dos documentos. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA.
+    - **OFERTAS:**
+      - **CONDIÇÃO:** Se a pergunta do usuário contiver a palavra "ofertas".
+      - **AÇÃO:** Busque documentos que contenham "alocacao", "ofertas" e "mes" no título.
+      - **RESPOSTA:** Se encontrados, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo completo dos documentos. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA.
     - **QUEM É alguém:** Busque arquivos com "organograma" E "identidade" no nome. Se a pergunta do usuário contiver um nome parcial (ex: "Paulo Caus" ou "Paulo Mesquita") e os documentos encontrados contiverem um nome completo que inclua o nome parcial (ex: "Paulo Caus Mesquita"), você DEVE assumir que são a mesma pessoa e que a busca foi bem-sucedida. Responda com a informação completa do documento.
     - **O QUE É algo:** Busque arquivos com "glossário" no nome.
 
@@ -1457,5 +1460,6 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     
 
     
+
 
 
