@@ -291,8 +291,6 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
 const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetClass: string, index: number, checked: boolean) => void, selectedFields: SelectedFields }) => {
     
     const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
-    const [selectedHighlightClass, setSelectedHighlightClass] = useState<string>('all');
-    const [selectedDetractorClass, setSelectedDetractorClass] = useState<string>('all');
     
     const parseReturnPercentage = (returnString: string): number => {
         if (typeof returnString !== 'string') return -Infinity;
@@ -351,22 +349,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
          ).sort((a,b) => (a.numericCdi ?? Infinity) - (b.numericCdi ?? Infinity));
     }, [filteredDetractors, data.detractors]);
 
-    const topThreeHighlights = useMemo(() => {
-        const filtered = selectedHighlightClass === 'all'
-            ? allHighlights
-            : allHighlights.filter(h => h.category === selectedHighlightClass);
-        return filtered.slice(0, 3);
-    }, [allHighlights, selectedHighlightClass]);
-
-    const bottomThreeDetractors = useMemo(() => {
-        const filtered = selectedDetractorClass === 'all'
-            ? allDetractors
-            : allDetractors.filter(d => d.category === selectedDetractorClass);
-        return filtered.slice(0, 3);
-    }, [allDetractors, selectedDetractorClass]);
-
-    const highlightClasses = useMemo(() => Object.keys(data.highlights), [data.highlights]);
-    const detractorClasses = useMemo(() => Object.keys(filteredDetractors), [filteredDetractors]);
+    const topThreeHighlights = useMemo(() => allHighlights.slice(0, 3), [allHighlights]);
+    const bottomThreeDetractors = useMemo(() => allDetractors.slice(0, 3), [allDetractors]);
 
     const allAccordionKeys = useMemo(() => {
         const highlightKeys = Object.keys(data.highlights).map(cat => `h-cat-${cat}`);
@@ -484,21 +468,10 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center justify-between text-base text-green-600">
-                        <span className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />Top 3 Destaques</span>
-                        <Select value={selectedHighlightClass} onValueChange={setSelectedHighlightClass}>
-                            <SelectTrigger className="w-[180px] h-8 text-xs">
-                                <SelectValue placeholder="Filtrar por classe..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas as Classes</SelectItem>
-                                {highlightClasses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base text-green-600"><TrendingUp className="h-5 w-5" />Top 3 Destaques</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
-                    {topThreeHighlights.length > 0 ? topThreeHighlights.map((item) => (
+                    {topThreeHighlights.map((item) => (
                         <div key={`top-h-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                              <Checkbox 
                                 id={`summary-h-${item.category}-${item.index}`}
@@ -511,26 +484,15 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
                             </Label>
                         </div>
-                    )) : <p className="text-xs text-muted-foreground">Nenhum destaque para a classe selecionada.</p>}
+                    ))}
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center justify-between text-base text-red-600">
-                        <span className="flex items-center gap-2"><TrendingDown className="h-5 w-5" />Top 3 Detratores</span>
-                        <Select value={selectedDetractorClass} onValueChange={setSelectedDetractorClass}>
-                            <SelectTrigger className="w-[180px] h-8 text-xs">
-                                <SelectValue placeholder="Filtrar por classe..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas as Classes</SelectItem>
-                                {detractorClasses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base text-red-600"><TrendingDown className="h-5 w-5" />Top 3 Detratores</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
-                    {bottomThreeDetractors.length > 0 ? bottomThreeDetractors.map((item) => (
+                    {bottomThreeDetractors.map((item) => (
                         <div key={`bottom-d-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                             <Checkbox 
                                 id={`summary-d-${item.category}-${item.originalIndex}`}
@@ -542,7 +504,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 <strong>{item.asset}</strong> ({item.cdiPercentage})
                              </Label>
                         </div>
-                    )) : <p className="text-xs text-muted-foreground">Nenhum detrator para a classe selecionada.</p>}
+                    ))}
                 </CardContent>
             </Card>
         </div>
