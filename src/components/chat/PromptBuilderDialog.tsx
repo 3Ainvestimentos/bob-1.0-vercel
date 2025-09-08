@@ -347,8 +347,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 numericCdi: parseCdiPercentage(item.cdiPercentage),
                 numericReturn: parseReturnPercentage(item.return)
             }))
-         ).sort((a,b) => (a.numericCdi ?? Infinity) - (b.numericCdi ?? Infinity));
-    }, [filteredDetractors, data.detractors]);
+         ).sort((a,b) => (detractorView === 'cdi' ? a.numericCdi : a.numericReturn) - (detractorView === 'cdi' ? b.numericCdi : b.numericReturn));
+    }, [filteredDetractors, data.detractors, detractorView]);
 
     const topThreeHighlights = useMemo(() => allHighlights.slice(0, 3), [allHighlights]);
     const bottomThreeDetractors = useMemo(() => allDetractors.slice(0, 3), [allDetractors]);
@@ -493,18 +493,28 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle className="flex items-center gap-2 text-base text-red-600"><TrendingDown className="h-5 w-5" />Top 3 Detratores</CardTitle>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => setDetractorView(v => v === 'cdi' ? 'return' : 'cdi')}>
-                                        <Repeat className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Alternar entre % CDI e Rent. %</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
+                        <div className="flex items-center p-0.5 bg-muted rounded-lg">
+                             <Button 
+                                size="sm" 
+                                className={cn(
+                                    "text-xs h-7 px-2", 
+                                    detractorView === 'return' ? 'bg-background shadow-sm' : 'bg-transparent text-muted-foreground'
+                                )}
+                                onClick={() => setDetractorView('return')}
+                            >
+                                Rent. %
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                className={cn(
+                                    "text-xs h-7 px-2", 
+                                    detractorView === 'cdi' ? 'bg-background shadow-sm' : 'bg-transparent text-muted-foreground'
+                                )}
+                                onClick={() => setDetractorView('cdi')}
+                            >
+                                % CDI
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
