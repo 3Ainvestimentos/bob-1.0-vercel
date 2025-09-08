@@ -224,7 +224,7 @@ async function callDiscoveryEngine(
             },
             extractiveContentSpec: {
                 maxExtractiveAnswerCount: 5,
-                maxExtractiveSegmentCount: 1,
+                maxExtractiveSegmentCount: 5,
             }
         }
       };
