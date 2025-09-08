@@ -485,6 +485,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                             </Label>
                         </div>
                     ))}
+                     {topThreeHighlights.length === 0 && <p className="text-xs text-muted-foreground">Nenhum destaque encontrado.</p>}
                 </CardContent>
             </Card>
             <Card>
@@ -505,6 +506,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                              </Label>
                         </div>
                     ))}
+                    {bottomThreeDetractors.length === 0 && <p className="text-xs text-muted-foreground">Nenhum detrator com performance abaixo de 100% do CDI encontrado.</p>}
                 </CardContent>
             </Card>
         </div>
@@ -718,7 +720,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
 
     if (selectedDetractors.length > 0) {
         messageBody += `\n\nOs principais detratores foram:\n`;
-        messageBody += selectedDetractors.map(d => `*${d.asset}*: *${d.cdiPercentage}*`).join('\n');
+        messageBody += selectedDetractors.map(d => `*${d.asset}*: *${d.cdiPercentage} do CDI*`).join('\n');
     }
 
     messageBody += `\n\n${economicScenarioText}`;
