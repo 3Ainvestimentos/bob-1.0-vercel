@@ -282,11 +282,11 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
 };
 
 
-const LoadingPhase = () => (
+const LoadingPhase = ({ loadingMessage }: { loadingMessage: string }) => (
     <div className="flex flex-col items-center justify-center text-center h-full">
         <Loader2 className="h-16 w-16 text-muted-foreground animate-spin mb-4" />
-        <h3 className="font-semibold text-lg text-foreground">Analisando Relatório...</h3>
-        <p className="text-muted-foreground text-sm">Aguarde, estamos extraindo os dados do seu documento.</p>
+        <h3 className="font-semibold text-lg text-foreground">{loadingMessage}...</h3>
+        <p className="text-muted-foreground text-sm">Isso pode levar alguns segundos. Por favor, aguarde.</p>
     </div>
 );
 
@@ -753,6 +753,13 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
 };
 
 
+const loadingMessages = [
+    "Anexando relatório",
+    "Analisando relatório",
+    "Extraindo e preparando dados para você"
+];
+
+
 export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onBatchSubmit }: PromptBuilderDialogProps) {
   const [phase, setPhase] = useState<PromptBuilderPhase>('upload');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -760,6 +767,19 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onB
   const [selectedFields, setSelectedFields] = useState<SelectedFields>({});
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (phase === 'loading') {
+      setLoadingMessageIndex(0); // Reset on new loading
+      interval = setInterval(() => {
+        setLoadingMessageIndex(prevIndex => (prevIndex + 1) % loadingMessages.length);
+      }, 2500);
+    }
+    return () => clearInterval(interval);
+  }, [phase]);
+
 
   const resetState = () => {
     setPhase('upload');
@@ -767,6 +787,7 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onB
     setExtractedData(null);
     setSelectedFields({});
     setError(null);
+    setLoadingMessageIndex(0);
   };
   
   const processIndividualFile = async (files: File[]) => {
@@ -992,7 +1013,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
         case 'upload':
             return <UploadPhase onFilesChange={handleFilesChange} onBatchSubmit={handleBatchSubmit} files={uploadedFiles} />;
         case 'loading':
-            return <LoadingPhase />;
+            return <LoadingPhase loadingMessage={loadingMessages[loadingMessageIndex]} />;
         case 'error':
             return <ErrorPhase error={error} onRetry={resetState} />;
         case 'selection':
