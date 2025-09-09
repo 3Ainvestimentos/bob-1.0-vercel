@@ -500,18 +500,25 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                                 checked={!!selectedFields.classPerformance?.[item.className]}
                                             />
                                             <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
-                                                <div className="flex items-center gap-2">
-                                                    <strong>{item.className}</strong>
-                                                    {!isGlobalClass && performanceIndicator}
-                                                </div>
                                                 {isGlobalClass ? (
-                                                     <span className="text-xs text-muted-foreground italic">{item.return}</span>
+                                                    <>
+                                                        <strong>{item.className}</strong>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {item.return} - Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.
+                                                        </span>
+                                                    </>
                                                 ) : (
-                                                     <div className="text-xs text-muted-foreground">
-                                                         <span>Rentabilidade: {item.return}</span>
-                                                         <span className="mx-2">|</span>
-                                                         <span>Benchmark: {benchmarkValue}</span>
-                                                     </div>
+                                                    <>
+                                                        <div className="flex items-center gap-2">
+                                                            <strong>{item.className}</strong>
+                                                            {performanceIndicator}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            <span>Rentabilidade: {item.return}</span>
+                                                            {benchmarkValue && <span className="mx-2">|</span>}
+                                                            {benchmarkValue && <span>Benchmark: {benchmarkValue}</span>}
+                                                        </div>
+                                                    </>
                                                 )}
                                             </Label>
                                         </div>
