@@ -380,9 +380,6 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             }))
          ).sort((a,b) => (detractorView === 'return' ? (a.numericReturn - b.numericReturn) : (a.numericCdi - b.numericCdi)));
     }, [filteredDetractors, data.detractors, detractorView]);
-
-    const topThreeHighlights = useMemo(() => allHighlights.slice(0, 3), [allHighlights]);
-    const bottomThreeDetractors = useMemo(() => allDetractors.slice(0, 3), [allDetractors]);
     
     const allClassPerformances = useMemo(() => {
         return (data.classPerformance || []).map(item => ({
@@ -510,7 +507,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             <span className="text-xs text-muted-foreground">
                                                 Rentabilidade: {item.return}
                                                 {isGlobalClass ? (
-                                                     ' | Benchmark não disponível no relatório XP'
+                                                     ' | Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.'
                                                 ) : (
                                                     ` | % ${item.benchmark} ${benchmarkValue}`
                                                 )}
@@ -605,7 +602,6 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                     </div>
                 ) : (
                     <div className="md:col-span-2 space-y-3 text-sm">
-                        <h4 className="font-semibold flex items-center gap-2"><Layers className="h-4 w-4" />Performance por Classe (Detalhado)</h4>
                         {renderClassPerformance()}
                     </div>
                 )}
