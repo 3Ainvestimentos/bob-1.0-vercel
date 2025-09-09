@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { extractDataFromXpReport } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X, Info, ChevronsRight, ChevronsDown, Repeat, Layers, Gem } from 'lucide-react';
+import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X, Info, ChevronsRight, ChevronsDown, Repeat, Layers, Gem, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
@@ -89,8 +89,6 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     useEffect(() => {
         if (selectedFiles.length > 1) {
             setAnalysisType('batch');
-        } else if (selectedFiles.length <= 1 && analysisType === 'batch') {
-            // Do not automatically switch back to individual
         }
     }, [selectedFiles]);
 
@@ -317,6 +315,22 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         const value = parseFloat(cleanedString);
         return isNaN(value) ? -Infinity : value;
     };
+    
+    const getPerformanceIndicator = (returnValue: number, benchmarkValue: number) => {
+        if (isNaN(returnValue) || isNaN(benchmarkValue)) {
+            return null;
+        }
+
+        const diff = returnValue - benchmarkValue;
+        if (Math.abs(diff) < 0.01) { // Tolerance for float comparison
+            return <Minus className="h-4 w-4 text-muted-foreground" />;
+        } else if (diff > 0) {
+            return <ArrowUp className="h-4 w-4 text-green-500" />;
+        } else {
+            return <ArrowDown className="h-4 w-4 text-red-500" />;
+        }
+    };
+
 
     const allHighlights = useMemo(() => {
         return Object.entries(data.highlights).flatMap(([category, items]) => 
@@ -474,22 +488,29 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                     </AccordionTrigger>
                     <AccordionContent className="pt-2 pl-1">
                         <div className="space-y-2">
-                            {allClassPerformances.map((item, index) => (
-                                <div key={`cp-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                    <Checkbox 
-                                        id={`cp-${index}`}
-                                        onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
-                                        className="mt-1" 
-                                        checked={!!selectedFields.classPerformance?.[item.className]}
-                                    />
-                                    <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
-                                        <span><strong>{item.className}</strong></span>
-                                        <span className="text-xs text-muted-foreground">
-                                            Rentabilidade: {item.return} | % {item.benchmark} {data.benchmarkValues?.[item.benchmark] ?? item.cdiPercentage}
-                                        </span>
-                                    </Label>
-                                </div>
-                            ))}
+                            {allClassPerformances.map((item, index) => {
+                                const benchmarkValue = data.benchmarkValues?.[item.benchmark] ?? 'N/A';
+                                const indicator = getPerformanceIndicator(item.numericReturn, parsePercentage(benchmarkValue));
+                                return (
+                                    <div key={`cp-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                        <Checkbox 
+                                            id={`cp-${index}`}
+                                            onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
+                                            className="mt-1" 
+                                            checked={!!selectedFields.classPerformance?.[item.className]}
+                                        />
+                                        <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
+                                            <div className="flex items-center gap-2">
+                                                <strong>{item.className}</strong>
+                                                {indicator}
+                                            </div>
+                                            <span className="text-xs text-muted-foreground">
+                                                Rentabilidade: {item.return} | % {item.benchmark} {benchmarkValue}
+                                            </span>
+                                        </Label>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </AccordionContent>
                 </AccordionItem>
@@ -557,9 +578,10 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                      <Card className="border-none shadow-none bg-transparent">
-                          <CardHeader className="px-2 pt-0 pb-2">
+                 <Card className="border-none shadow-none bg-transparent">
+                    <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                       <div className="space-y-3">
+                           <CardHeader className="px-2 pt-0 pb-2">
                               <div className="flex items-center justify-between">
                                   <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5 text-foreground" />Top 3 Destaques</CardTitle>
                                   {assetAnalysisView === 'asset' && (
@@ -587,8 +609,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                     </div>
                                   )}
                               </div>
-                          </CardHeader>
-                          <CardContent className="space-y-3 text-sm p-2">
+                           </CardHeader>
+                           <CardContent className="space-y-3 text-sm p-2">
                               {assetAnalysisView === 'asset' ? (
                                   <>
                                   {topThreeHighlights.map((item) => (
@@ -625,10 +647,10 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                   {topThreeClassHighlights.length === 0 && <p className="text-xs text-muted-foreground">Nenhum destaque de classe encontrado.</p>}
                                   </>
                               )}
-                          </CardContent>
-                      </Card>
-                      <Card className="border-none shadow-none bg-transparent">
-                          <CardHeader className="px-2 pt-0 pb-2">
+                           </CardContent>
+                       </div>
+                       <div className="space-y-3">
+                           <CardHeader className="px-2 pt-0 pb-2">
                               <div className="flex items-center justify-between">
                                   <CardTitle className="flex items-center gap-2 text-base"><TrendingDown className="h-5 w-5 text-foreground" />Top 3 Detratores</CardTitle>
                                    {assetAnalysisView === 'asset' && (
@@ -656,8 +678,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                     </div>
                                   )}
                               </div>
-                          </CardHeader>
-                          <CardContent className="space-y-3 text-sm p-2">
+                           </CardHeader>
+                           <CardContent className="space-y-3 text-sm p-2">
                               {assetAnalysisView === 'asset' ? (
                                   <>
                                   {bottomThreeDetractors.map((item) => (
@@ -693,9 +715,10 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                   {topThreeClassDetractors.length === 0 && <p className="text-xs text-muted-foreground">Nenhum detrator de classe encontrado.</p>}
                                   </>
                               )}
-                          </CardContent>
-                      </Card>
-                </div>
+                           </CardContent>
+                       </div>
+                    </CardContent>
+                 </Card>
                 <div className="w-full h-px bg-border my-4"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                     {assetAnalysisView === 'asset' ? (
