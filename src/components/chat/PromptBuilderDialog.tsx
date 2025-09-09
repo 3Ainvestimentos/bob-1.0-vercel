@@ -453,7 +453,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 {filteredDetractors[category].map((item, index) => {
                                     const originalDetractorIndex = data.detractors[category].findIndex(originalItem => originalItem.asset === item.asset);
                                     return (
-                                        <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/ ৫০">
+                                        <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                                             <Checkbox 
                                                 id={`d-${category}-${originalDetractorIndex}`} 
                                                 onCheckedChange={(c) => onCheckboxChange('detractors', category, originalDetractorIndex, !!c)} 
@@ -500,26 +500,21 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                                 checked={!!selectedFields.classPerformance?.[item.className]}
                                             />
                                             <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
-                                                {isGlobalClass ? (
-                                                    <>
-                                                        <strong>{item.className}</strong>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {item.return} - Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.
-                                                        </span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <div className="flex items-center gap-2">
-                                                            <strong>{item.className}</strong>
-                                                            {performanceIndicator}
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground">
-                                                            <span>Rentabilidade: {item.return}</span>
-                                                            {benchmarkValue && <span className="mx-2">|</span>}
-                                                            {benchmarkValue && <span>Benchmark: {benchmarkValue}</span>}
-                                                        </div>
-                                                    </>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    <strong>{item.className}</strong>
+                                                    {performanceIndicator}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {isGlobalClass ? (
+                                                      <span>Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.</span>
+                                                    ) : (
+                                                      <>
+                                                        <span>Rentabilidade: {item.return}</span>
+                                                        {benchmarkValue && <span className="mx-2">|</span>}
+                                                        {benchmarkValue && <span>Benchmark ({item.benchmark}): {benchmarkValue}</span>}
+                                                      </>
+                                                    )}
+                                                </div>
                                             </Label>
                                         </div>
                                     </div>
