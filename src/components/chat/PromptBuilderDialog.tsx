@@ -488,8 +488,6 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                         <div className="space-y-2">
                             {allClassPerformances.map((item, index) => {
                                 const isGlobalClass = item.className.toLowerCase().includes('global');
-                                const benchmarkValue = (data.benchmarkValues?.[item.benchmark] ?? 'N/A');
-                                const indicator = getPerformanceIndicator(item.numericReturn, parsePercentage(benchmarkValue));
                                 
                                 return (
                                     <div key={`cp-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
@@ -500,16 +498,13 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             checked={!!selectedFields.classPerformance?.[item.className]}
                                         />
                                         <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
-                                            <div className="flex items-center gap-2">
-                                                <strong>{item.className}</strong>
-                                                {!isGlobalClass && indicator}
-                                            </div>
+                                            <strong>{item.className}</strong>
                                             <span className="text-xs text-muted-foreground">
                                                 Rentabilidade: {item.return}
                                                 {isGlobalClass ? (
                                                      ' | Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.'
                                                 ) : (
-                                                    ` | % ${item.benchmark} ${benchmarkValue}`
+                                                    ` | % ${item.benchmark} ${data.benchmarkValues?.[item.benchmark] ?? 'N/A'}`
                                                 )}
                                             </span>
                                         </Label>
@@ -722,6 +717,14 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onB
     });
 };
 
+  const parsePercentage = (valueString: string | undefined): number => {
+      if (!valueString || typeof valueString !== 'string') return NaN;
+      if (valueString.trim() === '(0,00)' || valueString.trim() === '00,00%') return NaN;
+      const cleanedString = valueString.trim().replace('%', '').replace('.', '').replace(',', '.');
+      const value = parseFloat(cleanedString);
+      return isNaN(value) ? NaN : value;
+  };
+
 
   const handleGeneratePrompt = () => {
     if (!extractedData) return;
@@ -806,7 +809,17 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     if (selectedClasses.length > 0) {
         prompt += "\n- **Performance das Classes Selecionadas:**";
         selectedClasses.forEach(c => {
-            prompt += `\n  - ${c.className}: Retorno ${c.return}, CDI ${c.cdiPercentage}`;
+            const benchmarkName = assetClassBenchmarks[c.className] || 'N/A';
+            const benchmarkValue = extractedData.benchmarkValues?.[benchmarkName] || 'N/A';
+            const classReturn = parsePercentage(c.return);
+            const benchReturn = parsePercentage(benchmarkValue);
+            let diffText = '';
+            if (!isNaN(classReturn) && !isNaN(benchReturn)) {
+                const diff = classReturn - benchReturn;
+                diffText = `, ${Math.abs(diff).toFixed(2).replace('.', ',')}% ${diff >= 0 ? 'superior' : 'inferior'}`;
+            }
+
+            prompt += `\n  - ${c.className}: Retorno ${c.return}, Benchmark (${benchmarkName}): ${benchmarkValue}${diffText}`;
         });
     }
 
@@ -830,29 +843,43 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     if (yearlyPerformanceParts.length > 0) {
         messageBody += `No ano, estamos com ${yearlyPerformanceParts.join(', ')}!\n`;
     }
-
-    const parsePercentage = (valueString: string): number => {
-        if (typeof valueString !== 'string') return -Infinity;
-        const cleanedString = valueString.trim().replace('%', '').replace('.', '').replace(',', '.');
-        return parseFloat(cleanedString);
-    };
-
-    const positiveClasses = selectedClasses.filter(c => parsePercentage(c.return) > 0);
-    const negativeClasses = selectedClasses.filter(c => parsePercentage(c.return) <= 0);
-
-    if (selectedHighlights.length > 0 || positiveClasses.length > 0) {
+    
+    if (selectedHighlights.length > 0) {
         messageBody += `\nOs principais destaques foram:\n`;
         messageBody += selectedHighlights.map(h => `*${h.asset}*, com *${h.return}*`).join('\n');
-        if (selectedHighlights.length > 0 && positiveClasses.length > 0) messageBody += '\n';
-        messageBody += positiveClasses.map(c => `A classe *${c.className}* teve um bom desempenho com *${c.return}*`).join('\n');
     }
 
-    if (selectedDetractors.length > 0 || negativeClasses.length > 0) {
+    if (selectedDetractors.length > 0) {
         messageBody += `\n\nOs principais detratores foram:\n`;
         messageBody += selectedDetractors.map(d => `*${d.asset}*: *${d.return}*`).join('\n');
-        if (selectedDetractors.length > 0 && negativeClasses.length > 0) messageBody += '\n';
-        messageBody += negativeClasses.map(c => `A classe *${c.className}* ficou abaixo do esperado, com *${c.return}*`).join('\n');
     }
+    
+    if (selectedClasses.length > 0) {
+        const classPerformancesText = selectedClasses.map(c => {
+            const isGlobal = c.className.toLowerCase().includes('global');
+            if (isGlobal) {
+                return `A classe *${c.className}* teve um desempenho com *${c.return}*.`;
+            }
+
+            const benchmarkName = assetClassBenchmarks[c.className] || 'N/A';
+            const benchmarkValue = extractedData.benchmarkValues?.[benchmarkName] || 'N/A';
+            const classReturn = parsePercentage(c.return);
+            const benchReturn = parsePercentage(benchmarkValue);
+
+            if (!isNaN(classReturn) && !isNaN(benchReturn)) {
+                 const diff = classReturn - benchReturn;
+                 const comparison = diff >= 0 ? 'superior' : 'inferior';
+                 return `A classe *${c.className}* teve um bom desempenho com *${c.return}* de rentabilidade, *${Math.abs(diff).toFixed(2).replace('.',',')}%* ${comparison} ao seu benchmark *${benchmarkName}*, com *${benchmarkValue}*`;
+            } else {
+                return `A classe *${c.className}* teve um desempenho com *${c.return}*.`;
+            }
+        }).join('\n');
+        
+        if(classPerformancesText) {
+            messageBody += `\n\n${classPerformancesText}`;
+        }
+    }
+
 
     messageBody += `\n\n${economicScenarioText}`;
 
