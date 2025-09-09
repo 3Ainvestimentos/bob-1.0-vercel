@@ -493,10 +493,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 const isGlobalClass = item.className.toLowerCase().includes('global');
                                 const benchmarkValue = (data.benchmarkValues?.[item.benchmark] ?? 'N/A');
                                 const indicator = getPerformanceIndicator(item.numericReturn, parsePercentage(benchmarkValue));
-                                const benchmarkDisplay = isGlobalClass
-                                    ? "Benchmark não disponível no relatório XP"
-                                    : `% ${item.benchmark} ${benchmarkValue}`;
-
+                                
                                 return (
                                     <div key={`cp-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                                         <Checkbox 
@@ -508,10 +505,15 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                         <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
                                             <div className="flex items-center gap-2">
                                                 <strong>{item.className}</strong>
-                                                {indicator}
+                                                {!isGlobalClass && indicator}
                                             </div>
                                             <span className="text-xs text-muted-foreground">
-                                                Rentabilidade: {item.return} | {benchmarkDisplay}
+                                                Rentabilidade: {item.return}
+                                                {isGlobalClass ? (
+                                                     ''
+                                                ) : (
+                                                    ` | % ${item.benchmark} ${benchmarkValue}`
+                                                )}
                                             </span>
                                         </Label>
                                     </div>
@@ -576,103 +578,6 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {assetAnalysisView === 'asset' ? (
-                    <Card className="border-none shadow-none bg-transparent">
-                        <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                        <div className="space-y-3">
-                            <CardHeader className="px-2 pt-0 pb-2">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5 text-foreground" />Top 3 Destaques</CardTitle>
-                                    <div className="flex items-center p-0.5 bg-muted rounded-full">
-                                        <Button 
-                                            size="sm" 
-                                            className={cn(
-                                                "text-xs h-7 px-2 rounded-full", 
-                                                highlightView === 'return' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
-                                            )}
-                                            onClick={() => setHighlightView('return')}
-                                        >
-                                            Rent. %
-                                        </Button>
-                                        <Button 
-                                            size="sm" 
-                                            className={cn(
-                                                "text-xs h-7 px-2 rounded-full", 
-                                                highlightView === 'cdi' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
-                                            )}
-                                            onClick={() => setHighlightView('cdi')}
-                                        >
-                                            % CDI
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-sm p-2">
-                                {topThreeHighlights.map((item) => (
-                                    <div key={`top-h-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                        <Checkbox 
-                                            id={`summary-h-${item.category}-${item.index}`}
-                                            onCheckedChange={(c) => onCheckboxChange('highlights', item.category, item.index, !!c)}
-                                            checked={!!(selectedFields.highlights as any)?.[item.category]?.[item.index]}
-                                            className="mt-1"
-                                        />
-                                        <Label htmlFor={`summary-h-${item.category}-${item.index}`} className="flex flex-col cursor-pointer">
-                                            <span><strong>{item.asset}</strong> ({highlightView === 'return' ? item.return : item.cdiPercentage})</span>
-                                            <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
-                                        </Label>
-                                    </div>
-                                ))}
-                                {topThreeHighlights.length === 0 && <p className="text-xs text-muted-foreground">Nenhum destaque encontrado.</p>}
-                            </CardContent>
-                        </div>
-                        <div className="space-y-3">
-                            <CardHeader className="px-2 pt-0 pb-2">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2 text-base"><TrendingDown className="h-5 w-5 text-foreground" />Top 3 Detratores</CardTitle>
-                                    <div className="flex items-center p-0.5 bg-muted rounded-full">
-                                        <Button 
-                                            size="sm" 
-                                            className={cn(
-                                                "text-xs h-7 px-2 rounded-full", 
-                                                detractorView === 'return' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
-                                            )}
-                                            onClick={() => setDetractorView('return')}
-                                        >
-                                            Rent. %
-                                        </Button>
-                                        <Button 
-                                            size="sm" 
-                                            className={cn(
-                                                "text-xs h-7 px-2 rounded-full", 
-                                                detractorView === 'cdi' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
-                                            )}
-                                            onClick={() => setDetractorView('cdi')}
-                                        >
-                                            % CDI
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-sm p-2">
-                                {bottomThreeDetractors.map((item) => (
-                                    <div key={`bottom-d-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                        <Checkbox 
-                                            id={`summary-d-${item.category}-${item.originalIndex}`}
-                                            onCheckedChange={(c) => onCheckboxChange('detractors', item.category, item.originalIndex, !!c)}
-                                            checked={!!(selectedFields.detractors as any)?.[item.category]?.[item.originalIndex]}
-                                            className="mt-1"
-                                        />
-                                        <Label htmlFor={`summary-d-${item.category}-${item.originalIndex}`} className="cursor-pointer">
-                                            <strong>{item.asset}</strong> ({detractorView === 'return' ? item.return : item.cdiPercentage})
-                                        </Label>
-                                    </div>
-                                ))}
-                                {bottomThreeDetractors.length === 0 && <p className="text-xs text-muted-foreground">Nenhum detrator com performance abaixo de 100% do CDI encontrado.</p>}
-                            </CardContent>
-                        </div>
-                        </CardContent>
-                    </Card>
-                ) : null}
                 
                 <div className="w-full h-px bg-border my-4 flex items-center justify-center">
                     <div className="flex items-center gap-2 bg-background px-4">
