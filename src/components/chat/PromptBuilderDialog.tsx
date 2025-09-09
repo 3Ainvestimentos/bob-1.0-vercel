@@ -288,7 +288,7 @@ const LoadingPhase = ({ loadingMessage }: { loadingMessage: string }) => (
         <div className="relative w-full overflow-hidden h-6">
             <div
                 key={loadingMessage}
-                className="font-semibold text-lg text-foreground animate-in fade-in duration-500"
+                className="font-semibold text-lg text-foreground animate-in fade-in duration-1000"
             >
                 {loadingMessage}...
             </div>
@@ -533,7 +533,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base"><BarChart className="h-5 w-5" />Resultados do Mês da Carteira</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base"><CalendarDays className="h-5 w-5" />Resultados do Mês da Carteira</CardTitle>
                  </CardHeader>
                  <CardContent className="space-y-4 text-sm">
                     <div className="flex items-center space-x-3"><Checkbox id="monthlyReturn" onCheckedChange={(c) => onCheckboxChange('monthlyReturn', '', -1, !!c)} /><Label htmlFor="monthlyReturn">Rentabilidade: <strong>{data.monthlyReturn}</strong></Label></div>
