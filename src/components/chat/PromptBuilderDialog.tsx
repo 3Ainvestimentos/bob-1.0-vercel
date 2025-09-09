@@ -477,15 +477,6 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
 
     return (
     <div className="space-y-6">
-        {data.reportMonth && (
-             <div className="flex items-center gap-2 text-muted-foreground bg-muted p-3 rounded-lg">
-                <CalendarDays className="h-5 w-5" />
-                <h3 className="text-base text-foreground">
-                    Análise da conta <span className="font-semibold">{data.accountNumber}</span> para{' '}
-                    <span className="font-semibold">{data.reportMonth}</span>
-                </h3>
-            </div>
-        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
                  <CardHeader>
@@ -962,15 +953,27 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
       <DialogContent 
         className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0"
       >
-        <DialogHeader className='p-6 pb-4 border-b shrink-0'>
+        <DialogHeader className='p-6 pb-0 border-b shrink-0'>
           <div className="flex items-center gap-3">
             <Wand2 className="h-6 w-6" />
             <DialogTitle className="text-xl">Assistente de Prompt Estruturado</DialogTitle>
           </div>
-          <DialogDescription>
+          <DialogDescription className="pb-4">
             Anexe um relatório de performance da XP para extrair os dados e construir uma análise personalizada.
           </DialogDescription>
         </DialogHeader>
+        
+        {phase === 'selection' && extractedData?.reportMonth && (
+            <div className="px-6 pt-4 border-b">
+                 <div className="flex items-center gap-2 text-muted-foreground bg-muted p-3 rounded-lg">
+                    <CalendarDays className="h-5 w-5" />
+                    <h3 className="text-base text-foreground">
+                        Análise da conta <span className="font-semibold">{extractedData.accountNumber}</span> para{' '}
+                        <span className="font-semibold">{extractedData.reportMonth}</span>
+                    </h3>
+                </div>
+            </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-6">
             {renderContent()}
