@@ -24,7 +24,6 @@ type AssetClassPerformance = {
     className: string; 
     return: string; 
     cdiPercentage: string; 
-    benchmark: 'CDI' | 'Ibovespa' | 'IPCA' | 'Dólar';
 };
 
 type ExtractedData = {
@@ -63,7 +62,7 @@ interface PromptBuilderDialogProps {
 
 const BATCH_LIMIT = 5;
 
-const assetClassBenchmarks: Record<string, AssetClassPerformance['benchmark']> = {
+const assetClassBenchmarks: Record<string, keyof ExtractedData['benchmarkValues']> = {
     'Pre Fixado': 'CDI',
     'Pós Fixado': 'CDI',
     'Multimercado': 'CDI',
@@ -332,11 +331,11 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         const diffText = `${diff > 0 ? '+' : ''}${diff.toFixed(2)}%`.replace('.', ',');
         
         if (Math.abs(diff) < 0.01) {
-            return <div className="flex items-center gap-1"><Minus className="h-4 w-4 text-muted-foreground" /> <span className="text-xs text-muted-foreground">({diffText})</span></div>;
+            return <div className="flex items-center gap-1 text-muted-foreground"><Minus className="h-4 w-4" /> <span className="text-xs">({diffText})</span></div>;
         } else if (diff > 0) {
-            return <div className="flex items-center gap-1"><ArrowUp className="h-4 w-4 text-green-600" /> <span className="text-xs text-green-600">({diffText})</span></div>;
+            return <div className="flex items-center gap-1 text-green-600"><ArrowUp className="h-4 w-4" /> <span className="text-xs">({diffText})</span></div>;
         } else {
-            return <div className="flex items-center gap-1"><ArrowDown className="h-4 w-4 text-red-600" /> <span className="text-xs text-red-600">({diffText})</span></div>;
+            return <div className="flex items-center gap-1 text-red-600"><ArrowDown className="h-4 w-4" /> <span className="text-xs">({diffText})</span></div>;
         }
     };
 
@@ -383,7 +382,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
     const allClassPerformances = useMemo(() => {
         return (data.classPerformance || []).map(item => ({
             ...item,
-            benchmark: assetClassBenchmarks[item.className] || 'CDI',
+            benchmarkName: assetClassBenchmarks[item.className] || 'CDI',
             numericReturn: parsePercentage(item.return),
             numericCdi: parsePercentage(item.cdiPercentage)
         }));
@@ -487,7 +486,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                         <div className="space-y-2">
                             {allClassPerformances.map((item, index) => {
                                 const isGlobalClass = item.className.toLowerCase().includes('global');
-                                const benchmarkValue = data.benchmarkValues?.[item.benchmark] ?? null;
+                                const benchmarkValue = data.benchmarkValues?.[item.benchmarkName] ?? null;
                                 const performanceIndicator = benchmarkValue ? getPerformanceIndicator(item.numericReturn, parsePercentage(benchmarkValue)) : null;
 
                                 return (
@@ -502,16 +501,16 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
                                                 <div className="flex items-center gap-2">
                                                     <strong>{item.className}</strong>
-                                                    {!isGlobalClass && performanceIndicator}
+                                                    {!isGlobalClass && <div className="ml-auto">{performanceIndicator}</div>}
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">
                                                     {isGlobalClass ? (
-                                                      <span>Rentabilidade: {item.return}</span>
+                                                      <span>Rentabilidade: {item.return} | Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.</span>
                                                     ) : (
                                                       <>
                                                         <span>Rentabilidade: {item.return}</span>
                                                         {benchmarkValue && <span className="mx-2">|</span>}
-                                                        {benchmarkValue && <span>Benchmark ({item.benchmark}): {benchmarkValue}</span>}
+                                                        {benchmarkValue && <span>Benchmark ({item.benchmarkName}): {benchmarkValue}</span>}
                                                       </>
                                                     )}
                                                 </div>
@@ -867,7 +866,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
         const classPerformancesText = selectedClasses.map(c => {
             const isGlobal = c.className.toLowerCase().includes('global');
             if (isGlobal) {
-                return `A classe *${c.className}* teve um desempenho com *${c.return}*.`;
+                return `A classe *${c.className}* teve um desempenho com *${c.return}*. Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.`;
             }
 
             const benchmarkName = assetClassBenchmarks[c.className] || 'N/A';
