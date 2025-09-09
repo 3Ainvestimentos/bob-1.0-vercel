@@ -849,7 +849,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
 
     if (selectedDetractors.length > 0 || negativeClasses.length > 0) {
         messageBody += `\n\nOs principais detratores foram:\n`;
-        messageBody += selectedDetractors.map(d => `*${d.asset}*: *${d.cdiPercentage}* do CDI`).join('\n');
+        messageBody += selectedDetractors.map(d => `*${d.asset}*: *${d.return}*`).join('\n');
         if (selectedDetractors.length > 0 && negativeClasses.length > 0) messageBody += '\n';
         messageBody += negativeClasses.map(c => `A classe *${c.className}* ficou abaixo do esperado, com *${c.return}*`).join('\n');
     }
