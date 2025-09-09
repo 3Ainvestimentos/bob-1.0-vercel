@@ -242,7 +242,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="individual">Individual</SelectItem>
-                                <SelectItem value="batch">Lote (Máximo {BATCH_LIMIT} volumes)</SelectItem>
+                                <SelectItem value="batch">Lote (Máximo ${BATCH_LIMIT} volumes)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -710,7 +710,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                               className="mt-1"
                                           />
                                           <Label htmlFor={`summary-class-d-${item.className}`} className="cursor-pointer">
-                                              <strong>{item.className}</strong> ({item.cdiPercentage})
+                                              <strong>{item.className}</strong> ({item.return})
                                           </Label>
                                       </div>
                                   ))}
@@ -1081,5 +1081,3 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     </Dialog>
   );
 }
-
-    
