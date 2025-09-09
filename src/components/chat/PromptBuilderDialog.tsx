@@ -308,8 +308,7 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
     </div>
 );
 
-const SelectionPhase = (props: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetOrClass: string, index: number, checked: boolean, isClass?: boolean) => void, selectedFields: SelectedFields }) => {
-    const { data, onCheckboxChange, selectedFields } = props;
+const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: ExtractedData; onCheckboxChange: (category: keyof ExtractedData, assetOrClass: string, index: number, checked: boolean, isClass?: boolean) => void; selectedFields: SelectedFields; }) => {
     const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
     const [detractorView, setDetractorView] = useState<'cdi' | 'return'>('cdi');
     const [highlightView, setHighlightView] = useState<'cdi' | 'return'>('return');
@@ -501,17 +500,18 @@ const SelectionPhase = (props: { data: ExtractedData, onCheckboxChange: (categor
                                                 checked={!!selectedFields.classPerformance?.[item.className]}
                                             />
                                             <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
-                                                <strong>{item.className}</strong>
-                                            </Label>
-                                        </div>
-                                        <div className="pr-2 text-sm">
-                                            <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer items-end">
                                                 <div className="flex items-center gap-2">
-                                                    <span>{item.return}</span>
+                                                    <strong>{item.className}</strong>
                                                     {!isGlobalClass && performanceIndicator}
                                                 </div>
-                                                {isGlobalClass && (
-                                                    <span className="text-xs text-muted-foreground italic">Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.</span>
+                                                {isGlobalClass ? (
+                                                     <span className="text-xs text-muted-foreground italic">{item.return}</span>
+                                                ) : (
+                                                     <div className="text-xs text-muted-foreground">
+                                                         <span>Rentabilidade: {item.return}</span>
+                                                         <span className="mx-2">|</span>
+                                                         <span>Benchmark: {benchmarkValue}</span>
+                                                     </div>
                                                 )}
                                             </Label>
                                         </div>
