@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 type Asset = { asset: string; return: string; cdiPercentage: string; reason?: string; };
 
 type ExtractedData = {
+    accountNumber: string;
     reportMonth: string;
     monthlyReturn: string;
     monthlyCdi: string;
@@ -61,6 +62,8 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     useEffect(() => {
         if (selectedFiles.length > 1) {
             setAnalysisType('batch');
+        } else if (selectedFiles.length <= 1 && analysisType === 'batch') {
+            // Don't auto-switch back to individual if user selected batch
         }
     }, [selectedFiles]);
 
@@ -426,7 +429,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             <div className="flex items-center gap-2 text-muted-foreground bg-muted p-3 rounded-lg">
                 <CalendarDays className="h-5 w-5" />
                 <h3 className="text-base text-foreground">
-                    Selecione os dados para a análise de{' '}
+                    Análise da conta <span className="font-semibold">{data.accountNumber}</span> para{' '}
                     <span className="font-semibold">{data.reportMonth}</span>
                 </h3>
             </div>
@@ -479,7 +482,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                     <Button 
                                         size="sm" 
                                         className={cn(
-                                            "text-xs h-7 px-2", 
+                                            "text-xs h-7 px-2 rounded-full", 
                                             highlightView === 'return' ? 'bg-background shadow-sm text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
                                         )}
                                         onClick={() => setHighlightView('return')}
@@ -489,7 +492,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                     <Button 
                                         size="sm" 
                                         className={cn(
-                                            "text-xs h-7 px-2", 
+                                            "text-xs h-7 px-2 rounded-full", 
                                             highlightView === 'cdi' ? 'bg-background shadow-sm text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
                                         )}
                                         onClick={() => setHighlightView('cdi')}
@@ -525,7 +528,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                     <Button 
                                         size="sm" 
                                         className={cn(
-                                            "text-xs h-7 px-2", 
+                                            "text-xs h-7 px-2 rounded-full", 
                                             detractorView === 'return' ? 'bg-background shadow-sm text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
                                         )}
                                         onClick={() => setDetractorView('return')}
@@ -535,7 +538,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                     <Button 
                                         size="sm" 
                                         className={cn(
-                                            "text-xs h-7 px-2", 
+                                            "text-xs h-7 px-2 rounded-full", 
                                             detractorView === 'cdi' ? 'bg-background shadow-sm text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
                                         )}
                                         onClick={() => setDetractorView('cdi')}
