@@ -72,8 +72,8 @@ const assetClassBenchmarks: Record<string, AssetClassPerformance['benchmark']> =
     'Renda Fixa Brasil (RFB)': 'CDI',
     'Renda Variável Brasil (RVB)': 'Ibovespa',
     'Inflação': 'IPCA',
-    'Renda Variável Global (RVG)': 'Dólar',
-    'Renda Fixa Global (RFG)': 'Dólar',
+    'Renda Variável Global': 'Dólar',
+    'Renda Fixa Global': 'Dólar',
 };
 
 
@@ -83,12 +83,14 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     const { toast } = useToast();
     const [selectedFiles, setSelectedFiles] = useState<File[]>(files);
     const [analysisType, setAnalysisType] = useState<AnalysisType>('individual');
-    const [personalize, setPersonalize] = useState<PersonalizePrompt>('yes');
+    const [personalize, setPersonalize] = useState<PersonalizePrompt>('no');
     const [isDraggingOver, setIsDraggingOver] = useState(false);
 
     useEffect(() => {
         if (selectedFiles.length > 1) {
             setAnalysisType('batch');
+        } else if (selectedFiles.length <= 1 && analysisType === 'batch') {
+            // Do not automatically switch back to individual
         }
     }, [selectedFiles]);
 
@@ -520,7 +522,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             </Card>
         </div>
         <Card>
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-2">
                  <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
                     <CardTitle className="flex items-center gap-2 text-base"><Star className="h-5 w-5" />Destaques Mensais da Carteira</CardTitle>
                     <div className="flex items-center gap-2">
@@ -555,8 +557,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card className="border-none shadow-none">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                      <Card className="border-none shadow-none bg-transparent">
                           <CardHeader className="px-2 pt-0 pb-2">
                               <div className="flex items-center justify-between">
                                   <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5 text-foreground" />Top 3 Destaques</CardTitle>
@@ -625,7 +627,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                               )}
                           </CardContent>
                       </Card>
-                      <Card className="border-none shadow-none">
+                      <Card className="border-none shadow-none bg-transparent">
                           <CardHeader className="px-2 pt-0 pb-2">
                               <div className="flex items-center justify-between">
                                   <CardTitle className="flex items-center gap-2 text-base"><TrendingDown className="h-5 w-5 text-foreground" />Top 3 Detratores</CardTitle>
@@ -693,7 +695,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                               )}
                           </CardContent>
                       </Card>
-                  </div>
+                </div>
                 <div className="w-full h-px bg-border my-4"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                     {assetAnalysisView === 'asset' ? (
