@@ -490,8 +490,13 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                     <AccordionContent className="pt-2 pl-1">
                         <div className="space-y-2">
                             {allClassPerformances.map((item, index) => {
-                                const benchmarkValue = data.benchmarkValues?.[item.benchmark] ?? 'N/A';
+                                const isGlobalClass = item.className.includes('Global');
+                                const benchmarkValue = isGlobalClass ? 'N/A' : (data.benchmarkValues?.[item.benchmark] ?? 'N/A');
                                 const indicator = getPerformanceIndicator(item.numericReturn, parsePercentage(benchmarkValue));
+                                const benchmarkDisplay = isGlobalClass
+                                    ? "Benchmark não disponível no relatório XP"
+                                    : `% ${item.benchmark} ${benchmarkValue}`;
+
                                 return (
                                     <div key={`cp-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                                         <Checkbox 
@@ -506,7 +511,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                                 {indicator}
                                             </div>
                                             <span className="text-xs text-muted-foreground">
-                                                Rentabilidade: {item.return} | % {item.benchmark} {benchmarkValue}
+                                                Rentabilidade: {item.return} | {benchmarkDisplay}
                                             </span>
                                         </Label>
                                     </div>
@@ -668,6 +673,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                         </CardContent>
                     </Card>
                 )}
+                
                 <div className="w-full h-px bg-border my-4 flex items-center justify-center">
                     <div className="flex items-center gap-2 bg-background px-4">
                         <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
@@ -680,9 +686,9 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                         </Button>
                     </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                    {assetAnalysisView === 'asset' ? (
-                        <>
+
+                {assetAnalysisView === 'asset' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                         <div className="space-y-3">
                             <h4 className="font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4" />Maiores Retornos (Detalhado)</h4>
                             {renderHighlights()}
@@ -691,14 +697,13 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                             <h4 className="font-semibold flex items-center gap-2"><TrendingDown className="h-4 w-4" />Performance Inferior ao CDI (Detalhado)</h4>
                             {renderDetractors()}
                         </div>
-                        </>
-                    ) : (
-                        <div className="md:col-span-2 space-y-3">
-                              <h4 className="font-semibold flex items-center gap-2"><Layers className="h-4 w-4" />Performance por Classe (Detalhado)</h4>
-                              {renderClassPerformance()}
-                        </div>
-                    )}
-                </div>
+                    </div>
+                ) : (
+                    <div className="md:col-span-2 space-y-3 text-sm">
+                        <h4 className="font-semibold flex items-center gap-2"><Layers className="h-4 w-4" />Performance por Classe (Detalhado)</h4>
+                        {renderClassPerformance()}
+                    </div>
+                )}
               </div>
             </CardContent>
         </Card>
