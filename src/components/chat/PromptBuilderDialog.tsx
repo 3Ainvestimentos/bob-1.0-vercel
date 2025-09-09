@@ -68,11 +68,16 @@ const assetClassBenchmarks: Record<string, keyof ExtractedData['benchmarkValues'
     'Multimercado': 'CDI',
     'Alternativo': 'CDI',
     'Fundo Listado': 'CDI',
-    'Renda Fixa Brasil (RFB)': 'CDI',
-    'Renda Variável Brasil (RVB)': 'Ibovespa',
+    'Renda Fixa Brasil': 'CDI',
+    'Renda Variável Brasil': 'Ibovespa',
     'Inflação': 'IPCA',
     'Renda Variável Global': 'Dólar',
     'Renda Fixa Global': 'Dólar',
+};
+
+const findBenchmarkByClassName = (className: string): keyof ExtractedData['benchmarkValues'] => {
+    const matchingKey = Object.keys(assetClassBenchmarks).find(key => className.includes(key));
+    return matchingKey ? assetClassBenchmarks[matchingKey] : 'CDI'; // Default to CDI if not found
 };
 
 
@@ -382,7 +387,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
     const allClassPerformances = useMemo(() => {
         return (data.classPerformance || []).map(item => ({
             ...item,
-            benchmarkName: assetClassBenchmarks[item.className] || 'CDI',
+            benchmarkName: findBenchmarkByClassName(item.className),
             numericReturn: parsePercentage(item.return),
             numericCdi: parsePercentage(item.cdiPercentage)
         }));
@@ -497,7 +502,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             className="mt-1"
                                             checked={!!selectedFields.classPerformance?.[item.className]}
                                         />
-                                        <Label htmlFor={`cp-${index}`} className="flex-1 cursor-pointer">
+                                        <Label htmlFor={`cp-${index}`} className="flex-1 cursor-pointer space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <strong>{item.className}</strong>
                                                 {!isGlobalClass && performanceIndicator}
@@ -506,8 +511,6 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                                 {isGlobalClass ? (
                                                     <>
                                                         <span>Rentabilidade: {item.return}</span>
-                                                        <span className="mx-2">|</span>
-                                                        <span>Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.</span>
                                                     </>
                                                 ) : (
                                                     <>
@@ -819,8 +822,8 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     if (selectedClasses.length > 0) {
         prompt += "\n- **Performance das Classes Selecionadas:**";
         selectedClasses.forEach(c => {
-            const benchmarkName = assetClassBenchmarks[c.className] || 'N/A';
-            const benchmarkValue = extractedData.benchmarkValues?.[benchmarkName] || 'N/A';
+            const benchmarkName = findBenchmarkByClassName(c.className);
+            const benchmarkValue = extractedData.benchmarkValues?.[benchmarkName] ?? 'N/A';
             const classReturn = parsePercentage(c.return);
             const benchReturn = parsePercentage(benchmarkValue);
             let diffText = '';
@@ -871,8 +874,8 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
                 return `A classe *${c.className}* teve um desempenho com *${c.return}*. Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.`;
             }
 
-            const benchmarkName = assetClassBenchmarks[c.className] || 'N/A';
-            const benchmarkValue = extractedData.benchmarkValues?.[benchmarkName] || 'N/A';
+            const benchmarkName = findBenchmarkByClassName(c.className);
+            const benchmarkValue = extractedData.benchmarkValues?.[benchmarkName] ?? 'N/A';
             const classReturn = parsePercentage(c.return);
             const benchReturn = parsePercentage(benchmarkValue);
 
