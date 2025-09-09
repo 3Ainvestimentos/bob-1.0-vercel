@@ -59,13 +59,16 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     const [isDraggingOver, setIsDraggingOver] = useState(false);
 
     useEffect(() => {
-        if (selectedFiles.length > 1) {
+        if (selectedFiles.length > 1 && analysisType !== 'batch') {
             setAnalysisType('batch');
-            setPersonalize('no');
-        } else if (selectedFiles.length <= 1 && analysisType === 'batch') {
-            setAnalysisType('individual');
         }
     }, [selectedFiles, analysisType]);
+
+    useEffect(() => {
+        if (analysisType === 'batch') {
+            setPersonalize('no');
+        }
+    }, [analysisType]);
 
     const handleFileDrop = (droppedFiles: FileList) => {
         if (!droppedFiles) return;
