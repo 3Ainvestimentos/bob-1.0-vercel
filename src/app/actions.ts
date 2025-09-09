@@ -512,14 +512,13 @@ export async function askAssistant(
         if (fileDataUris.length > 0) {
             for (const file of fileDataUris) {
                 const content = await getFileContent(file.dataUri, file.mimeType);
-                // The de-identification is now expected to happen before this function is called.
-                // We just pass the original content for now, assuming it's already de-identified.
                 attachments.push({
                     id: crypto.randomUUID(),
                     fileName: file.name,
-                    // @ts-ignore
-                    mimeType: file.type,
-                    deidentifiedContent: content,
+                    mimeType: file.mimeType,
+                    storagePath: '', // Not applicable for direct URI processing
+                    downloadURL: '', // Not applicable
+                    deidentifiedContent: content, // Assuming content is de-identified if needed
                 });
             }
         }
@@ -1460,6 +1459,8 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     
 
     
+
+
 
 
 
