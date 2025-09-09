@@ -216,23 +216,23 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                     </div>
                      <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <Label htmlFor="personalize-prompt" className="font-semibold">Personalizar Prompt</Label>
+                            <Label htmlFor="personalize-prompt" className="font-semibold">Tipo de Análise</Label>
                              <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Selecione "Sim" para escolher os dados da análise ou "Não" para usar a mensagem automática.</p>
+                                    <p>Escolha "Personalizada" para selecionar os dados ou "Automática" para usar o modelo padrão.</p>
                                 </TooltipContent>
                             </Tooltip>
                         </div>
                         <Select value={personalize} onValueChange={(value) => setPersonalize(value as PersonalizePrompt)} disabled={analysisType === 'batch'}>
                             <SelectTrigger id="personalize-prompt">
-                                <SelectValue placeholder="Deseja personalizar?" />
+                                <SelectValue placeholder="Selecione o tipo de análise" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="yes">Sim</SelectItem>
-                                <SelectItem value="no">Não (usar mensagem automática)</SelectItem>
+                                <SelectItem value="yes">Análise Personalizada</SelectItem>
+                                <SelectItem value="no">Análise Automática</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
