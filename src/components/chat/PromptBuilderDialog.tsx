@@ -308,11 +308,11 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
     </div>
 );
 
-const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetOrClass: string, index: number, checked: boolean, isClass?: boolean) => void, selectedFields: SelectedFields }) => {
-    
+const SelectionPhase = (props: { data: ExtractedData, onCheckboxChange: (category: keyof ExtractedData, assetOrClass: string, index: number, checked: boolean, isClass?: boolean) => void, selectedFields: SelectedFields }) => {
+    const { data, onCheckboxChange, selectedFields } = props;
     const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
     const [detractorView, setDetractorView] = useState<'cdi' | 'return'>('cdi');
-    const [highlightView, setHighlightView] useState<'cdi' | 'return'>('return');
+    const [highlightView, setHighlightView] = useState<'cdi' | 'return'>('return');
     const [assetAnalysisView, setAssetAnalysisView] = useState<AssetAnalysisView>('asset');
 
     
@@ -461,7 +461,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                                 className="mt-1" 
                                                 checked={!!(selectedFields.detractors as any)?.[category]?.[originalDetractorIndex]}
                                             />
-                                            <Label htmlFor={`d-${category}-${originalDetractorIndex}`} className="cursor-pointer"><strong>{item.asset}</strong> ({item.cdiPercentage})</Label>
+                                            <Label htmlFor={`d-${category}-${originalDetractorIndex}`} className="cursor-pointer"><strong>{item.asset}</strong> ({item.return})</Label>
                                         </div>
                                     )
                                 })}
@@ -502,17 +502,18 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             />
                                             <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
                                                 <strong>{item.className}</strong>
-                                                <span className="text-xs text-muted-foreground">
-                                                    Rentabilidade: {item.return}
-                                                </span>
                                             </Label>
                                         </div>
-                                        <div className="pr-2">
-                                            {isGlobalClass ? (
-                                                <span className="text-xs text-muted-foreground italic ml-2">Não comparável</span>
-                                            ) : (
-                                                performanceIndicator
-                                            )}
+                                        <div className="pr-2 text-sm">
+                                            <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer items-end">
+                                                <div className="flex items-center gap-2">
+                                                    <span>{item.return}</span>
+                                                    {!isGlobalClass && performanceIndicator}
+                                                </div>
+                                                {isGlobalClass && (
+                                                    <span className="text-xs text-muted-foreground italic">Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.</span>
+                                                )}
+                                            </Label>
                                         </div>
                                     </div>
                                 );
