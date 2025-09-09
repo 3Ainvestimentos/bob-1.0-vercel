@@ -89,8 +89,6 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     useEffect(() => {
         if (selectedFiles.length > 1) {
             setAnalysisType('batch');
-        } else if (selectedFiles.length <= 1) {
-            // No longer forcing it back to 'individual' to allow user choice
         }
     }, [selectedFiles]);
 
@@ -256,8 +254,8 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <div className="max-w-xs space-y-1">
-                                    <p><strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. Disponível para um ou múltiplos arquivos (lote).</p>
-                                    <p><strong className="text-foreground">Análise Personalizada:</strong> Permite escolher os dados. Disponível apenas para um único arquivo.</p>
+                                     <p><strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. Disponível para um ou múltiplos arquivos (lote).</p>
+                                     <p><strong className="text-foreground">Análise Personalizada:</strong> Permite escolher os dados. Disponível apenas para um único arquivo.</p>
                                   </div>
                                 </TooltipContent>
                             </Tooltip>
@@ -485,7 +483,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                     <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
                                         <span><strong>{item.className}</strong></span>
                                         <span className="text-xs text-muted-foreground">
-                                            Rentabilidade: {item.return} | % {item.benchmark}: {item.cdiPercentage} (Benchmark: {data.benchmarkValues?.[item.benchmark] ?? 'N/A'})
+                                            Rentabilidade: {item.return} | % {item.benchmark} {data.benchmarkValues?.[item.benchmark] ?? item.cdiPercentage}
                                         </span>
                                     </Label>
                                 </div>
