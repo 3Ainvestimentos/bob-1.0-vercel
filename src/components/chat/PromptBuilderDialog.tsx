@@ -312,7 +312,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
     
     const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
     const [detractorView, setDetractorView] = useState<'cdi' | 'return'>('cdi');
-    const [highlightView, setHighlightView] = useState<'cdi' | 'return'>('return');
+    const [highlightView, setHighlightView] useState<'cdi' | 'return'>('return');
     const [assetAnalysisView, setAssetAnalysisView] = useState<AssetAnalysisView>('asset');
 
     
@@ -454,7 +454,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 {filteredDetractors[category].map((item, index) => {
                                     const originalDetractorIndex = data.detractors[category].findIndex(originalItem => originalItem.asset === item.asset);
                                     return (
-                                        <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                        <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/ ৫০">
                                             <Checkbox 
                                                 id={`d-${category}-${originalDetractorIndex}`} 
                                                 onCheckedChange={(c) => onCheckboxChange('detractors', category, originalDetractorIndex, !!c)} 
@@ -488,26 +488,32 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                         <div className="space-y-2">
                             {allClassPerformances.map((item, index) => {
                                 const isGlobalClass = item.className.toLowerCase().includes('global');
-                                
+                                const benchmarkValue = data.benchmarkValues?.[item.benchmark] ?? null;
+                                const performanceIndicator = benchmarkValue ? getPerformanceIndicator(item.numericReturn, parsePercentage(benchmarkValue)) : null;
+
                                 return (
-                                    <div key={`cp-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                        <Checkbox 
-                                            id={`cp-${index}`}
-                                            onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
-                                            className="mt-1" 
-                                            checked={!!selectedFields.classPerformance?.[item.className]}
-                                        />
-                                        <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
-                                            <strong>{item.className}</strong>
-                                            <span className="text-xs text-muted-foreground">
-                                                Rentabilidade: {item.return}
-                                                {isGlobalClass ? (
-                                                     ' | Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.'
-                                                ) : (
-                                                    ` | % ${item.benchmark} ${data.benchmarkValues?.[item.benchmark] ?? 'N/A'}`
-                                                )}
-                                            </span>
-                                        </Label>
+                                    <div key={`cp-${index}`} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                                        <div className="flex items-start space-x-3">
+                                            <Checkbox
+                                                id={`cp-${index}`}
+                                                onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
+                                                className="mt-1"
+                                                checked={!!selectedFields.classPerformance?.[item.className]}
+                                            />
+                                            <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
+                                                <strong>{item.className}</strong>
+                                                <span className="text-xs text-muted-foreground">
+                                                    Rentabilidade: {item.return}
+                                                </span>
+                                            </Label>
+                                        </div>
+                                        <div className="pr-2">
+                                            {isGlobalClass ? (
+                                                <span className="text-xs text-muted-foreground italic ml-2">Não comparável</span>
+                                            ) : (
+                                                performanceIndicator
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
