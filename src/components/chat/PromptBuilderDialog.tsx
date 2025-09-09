@@ -490,32 +490,34 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 const performanceIndicator = benchmarkValue ? getPerformanceIndicator(item.numericReturn, parsePercentage(benchmarkValue)) : null;
 
                                 return (
-                                    <div key={`cp-${index}`} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                                        <div className="flex items-start space-x-3">
-                                            <Checkbox
-                                                id={`cp-${index}`}
-                                                onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
-                                                className="mt-1"
-                                                checked={!!selectedFields.classPerformance?.[item.className]}
-                                            />
-                                            <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
-                                                <div className="flex items-center gap-2">
-                                                    <strong>{item.className}</strong>
-                                                    {!isGlobalClass && <div className="ml-auto">{performanceIndicator}</div>}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {isGlobalClass ? (
-                                                      <span>Rentabilidade: {item.return} | Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.</span>
-                                                    ) : (
-                                                      <>
+                                    <div key={`cp-${index}`} className="flex items-start justify-between p-2 rounded-md bg-muted/50 space-x-3">
+                                        <Checkbox
+                                            id={`cp-${index}`}
+                                            onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
+                                            className="mt-1"
+                                            checked={!!selectedFields.classPerformance?.[item.className]}
+                                        />
+                                        <Label htmlFor={`cp-${index}`} className="flex-1 cursor-pointer">
+                                            <div className="flex items-center gap-2">
+                                                <strong>{item.className}</strong>
+                                                {!isGlobalClass && performanceIndicator}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {isGlobalClass ? (
+                                                    <>
+                                                        <span>Rentabilidade: {item.return}</span>
+                                                        <span className="mx-2">|</span>
+                                                        <span>Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.</span>
+                                                    </>
+                                                ) : (
+                                                    <>
                                                         <span>Rentabilidade: {item.return}</span>
                                                         {benchmarkValue && <span className="mx-2">|</span>}
                                                         {benchmarkValue && <span>Benchmark ({item.benchmarkName}): {benchmarkValue}</span>}
-                                                      </>
-                                                    )}
-                                                </div>
-                                            </Label>
-                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </Label>
                                     </div>
                                 );
                             })}
