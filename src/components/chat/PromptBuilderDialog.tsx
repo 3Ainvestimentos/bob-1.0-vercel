@@ -285,7 +285,14 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
 const LoadingPhase = ({ loadingMessage }: { loadingMessage: string }) => (
     <div className="flex flex-col items-center justify-center text-center h-full">
         <Loader2 className="h-16 w-16 text-muted-foreground animate-spin mb-4" />
-        <h3 className="font-semibold text-lg text-foreground">{loadingMessage}...</h3>
+        <div className="relative w-full overflow-hidden h-6">
+            <div
+                key={loadingMessage}
+                className="font-semibold text-lg text-foreground animate-in fade-in duration-500"
+            >
+                {loadingMessage}...
+            </div>
+        </div>
         <p className="text-muted-foreground text-sm">Isso pode levar alguns segundos. Por favor, aguarde.</p>
     </div>
 );
