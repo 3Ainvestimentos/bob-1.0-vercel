@@ -89,8 +89,11 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     useEffect(() => {
         if (selectedFiles.length > 1) {
             setAnalysisType('batch');
+        } else {
+            setAnalysisType('individual');
         }
     }, [selectedFiles]);
+
 
     useEffect(() => {
         if (analysisType === 'batch') {
@@ -265,8 +268,8 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                                 <SelectValue placeholder="Selecione o tipo de análise" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="yes">Análise Personalizada</SelectItem>
                                 <SelectItem value="no">Análise Automática</SelectItem>
+                                <SelectItem value="yes">Análise Personalizada</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -322,12 +325,14 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         }
 
         const diff = returnValue - benchmarkValue;
-        if (Math.abs(diff) < 0.01) { // Tolerance for float comparison
-            return <Minus className="h-4 w-4 text-muted-foreground" />;
+        const diffText = `${diff > 0 ? '+' : ''}${diff.toFixed(2)}%`.replace('.', ',');
+        
+        if (Math.abs(diff) < 0.01) {
+            return <div className="flex items-center gap-1"><Minus className="h-4 w-4 text-muted-foreground" /> <span className="text-xs text-muted-foreground">({diffText})</span></div>;
         } else if (diff > 0) {
-            return <ArrowUp className="h-4 w-4 text-green-500" />;
+            return <div className="flex items-center gap-1"><ArrowUp className="h-4 w-4 text-green-600" /> <span className="text-xs text-green-600">({diffText})</span></div>;
         } else {
-            return <ArrowDown className="h-4 w-4 text-red-500" />;
+            return <div className="flex items-center gap-1"><ArrowDown className="h-4 w-4 text-red-600" /> <span className="text-xs text-red-600">({diffText})</span></div>;
         }
     };
 
