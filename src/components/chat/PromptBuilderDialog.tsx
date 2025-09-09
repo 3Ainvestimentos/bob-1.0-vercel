@@ -194,27 +194,6 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                 <div className="space-y-4">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <Label htmlFor="report-type" className="font-semibold">Relatórios Disponíveis</Label>
-                             <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Selecione o tipo de documento que será analisado.</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </div>
-                        <Select defaultValue="performance">
-                            <SelectTrigger id="report-type">
-                                <SelectValue placeholder="Selecione o relatório" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="performance">Relatório de Performance</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
                             <Label htmlFor="analysis-type" className="font-semibold">Quantidade de Itens</Label>
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -472,8 +451,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5" />Top 3 Destaques</CardTitle>
-                        <div className="flex items-center p-0.5 bg-muted rounded-lg">
+                        <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5 text-foreground" />Top 3 Destaques</CardTitle>
+                        <div className="flex items-center p-0.5 bg-muted rounded-full">
                              <Button 
                                 size="sm" 
                                 className={cn(
@@ -518,8 +497,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2 text-base"><TrendingDown className="h-5 w-5" />Top 3 Detratores</CardTitle>
-                        <div className="flex items-center p-0.5 bg-muted rounded-lg">
+                        <CardTitle className="flex items-center gap-2 text-base"><TrendingDown className="h-5 w-5 text-foreground" />Top 3 Detratores</CardTitle>
+                        <div className="flex items-center p-0.5 bg-muted rounded-full">
                              <Button 
                                 size="sm" 
                                 className={cn(
