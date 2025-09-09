@@ -89,8 +89,6 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     useEffect(() => {
         if (selectedFiles.length > 1) {
             setAnalysisType('batch');
-        } else {
-            setAnalysisType('individual');
         }
     }, [selectedFiles]);
 
@@ -528,7 +526,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base"><BarChart className="h-5 w-5" />Resultados do Mês</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base"><BarChart className="h-5 w-5" />Resultados do Mês da Carteira</CardTitle>
                  </CardHeader>
                  <CardContent className="space-y-4 text-sm">
                     <div className="flex items-center space-x-3"><Checkbox id="monthlyReturn" onCheckedChange={(c) => onCheckboxChange('monthlyReturn', '', -1, !!c)} /><Label htmlFor="monthlyReturn">Rentabilidade: <strong>{data.monthlyReturn}</strong></Label></div>
@@ -538,7 +536,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             </Card>
             <Card>
                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5" />Resultados do Ano</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5" />Resultados do Ano da Carteira</CardTitle>
                  </CardHeader>
                  <CardContent className="space-y-4 text-sm">
                     <div className="flex items-center space-x-3"><Checkbox id="yearlyReturn" onCheckedChange={(c) => onCheckboxChange('yearlyReturn', '', -1, !!c)} /><Label htmlFor="yearlyReturn">Rentabilidade: <strong>{data.yearlyReturn}</strong></Label></div>
@@ -548,7 +546,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             </Card>
         </div>
         <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-4">
                  <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
                     <CardTitle className="flex items-center gap-2 text-base"><Star className="h-5 w-5" />Destaques Mensais da Carteira</CardTitle>
                     <div className="flex items-center gap-2">
@@ -570,14 +568,6 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                 Por Classe
                             </Button>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
-                            <ChevronsDown className="mr-1 h-4 w-4" />
-                            Expandir
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={handleCollapseAll} className="text-xs text-muted-foreground">
-                            <ChevronsRight className="mr-1 h-4 w-4" />
-                            Recolher
-                        </Button>
                     </div>
                 </div>
             </CardHeader>
@@ -724,7 +714,18 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                        </div>
                     </CardContent>
                  </Card>
-                <div className="w-full h-px bg-border my-4"></div>
+                <div className="w-full h-px bg-border my-4 flex items-center justify-center">
+                    <div className="flex items-center gap-2 bg-background px-4">
+                        <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
+                            <ChevronsDown className="mr-1 h-4 w-4" />
+                            Expandir Tudo
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={handleCollapseAll} className="text-xs text-muted-foreground">
+                            <ChevronsRight className="mr-1 h-4 w-4" />
+                            Recolher Tudo
+                        </Button>
+                    </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                     {assetAnalysisView === 'asset' ? (
                         <>
