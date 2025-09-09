@@ -351,8 +351,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 ...item,
                 category,
                 originalIndex: data.detractors[category].findIndex(originalItem => originalItem.asset === item.asset),
-                numericCdi: item.numericCdi,
-                numericReturn: item.numericReturn
+                numericCdi: (item as any).numericCdi,
+                numericReturn: (item as any).numericReturn
             }))
          ).sort((a,b) => (detractorView === 'return' ? (a.numericReturn - b.numericReturn) : (a.numericCdi - b.numericCdi)));
     }, [filteredDetractors, data.detractors, detractorView]);
@@ -482,10 +482,10 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                         className="mt-1" 
                                         checked={!!selectedFields.classPerformance?.[item.className]}
                                     />
-                                    <Label htmlFor={`cp-${index}`} className="flex flex-col">
+                                    <Label htmlFor={`cp-${index}`} className="flex flex-col cursor-pointer">
                                         <span><strong>{item.className}</strong></span>
                                         <span className="text-xs text-muted-foreground">
-                                            Rentabilidade: {item.return} | % {item.benchmark}: {item.cdiPercentage}
+                                            Rentabilidade: {item.return} | % {item.benchmark}: {item.cdiPercentage} (Benchmark: {data.benchmarkValues?.[item.benchmark] ?? 'N/A'})
                                         </span>
                                     </Label>
                                 </div>
@@ -523,36 +523,36 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         </div>
         <Card>
             <CardHeader className="pb-4">
-                 <div className="flex justify-between items-center">
+                 <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
                     <CardTitle className="flex items-center gap-2 text-base"><Star className="h-5 w-5" />Destaques Mensais da Carteira</CardTitle>
-                     <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                         <div className="flex items-center p-1 bg-muted rounded-xl">
+                            <Button 
+                                size="sm" 
+                                onClick={() => setAssetAnalysisView('asset')} 
+                                className={cn("flex-1 text-sm h-8 rounded-lg", assetAnalysisView === 'asset' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50')}
+                            >
+                                <Gem className="mr-2 h-4 w-4" />
+                                Por Ativo
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                onClick={() => setAssetAnalysisView('class')} 
+                                className={cn("flex-1 text-sm h-8 rounded-lg", assetAnalysisView === 'class' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50')}
+                            >
+                                <Layers className="mr-2 h-4 w-4" />
+                                Por Classe
+                            </Button>
+                        </div>
                         <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
                             <ChevronsDown className="mr-1 h-4 w-4" />
-                            Expandir Todos
+                            Expandir
                         </Button>
                         <Button variant="ghost" size="sm" onClick={handleCollapseAll} className="text-xs text-muted-foreground">
                             <ChevronsRight className="mr-1 h-4 w-4" />
-                            Recolher Todos
+                            Recolher
                         </Button>
                     </div>
-                </div>
-                <div className="mt-4 flex items-center p-1 bg-muted rounded-xl">
-                    <Button 
-                        size="sm" 
-                        onClick={() => setAssetAnalysisView('asset')} 
-                        className={cn("flex-1 text-sm h-8 rounded-lg", assetAnalysisView === 'asset' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50')}
-                    >
-                        <Gem className="mr-2 h-4 w-4" />
-                        Por Ativo
-                    </Button>
-                    <Button 
-                        size="sm" 
-                        onClick={() => setAssetAnalysisView('class')} 
-                        className={cn("flex-1 text-sm h-8 rounded-lg", assetAnalysisView === 'class' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50')}
-                    >
-                        <Layers className="mr-2 h-4 w-4" />
-                        Por Classe
-                    </Button>
                 </div>
             </CardHeader>
             <CardContent>
