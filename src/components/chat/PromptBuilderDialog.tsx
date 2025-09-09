@@ -510,7 +510,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             <span className="text-xs text-muted-foreground">
                                                 Rentabilidade: {item.return}
                                                 {isGlobalClass ? (
-                                                     ''
+                                                     ' | Benchmark não disponível no relatório XP'
                                                 ) : (
                                                     ` | % ${item.benchmark} ${benchmarkValue}`
                                                 )}
