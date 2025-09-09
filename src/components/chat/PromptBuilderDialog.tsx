@@ -490,8 +490,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                     <AccordionContent className="pt-2 pl-1">
                         <div className="space-y-2">
                             {allClassPerformances.map((item, index) => {
-                                const isGlobalClass = item.className.includes('Global');
-                                const benchmarkValue = isGlobalClass ? 'N/A' : (data.benchmarkValues?.[item.benchmark] ?? 'N/A');
+                                const isGlobalClass = item.className.toLowerCase().includes('global');
+                                const benchmarkValue = (data.benchmarkValues?.[item.benchmark] ?? 'N/A');
                                 const indicator = getPerformanceIndicator(item.numericReturn, parsePercentage(benchmarkValue));
                                 const benchmarkDisplay = isGlobalClass
                                     ? "Benchmark não disponível no relatório XP"
@@ -576,7 +576,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {assetAnalysisView === 'asset' && (
+                {assetAnalysisView === 'asset' ? (
                     <Card className="border-none shadow-none bg-transparent">
                         <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                         <div className="space-y-3">
@@ -663,7 +663,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             className="mt-1"
                                         />
                                         <Label htmlFor={`summary-d-${item.category}-${item.originalIndex}`} className="cursor-pointer">
-                                            <strong>{item.asset}</strong> ({detractorView === 'cdi' ? item.cdiPercentage : item.return})
+                                            <strong>{item.asset}</strong> ({detractorView === 'return' ? item.return : item.cdiPercentage})
                                         </Label>
                                     </div>
                                 ))}
@@ -672,7 +672,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                         </div>
                         </CardContent>
                     </Card>
-                )}
+                ) : null}
                 
                 <div className="w-full h-px bg-border my-4 flex items-center justify-center">
                     <div className="flex items-center gap-2 bg-background px-4">
