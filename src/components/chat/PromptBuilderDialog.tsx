@@ -222,7 +222,10 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                                     <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Escolha "Personalizada" para selecionar os dados ou "Automática" para usar o modelo padrão.</p>
+                                  <div className="space-y-1">
+                                    <p><strong className="text-foreground">Análise Automática:</strong> Disponível para um ou múltiplos arquivos (lote).</p>
+                                    <p><strong className="text-foreground">Análise Personalizada:</strong> Disponível apenas para um único arquivo.</p>
+                                  </div>
                                 </TooltipContent>
                             </Tooltip>
                         </div>
@@ -750,7 +753,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
 
     if (selectedDetractors.length > 0) {
         messageBody += `\n\nOs principais detratores foram:\n`;
-        messageBody += selectedDetractors.map(d => `*${d.asset}*: *${d.cdiPercentage} do CDI*`).join('\n');
+        messageBody += selectedDetractors.map(d => `*${d.asset}*: *${d.cdiPercentage}* do CDI`).join('\n');
     }
 
     messageBody += `\n\n${economicScenarioText}`;
