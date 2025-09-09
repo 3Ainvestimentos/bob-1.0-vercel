@@ -288,7 +288,7 @@ const LoadingPhase = ({ loadingMessage }: { loadingMessage: string }) => (
         <div className="relative w-full overflow-hidden h-6">
             <div
                 key={loadingMessage}
-                className="font-semibold text-lg text-foreground animate-in fade-in duration-1000"
+                className="font-semibold text-lg text-foreground animate-fade-in-out"
             >
                 {loadingMessage}...
             </div>

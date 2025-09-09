@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -121,6 +122,10 @@ export default {
                 opacity: '0.5',
             },
         },
+        'fade-in-out': {
+          '0%, 100%': { opacity: '0' },
+          '50%': { opacity: '1' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -130,6 +135,7 @@ export default {
         'lamp-on-off': 'lamp-on-off 2s ease-in-out infinite',
         'wave': 'wave 2.5s ease-in-out infinite',
         'pulse-slow': 'pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in-out': 'fade-in-out 2.5s ease-in-out infinite',
       },
     },
   },
