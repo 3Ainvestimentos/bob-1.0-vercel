@@ -39,10 +39,11 @@ type ExtractedData = {
     highlights: Record<string, Asset[]>;
     detractors: Record<string, Asset[]>;
     classPerformance: AssetClassPerformance[];
+    benchmarkValues: { [key in 'CDI' | 'Ibovespa' | 'IPCA' | 'Dólar']?: string };
 };
 
 type SelectedFields = {
-    [key in keyof Omit<ExtractedData, 'classPerformance'>]?: boolean | { [category: string]: { [index: number]: boolean } };
+    [key in keyof Omit<ExtractedData, 'classPerformance' | 'benchmarkValues'>]?: boolean | { [category: string]: { [index: number]: boolean } };
 } & {
     classPerformance?: { [className: string]: boolean };
 };
@@ -88,10 +89,10 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
     useEffect(() => {
         if (selectedFiles.length > 1) {
             setAnalysisType('batch');
-        } else if (selectedFiles.length <= 1 && analysisType === 'batch') {
-            // Don't auto-switch back to individual if user selected batch
+        } else if (selectedFiles.length <= 1) {
+            // No longer forcing it back to 'individual' to allow user choice
         }
-    }, [selectedFiles, analysisType]);
+    }, [selectedFiles]);
 
     useEffect(() => {
         if (analysisType === 'batch') {
@@ -555,169 +556,167 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                         <Card className="border-none shadow-none">
-                            <CardHeader className="px-2 pt-0 pb-2">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5 text-foreground" />Top 3 Destaques</CardTitle>
-                                    {assetAnalysisView === 'asset' && (
-                                        <div className="flex items-center p-0.5 bg-muted rounded-full">
-                                            <Button 
-                                                size="sm" 
-                                                className={cn(
-                                                    "text-xs h-7 px-2 rounded-full", 
-                                                    highlightView === 'return' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
-                                                )}
-                                                onClick={() => setHighlightView('return')}
-                                            >
-                                                Rent. %
-                                            </Button>
-                                            <Button 
-                                                size="sm" 
-                                                className={cn(
-                                                    "text-xs h-7 px-2 rounded-full", 
-                                                    highlightView === 'cdi' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
-                                                )}
-                                                onClick={() => setHighlightView('cdi')}
-                                            >
-                                                % CDI
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-sm p-2">
-                                {assetAnalysisView === 'asset' ? (
-                                    <>
-                                    {topThreeHighlights.map((item) => (
-                                        <div key={`top-h-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                            <Checkbox 
-                                                id={`summary-h-${item.category}-${item.index}`}
-                                                onCheckedChange={(c) => onCheckboxChange('highlights', item.category, item.index, !!c)}
-                                                checked={!!(selectedFields.highlights as any)?.[item.category]?.[item.index]}
-                                                className="mt-1"
-                                            />
-                                            <Label htmlFor={`summary-h-${item.category}-${item.index}`} className="flex flex-col cursor-pointer">
-                                                <span><strong>{item.asset}</strong> ({highlightView === 'return' ? item.return : item.cdiPercentage})</span>
-                                                <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
-                                            </Label>
-                                        </div>
-                                    ))}
-                                    {topThreeHighlights.length === 0 && <p className="text-xs text-muted-foreground">Nenhum destaque encontrado.</p>}
-                                    </>
-                                ) : (
-                                    <>
-                                    {topThreeClassHighlights.map((item) => (
-                                        <div key={`top-class-h-${item.className}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                            <Checkbox
-                                                id={`summary-class-h-${item.className}`}
-                                                onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
-                                                checked={!!selectedFields.classPerformance?.[item.className]}
-                                                className="mt-1"
-                                            />
-                                            <Label htmlFor={`summary-class-h-${item.className}`} className="cursor-pointer">
-                                                <strong>{item.className}</strong> ({item.return})
-                                            </Label>
-                                        </div>
-                                    ))}
-                                    {topThreeClassHighlights.length === 0 && <p className="text-xs text-muted-foreground">Nenhum destaque de classe encontrado.</p>}
-                                    </>
-                                )}
-                            </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-none">
-                            <CardHeader className="px-2 pt-0 pb-2">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2 text-base"><TrendingDown className="h-5 w-5 text-foreground" />Top 3 Detratores</CardTitle>
-                                    {assetAnalysisView === 'asset' && (
-                                        <div className="flex items-center p-0.5 bg-muted rounded-full">
-                                            <Button 
-                                                size="sm" 
-                                                className={cn(
-                                                    "text-xs h-7 px-2 rounded-full", 
-                                                    detractorView === 'return' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
-                                                )}
-                                                onClick={() => setDetractorView('return')}
-                                            >
-                                                Rent. %
-                                            </Button>
-                                            <Button 
-                                                size="sm" 
-                                                className={cn(
-                                                    "text-xs h-7 px-2 rounded-full", 
-                                                    detractorView === 'cdi' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
-                                                )}
-                                                onClick={() => setDetractorView('cdi')}
-                                            >
-                                                % CDI
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-sm p-2">
-                                {assetAnalysisView === 'asset' ? (
-                                    <>
-                                    {bottomThreeDetractors.map((item) => (
-                                        <div key={`bottom-d-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                            <Checkbox 
-                                                id={`summary-d-${item.category}-${item.originalIndex}`}
-                                                onCheckedChange={(c) => onCheckboxChange('detractors', item.category, item.originalIndex, !!c)}
-                                                checked={!!(selectedFields.detractors as any)?.[item.category]?.[item.originalIndex]}
-                                                className="mt-1"
-                                            />
-                                            <Label htmlFor={`summary-d-${item.category}-${item.originalIndex}`} className="cursor-pointer">
-                                                <strong>{item.asset}</strong> ({detractorView === 'cdi' ? item.cdiPercentage : item.return})
-                                            </Label>
-                                        </div>
-                                    ))}
-                                    {bottomThreeDetractors.length === 0 && <p className="text-xs text-muted-foreground">Nenhum detrator com performance abaixo de 100% do CDI encontrado.</p>}
-                                    </>
-                                ) : (
-                                    <>
-                                    {topThreeClassDetractors.map((item) => (
-                                        <div key={`top-class-d-${item.className}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                            <Checkbox
-                                                id={`summary-class-d-${item.className}`}
-                                                onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
-                                                checked={!!selectedFields.classPerformance?.[item.className]}
-                                                className="mt-1"
-                                            />
-                                            <Label htmlFor={`summary-class-d-${item.className}`} className="cursor-pointer">
-                                                <strong>{item.className}</strong> ({item.cdiPercentage})
-                                            </Label>
-                                        </div>
-                                    ))}
-                                    {topThreeClassDetractors.length === 0 && <p className="text-xs text-muted-foreground">Nenhum detrator de classe encontrado.</p>}
-                                    </>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <div className="w-full h-px bg-border my-4"></div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                        {assetAnalysisView === 'asset' ? (
-                            <>
-                            <div className="space-y-3">
-                                <h4 className="font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4" />Maiores Retornos (Detalhado)</h4>
-                                {renderHighlights()}
-                            </div>
-                            <div className="space-y-3">
-                                <h4 className="font-semibold flex items-center gap-2"><TrendingDown className="h-4 w-4" />Performance Inferior ao CDI (Detalhado)</h4>
-                                {renderDetractors()}
-                            </div>
-                            </>
-                        ) : (
-                            <div className="md:col-span-2 space-y-3">
-                                 <h4 className="font-semibold flex items-center gap-2"><Layers className="h-4 w-4" />Performance por Classe (Detalhado)</h4>
-                                 {renderClassPerformance()}
-                            </div>
-                        )}
-                    </div>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card className="border-none shadow-none">
+                          <CardHeader className="px-2 pt-0 pb-2">
+                              <div className="flex items-center justify-between">
+                                  <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5 text-foreground" />Top 3 Destaques</CardTitle>
+                                  {assetAnalysisView === 'asset' && (
+                                    <div className="flex items-center p-0.5 bg-muted rounded-full">
+                                      <Button 
+                                          size="sm" 
+                                          className={cn(
+                                              "text-xs h-7 px-2 rounded-full", 
+                                              highlightView === 'return' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
+                                          )}
+                                          onClick={() => setHighlightView('return')}
+                                      >
+                                          Rent. %
+                                      </Button>
+                                      <Button 
+                                          size="sm" 
+                                          className={cn(
+                                              "text-xs h-7 px-2 rounded-full", 
+                                              highlightView === 'cdi' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
+                                          )}
+                                          onClick={() => setHighlightView('cdi')}
+                                      >
+                                          % CDI
+                                      </Button>
+                                    </div>
+                                  )}
+                              </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3 text-sm p-2">
+                              {assetAnalysisView === 'asset' ? (
+                                  <>
+                                  {topThreeHighlights.map((item) => (
+                                      <div key={`top-h-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                          <Checkbox 
+                                              id={`summary-h-${item.category}-${item.index}`}
+                                              onCheckedChange={(c) => onCheckboxChange('highlights', item.category, item.index, !!c)}
+                                              checked={!!(selectedFields.highlights as any)?.[item.category]?.[item.index]}
+                                              className="mt-1"
+                                          />
+                                          <Label htmlFor={`summary-h-${item.category}-${item.index}`} className="flex flex-col cursor-pointer">
+                                              <span><strong>{item.asset}</strong> ({highlightView === 'return' ? item.return : item.cdiPercentage})</span>
+                                              <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
+                                          </Label>
+                                      </div>
+                                  ))}
+                                  {topThreeHighlights.length === 0 && <p className="text-xs text-muted-foreground">Nenhum destaque encontrado.</p>}
+                                  </>
+                              ) : (
+                                  <>
+                                  {topThreeClassHighlights.map((item) => (
+                                      <div key={`top-class-h-${item.className}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                          <Checkbox
+                                              id={`summary-class-h-${item.className}`}
+                                              onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
+                                              checked={!!selectedFields.classPerformance?.[item.className]}
+                                              className="mt-1"
+                                          />
+                                          <Label htmlFor={`summary-class-h-${item.className}`} className="cursor-pointer">
+                                              <strong>{item.className}</strong> ({item.return})
+                                          </Label>
+                                      </div>
+                                  ))}
+                                  {topThreeClassHighlights.length === 0 && <p className="text-xs text-muted-foreground">Nenhum destaque de classe encontrado.</p>}
+                                  </>
+                              )}
+                          </CardContent>
+                      </Card>
+                      <Card className="border-none shadow-none">
+                          <CardHeader className="px-2 pt-0 pb-2">
+                              <div className="flex items-center justify-between">
+                                  <CardTitle className="flex items-center gap-2 text-base"><TrendingDown className="h-5 w-5 text-foreground" />Top 3 Detratores</CardTitle>
+                                   {assetAnalysisView === 'asset' && (
+                                    <div className="flex items-center p-0.5 bg-muted rounded-full">
+                                      <Button 
+                                          size="sm" 
+                                          className={cn(
+                                              "text-xs h-7 px-2 rounded-full", 
+                                              detractorView === 'return' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
+                                          )}
+                                          onClick={() => setDetractorView('return')}
+                                      >
+                                          Rent. %
+                                      </Button>
+                                      <Button 
+                                          size="sm" 
+                                          className={cn(
+                                              "text-xs h-7 px-2 rounded-full", 
+                                              detractorView === 'cdi' ? 'bg-background shadow text-foreground' : 'bg-transparent text-muted-foreground hover:bg-background/50'
+                                          )}
+                                          onClick={() => setDetractorView('cdi')}
+                                      >
+                                          % CDI
+                                      </Button>
+                                    </div>
+                                  )}
+                              </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3 text-sm p-2">
+                              {assetAnalysisView === 'asset' ? (
+                                  <>
+                                  {bottomThreeDetractors.map((item) => (
+                                      <div key={`bottom-d-${item.asset}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                          <Checkbox 
+                                              id={`summary-d-${item.category}-${item.originalIndex}`}
+                                              onCheckedChange={(c) => onCheckboxChange('detractors', item.category, item.originalIndex, !!c)}
+                                              checked={!!(selectedFields.detractors as any)?.[item.category]?.[item.originalIndex]}
+                                              className="mt-1"
+                                          />
+                                          <Label htmlFor={`summary-d-${item.category}-${item.originalIndex}`} className="cursor-pointer">
+                                              <strong>{item.asset}</strong> ({detractorView === 'cdi' ? item.cdiPercentage : item.return})
+                                          </Label>
+                                      </div>
+                                  ))}
+                                  {bottomThreeDetractors.length === 0 && <p className="text-xs text-muted-foreground">Nenhum detrator com performance abaixo de 100% do CDI encontrado.</p>}
+                                  </>
+                              ) : (
+                                  <>
+                                  {topThreeClassDetractors.map((item) => (
+                                      <div key={`top-class-d-${item.className}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                          <Checkbox
+                                              id={`summary-class-d-${item.className}`}
+                                              onCheckedChange={(c) => onCheckboxChange('classPerformance', item.className, -1, !!c, true)}
+                                              checked={!!selectedFields.classPerformance?.[item.className]}
+                                              className="mt-1"
+                                          />
+                                          <Label htmlFor={`summary-class-d-${item.className}`} className="cursor-pointer">
+                                              <strong>{item.className}</strong> ({item.cdiPercentage})
+                                          </Label>
+                                      </div>
+                                  ))}
+                                  {topThreeClassDetractors.length === 0 && <p className="text-xs text-muted-foreground">Nenhum detrator de classe encontrado.</p>}
+                                  </>
+                              )}
+                          </CardContent>
+                      </Card>
+                  </div>
+                <div className="w-full h-px bg-border my-4"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                    {assetAnalysisView === 'asset' ? (
+                        <>
+                        <div className="space-y-3">
+                            <h4 className="font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4" />Maiores Retornos (Detalhado)</h4>
+                            {renderHighlights()}
+                        </div>
+                        <div className="space-y-3">
+                            <h4 className="font-semibold flex items-center gap-2"><TrendingDown className="h-4 w-4" />Performance Inferior ao CDI (Detalhado)</h4>
+                            {renderDetractors()}
+                        </div>
+                        </>
+                    ) : (
+                        <div className="md:col-span-2 space-y-3">
+                              <h4 className="font-semibold flex items-center gap-2"><Layers className="h-4 w-4" />Performance por Classe (Detalhado)</h4>
+                              {renderClassPerformance()}
+                        </div>
+                    )}
                 </div>
+              </div>
             </CardContent>
         </Card>
     </div>
@@ -992,7 +991,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
           </DialogDescription>
         </DialogHeader>
         
-        {phase === 'selection' && extractedData?.reportMonth && (
+        {phase === 'selection' && extractedData && (
             <div className="px-6 border-b sticky top-0 bg-background z-10 py-3">
                  <div className="flex items-center gap-2 text-muted-foreground bg-muted p-3 rounded-lg">
                     <CalendarDays className="h-5 w-5" />
