@@ -6,7 +6,9 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
     -   **IDENTIFICAÇÃO:** Antes de qualquer outra coisa, adicione um título de identificação no formato: "**Análise do Relatório: [Nome do Arquivo]**".
     -   **EXTRAIA OS DADOS:**
         -   Da **página 2**: O mês de referência do relatório (ex: Julho de 2025), RENTABILIDADE PERCENTUAL DO MÊS, RENTABILIDADE EM %CDI DO MÊS, GANHO FINANCEIRO DO MÊS, RENTABILIDADE PERCENTUAL DO ANO, RENTABILIDADE EM %CDI DO ANO, GANHO FINANCEIRO DO ANO.
-        -   Da **página 5**: As duas classes de ativos com a **maior** rentabilidade no mês (nome, percentual) e as duas com rentabilidade **inferior** ao CDI (nome, percentual).
+        -   Da **página 5**:
+            -   **Destaques:** As duas classes de ativos com a **maior** rentabilidade no mês (nome, percentual).
+            -   **Detratores:** As duas classes com rentabilidade **inferior** ao CDI (nome, percentual), **DESDE QUE NÃO ESTEJAM JÁ LISTADAS NOS DESTAQUES**.
     -   **ANÁLISE ECONÔMICA:** Com base no mês e ano extraídos, gere um parágrafo conciso sobre o cenário econômico nacional e outro sobre o cenário internacional para aquele período específico.
     -   **FORMATE A MENSAGEM:** Siga o modelo abaixo **EXATAMENTE**. Use quebras de linha e asteriscos para negrito. NÃO use \`\`\`, Markdown ou qualquer outra formatação.
 2.  **SEPARADOR:** Após formatar a mensagem completa para um relatório, insira uma linha com "---" antes de começar a processar o próximo relatório.
