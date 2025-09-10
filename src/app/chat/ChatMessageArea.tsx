@@ -28,12 +28,15 @@ import {
   KeyRound,
   PiggyBank,
   Wand2,
+  Copy,
+  Check,
 } from 'lucide-react';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { BobIcon } from '@/components/icons/BobIcon';
 import rehypeRaw from 'rehype-raw';
 import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
+import { cn } from '@/lib/utils';
 
 interface ChatMessageAreaProps {
   messages: Message[];
@@ -69,6 +72,49 @@ const webSearchSuggestions = [
         description: "Consultar as regras e o procedimento",
     }
 ];
+
+const PreWithCopy = ({ children, ...props }: React.ComponentPropsWithoutRef<'pre'>) => {
+    const [isCopied, setIsCopied] = useState(false);
+
+    const textToCopy = React.useMemo(() => {
+        if (!children || typeof children !== 'object' || !('props' in children)) {
+            return '';
+        }
+        const codeElement = children.props.children;
+        if (typeof codeElement === 'string') {
+            return codeElement;
+        }
+        if (Array.isArray(codeElement)) {
+            return codeElement.map(child => (typeof child === 'string' ? child : '')).join('');
+        }
+        return '';
+    }, [children]);
+
+    const handleCopy = () => {
+        if (!textToCopy) return;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        });
+    };
+
+    return (
+        <div className="relative group">
+            <pre {...props}>{children}</pre>
+            <Button
+                size="icon"
+                variant="ghost"
+                className={cn(
+                    "absolute top-2 right-2 h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity",
+                    isCopied && "opacity-100"
+                )}
+                onClick={handleCopy}
+            >
+                {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+        </div>
+    );
+};
 
 export function ChatMessageArea({
   messages,
@@ -178,7 +224,14 @@ export function ChatMessageArea({
                     ) : (
                       <>
                         <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                          <ReactMarkdown rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>
+                          <ReactMarkdown 
+                            rehypePlugins={[rehypeRaw]}
+                            components={{
+                                pre: PreWithCopy
+                            }}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
                         </div>
                         {activeChatId && (
                           <div className="flex items-center justify-between">
