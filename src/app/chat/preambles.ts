@@ -6,7 +6,7 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
     -   **IDENTIFICAÇÃO:** Antes de qualquer outra coisa, adicione um título de identificação no formato: "**Análise do Relatório: [Nome do Arquivo]**".
     -   **EXTRAIA OS DADOS:**
         -   Da **página 2**: O mês de referência do relatório (ex: Julho de 2025), RENTABILIDADE PERCENTUAL DO MÊS, RENTABILIDADE EM %CDI DO MÊS, GANHO FINANCEIRO DO MÊS, RENTABILIDADE PERCENTUAL DO ANO, RENTABILIDADE EM %CDI DO ANO, GANHO FINANCEIRO DO ANO.
-        -   Da **página 5**:
+        -   Da **página 7**:
             -   **Destaques:** Os dois **ativos individuais** com a **maior** rentabilidade no mês (extraia o nome do ativo, a rentabilidade percentual e a rentabilidade em % do CDI).
             -   **Detratores:** Os dois **ativos individuais** com rentabilidade **inferior** ao CDI (extraia o nome do ativo e a rentabilidade percentual), **DESDE QUE NÃO ESTEJAM JÁ LISTADOS NOS DESTAQUES**.
     -   **ANÁLISE ECONÔMICA:** Com base no mês e ano extraídos, gere um parágrafo conciso sobre o cenário econômico nacional e outro sobre o cenário internacional para aquele período específico.
@@ -45,8 +45,8 @@ Você é um assistente de extração de dados altamente preciso. Sua única tare
     -   'yearlyReturn': RENTABILIDADE PERCENTUAL DO ANO.
     -   'yearlyCdi': RENTABILIDADE EM %CDI DO ANO.
     -   'yearlyGain': GANHO FINANCEiro DO ANO.
-    -   'highlights': Na **página 5**, na seção 'Posição Detalhada dos Ativos', encontre os ativos com a **maior** rentabilidade no mês. Agrupe-os pela sua respectiva **classe de ativo** (Estratégia). Para cada ativo, extraia seu nome ('asset'), o percentual de retorno ('return'), o percentual de CDI ('cdiPercentage') e a justificativa ('reason'). O resultado deve ser um objeto onde as chaves são as classes de ativos.
-    -   'detractors': Na **página 5**, na seção 'Posição Detalhada dos Ativos', encontre **TODOS** os ativos listados. Agrupe-os pela sua respectiva **classe de ativo** (Estratégia). Para cada ativo, extraia o nome do ativo ('asset'), a rentabilidade em % ('return') e a rentabilidade em %CDI no mês ('cdiPercentage'). O resultado deve ser um objeto onde as chaves são as classes de ativos.
+    -   'highlights': Na **página 7**, na seção 'Posição Detalhada dos Ativos', encontre os ativos com a **maior** rentabilidade no mês. Agrupe-os pela sua respectiva **classe de ativo** (Estratégia). Para cada ativo, extraia seu nome ('asset'), o percentual de retorno ('return'), o percentual de CDI ('cdiPercentage') e a justificativa ('reason'). O resultado deve ser um objeto onde as chaves são as classes de ativos.
+    -   'detractors': Na **página 7**, na seção 'Posição Detalhada dos Ativos', encontre **TODOS** os ativos listados. Agrupe-os pela sua respectiva **classe de ativo** (Estratégia). Para cada ativo, extraia o nome do ativo ('asset'), a rentabilidade em % ('return') e a rentabilidade em %CDI no mês ('cdiPercentage'). O resultado deve ser um objeto onde as chaves são as classes de ativos.
     -   'classPerformance': Na **página 4**, na seção 'Rentabilidade por Classe de Ativo', extraia a performance de CADA classe. Para cada uma, capture o nome da classe ('className'), a rentabilidade percentual no mês ('return') e a rentabilidade em % do CDI no mês ('cdiPercentage'). O resultado deve ser um array de objetos.
     -   'benchmarkValues': Na **página 4**, na seção 'índices de referência - benchmarks', encontre os valores do "Mês Atual" para cada um dos seguintes benchmarks: CDI, Ibovespa, IPCA e Dólar. Retorne um objeto onde a chave é o nome do benchmark e o valor é o seu percentual no mês atual.
 3.  **Formato de Saída:** A resposta DEVE ser um objeto JSON válido, contendo apenas os campos listados acima. Não inclua nenhum texto, explicação, ou formatação Markdown. Apenas o JSON.
