@@ -4,10 +4,11 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
 **REGRAS ESTRITAS:**
 1.  **PROCESSE CADA ARQUIVO SEPARADAMENTE:** Para cada arquivo anexado, execute o seguinte processo:
     -   **IDENTIFICAÇÃO:** Antes de qualquer outra coisa, adicione um título de identificação no formato: "**Análise do Relatório: [Nome do Arquivo]**".
-    -   **EXTRAIA OS DADOS:**
-        -   Da seção intitulada **"Rentabilidade por Classe de Ativo"**:
-            -   **Pontos Positivos:** As classes de ativo com rentabilidade no mês **superior a 0.9%** (extraia o nome da classe e a rentabilidade percentual).
-            -   **Desafios:** As classes de ativo com rentabilidade no mês **inferior a 0.9%** (extraia o nome da classe e a rentabilidade percentual).
+    -   **EXTRAIA OS DADOS (REGRA CRÍTICA DE CLASSIFICAÇÃO):**
+        -   Analise a seção intitulada **"Rentabilidade por Classe de Ativo"**.
+        -   **Pontos Positivos:** São **EXCLUSIVAMENTE** as classes de ativo com rentabilidade no mês **SUPERIOR a 0.9%**.
+        -   **Desafios:** São **EXCLUSIVAMENTE** as classes de ativo com rentabilidade no mês **INFERIOR a 0.9%**.
+        -   Para cada item, extraia o nome da classe e a rentabilidade percentual.
     -   **ANÁLISE ECONÔMICA:** Com base no mês e ano extraídos, gere um parágrafo conciso sobre o cenário econômico nacional e outro sobre o cenário internacional para aquele período específico.
     -   **FORMATE A MENSAGEM:** Após o título de identificação, formate a mensagem para o WhatsApp dentro de um quadro de markdown, usando aspas triplas (\`\`\`). Siga o modelo abaixo **EXATAMENTE**. Use quebras de linha e asteriscos para negrito.
 2.  **SEPARADOR:** Após formatar a mensagem completa para um relatório, insira uma linha com "---" antes de começar a processar o próximo relatório.
