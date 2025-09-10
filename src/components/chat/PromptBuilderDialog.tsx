@@ -44,7 +44,7 @@ type ExtractedData = {
 type SelectedFields = {
     [key in keyof Omit<ExtractedData, 'classPerformance' | 'benchmarkValues'>]?: boolean | { [category: string]: { [index: number]: boolean } };
 } & {
-    classPerformance?: { [className: string]: boolean };
+    classPerformance?: { [className: boolean };
 };
 
 type PromptBuilderPhase = 'upload' | 'loading' | 'selection' | 'error';
@@ -246,7 +246,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="individual">Individual</SelectItem>
-                                <SelectItem value="batch">Lote (Máximo ${BATCH_LIMIT} volumes)</SelectItem>
+                                <SelectItem value="batch">Lote (Máximo {BATCH_LIMIT} volumes)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -548,18 +548,18 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
               <div className="space-y-6">
                 
                 {assetAnalysisView === 'asset' && (
-                  <div className="w-full h-px bg-border my-4 flex items-center justify-center">
-                      <div className="flex items-center gap-2 bg-background px-4">
-                          <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
-                              <ChevronsDown className="mr-1 h-4 w-4" />
-                              Expandir Tudo
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={handleCollapseAll} className="text-xs text-muted-foreground">
-                              <ChevronsRight className="mr-1 h-4 w-4" />
-                              Recolher Tudo
-                          </Button>
-                      </div>
-                  </div>
+                    <div className="w-full h-px bg-border my-4 flex items-center justify-center">
+                        <div className="flex items-center gap-2 bg-background px-4">
+                            <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
+                                <ChevronsDown className="mr-1 h-4 w-4" />
+                                Expandir Tudo
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handleCollapseAll} className="text-xs text-muted-foreground">
+                                <ChevronsRight className="mr-1 h-4 w-4" />
+                                Recolher Tudo
+                            </Button>
+                        </div>
+                    </div>
                 )}
 
                 {assetAnalysisView === 'asset' ? (
@@ -933,3 +933,5 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     </Dialog>
   );
 }
+
+    
