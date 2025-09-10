@@ -259,8 +259,12 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <div className="max-w-xs space-y-1">
-                                     <p><strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. A perfomance automática é feita considerando 3 principais ativos e 3 detratores relacionadas ao seu percentual do *CDI*. Disponível para um ou múltiplos arquivos (lote).</p>
-                                     <p><strong className="text-foreground">Análise Personalizada:</strong> Permite escolher os dados. Disponível apenas para um único arquivo.</p>
+                                    <p>
+                                        <strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. A perfomance automática é feita considerando 3 principais ativos e 3 detratores relacionadas ao seu percentual do *CDI*. Disponível para um ou múltiplos arquivos (lote).
+                                    </p>
+                                    <p>
+                                        <strong className="text-foreground">Análise Personalizada:</strong> Permite escolher os dados. Disponível apenas para um único arquivo.
+                                    </p>
                                   </div>
                                 </TooltipContent>
                             </Tooltip>
@@ -342,45 +346,33 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         }
     };
 
-
-    const allHighlights = useMemo(() => {
-        return Object.entries(data.highlights).flatMap(([category, items]) => 
-            items.map((item, index) => ({
-                ...item,
-                category,
-                index,
-                numericReturn: parsePercentage(item.return),
-                numericCdi: parsePercentage(item.cdiPercentage)
-            }))
-        ).sort((a,b) => b.numericReturn - a.numericReturn);
-    }, [data.highlights]);
-
-    const filteredDetractors = useMemo(() => {
-        const result: Record<string, Asset[]> = {};
+    const allAssetsByClass = useMemo(() => {
+        const assets: Record<string, (Asset & { originalIndex: number, numericReturn: number })[]> = {};
+        
+        // Use 'detractors' as the base since it contains all assets
         Object.entries(data.detractors).forEach(([category, items]) => {
-            const processedItems = items
-                .map(item => ({ ...item, numericReturn: parsePercentage(item.return), numericCdi: parsePercentage(item.cdiPercentage) }))
-                .filter(item => !isNaN(item.numericCdi) && item.numericCdi < 100)
-                .sort((a, b) => a.numericCdi - b.numericCdi);
-
-            if (processedItems.length > 0) {
-                result[category] = processedItems;
+            if (!assets[category]) {
+                assets[category] = [];
             }
+            items.forEach((item, index) => {
+                // Check if the asset is already added to avoid duplicates if it's also in highlights
+                if (!assets[category].some(a => a.asset === item.asset)) {
+                    assets[category].push({
+                        ...item,
+                        originalIndex: index,
+                        numericReturn: parsePercentage(item.return)
+                    });
+                }
+            });
         });
-        return result;
-    }, [data.detractors]);
-    
-    const allDetractors = useMemo(() => {
-         return Object.entries(filteredDetractors).flatMap(([category, items]) =>
-            items.map((item, index) => ({
-                ...item,
-                category,
-                originalIndex: data.detractors[category].findIndex(originalItem => originalItem.asset === item.asset),
-                numericCdi: (item as any).numericCdi,
-                numericReturn: (item as any).numericReturn
-            }))
-         ).sort((a,b) => a.numericReturn - b.numericReturn);
-    }, [filteredDetractors, data.detractors]);
+
+        // Sort assets within each class by return
+        Object.keys(assets).forEach(category => {
+            assets[category].sort((a, b) => b.numericReturn - a.numericReturn);
+        });
+
+        return assets;
+    }, [data.detractors, data.highlights]);
     
     const allClassPerformances = useMemo(() => {
         return (data.classPerformance || []).map(item => ({
@@ -393,79 +385,48 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
 
     const allAccordionKeys = useMemo(() => {
         if (assetAnalysisView === 'asset') {
-            const highlightKeys = Object.keys(data.highlights).map(cat => `h-cat-${cat}`);
-            const detractorKeys = Object.keys(filteredDetractors).map(cat => `d-cat-${cat}`);
-            return [...highlightKeys, ...detractorKeys];
+            return Object.keys(allAssetsByClass).map(cat => `asset-cat-${cat}`);
         }
         return ['class-performance-accordion'];
-    }, [data.highlights, filteredDetractors, assetAnalysisView]);
+    }, [allAssetsByClass, assetAnalysisView]);
 
     const handleExpandAll = () => setOpenAccordionItems(allAccordionKeys);
     const handleCollapseAll = () => setOpenAccordionItems([]);
 
 
-    const renderHighlights = () => {
-        const categories = Object.keys(data.highlights);
-        if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum destaque positivo encontrado.</p>;
+    const renderAllAssets = () => {
+        const categories = Object.keys(allAssetsByClass);
+        if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum ativo encontrado.</p>;
 
         return (
             <Accordion type="multiple" className="w-full" value={openAccordionItems} onValueChange={setOpenAccordionItems}>
                 {categories.map(category => (
-                    <AccordionItem value={`h-cat-${category}`} key={`h-cat-${category}`}>
+                    <AccordionItem value={`asset-cat-${category}`} key={`asset-cat-${category}`}>
                         <AccordionTrigger className="font-semibold text-muted-foreground text-xs uppercase tracking-wider hover:no-underline py-2">
-                            {category} ({data.highlights[category].length})
+                            {category} ({allAssetsByClass[category].length})
                         </AccordionTrigger>
                         <AccordionContent className="pt-2 pl-1">
                             <div className="space-y-2">
-                                {data.highlights[category].map((item, index) => (
-                                    <div key={`h-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
+                                {allAssetsByClass[category].map((item) => (
+                                    <div key={`asset-${category}-${item.originalIndex}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                                         <Checkbox 
-                                            id={`h-${category}-${index}`} 
-                                            onCheckedChange={(c) => onCheckboxChange('highlights', category, index, !!c)} 
+                                            id={`asset-${category}-${item.originalIndex}`} 
+                                            onCheckedChange={(c) => {
+                                                const isHighlight = (data.highlights[category] || []).some(h => h.asset === item.asset);
+                                                onCheckboxChange(isHighlight ? 'highlights' : 'detractors', category, item.originalIndex, !!c);
+                                            }}
                                             className="mt-1" 
-                                            checked={!!(selectedFields.highlights as any)?.[category]?.[index]}
+                                            checked={
+                                                !!(selectedFields.highlights as any)?.[category]?.[item.originalIndex] ||
+                                                !!(selectedFields.detractors as any)?.[category]?.[item.originalIndex]
+                                            }
                                         />
-                                        <Label htmlFor={`h-${category}-${index}`} className="flex flex-col">
+                                        <Label htmlFor={`asset-${category}-${item.originalIndex}`} className="flex flex-col">
                                             <span><strong>{item.asset}</strong> ({item.return})</span>
-                                            <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>
+                                            {item.reason && <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>}
                                         </Label>
                                     </div>
                                 ))}
-                            </div>
-                        </AccordionContent>
-                    </AccordionItem>
-                ))}
-            </Accordion>
-        );
-    };
-    
-    const renderDetractors = () => {
-        const categories = Object.keys(filteredDetractors);
-        if (categories.length === 0) return <p className="text-xs text-muted-foreground">Nenhum detrator com performance abaixo de 100% do CDI foi encontrado.</p>;
-
-        return (
-            <Accordion type="multiple" className="w-full" value={openAccordionItems} onValueChange={setOpenAccordionItems}>
-                {categories.map(category => (
-                    <AccordionItem value={`d-cat-${category}`} key={`d-cat-${category}`}>
-                        <AccordionTrigger className="font-semibold text-muted-foreground text-xs uppercase tracking-wider hover:no-underline py-2">
-                           {category} ({filteredDetractors[category].length})
-                        </AccordionTrigger>
-                        <AccordionContent className="pt-2 pl-1">
-                            <div className="space-y-2">
-                                {filteredDetractors[category].map((item, index) => {
-                                    const originalDetractorIndex = data.detractors[category].findIndex(originalItem => originalItem.asset === item.asset);
-                                    return (
-                                        <div key={`d-${category}-${index}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
-                                            <Checkbox 
-                                                id={`d-${category}-${originalDetractorIndex}`} 
-                                                onCheckedChange={(c) => onCheckboxChange('detractors', category, originalDetractorIndex, !!c)} 
-                                                className="mt-1" 
-                                                checked={!!(selectedFields.detractors as any)?.[category]?.[originalDetractorIndex]}
-                                            />
-                                            <Label htmlFor={`d-${category}-${originalDetractorIndex}`} className="cursor-pointer"><strong>{item.asset}</strong> ({item.return})</Label>
-                                        </div>
-                                    )
-                                })}
                             </div>
                         </AccordionContent>
                     </AccordionItem>
@@ -602,15 +563,9 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 )}
 
                 {assetAnalysisView === 'asset' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                        <div className="space-y-3">
-                            <h4 className="font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4" />Maiores Retornos (Detalhado)</h4>
-                            {renderHighlights()}
-                        </div>
-                        <div className="space-y-3">
-                            <h4 className="font-semibold flex items-center gap-2"><TrendingDown className="h-4 w-4" />Performance Inferior ao CDI (Detalhado)</h4>
-                            {renderDetractors()}
-                        </div>
+                    <div className="space-y-3 text-sm">
+                        <h4 className="font-semibold flex items-center gap-2"><BarChart className="h-4 w-4" />Ativos da Carteira</h4>
+                        {renderAllAssets()}
                     </div>
                 ) : (
                     <div className="md:col-span-2 space-y-3 text-sm">
@@ -978,5 +933,3 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     </Dialog>
   );
 }
-
-    
