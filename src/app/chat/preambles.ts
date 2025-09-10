@@ -7,8 +7,8 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
     -   **EXTRAIA OS DADOS:**
         -   Da **página 2**: O mês de referência do relatório (ex: Julho de 2025), RENTABILIDADE PERCENTUAL DO MÊS, RENTABILIDADE EM %CDI DO MÊS, GANHO FINANCEIRO DO MÊS, RENTABILIDADE PERCENTUAL DO ANO, RENTABILIDADE EM %CDI DO ANO, GANHO FINANCEIRO DO ANO.
         -   Da **página 5**:
-            -   **Destaques:** Os dois **ativos individuais** com a **maior** rentabilidade no mês (nome do ativo, percentual).
-            -   **Detratores:** Os dois **ativos individuais** com rentabilidade **inferior** ao CDI (nome do ativo, percentual), **DESDE QUE NÃO ESTEJAM JÁ LISTADOS NOS DESTAQUES**.
+            -   **Destaques:** Os dois **ativos individuais** com a **maior** rentabilidade no mês (extraia o nome do ativo, a rentabilidade percentual e a rentabilidade em % do CDI).
+            -   **Detratores:** Os dois **ativos individuais** com rentabilidade **inferior** ao CDI (extraia o nome do ativo e a rentabilidade percentual), **DESDE QUE NÃO ESTEJAM JÁ LISTADOS NOS DESTAQUES**.
     -   **ANÁLISE ECONÔMICA:** Com base no mês e ano extraídos, gere um parágrafo conciso sobre o cenário econômico nacional e outro sobre o cenário internacional para aquele período específico.
     -   **FORMATE A MENSAGEM:** Siga o modelo abaixo **EXATAMENTE**. Use quebras de linha e asteriscos para negrito. NÃO use \`\`\`, Markdown ou qualquer outra formatação.
 2.  **SEPARADOR:** Após formatar a mensagem completa para um relatório, insira uma linha com "---" antes de começar a processar o próximo relatório.
@@ -21,8 +21,8 @@ Olá!
 Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]* do CDI, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* do CDI e um ganho financeiro de *[GANHO FINANCEiro DO ANO]*!
 
 Os principais destaques foram:
-*[Ativo 1]*, com *[rentabilidade]*
-*[Ativo 2]*, com *[rentabilidade]*
+*[Ativo 1]*, com *[rentabilidade]*, o que equivale a *[rentabilidade em % do CDI]* do CDI
+*[Ativo 2]*, com *[rentabilidade]*, o que equivale a *[rentabilidade em % do CDI]* do CDI
 
 Os principais detratores foram:
 *[Ativo 1]*: *[rentabilidade]*
