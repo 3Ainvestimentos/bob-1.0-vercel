@@ -588,18 +588,20 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             <CardContent>
               <div className="space-y-6">
                 
-                <div className="w-full h-px bg-border my-4 flex items-center justify-center">
-                    <div className="flex items-center gap-2 bg-background px-4">
-                        <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
-                            <ChevronsDown className="mr-1 h-4 w-4" />
-                            Expandir Tudo
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={handleCollapseAll} className="text-xs text-muted-foreground">
-                            <ChevronsRight className="mr-1 h-4 w-4" />
-                            Recolher Tudo
-                        </Button>
-                    </div>
-                </div>
+                {assetAnalysisView === 'asset' && (
+                  <div className="w-full h-px bg-border my-4 flex items-center justify-center">
+                      <div className="flex items-center gap-2 bg-background px-4">
+                          <Button variant="ghost" size="sm" onClick={handleExpandAll} className="text-xs text-muted-foreground">
+                              <ChevronsDown className="mr-1 h-4 w-4" />
+                              Expandir Tudo
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={handleCollapseAll} className="text-xs text-muted-foreground">
+                              <ChevronsRight className="mr-1 h-4 w-4" />
+                              Recolher Tudo
+                          </Button>
+                      </div>
+                  </div>
+                )}
 
                 {assetAnalysisView === 'asset' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
