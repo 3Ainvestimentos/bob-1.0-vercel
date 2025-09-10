@@ -8,6 +8,7 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
         -   Analise a seção intitulada **"Rentabilidade por Classe de Ativo"**.
         -   **Pontos Positivos:** São **EXCLUSIVAMENTE** as classes de ativo com rentabilidade no mês **SUPERIOR a 0.9%**.
         -   **Desafios:** São **EXCLUSIVAMENTE** as classes de ativo com rentabilidade no mês **INFERIOR a 0.9%**.
+        -   **APLICAÇÃO UNIVERSAL:** Esta regra se aplica a TODAS as classes de ativo, incluindo "Renda Fixa Global" e "Renda Variável Global", sem exceção.
         -   Para cada item, extraia o nome da classe e a rentabilidade percentual.
     -   **ANÁLISE ECONÔMICA:** Com base no mês e ano extraídos, gere um parágrafo conciso sobre o cenário econômico nacional e outro sobre o cenário internacional para aquele período específico.
     -   **FORMATE A MENSAGEM:** Após o título de identificação, formate a mensagem para o WhatsApp dentro de um quadro de markdown, usando aspas triplas (\`\`\`). Siga o modelo abaixo **EXATAMENTE**. Use quebras de linha e asteriscos para negrito.
@@ -20,6 +21,7 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
 Olá!
 🔎 Resumo da perfomance: 
 Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]* do CDI, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*!
+
 No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* do CDI e um ganho financeiro de *[GANHO FINANCEiro DO ANO]*!
 
 ✅ Pontos Positivos:
