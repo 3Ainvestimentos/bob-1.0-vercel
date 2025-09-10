@@ -5,7 +5,6 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
 1.  **PROCESSE CADA ARQUIVO SEPARADAMENTE:** Para cada arquivo anexado, execute o seguinte processo:
     -   **IDENTIFICAÇÃO:** Antes de qualquer outra coisa, adicione um título de identificação no formato: "**Análise do Relatório: [Nome do Arquivo]**".
     -   **EXTRAIA OS DADOS:**
-        -   Da **página 2**: O mês de referência do relatório (ex: Julho de 2025), RENTABILIDADE PERCENTUAL DO MÊS, RENTABILIDADE EM %CDI DO MÊS, GANHO FINANCEIRO DO MÊS, RENTABILIDADE PERCENTUAL DO ANO, RENTABILIDADE EM %CDI DO ANO, GANHO FINANCEIRO DO ANO.
         -   Da seção intitulada **"Rentabilidade por Classe de Ativo"**:
             -   **Pontos Positivos:** As classes de ativo com rentabilidade no mês **superior a 0.9%** (extraia o nome da classe e a rentabilidade percentual).
             -   **Desafios:** As classes de ativo com rentabilidade no mês **inferior a 0.9%** (extraia o nome da classe e a rentabilidade percentual).
@@ -20,11 +19,11 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
 Olá!
 Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]* do CDI, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* do CDI e um ganho financeiro de *[GANHO FINANCEiro DO ANO]*!
 
-✅ Os principais pontos positivos foram:
+✅ Pontos Positivos:
 *[Classe de Ativo 1]*, com *[rentabilidade]*
 *[Classe de Ativo 2]*, com *[rentabilidade]*
 
-⚠️ Os principais desafios foram:
+⚠️ Principais desafios:
 *[Classe de Ativo 1]*: *[rentabilidade]*
 *[Classe de Ativo 2]*: *[rentabilidade]*
 
