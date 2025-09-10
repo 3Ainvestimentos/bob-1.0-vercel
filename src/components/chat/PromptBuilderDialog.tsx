@@ -259,7 +259,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <div className="max-w-xs space-y-1">
-                                     <p><strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. A perfomance automática é feita considerando 3 principais ativos e 3 detratores. Disponível para um ou múltiplos arquivos (lote).</p>
+                                     <p><strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. A perfomance automática é feita considerando 3 principais ativos e 3 detratores relacionadas ao seu percentual do <em>CDI</em>. Disponível para um ou múltiplos arquivos (lote).</p>
                                      <p><strong className="text-foreground">Análise Personalizada:</strong> Permite escolher os dados. Disponível apenas para um único arquivo.</p>
                                   </div>
                                 </TooltipContent>
@@ -509,7 +509,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                                      {!isGlobalClass && performanceIndicator}
                                                 </div>
                                             </div>
-                                            <div className="text-xs text-muted-foreground mt-1">
+                                            <div className="text-xs text-muted-foreground">
                                                 {isGlobalClass ? (
                                                     <>
                                                         <span>Rentabilidade: {item.return}</span>
