@@ -398,7 +398,7 @@ async function callGemini(
         
         let promptWithContext = query;
         if (enableWebSearch) {
-            promptWithContext = `**Instrução Adicional:** Baseie sua resposta nos seguintes trechos de busca da web. Responda de forma concisa e direta.\n\n**Pergunta do usuário:** "${query}"`;
+            promptWithContext = `**Instrução Adicional:** Baseie sua resposta nos seguintes trechos de busca da web. Responda de forma concisa e direta. Responda sempre em Português do Brasil.\n\n**Pergunta do usuário:** "${query}"`;
         }
         
         const promptParts: Part[] = [];
@@ -1459,6 +1459,7 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     
 
     
+
 
 
 
