@@ -20,11 +20,11 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
 Olá!
 Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]* do CDI, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*! No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* do CDI e um ganho financeiro de *[GANHO FINANCEiro DO ANO]*!
 
-Os principais pontos positivos foram:
+✅ Os principais pontos positivos foram:
 *[Classe de Ativo 1]*, com *[rentabilidade]*
 *[Classe de Ativo 2]*, com *[rentabilidade]*
 
-Os principais desafios foram:
+⚠️ Os principais desafios foram:
 *[Classe de Ativo 1]*: *[rentabilidade]*
 *[Classe de Ativo 2]*: *[rentabilidade]*
 
