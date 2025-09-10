@@ -76,7 +76,7 @@ const assetClassBenchmarks: Record<string, keyof ExtractedData['benchmarkValues'
 };
 
 const findBenchmarkByClassName = (className: string): keyof ExtractedData['benchmarkValues'] => {
-    const matchingKey = Object.keys(assetClassBenchmarks).find(key => className.includes(key));
+    const matchingKey = Object.keys(assetClassBenchmarks).find(key => className.includes(key.replace(/ \(.+\)/, '')));
     return matchingKey ? assetClassBenchmarks[matchingKey] : 'CDI'; // Default to CDI if not found
 };
 
@@ -259,7 +259,7 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <div className="max-w-xs space-y-1">
-                                     <p><strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. A perfomance automática é feita considerando 3 principais ativos e 3 detratores relacionadas ao seu percentual do <em>CDI</em>. Disponível para um ou múltiplos arquivos (lote).</p>
+                                     <p><strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. A perfomance automática é feita considerando 3 principais ativos e 3 detratores relacionadas ao seu percentual do *CDI*. Disponível para um ou múltiplos arquivos (lote).</p>
                                      <p><strong className="text-foreground">Análise Personalizada:</strong> Permite escolher os dados. Disponível apenas para um único arquivo.</p>
                                   </div>
                                 </TooltipContent>
@@ -314,8 +314,6 @@ const ErrorPhase = ({ error, onRetry }: { error: string | null, onRetry: () => v
 
 const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: ExtractedData; onCheckboxChange: (category: keyof ExtractedData, assetOrClass: string, index: number, checked: boolean, isClass?: boolean) => void; selectedFields: SelectedFields; }) => {
     const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
-    const [detractorView, setDetractorView] = useState<'cdi' | 'return'>('cdi');
-    const [highlightView, setHighlightView] = useState<'cdi' | 'return'>('return');
     const [assetAnalysisView, setAssetAnalysisView] = useState<AssetAnalysisView>('asset');
 
     
@@ -354,8 +352,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 numericReturn: parsePercentage(item.return),
                 numericCdi: parsePercentage(item.cdiPercentage)
             }))
-        ).sort((a,b) => (highlightView === 'return' ? (b.numericReturn - a.numericReturn) : (b.numericCdi - a.numericCdi)));
-    }, [data.highlights, highlightView]);
+        ).sort((a,b) => b.numericReturn - a.numericReturn);
+    }, [data.highlights]);
 
     const filteredDetractors = useMemo(() => {
         const result: Record<string, Asset[]> = {};
@@ -381,8 +379,8 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                 numericCdi: (item as any).numericCdi,
                 numericReturn: (item as any).numericReturn
             }))
-         ).sort((a,b) => (detractorView === 'return' ? (a.numericReturn - b.numericReturn) : (a.numericCdi - b.numericCdi)));
-    }, [filteredDetractors, data.detractors, detractorView]);
+         ).sort((a,b) => a.numericReturn - b.numericReturn);
+    }, [filteredDetractors, data.detractors]);
     
     const allClassPerformances = useMemo(() => {
         return (data.classPerformance || []).map(item => ({
@@ -980,3 +978,5 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     </Dialog>
   );
 }
+
+    
