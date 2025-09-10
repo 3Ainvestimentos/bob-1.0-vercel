@@ -44,7 +44,7 @@ type ExtractedData = {
 type SelectedFields = {
     [key in keyof Omit<ExtractedData, 'classPerformance' | 'benchmarkValues'>]?: boolean | { [category: string]: { [index: number]: boolean } };
 } & {
-    classPerformance?: { [className: boolean };
+    classPerformance?: { [className: string]: boolean };
 };
 
 type PromptBuilderPhase = 'upload' | 'loading' | 'selection' | 'error';
