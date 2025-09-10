@@ -422,7 +422,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             }
                                         />
                                         <Label htmlFor={`asset-${category}-${item.originalIndex}`} className="flex flex-col">
-                                            <span><strong>{item.asset}</strong> ({item.return})</span>
+                                            <span><strong>{item.asset}</strong> (Rentabilidade: {item.return})</span>
                                             {item.reason && <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>}
                                         </Label>
                                     </div>
