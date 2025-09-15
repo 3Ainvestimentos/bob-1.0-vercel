@@ -1403,18 +1403,23 @@ export async function validateAndOnboardUser(
         return { success: false, role: null, error: 'UID e Email são obrigatórios.' };
     }
 
+    const allowedDomains = ['@3ariva.com.br', '@3ainvestimentos.com.br'];
+    const isDomainAllowed = allowedDomains.some(domain => email.endsWith(domain));
+
+    if (!isDomainAllowed) {
+        return { success: false, role: null, error: 'Seu domínio de e-mail não tem permissão para acessar este sistema.' };
+    }
+
     const adminDb = await getAuthenticatedFirestoreAdmin();
 
     try {
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists) {
-            // User exists, return their role
+        if (userDocSnap.exists()) {
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
-        // New user, automatically create a document for them.
         const role: UserRole = 'user';
         const newUserData = {
             uid,
@@ -1459,6 +1464,7 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     
 
     
+
 
 
 
