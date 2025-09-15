@@ -1416,7 +1416,7 @@ export async function validateAndOnboardUser(
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDocSnap = await userDocRef.get();
 
-        if (userDocSnap.exists()) {
+        if (userDocSnap.exists) {
             return { success: true, role: userDocSnap.data()?.role || 'user' };
         }
 
@@ -1464,6 +1464,7 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     
 
     
+
 
 
 
