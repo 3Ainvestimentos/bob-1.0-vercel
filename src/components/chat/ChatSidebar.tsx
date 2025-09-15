@@ -263,8 +263,7 @@ export function ChatSidebar({
                 <SidebarMenuButton
                   onClick={onNewChat}
                   tooltip="Nova Conversa"
-                  className="h-9 w-full justify-start font-semibold rounded-xl text-black hover:opacity-90"
-                  style={{ backgroundColor: '#DFB87F' }}
+                  className="h-9 w-full justify-start font-semibold rounded-xl bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/80"
                 >
                   <Pencil className="h-4 w-4 group-data-[state=collapsed]:h-5 group-data-[state=collapsed]:w-5" />
                   <SidebarMenuButton.Text>Nova conversa</SidebarMenuButton.Text>
@@ -609,5 +608,3 @@ function ConversationItem({
     </SidebarMenuItem>
   );
 }
-
-    
