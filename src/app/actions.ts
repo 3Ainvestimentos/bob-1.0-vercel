@@ -380,7 +380,7 @@ async function callGemini(
         }] : [];
 
         const modelConfig: any = {
-            model: "gemini-1.5-pro",
+            model: "gemini-2.5-flash",
             tools: tools as any,
         };
 
@@ -723,7 +723,7 @@ export async function generateSuggestedQuestions(
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.1
@@ -763,7 +763,7 @@ Pergunta: "${baseQuery}"`;
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       generationConfig: {
         temperature: 0.1,
       },
