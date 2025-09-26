@@ -376,11 +376,11 @@ async function callGemini(
         const genAI = new GoogleGenerativeAI(geminiApiKey);
 
         const tools = enableWebSearch ? [{
-            "google_search_retrieval": {}
+            googleSearch: {}
         }] : [];
 
         const modelConfig: any = {
-            model: "gemini-1.5-pro-latest",
+            model: "gemini-2.5-flash",
             tools: tools as any,
         };
 
@@ -723,7 +723,7 @@ export async function generateSuggestedQuestions(
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-2.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.1
@@ -763,7 +763,7 @@ Pergunta: "${baseQuery}"`;
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-2.5-flash",
       generationConfig: {
         temperature: 0.1,
       },
@@ -1404,7 +1404,7 @@ export async function validateAndOnboardUser(
     }
 
     const allowedDomains = ['@3ariva.com.br', '@3ainvestimentos.com.br'];
-    const isDomainAllowed = allowedDomains.some(domain => email.endsWith(domain));
+    const isDomainAllowed = allowedDomains.some(domain => email.toLowerCase().endsWith(domain));
 
     if (!isDomainAllowed) {
         return { success: false, role: null, error: 'Seu domínio de e-mail não tem permissão para acessar este sistema.' };
@@ -1464,6 +1464,9 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     
 
     
+
+
+
 
 
 
