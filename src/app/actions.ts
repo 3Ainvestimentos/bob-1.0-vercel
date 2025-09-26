@@ -10,6 +10,8 @@ import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
 import { SpeechClient } from '@google-cloud/speech';
 import { estimateTokens, getFileContent, formatTutorialToMarkdown } from '@/lib/server/utils';
 import { POSICAO_CONSOLIDADA_PREAMBLE, XP_REPORT_EXTRACTION_PREAMBLE } from './chat/preambles';
+import { acknowledgeUpdate as coreAcknowledgeUpdate } from '@/lib/server/core/userActions';
+
 
 
 const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
@@ -1461,7 +1463,10 @@ export async function extractDataFromXpReport(fileDataUri: { name: string; dataU
     }
 }
 
-    
+export async function acknowledgeUpdate(userId: string, versionId: string): Promise<{ success: boolean }> {
+    // A Server Action agora simplesmente chama a lógica de negócio do nosso novo módulo.
+    return coreAcknowledgeUpdate(userId, versionId);
+}    
 
     
 

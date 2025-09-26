@@ -82,6 +82,8 @@ import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { OnboardingTour } from '@/components/chat/OnboardingTour';
 import { PromptBuilderDialog } from '@/components/chat/PromptBuilderDialog';
+import { UpdateNotificationManager } from '@/components/chat/UpdateNotificationManager';
+
 
 
 // ---- Data Types ----
@@ -1617,6 +1619,7 @@ export default function ChatPageContent() {
             onPromptGenerated={handlePromptGenerated}
             onBatchSubmit={handleBatchSubmit}
         />
+        <UpdateNotificationManager />
 
         {isAuthenticated && !showTermsDialog && (
         <>
