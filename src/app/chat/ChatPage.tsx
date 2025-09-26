@@ -658,11 +658,15 @@ export default function ChatPageContent() {
     });
   };
 
-  const submitQuery = async (query: string, filesToUpload: File[]) => {
+  const submitQuery = async (
+    query: string, 
+    filesToUpload: File[], 
+    mensagemVisivelParaUsuario?: string
+  ) => {
     if (!query.trim() && filesToUpload.length === 0) return;
     if (isLoading || !user) return;
   
-    const originalQuery = query;
+    const originalQuery = mensagemVisivelParaUsuario || query;
     setInput('');
     setSelectedFiles([]);
     setError(null);
@@ -670,9 +674,9 @@ export default function ChatPageContent() {
 
     try {
       const deidentifiedQuery = await deidentifyTextOnly(originalQuery);
-      const useStandardAnalysis = originalQuery.toLowerCase().includes("faça uma mensagem e uma análise com o nosso padrão") || originalQuery === POSICAO_CONSOLIDADA_PREAMBLE;
-      const fileNames = filesToUpload.map(f => f.name);
-  
+      // A lógica para análise padrão agora verifica a query INTERNA.
+      const useStandardAnalysis = query === POSICAO_CONSOLIDADA_PREAMBLE;      const fileNames = filesToUpload.map(f => f.name);
+        
       const userMessage: Message = {
         id: crypto.randomUUID(),
         role: 'user',
@@ -718,7 +722,7 @@ export default function ChatPageContent() {
       const fileDataUris = await Promise.all(filesToUpload.map(readFileAsDataURL));
   
       const assistantResponse = await askAssistant(
-        deidentifiedQuery,
+        query,
         {
           fileDataUris,
           useStandardAnalysis,
@@ -782,9 +786,17 @@ export default function ChatPageContent() {
         });
         return;
     }
-    const query = POSICAO_CONSOLIDADA_PREAMBLE;
-    submitQuery(query, files);
-    setIsPromptBuilderOpen(false);
+    // 1. A query que vai para o backend é o PREAMBLE completo.
+  const queryParaBackend = POSICAO_CONSOLIDADA_PREAMBLE;
+  
+  // 2. A mensagem que o USUÁRIO VÊ é simples e limpa.
+  const mensagemParaUsuario = `Analisando ${files.length} relatório(s) com o padrão 3A RIVA...`;
+
+  // 3. Chamamos a submitQuery com as duas versões.
+  //    (Vamos ajustar submitQuery para usar isso corretamente no próximo passo)
+  submitQuery(queryParaBackend, files, mensagemParaUsuario);
+  
+  setIsPromptBuilderOpen(false);
 };
 
   

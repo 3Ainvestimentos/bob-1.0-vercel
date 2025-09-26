@@ -14,7 +14,7 @@ export const POSICAO_CONSOLIDADA_PREAMBLE = `Você é um especialista em finanç
   - **SEPARADOR:** Após formatar a mensagem completa para um relatório, insira uma linha com "---" antes de começar a processar o próximo relatório.
   - **NOTA IMPORTANTE:** No início da sua resposta, inclua a frase "Sugestão: Insira o nome de cada cliente após o 'Olá!' em cada mensagem abaixo.".
   - **SEPARADOR:** Após formatar a mensagem completa para um relatório, insira uma linha com "---" antes de começar a processar o próximo relatório. 
-  = **EMOJI:** Não escreva a palavra a descrição nem a palavra emoji, busque o EMOJI que mais tem relação
+  = **EMOJI:** Não escreva a descrição nem a palavra emoji, busque o EMOJI que mais tem relação
   - **MODELO OBRIGATÓRIO DA MENSAGEM (PREENCHA OS CAMPOS PARA CADA RELATÓRIO):**
 \`\`\`
 Olá!
