@@ -8,12 +8,11 @@ Sua tarefa é realizar uma análise profunda de relatórios de investimentos da 
 3.  **CLASSIFICAÇÃO DE CLASSES:**
     -   Compare a rentabilidade mensal de cada classe de ativo com seu respectivo benchmark ("ativo"-"benchark"; etc.) ("Pós Fixado" - "CDI"; "Inflação" - "IPCA"; "Renda Variável Brasil" - "Ibovespa"; "Multimercado" - "CDI"; "Fundos Listados" - "CDI")
     -   **Pontos Positivos:** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **SUPERIOR** ao seu benchmark de referência correspondente.
-    -   **Pontos de Atenção:** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência.
+    -   **Pontos de Atenção(Máximo dois):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência.
 4.  **ANÁLISE DETALHADA (DRILL-DOWN):**
     -   **[MELHORIA-CHAVE: ANÁLISE DOS DESTAQUES]** Para as 1 ou 2 principais classes de "Destaques", consulte a seção "POSIÇÃO DETALHADA DOS ATIVOS". Identifique os 2 ou 3 **ativos individuais** com maior rentabilidade no mês dentro daquela classe e cite-os como os impulsionadores do resultado.
-    -   **[MELHORIA-CHAVE: ANÁLISE DOS DETRATORES]** Para os "Detratores", use a análise macroeconômica para fornecer uma breve e plausível justificativa para a baixa performance (ex: IPCA negativo impactando a classe "Inflação").
 5.  **ANÁLISE MACROECONÔMICA DINÂMICA:**
-    -   Com base no mês e ano de referência do relatório, gere um parágrafo conciso sobre o cenário macroeconômico nacional e outro sobre o internacional daquele período específico.
+    -   Com base no mês e ano de referência do relatório, gere um parágrafo objetivo sobre o cenário macroeconômico nacional e outro sobre o internacional daquele período específico.
 6.  **OMISSÃO DE SEÇÃO VAZIA (REGRA CRÍTICA):** Se não houver nenhuma classe de ativo na categoria "Pontos de Atenção", você DEVE omitir completamente a seção ":atenção: Pontos de Atenção:" do resultado final.
 7.  **FORMATAÇÃO:** Formate a mensagem final para o WhatsApp dentro de um quadro de markdown (\`\`\`), seguindo o modelo obrigatório.
 8.  **SEPARADOR:** Após formatar a mensagem completa para um relatório, insira uma linha com "---" antes de começar a processar o próximo relatório.
@@ -23,14 +22,14 @@ Sua tarefa é realizar uma análise profunda de relatórios de investimentos da 
   - diferençaDeRentabilidadeDoAtivo = (Ativo - Rentabilidade do Benchmark correspondente)
   **MODELO OBRIGATÓRIO DA MENSAGEM:**
 \\\`\`\`
-Olá, [Nome do Cliente]!
+Olá, [N° do Cliente]!
 🔎: Resumo da perfomance:
 Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]* do CDI, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*!
 No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* do CDI e um ganho financeiro de *[GANHO FINANCEIRO DO ANO]*!
 ✅: *Destaques do mês:*:
 - *[Nome da Classe 1]*, com *[rentabilidade da classe]*, com [diferençaDeRentabilidadeDoAtivo]% a cima do [benchmark correspondente], valorização puxada por ações como *[Ativo 1] (+X,XX%)* e *[Ativo 2] (+Y,YY%)*.
 - *[Nome da Classe 2]*, com *[rentabilidade da classe]*, com [diferençaDeRentabilidadeDoAtivo]% a cima do [benchmark correspondente], sustentada por fundos como *[Ativo 3] (+A,AA%)*.
-- *[Nome da Classe 3]*[Se existir conforme os requisitos], com *[rentabilidade da classe]*, puxada por ações como *[Ativo 4] (+X,XX%)* e *[Ativo 5] (+Y,YY%)*, que [breve justificativa conectada ao cenário e à escolha de bons ativos].
+- *[Nome da Classe 3]*[Se existir conforme os requisitos], com *[rentabilidade da classe]*, puxada por ações como *[Ativo 4] (+X,XX%)* e *[Ativo 5] (+Y,YY%)*.
 ⚠️: *Pontos de Atenção:*:
 - *[Nome da Classe 3]*: *[rentabilidade da classe, sem mais explicações]*.
 - *[Nome da Classe 4]*: *[rentabilidade da classe, sem mais explicações]*.
