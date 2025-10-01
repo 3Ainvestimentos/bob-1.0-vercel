@@ -88,7 +88,12 @@ async function logDlpAlert(userId: string, chatId: string, foundInfoTypes: strin
 // `inspectConfig` estejam aninhados dentro de um objeto `requestBody`.
 // A remoção desta estrutura causará erros de 400 Bad Request.
 async function deidentifyQuery(query: string, userId?: string | null, chatId?: string | null): Promise<{ deidentifiedQuery: string; foundInfoTypes: string[] }> {
+    if (!query || query.trim() === '') {
+        return { deidentifiedQuery: query, foundInfoTypes: [] };
+    }
+    
     const {google} = require('googleapis');
+    const {GoogleAuth} = require('google-auth-library'); // Importação mais explícita
     const credentials = await getServiceAccountCredentialsFromEnv();
     const projectId = credentials.project_id;
     
@@ -130,11 +135,22 @@ async function deidentifyQuery(query: string, userId?: string | null, chatId?: s
     };
 
     try {
-        // @ts-ignore
-        const [response] = await dlp.projects.content.deidentify(request);
+        // --- MUDANÇA PRINCIPAL AQUI ---
+        // Chamamos a API e esperamos o objeto de resposta completo.
+        const response = await dlp.projects.content.deidentify(request);
+
+        // O corpo da resposta geralmente fica na propriedade 'data'.
+        const responseData = response.data;
+
+        // Verificamos se a resposta ou o item principal existem.
+        if (!responseData || !responseData.item) {
+            console.warn("DLP API retornou uma resposta sem o item esperado. Retornando a query original.");
+            return { deidentifiedQuery: query, foundInfoTypes: [] };
+        }
         
-        const deidentifiedQuery = response.item?.value || query;
-        const findings = response.overview?.transformationSummaries?.[0]?.results || [];
+        const deidentifiedQuery = responseData.item.value || query;
+        const transformationSummaries = responseData.overview?.transformationSummaries;
+        const findings = transformationSummaries && transformationSummaries.length > 0 ? transformationSummaries[0].results || [] : [];
         
         const foundInfoTypes = findings
           .map((result: any) => result.infoType?.name)
@@ -144,15 +160,13 @@ async function deidentifyQuery(query: string, userId?: string | null, chatId?: s
             await logDlpAlert(userId, chatId, foundInfoTypes);
         }
 
+        console.log(`DLP check complete. Found infoTypes: [${foundInfoTypes.join(', ')}]`);
         return { deidentifiedQuery, foundInfoTypes };
 
     } catch (error: any) {
         console.error('Error calling DLP API:', error.message);
         if (error.response && error.response.data && error.response.data.error) {
             console.error('DLP API Error Details:', JSON.stringify(error.response.data.error, null, 2));
-        }
-        if (error.message && (error.message.includes('permission') || error.message.includes('denied'))) {
-             throw new Error(`Erro de permissão com a API DLP. Verifique se a conta de serviço tem o papel "Usuário de DLP".`);
         }
         console.error("DLP Error: Returning original query.");
         return { deidentifiedQuery: query, foundInfoTypes: [] };
@@ -1469,8 +1483,6 @@ export async function acknowledgeUpdate(userId: string, versionId: string): Prom
 }    
 
     
-
-
 
 
 
