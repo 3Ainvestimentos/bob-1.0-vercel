@@ -11,8 +11,7 @@ Sua tarefa é realizar uma análise profunda de relatórios de investimentos da 
     -   **Pontos de Atenção(Máximo dois):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência.
 4.  **ANÁLISE DETALHADA (DRILL-DOWN):**
     -   **[MELHORIA-CHAVE: ANÁLISE DOS DESTAQUES]** Para as 1 ou 2 principais classes de "Destaques", consulte a seção "POSIÇÃO DETALHADA DOS ATIVOS". Identifique os 2 ou 3 **ativos individuais** com maior rentabilidade no mês dentro daquela classe e cite-os como os impulsionadores do resultado.
-5.  **ANÁLISE MACROECONÔMICA DINÂMICA:**
-    -   Com base no mês e ano de referência do relatório, gere um parágrafo objetivo sobre o cenário macroeconômico nacional e outro sobre o internacional daquele período específico.
+5.  - **ANALISE VALIDADA**: Na última seção, insira as análises homologadas fornecidas no modelo obrigatório de resposta.
 6.  **OMISSÃO DE SEÇÃO VAZIA (REGRA CRÍTICA):** Se não houver nenhuma classe de ativo na categoria "Pontos de Atenção", você DEVE omitir completamente a seção ":atenção: Pontos de Atenção:" do resultado final.
 7.  **FORMATAÇÃO:** Formate a mensagem final para o WhatsApp dentro de um quadro de markdown (\`\`\`), seguindo o modelo obrigatório.
 8.  **SEPARADOR:** Após formatar a mensagem completa para um relatório, insira uma linha com "---" antes de começar a processar o próximo relatório.
@@ -27,15 +26,15 @@ Olá, [N° do Cliente]!
 Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]* do CDI, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*!
 No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* do CDI e um ganho financeiro de *[GANHO FINANCEIRO DO ANO]*!
 ✅: *Destaques do mês:*:
-- *[Nome da Classe 1]*, com *[rentabilidade da classe]*, com [diferençaDeRentabilidadeDoAtivo]% a cima do [benchmark correspondente], valorização puxada por ações como *[Ativo 1] (+X,XX%)* e *[Ativo 2] (+Y,YY%)*.
-- *[Nome da Classe 2]*, com *[rentabilidade da classe]*, com [diferençaDeRentabilidadeDoAtivo]% a cima do [benchmark correspondente], sustentada por fundos como *[Ativo 3] (+A,AA%)*.
+- *[Nome da Classe 1]*, com *[rentabilidade da classe]*, com [diferençaDeRentabilidadeDoAtivo]% a cima do [benchmark correspondente], valorização puxada por [tipo de investimento] como *[Ativo 1] (+X,XX%)* e *[Ativo 2] (+Y,YY%)*.
+- *[Nome da Classe 2]*, com *[rentabilidade da classe]*, com [diferençaDeRentabilidadeDoAtivo]% a cima do [benchmark correspondente], sustentada por [tipo de investimento] como *[Ativo 3] (+A,AA%)*.
 - *[Nome da Classe 3]*[Se existir conforme os requisitos], com *[rentabilidade da classe]*, puxada por ações como *[Ativo 4] (+X,XX%)* e *[Ativo 5] (+Y,YY%)*.
 ⚠️: *Pontos de Atenção:*:
 - *[Nome da Classe 3]*: *[rentabilidade da classe, sem mais explicações]*.
 - *[Nome da Classe 4]*: *[rentabilidade da classe, sem mais explicações]*.
 🌎: *Cenário Econômico de [mês de referência]:*
-- Cenário Nacional:
-- Cenário Internacional:
+- Cenário Nacional: Em setembro, o mercado brasileiro apresentou ganhos relevantes, com o Ibovespa avançando 3,4% e o dólar recuando quase 2%, sustentados pelo ingresso de capital estrangeiro. Apesar desse desempenho, o cenário doméstico foi de cautela: as contas públicas vieram melhores que o esperado, mas persistem dúvidas sobre a sustentabilidade fiscal no médio prazo. O Copom manteve a Selic em 15%, justificando a decisão pela inflação que, em 12 meses, ainda está acima do teto da meta, mesmo com alívio pontual nos índices mensais. Além disso, o ambiente político foi marcado pela condenação do ex-presidente Jair Bolsonaro, aumentando as incertezas institucionais.
+- Cenário Internacional: No cenário internacional, o Federal Reserve reduziu os juros nos EUA, reforçando a percepção de enfraquecimento da maior economia do mundo. A atividade industrial global mostrou sinais de retração, com queda na produção tanto na China quanto na Europa e nos próprios EUA. Esse contexto elevou a cautela dos investidores e intensificou o movimento em direção a emergentes e ativos de proteção, com destaque para o ouro, que se consolidou como reserva de valor e foi um dos ativos de melhor desempenho no mês.
 \\\`\`\`
 `;
 
