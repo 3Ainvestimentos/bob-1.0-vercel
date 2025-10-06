@@ -50,6 +50,7 @@ interface AdminInsights {
     avgLatencyWeb: number;
     p95Latency: number;
     p99Latency: number;
+    failedRagQueries: { query: string, user: string, date: string }[];
 }
 
 interface AdminUser {
@@ -777,7 +778,7 @@ export default function AdminPage() {
                             </CardContent>
                         </Card>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-1 md:gap-8">
+                    <div className="grid gap-4 md:grid-cols-2 md:gap-8">
                         <Card>
                             <CardHeader>
                                 <div className="flex items-center gap-2">
@@ -813,6 +814,43 @@ export default function AdminPage() {
                                             <TableRow>
                                                 <TableCell colSpan={2} className="h-24 text-center">
                                                     Nenhum dado de fonte RAG encontrado.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center gap-2">
+                                    <SearchX className="h-5 w-5 text-muted-foreground" />
+                                    <CardTitle>Perguntas que Falharam na Busca Interna</CardTitle>
+                                </div>
+                                <CardDescription>
+                                    Perguntas que não encontraram resposta na base de conhecimento.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[80%]">Pergunta do Usuário</TableHead>
+                                            <TableHead className="text-right">Data</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {insights?.failedRagQueries && insights.failedRagQueries.length > 0 ? (
+                                            insights.failedRagQueries.map((item, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell className="font-medium">{item.query}</TableCell>
+                                                    <TableCell className="text-right text-xs">{item.date}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={2} className="h-24 text-center">
+                                                    Nenhuma falha de busca RAG registrada.
                                                 </TableCell>
                                             </TableRow>
                                         )}

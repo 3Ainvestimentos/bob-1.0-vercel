@@ -871,6 +871,7 @@ export async function getAdminInsights(roleFilter: UserRole | 'all' = 'all'): Pr
         const interactionsByDayMap: { [key: string]: number } = {};
         const interactionsByHourMap: { [key: string]: number } = {};
         const sourceUsageMap: { [key: string]: { title: string; uri: string; count: number } } = {};
+        const failedRagQueries: { query: string, user: string, date: string }[] = [];
 
         const allLatencies: number[] = [];
         const ragLatencies: number[] = [];
@@ -891,7 +892,7 @@ export async function getAdminInsights(roleFilter: UserRole | 'all' = 'all'): Pr
             const chatCreatedAt = (doc.data().createdAt as import('firebase-admin/firestore').Timestamp).toDate();
             const gmtMinus3Offset = 3 * 60 * 60 * 1000;
             
-            messages.forEach((m: Message) => {
+            messages.forEach((m: Message, index: number) => {
                 const interactionDate = new Date(chatCreatedAt.getTime() - gmtMinus3Offset);
                 const dayKey = interactionDate.toISOString().split('T')[0];
 
@@ -923,6 +924,13 @@ export async function getAdminInsights(roleFilter: UserRole | 'all' = 'all'): Pr
                         if (m.latencyMs) ragLatencies.push(m.latencyMs);
                         if (m.content === "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web") {
                             ragSearchFailureCount++;
+                            if (index > 0 && messages[index - 1].role === 'user') {
+                                failedRagQueries.push({
+                                    query: messages[index - 1].content,
+                                    user: userRoles.get(userId) || userId,
+                                    date: interactionDate.toLocaleString('pt-BR')
+                                });
+                            }
                         }
 
                         if (m.sources && m.sources.length > 0) {
@@ -1037,6 +1045,7 @@ export async function getAdminInsights(roleFilter: UserRole | 'all' = 'all'): Pr
             avgLatencyWeb,
             p95Latency,
             p99Latency,
+            failedRagQueries,
         };
     } catch (error: any) {
         console.error("Error fetching admin insights:", error.message);
@@ -1494,6 +1503,7 @@ export async function acknowledgeUpdate(userId: string, versionId: string): Prom
 }    
 
     
+
 
 
 
