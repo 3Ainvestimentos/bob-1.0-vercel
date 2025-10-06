@@ -396,7 +396,7 @@ async function callGemini(
         }] : [];
 
         const modelConfig: any = {
-            model: "gemini-2.5-flash",
+            model: "gemini-1.5-pro",
             tools: tools as any,
         };
 
@@ -846,12 +846,18 @@ function calculatePercentile(arr: number[], percentile: number): number {
     return arr[lower] * (1 - weight) + arr[upper] * weight;
 }
 
-export async function getAdminInsights(): Promise<any> {
+export async function getAdminInsights(roleFilter: UserRole | 'all' = 'all'): Promise<any> {
     try {
         const adminDb = await getAuthenticatedFirestoreAdmin();
 
         const listUsersResult = await (await getAuthenticatedAuthAdmin()).listUsers();
         const totalUsers = listUsersResult.users.length;
+        
+        const usersSnapshot = await adminDb.collection('users').get();
+        const userRoles = new Map<string, UserRole>();
+        usersSnapshot.forEach(doc => {
+            userRoles.set(doc.id, doc.data().role || 'user');
+        });
 
         const chatsCollectionGroup = adminDb.collectionGroup('chats');
         const chatsSnapshot = await chatsCollectionGroup.get();
@@ -872,9 +878,16 @@ export async function getAdminInsights(): Promise<any> {
         const latencyByDayMap: { [key: string]: { totalLatency: number, count: number } } = {};
 
         chatsSnapshot.forEach(doc => {
-            const messages = (doc.data().messages || []) as Message[];
-            const userId = doc.ref.parent.parent?.id; 
+            const userId = doc.ref.parent.parent?.id;
+            if (!userId) return;
             
+            const userRole = userRoles.get(userId) || 'user';
+            
+            if (roleFilter !== 'all' && userRole !== roleFilter) {
+                return;
+            }
+
+            const messages = (doc.data().messages || []) as Message[];
             const chatCreatedAt = (doc.data().createdAt as import('firebase-admin/firestore').Timestamp).toDate();
             const gmtMinus3Offset = 3 * 60 * 60 * 1000;
             
@@ -884,9 +897,7 @@ export async function getAdminInsights(): Promise<any> {
 
                 if (m.role === 'user') {
                     totalQuestions++;
-                    if (userId) {
-                        userQuestionCounts[userId] = (userQuestionCounts[userId] || 0) + 1;
-                    }
+                    userQuestionCounts[userId] = (userQuestionCounts[userId] || 0) + 1;
                     
                     interactionsByDayMap[dayKey] = (interactionsByDayMap[dayKey] || 0) + 1;
                     
@@ -1483,6 +1494,7 @@ export async function acknowledgeUpdate(userId: string, versionId: string): Prom
 }    
 
     
+
 
 
 

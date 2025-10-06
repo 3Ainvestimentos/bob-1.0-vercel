@@ -8,7 +8,7 @@ import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode,
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2, MessageSquare, Save, MoreHorizontal, Pencil, Trash2, UserPlus } from 'lucide-react';
+import { HelpCircle, Users, ArrowLeft, MessageCircleQuestion, Shield, ThumbsUp, ThumbsDown, BarChart2, Repeat, Globe, UserCheck, Percent, LineChart, DollarSign, Coins, TrendingUp, PiggyBank, AlertTriangle, Database, FileSearch, Link as LinkIcon, BookOpenCheck, SearchX, Timer, Gauge, Rabbit, Turtle, Wrench, Beaker, CheckCircle2, XCircle, Loader2, MessageSquare, Save, MoreHorizontal, Pencil, Trash2, UserPlus, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { UserRole } from '@/types';
@@ -128,6 +128,10 @@ export default function AdminPage() {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [newUser, setNewUser] = useState({ email: '', role: 'user' as UserRole });
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
+  
+  const [interactionsRoleFilter, setInteractionsRoleFilter] = useState<UserRole | 'all'>('all');
+  const [isFetchingInsights, setIsFetchingInsights] = useState(false);
+
 
   const filteredUsers = useMemo(() => {
     if (roleFilter === 'all') {
@@ -136,12 +140,30 @@ export default function AdminPage() {
     return allUsers.filter(user => user.role === roleFilter);
   }, [allUsers, roleFilter]);
 
-  const fetchAdminData = async () => {
-    if (!user) return;
+  const fetchInsights = async (filter: UserRole | 'all') => {
+        setIsFetchingInsights(true);
+        try {
+            const insightsData = await getAdminInsights(filter);
+            if (insightsData.error) throw new Error(insightsData.error);
+            setInsights(insightsData);
+        } catch (err: any) {
+            console.error('Erro ao buscar insights com filtro:', err);
+            setError(err.message || 'Não foi possível carregar os insights com o filtro aplicado.');
+        } finally {
+            setIsFetchingInsights(false);
+        }
+    };
+    
+    const handleInteractionsFilterChange = (newFilter: UserRole | 'all') => {
+        setInteractionsRoleFilter(newFilter);
+        fetchInsights(newFilter);
+    };
+
+  const fetchAllAdminData = async () => {
     setIsLoading(true);
      try {
         const [insightsData, usersData, preRegData, costsData, maintenanceData, alertsData, feedbacksData] = await Promise.all([
-            getAdminInsights(),
+            getAdminInsights('all'),
             getUsersWithRoles(),
             getPreRegisteredUsers(),
             getAdminCosts(),
@@ -188,7 +210,7 @@ export default function AdminPage() {
 
             if (userDocSnap.exists() && userDocSnap.data()?.role === 'admin') {
                 setIsAuthorized(true);
-                fetchAdminData();
+                fetchAllAdminData();
             } else {
                 setIsAuthorized(false);
                 setError("Você não tem permissão para ver esta página.");
@@ -257,7 +279,7 @@ export default function AdminPage() {
     const result = await setUserRole(selectedUser.uid, selectedUser.role);
     if (result.success) {
         toast({ title: 'Sucesso', description: `O papel de ${selectedUser.displayName} foi atualizado.` });
-        await fetchAdminData();
+        await fetchAllAdminData();
     } else {
         toast({ variant: 'destructive', title: 'Erro', description: result.error });
     }
@@ -275,7 +297,7 @@ export default function AdminPage() {
     const result = await deleteUser(selectedUser.uid);
      if (result.success) {
         toast({ title: 'Sucesso', description: `O usuário ${selectedUser.displayName} foi excluído.` });
-        await fetchAdminData();
+        await fetchAllAdminData();
     } else {
         toast({ variant: 'destructive', title: 'Erro', description: result.error });
     }
@@ -293,7 +315,7 @@ export default function AdminPage() {
         const result = await createUser(email, role);
         if (result.success) {
             toast({ title: 'Sucesso', description: `Usuário com email ${email} foi pré-registrado com sucesso.` });
-            await fetchAdminData();
+            await fetchAllAdminData();
             setIsAddUserDialogOpen(false);
             setNewUser({ email: '', role: 'user' });
             // We don't need to refetch data as the user list won't change until they log in.
@@ -580,15 +602,38 @@ export default function AdminPage() {
                      <div className="grid gap-4 md:grid-cols-1 md:gap-8">
                         <Card>
                             <CardHeader>
-                                <div className="flex items-center gap-2">
-                                    <LineChart className="h-5 w-5 text-muted-foreground" />
-                                    <CardTitle>Interações ao Longo do Tempo</CardTitle>
+                                <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <LineChart className="h-5 w-5 text-muted-foreground" />
+                                        <CardTitle>Interações ao Longo do Tempo</CardTitle>
+                                    </div>
+                                    <CardDescription>
+                                        Visualização do número de perguntas feitas por dia ou por hora.
+                                    </CardDescription>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Filter className="h-4 w-4 text-muted-foreground"/>
+                                    <Select value={interactionsRoleFilter} onValueChange={(value) => handleInteractionsFilterChange(value as UserRole | 'all')}>
+                                        <SelectTrigger className="w-full sm:w-[180px]">
+                                            <SelectValue placeholder="Filtrar por papel..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os Usuários</SelectItem>
+                                            <SelectItem value="user">Apenas Usuários</SelectItem>
+                                            <SelectItem value="admin">Apenas Admins</SelectItem>
+                                            <SelectItem value="beta">Apenas Betas</SelectItem>
+                                        </SelectContent>
+                                     </Select>
+                                  </div>
                                 </div>
-                                <CardDescription>
-                                    Visualização do número de perguntas feitas por dia ou por hora.
-                                </CardDescription>
                             </CardHeader>
                             <CardContent>
+                                {isFetchingInsights ? (
+                                    <div className="h-[350px] flex items-center justify-center">
+                                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                    </div>
+                                ) : (
                                 <Tabs defaultValue="daily">
                                     <TabsList>
                                         <TabsTrigger value="daily">Por Dia</TabsTrigger>
@@ -625,6 +670,7 @@ export default function AdminPage() {
                                         </ResponsiveContainer>
                                     </TabsContent>
                                 </Tabs>
+                                )}
                             </CardContent>
                         </Card>
                     </div>
@@ -1300,6 +1346,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
-    
