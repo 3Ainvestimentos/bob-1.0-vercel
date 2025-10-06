@@ -1087,38 +1087,29 @@ export default function ChatPageContent() {
     }
   };
 
-  const handleCopyToClipboard = (text: string) => {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    
-    // Make the textarea out of sight
-    textArea.style.position = 'fixed';
-    textArea.style.top = '-9999px';
-    textArea.style.left = '-9999px';
-
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
+  const handleCopyToClipboard = async (text: string) => {
+    if (!navigator.clipboard) {
+        toast({
+            variant: 'destructive',
+            title: 'Falha ao copiar',
+            description: 'A área de transferência não está disponível neste navegador ou a página não é segura (HTTPS).',
+        });
+        return;
+    }
 
     try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-            toast({
-                title: 'Copiado!',
-                description: 'A resposta do assistente foi copiada para a área de transferência.',
-            });
-        } else {
-            throw new Error('Falha ao usar document.execCommand.');
-        }
-    } catch (err: any) {
+        await navigator.clipboard.writeText(text);
+        toast({
+            title: 'Copiado!',
+            description: 'A resposta do assistente foi copiada para a área de transferência.',
+        });
+    } catch (err) {
         console.error('Falha ao copiar: ', err);
         toast({
             variant: 'destructive',
             title: 'Falha ao copiar',
             description: 'Não foi possível copiar o texto.',
         });
-    } finally {
-        document.body.removeChild(textArea);
     }
 };
 
