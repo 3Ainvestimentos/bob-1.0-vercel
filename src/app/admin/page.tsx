@@ -840,10 +840,21 @@ export default function AdminPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {insights?.failedRagQueries && insights.failedRagQueries.length > 0 ? (
-                                            insights.failedRagQueries.map((item, index) => (
+                                            insights.failedRagQueries
+                                                .slice() // Cria uma cópia rasa do array para não mutar o original
+                                                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Ordena pela data mais recente
+                                                .map((item, index) => (
                                                 <TableRow key={index}>
                                                     <TableCell className="font-medium">{item.query}</TableCell>
-                                                    <TableCell className="text-right text-xs">{item.date}</TableCell>
+                                                    <TableCell className="text-right text-xs">
+                                                        {new Date(item.date).toLocaleString('pt-BR', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                        })}
+                                                    </TableCell>
                                                 </TableRow>
                                             ))
                                         ) : (
@@ -1384,4 +1395,5 @@ export default function AdminPage() {
   );
 }
 
+   
     

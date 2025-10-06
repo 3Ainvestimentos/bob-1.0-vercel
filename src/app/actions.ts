@@ -396,7 +396,7 @@ async function callGemini(
         }] : [];
 
         const modelConfig: any = {
-            model: "gemini-1.5-pro",
+            model: "gemini-2.5-flash-latest",
             tools: tools as any,
         };
 
@@ -928,7 +928,7 @@ export async function getAdminInsights(roleFilter: UserRole | 'all' = 'all'): Pr
                                 failedRagQueries.push({
                                     query: messages[index - 1].content,
                                     user: userRoles.get(userId) || userId,
-                                    date: interactionDate.toLocaleString('pt-BR')
+                                    date: interactionDate.toISOString()
                                 });
                             }
                         }
@@ -1503,6 +1503,7 @@ export async function acknowledgeUpdate(userId: string, versionId: string): Prom
 }    
 
     
+
 
 
 
