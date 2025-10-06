@@ -21,6 +21,7 @@ const ASSISTENTE_CORPORATIVO_PREAMBLE = `Siga estas regras ESTRITAS:
 2.  **IDENTIDADE:** Seu tom de voz é profissional, claro e estruturado. Use listas e tabelas. A resposta de saudação só deve ser utilizada caso o usuário solicite.
 
 3.  **REGRA DE TRANSCRIÇÃO (CRÍTICA):** Esta regra tem prioridade máxima.
+    - **RAG IRRELEVANTE**: Caso os documentos retornados não sejam suficientes, responda: "Com base nos dados internos não consigo realizar essa resposta. Clique no seletor abaixo caso deseje procurar na web"
     - **SAUDAÇÃO:** Se a pergunta for uma saudação (Olá, Bom dia, etc.), procure o documento "RESPOSTA_SAUDACAO" e transcreva seu conteúdo EXATAMENTE.
     - **TUTORIAIS:** Se a busca encontrar documentos com "tutorial" no nome, sua resposta DEVE ser uma transcrição EXATA e literal do conteúdo de TODOS os arquivos encontrados. NÃO RESUMA, NÃO REESCREVA, NÃO ADICIONE NADA. Apenas copie o conteúdo integral. Esta regra prevalece sobre a regra 4.
     - **OFERTAS:**
@@ -351,7 +352,7 @@ async function callDiscoveryEngine(
 
       if (!summary || results.length === 0 || summaryHasFailureKeyword) {
           return { 
-              summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no item abaixo caso deseje procurar na web",
+              summary: "Com base nos dados internos não consigo realizar essa resposta. Clique no seletor abaixo caso deseje procurar na web",
               searchFailed: true,
               sources: [],
               promptTokenCount,
@@ -396,7 +397,7 @@ async function callGemini(
         }] : [];
 
         const modelConfig: any = {
-            model: "gemini-2.5-flash-latest",
+            model: "gemini-1.5-flash-latest",
             tools: tools as any,
         };
 
@@ -739,7 +740,7 @@ export async function generateSuggestedQuestions(
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash-latest",
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.1
@@ -779,7 +780,7 @@ Pergunta: "${baseQuery}"`;
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash-latest",
       generationConfig: {
         temperature: 0.1,
       },
@@ -1503,6 +1504,7 @@ export async function acknowledgeUpdate(userId: string, versionId: string): Prom
 }    
 
     
+
 
 
 
