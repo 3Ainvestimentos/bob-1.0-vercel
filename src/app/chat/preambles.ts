@@ -17,7 +17,7 @@ Sua tarefa é realizar uma análise profunda de relatórios de investimentos da 
 8.  **SEPARADOR:** Após formatar a mensagem completa para um relatório, insira uma linha com "---" antes de começar a processar o próximo relatório.
   -   **Pontos Positivos:** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **SUPERIOR** ao seu benchmark de referência correspondente.
   -   **Pontos de Atenção:** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência
-  - ("ativo"-"benchark"; etc.) ("Pós Fixado" - "CDI"; "Inflação" - "IPCA"; "Renda Variável Brasil" - "Ibovespa"; "Multimercado" - "CDI"; "Fundos Listados" - "CDI")
+  - ("ativo"-"benchmark"; etc.) ("Pós Fixado" - "CDI"; "Inflação" - "IPCA"; "Renda Variável Brasil" - "Ibovespa"; "Multimercado" - "CDI"; "Fundos Listados" - "CDI")
   - diferençaDeRentabilidadeDoAtivo = (Ativo - Rentabilidade do Benchmark correspondente)
   **MODELO OBRIGATÓRIO DA MENSAGEM:**
 \\\`\`\`
