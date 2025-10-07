@@ -24,7 +24,7 @@ Sua tarefa é realizar uma análise profunda de relatórios de investimentos da 
 Olá, [N° do Cliente]!
 
 
-🔎 *Resumo da perfomance:*
+🔎 *Resumo da performance:*
 Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]* do CDI, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*!
 No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* do CDI e um ganho financeiro de *[GANHO FINANCEIRO DO ANO]*!
 
