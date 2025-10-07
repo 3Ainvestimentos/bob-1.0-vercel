@@ -24,23 +24,23 @@ Sua tarefa é realizar uma análise profunda de relatórios de investimentos da 
 Olá, [N° do Cliente]!
 
 
-🔎: Resumo da perfomance:
+🔎 *Resumo da perfomance:*
 Em [mês de referência] sua carteira rendeu *[RENTABILIDADE PERCENTUAL DO MÊS]*, o que equivale a *[RENTABILIDADE EM %CDI DO MÊS]* do CDI, um ganho bruto de *[GANHO FINANCEIRO DO MÊS]*!
 No ano, estamos com uma rentabilidade de *[RENTABILIDADE PERCENTUAL DO ANO]*, o que equivale a uma performance de *[RENTABILIDADE EM %CDI DO ANO]* do CDI e um ganho financeiro de *[GANHO FINANCEIRO DO ANO]*!
 
 
-✅: *Destaques do mês:*:
+✅ *Destaques do mês:*
 - *[Nome da Classe 1]*, com *[rentabilidade da classe]*, com [diferençaDeRentabilidadeDoAtivo]% a cima do [benchmark correspondente], valorização puxada por [tipo de investimento] como *[Ativo 1] (+X,XX%)* e *[Ativo 2] (+Y,YY%)*.
 - *[Nome da Classe 2]*, com *[rentabilidade da classe]*, com [diferençaDeRentabilidadeDoAtivo]% a cima do [benchmark correspondente], sustentada por [tipo de investimento] como *[Ativo 3] (+A,AA%)*.
 - *[Nome da Classe 3]*[Se existir conforme os requisitos], com *[rentabilidade da classe]*, puxada por ações como *[Ativo 4] (+X,XX%)* e *[Ativo 5] (+Y,YY%)*.
 
 
-⚠️: *Pontos de Atenção:*:
+⚠️ *Pontos de Atenção:*
 - *[Nome da Classe 3]*: *[rentabilidade da classe, sem mais explicações]*.
 - *[Nome da Classe 4]*: *[rentabilidade da classe, sem mais explicações]*.
 
 
-🌎: *Cenário Econômico de [mês de referência]:*
+🌎 *Cenário Econômico de [mês de referência]:*
 - Cenário Nacional: O cenário doméstico em setembro foi marcado pela cautela. A prévia da inflação (IPCA-15) veio pressionada em 0,48%, frustrando as expectativas de alívio e confirmando a persistência dos preços no setor de serviços. Como consequência direta, o mercado consolidou a visão de que o Banco Central manterá a taxa Selic em 15% a.a. até o fim de 2025, adiando o início do ciclo de cortes para 2026. O foco, portanto, permanece no desafio de controlar a inflação interna.
 - Cenário Internacional: O ambiente externo tornou-se mais otimista. O principal destaque foi a decisão do Federal Reserve (Fed) de iniciar o ciclo de corte de juros nos Estados Unidos, em resposta à desaceleração do mercado de trabalho. Essa mudança para uma política monetária mais branda melhora a liquidez global e aumenta o apetite por risco, criando um pano de fundo favorável para mercados emergentes, incluindo o Brasil.
 \\\`\`\`
