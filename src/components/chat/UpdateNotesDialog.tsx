@@ -15,13 +15,13 @@ interface UpdateNotes {
 export const updateDetails: UpdateNotes = {
   title: "Novidades e Melhorias na Análise de Relatórios do Bob!",
   features: [
-    "Análise de Relatório Oculta: Agora, ao gerar uma análise de relatório, o prompt complexo é processado nos bastidores, mantendo sua tela de chat limpa e focada no resultado.",
-    "Análise Automática Aprimorada: A análise de relatórios automática agora vem mais detalhada, expondo os ativos responsáveis pelo retorno.",
+    "Formatação otimizada na análise de relatório XPerformance.",
   ],
   fixes: [
-    "Corrigido um problema onde a comparação de ativos em relação à seu Benchmark correspondente não era exibida.",
+    "Corrigido o botão de 'copiar' na análise de relatório XPerformance.",
   ]
 };
+
 
 interface UpdateNotesDialogProps {
   open: boolean;
