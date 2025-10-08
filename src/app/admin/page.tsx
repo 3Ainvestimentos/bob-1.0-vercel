@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
-import { getAdminInsights, getUsersWithRoles, getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, setUserRole, deleteUser, createUser, getPreRegisteredUsers, setUserOnboardingStatus } from '@/app/actions';
+import { getAdminInsights, getUsersWithRoles,getAdminCosts, getMaintenanceMode, setMaintenanceMode, runApiHealthCheck, getLegalIssueAlerts, getFeedbacks, setUserRole, deleteUser, createUser, getPreRegisteredUsers, setUserOnboardingStatus } from './actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,7 +42,6 @@ interface AdminInsights {
     interactionsByDay: { date: string, formattedDate: string, count: number }[];
     interactionsByHour: { hour: string, count: number }[];
     latencyByDay: { date: string, formattedDate: string, latency: number }[];
-    totalLegalIssues: number;
     mostUsedSources: { title: string, uri: string, count: number }[];
     avgLatency: number;
     avgLatencyRag: number;
@@ -144,7 +143,10 @@ export default function AdminPage() {
         setIsFetchingInsights(true);
         try {
             const insightsData = await getAdminInsights(filter);
-            if (insightsData.error) throw new Error(insightsData.error);
+            // Use "in" para verificar se a propriedade 'error' existe no objeto
+            if (insightsData && 'error' in insightsData) {
+                throw new Error(insightsData.error);
+            }
             setInsights(insightsData);
         } catch (err: any) {
             console.error('Erro ao buscar insights com filtro:', err);
@@ -171,12 +173,12 @@ export default function AdminPage() {
             getLegalIssueAlerts(),
             getFeedbacks(),
         ]);
-        if (insightsData?.error) throw new Error(insightsData.error);
-        if (usersData?.error) throw new Error(usersData.error);
-        if (preRegData?.error) throw new Error(preRegData.error);
-        if (costsData?.error) throw new Error(costsData.error);
-        if (alertsData?.error) throw new Error(alertsData.error);
-        if (feedbacksData?.error) throw new Error(feedbacksData.error);
+        if (insightsData && 'error' in insightsData) throw new Error(insightsData.error);
+        if (usersData && 'error' in usersData) throw new Error(usersData.error);
+        if (preRegData && 'error' in preRegData) throw new Error(preRegData.error);
+        if (costsData && 'error' in costsData) throw new Error(costsData.error);
+        if (alertsData && 'error' in alertsData) throw new Error(alertsData.error);
+        if (feedbacksData && 'error' in feedbacksData) throw new Error(feedbacksData.error);
         
         setInsights(insightsData);
         setAllUsers(usersData);
@@ -230,7 +232,8 @@ export default function AdminPage() {
     setIsMaintenanceMode(checked);
     try {
         const result = await setMaintenanceMode(checked);
-        if (result?.error) {
+        if (!result.success) {
+            // Dentro deste 'if', o TypeScript entende que 'result.error' existe.
             throw new Error(result.error);
         }
         toast({
@@ -254,10 +257,16 @@ export default function AdminPage() {
     setApiHealthResults([]);
     try {
         const result = await runApiHealthCheck();
-        if (result.error) {
-            throw new Error(result.error);
+        // Verificamos se a propriedade 'error' existe no objeto retornado.
+        if (result && 'error' in result) {
+            throw new Error(String(result.error));
         }
-        setApiHealthResults(result.results);
+
+        // Se não houver erro, sabemos que 'result.results' existe.
+        // Adicionamos uma verificação extra para garantir que 'results' não seja nulo.
+        if (result?.results) {
+            setApiHealthResults(result.results);
+        }
     } catch (error: any) {
         toast({
             variant: "destructive",
@@ -328,7 +337,7 @@ export default function AdminPage() {
         const result = await setUserOnboardingStatus(userId, newStatus);
         if (result.success) {
             setAllUsers(prevUsers => 
-                prevUsers.map(u => u.uid === userId ? { ...u, hasCompletedOnboarding: newStatus } : u)
+                prevUsers?.map(u => u.uid === userId ? { ...u, hasCompletedOnboarding: newStatus } : u)
             );
             toast({ title: 'Sucesso', description: `Status do onboarding do usuário atualizado.` });
         } else {
@@ -353,7 +362,7 @@ export default function AdminPage() {
     { name: 'Web', latency: formatLatencyForChart(insights.avgLatencyWeb), fill: 'hsl(var(--destructive))' },
   ] : [];
 
-  const latencyByDayChartData = insights ? insights.latencyByDay.map(d => ({
+  const latencyByDayChartData = insights ? insights.latencyByDay?.map(d => ({
       ...d,
       latency: formatLatencyForChart(d.latency)
   })) : [];
@@ -362,7 +371,7 @@ export default function AdminPage() {
     <>
         {feedbacks.length > 0 ? (
             <Accordion type="single" collapsible className="w-full">
-                {feedbacks.map(feedback => (
+                {feedbacks?.map(feedback => (
                     <AccordionItem value={feedback.id} key={feedback.id}>
                         <AccordionTrigger>
                             <div className="flex w-full items-center justify-between pr-4 text-sm">
@@ -696,7 +705,7 @@ export default function AdminPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {insights?.topQuestions && insights.topQuestions.length > 0 ? (
-                                            insights.topQuestions.map((q, index) => (
+                                            insights.topQuestions?.map((q, index) => (
                                             <TableRow key={index}>
                                                 <TableCell className="font-medium">{q.normalizedText}</TableCell>
                                                 <TableCell>{q.count}</TableCell>
@@ -798,7 +807,7 @@ export default function AdminPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {insights?.mostUsedSources && insights.mostUsedSources.length > 0 ? (
-                                            insights.mostUsedSources.map((source, index) => (
+                                            insights.mostUsedSources?.map((source, index) => (
                                             <TableRow key={index}>
                                                 <TableCell className="font-medium">
                                                     <a href={source.uri} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
@@ -843,7 +852,7 @@ export default function AdminPage() {
                                             insights.failedRagQueries
                                                 .slice() // Cria uma cópia rasa do array para não mutar o original
                                                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Ordena pela data mais recente
-                                                .map((item, index) => (
+                                                ?.map((item, index) => (
                                                 <TableRow key={index}>
                                                     <TableCell className="font-medium">{item.query}</TableCell>
                                                     <TableCell className="text-right text-xs">
@@ -1042,7 +1051,7 @@ export default function AdminPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredUsers.map(u => (
+                                {filteredUsers?.map(u => (
                                     <TableRow key={u.uid}>
                                         <TableCell className="font-medium">{u.displayName || 'N/A'}</TableCell>
                                         <TableCell>{u.email}</TableCell>
@@ -1107,7 +1116,7 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {preRegisteredUsers.length > 0 ? preRegisteredUsers.map(u => (
+                                    {preRegisteredUsers.length > 0 ? preRegisteredUsers?.map(u => (
                                         <TableRow key={u.email}>
                                             <TableCell className="font-medium">{u.email}</TableCell>
                                             <TableCell>
@@ -1192,7 +1201,7 @@ export default function AdminPage() {
                     <CardContent>
                         {legalAlerts.length > 0 ? (
                             <Accordion type="single" collapsible className="w-full">
-                                {legalAlerts.map(alert => (
+                                {legalAlerts?.map(alert => (
                                     <AccordionItem value={alert.id} key={alert.id}>
                                         <AccordionTrigger>
                                             <div className="flex w-full items-center justify-between pr-4 text-sm">
@@ -1370,7 +1379,7 @@ export default function AdminPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {apiHealthResults.map((result) => (
+                                        {apiHealthResults?.map((result) => (
                                             <TableRow key={result.api}>
                                                 <TableCell className="font-medium">{result.api}</TableCell>
                                                 <TableCell>
@@ -1395,5 +1404,5 @@ export default function AdminPage() {
   );
 }
 
-   
+    
     

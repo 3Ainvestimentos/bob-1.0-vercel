@@ -17,8 +17,9 @@ import {
   regenerateAnswer,
   removeFileFromConversation,
   transcribeLiveAudio,
-  setUserOnboardingStatus
 } from '@/app/actions';
+// Importa a função que foi movida do seu novo local
+import { setUserOnboardingStatus } from '@/app/admin/actions';
 import {
   AlertDialog,
   AlertDialogAction,
