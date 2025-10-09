@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { File, Mic, Paperclip, SendHorizontal, X, Lock, Trash2, Square, Loader2, Database, Globe, CheckCircle2 } from 'lucide-react';
+import { File, Mic, Paperclip, SendHorizontal, X, Lock, Trash2, Square, Loader2, Database, Globe, CheckCircle2, Wand2 } from 'lucide-react';
 import React, { FormEvent, useCallback, useRef, useState, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Switch } from '../ui/switch';
@@ -90,6 +90,7 @@ interface ChatInputFormProps {
   setSelectedFiles: (files: File[]) => void;
   searchSource: SearchSource;
   setSearchSource: (source: SearchSource) => void;
+  onSuggestionClick: (suggestion: string) => void;
 }
 
 const searchOptions = {
@@ -117,6 +118,7 @@ export function ChatInputForm({
   setSelectedFiles,
   searchSource,
   setSearchSource,
+  onSuggestionClick,
 }: ChatInputFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -432,6 +434,18 @@ export function ChatInputForm({
                         aria-label="Gravar áudio"
                     >
                         <Mic className="h-5 w-5" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"
+                        disabled={isLoading}
+                        onClick={() => onSuggestionClick('open_prompt_builder')}
+                        aria-label="Análise de Relatório de Performance XP"
+                        title="Análise de Relatório de Performance XP"
+                    >
+                        <Wand2 className="h-5 w-5" style={{ color: '#B8860B' }} />
                     </Button>
                     {isDragToLockActive && (
                         <Button

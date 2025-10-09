@@ -889,6 +889,7 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); else onOpenChange(true); }}>
       <DialogContent 
         className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0"
+        style={{ borderRadius: '10px' }}
       >
         <DialogHeader className='p-6 pb-2 border-b shrink-0'>
           <div className="flex items-center gap-3">

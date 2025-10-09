@@ -15,10 +15,11 @@ interface UpdateNotes {
 export const updateDetails: UpdateNotes = {
   title: "Novidades e Melhorias na Análise de Relatórios do Bob!",
   features: [
+    "Botão para mais de uma análise de relatório XPerformance na mesma conversa (ao lado do microfone).",
     "Formatação otimizada na análise de relatório XPerformance.",
   ],
   fixes: [
-    "Corrigido o botão de 'copiar' na análise de relatório XPerformance.",
+    "Botão de 'copiar' na análise de relatório XPerformance ativo.",
   ]
 };
 

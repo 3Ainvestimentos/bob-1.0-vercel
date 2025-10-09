@@ -1674,6 +1674,7 @@ export default function ChatPageContent() {
                         setSelectedFiles={setSelectedFiles}
                         searchSource={searchSource}
                         setSearchSource={setSearchSource}
+                        onSuggestionClick={handleSuggestionClick}
                     />
                 </main>
             </SidebarInset>
