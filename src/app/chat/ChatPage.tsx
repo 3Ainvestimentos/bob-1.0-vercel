@@ -896,6 +896,14 @@ const handleMeetingAnalyzed = async (files: File[]) => {
   
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    // Interceptar comandos especiais ANTES do submitQuery - comando especial para abrir análise de reunião
+    if (input === '/hiding_meeting') {
+      setIsMeetingInsightsOpen(true);
+      setInput(''); // Limpar a caixa de texto
+      return;
+    }
+
     submitQuery(input, selectedFiles);
   };
   
