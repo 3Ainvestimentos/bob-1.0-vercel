@@ -17,6 +17,7 @@ import {
   regenerateAnswer,
   removeFileFromConversation,
   transcribeLiveAudio,
+  analyzeMeetingTranscript, 
 } from '@/app/actions';
 // Importa a função que foi movida do seu novo local
 import { setUserOnboardingStatus } from '@/app/admin/actions';
@@ -84,6 +85,7 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { OnboardingTour } from '@/components/chat/OnboardingTour';
 import { PromptBuilderDialog } from '@/components/chat/PromptBuilderDialog';
 import { UpdateNotificationManager } from '@/components/chat/UpdateNotificationManager';
+import { MeetingInsightsDialog } from "@/components/chat/MeetingInsightsDialog";
 
 
 
@@ -495,6 +497,7 @@ export default function ChatPageContent() {
 
   const [searchSource, setSearchSource] = useState<SearchSource>('rag');
   const [isPromptBuilderOpen, setIsPromptBuilderOpen] = useState(false);
+  const [isMeetingInsightsOpen, setIsMeetingInsightsOpen] = useState(false);
 
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -776,6 +779,10 @@ export default function ChatPageContent() {
           setIsPromptBuilderOpen(true);
           return;
       }
+      //if (suggestion === 'open_meeting_insights') {
+        //setIsMeetingInsightsOpen(true);
+        //return;
+    //}
       setInput(suggestion);
       inputRef.current?.focus();
   };
@@ -800,6 +807,90 @@ export default function ChatPageContent() {
   submitQuery(queryParaBackend, files, mensagemParaUsuario);
   
   setIsPromptBuilderOpen(false);
+};
+
+
+// Simplificar a função
+const handleMeetingAnalyzed = async (files: File[]) => {
+  if (files.length === 0) {
+    toast({
+      variant: 'destructive',
+      title: 'Nenhum Arquivo',
+      description: 'Por favor, anexe uma transcrição de reunião para análise.',
+    });
+    return;
+  }
+
+  if (!user) {
+    toast({
+      variant: 'destructive',
+      title: 'Erro de Autenticação',
+      description: 'Usuário não autenticado.',
+    });
+    return;
+  }
+
+  const file = files[0];
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    const result = await analyzeMeetingTranscript(file);
+
+    console.log('🔍 DEBUG - Result from Python:', result); // ✅ Adicionar este log
+
+    
+    if (!result.success) {
+      throw new Error('Falha na análise da transcrição');
+    }
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: `Analisando transcrição da reunião (Análise Geral)...`,
+      fileNames: [file.name],
+      source: 'transcription',
+    };
+
+    const assistantMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: result.summary + (result.opportunities && result.opportunities.length > 0 
+        ? `\n\n**Oportunidades Identificadas:**\n${result.opportunities.map((opp: any, index: number) => 
+            `${index + 1}. **${opp.title}:**\n\n   ${opp.description}`
+          ).join('\n')}`
+        : ''),
+      source: 'transcription',
+    };
+    const newMessages = [...messages, userMessage, assistantMessage];
+    setMessages(newMessages);
+
+    // Salvar conversa
+    let currentChatId = activeChatId;
+    if (!currentChatId) {
+      const tempTitle = await generateTitleForConversation(userMessage.content, file.name);
+      const newId = await saveConversation(user.uid, newMessages, null, { newChatTitle: tempTitle });
+      currentChatId = newId;
+      const newFullChat = await getFullConversation(user.uid, newId);
+      setActiveChat(newFullChat);
+      await fetchSidebarData();
+    } else {
+      await saveConversation(user.uid, newMessages, currentChatId);
+    }
+
+  } catch (err: any) {
+    const errorMessageContent = `Ocorreu um erro na análise: ${err.message}`;
+    const errorMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: errorMessageContent,
+    };
+    setMessages((prev) => [...prev, errorMessage]);
+    setError(errorMessageContent);
+  } finally {
+    setIsLoading(false);
+    setIsMeetingInsightsOpen(false);
+  }
 };
 
   
@@ -1612,6 +1703,12 @@ export default function ChatPageContent() {
             onBatchSubmit={handleBatchSubmit}
         />
         <UpdateNotificationManager />
+
+        <MeetingInsightsDialog 
+          isOpen={isMeetingInsightsOpen}
+          onClose={() => setIsMeetingInsightsOpen(false)}
+          onMeetingAnalyzed={handleMeetingAnalyzed}
+        />
 
         {isAuthenticated && !showTermsDialog && (
         <>

@@ -173,13 +173,14 @@ export function ChatMessageArea({
                       </div>
                     </div>
                   </Card>
-                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick("Como acessar o informe de rendimentos")}>
+                   <Card className="cursor-pointer p-4 transition-colors hover:bg-accent rounded-xl shadow-md h-full" onClick={() => onSuggestionClick('Como acessar o informe de rendimentos?')}>  
+                     {/* antigo 'open_meeting_insights' */}
                     <div className="flex items-start gap-4">
                       <FileText className="h-6 w-6 text-muted-foreground" />
                       <div>
                         <p className="font-semibold">Como acessar o informe de rendimentos</p>
                         <p className="text-sm text-muted-foreground">
-                          Encontre o passo-a-passo para obter o documento
+                          Encontre o passo a passo para obter o documento
                         </p>
                       </div>
                     </div>

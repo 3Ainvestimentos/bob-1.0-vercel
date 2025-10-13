@@ -909,7 +909,49 @@ export async function acknowledgeUpdate(userId: string, versionId: string): Prom
 }    
 
 
-
-
-
-
+/**
+ * Analisa uma transcrição de reunião usando o serviço Python
+ */
+export async function analyzeMeetingTranscript(file: File): Promise<{
+    success: boolean;
+    summary: string;
+    opportunities: Array<{
+        title: string;
+        description: string;
+        priority: string;
+        clientMentions?: string[];
+    }>;
+    metadata: any;
+  }> {
+    try {
+      // Validar arquivo
+      if (!file.name.endsWith('.docx')) {
+        throw new Error('Apenas arquivos .docx são aceitos');
+      }
+  
+      // Criar FormData
+      const formData = new FormData();
+      formData.append('file', file);
+  
+      // URL do serviço Python (ajustar conforme necessário)
+      const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
+      
+      // Fazer requisição para o serviço Python
+      const response = await fetch(`${pythonServiceUrl}/api/analyze`, {
+        method: 'POST',
+        body: formData,
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Erro ao processar arquivo');
+      }
+  
+      const result = await response.json();
+      return result;
+  
+    } catch (error) {
+      console.error('Erro ao analisar transcrição:', error);
+      throw new Error('Erro interno do servidor');
+    }
+  }
