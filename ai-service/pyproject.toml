@@ -1,0 +1,31 @@
+[project]
+name = "ai-service"
+version = "0.1.0"
+description = "AI-powered service using LangGraph"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-docx>=1.1.2",
+    "langchain>=0.3.0",
+    "langchain-google-genai>=2.0.0",
+    "python-multipart>=0.0.6",
+    "langgraph>=0.2.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",  # Para testar FastAPI
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
