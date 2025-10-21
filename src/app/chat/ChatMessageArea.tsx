@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Conversation, Message, AttachedFile } from '@/app/chat/page';
@@ -61,59 +60,59 @@ interface ChatMessageAreaProps {
 }
 
 const webSearchSuggestions = [
-    {
-        Icon: KeyRound,
-        title: "Como alterar uma senha",
-        description: "Ajudar um cliente a redefinir o acesso",
-    },
-    {
-        Icon: PiggyBank,
-        title: "Como fazer um resgate de previdência",
-        description: "Consultar as regras e o procedimento",
-    }
+  {
+    Icon: KeyRound,
+    title: "Como alterar uma senha",
+    description: "Ajudar um cliente a redefinir o acesso",
+  },
+  {
+    Icon: PiggyBank,
+    title: "Como fazer um resgate de previdência",
+    description: "Consultar as regras e o procedimento",
+  }
 ];
 
 const PreWithCopy = ({ children, ...props }: React.ComponentPropsWithoutRef<'pre'>) => {
-    const [isCopied, setIsCopied] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
-    const textToCopy = React.useMemo(() => {
-        if (!children || typeof children !== 'object' || !('props' in children)) {
-            return '';
-        }
-        const codeElement = children.props.children;
-        if (typeof codeElement === 'string') {
-            return codeElement;
-        }
-        if (Array.isArray(codeElement)) {
-            return codeElement.map(child => (typeof child === 'string' ? child : '')).join('');
-        }
-        return '';
-    }, [children]);
+  const textToCopy = React.useMemo(() => {
+    if (!children || typeof children !== 'object' || !('props' in children)) {
+      return '';
+    }
+    const codeElement = children.props.children;
+    if (typeof codeElement === 'string') {
+      return codeElement;
+    }
+    if (Array.isArray(codeElement)) {
+      return codeElement.map(child => (typeof child === 'string' ? child : '')).join('');
+    }
+    return '';
+  }, [children]);
 
-    const handleCopy = () => {
-        if (!textToCopy) return;
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2000);
-        });
-    };
+  const handleCopy = () => {
+    if (!textToCopy) return;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  };
 
-    return (
-        <div className="relative group">
-            <pre {...props}>{children}</pre>
-            <Button
-                size="icon"
-                variant="ghost"
-                className={cn(
-                    "absolute top-2 right-2 h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity",
-                    isCopied && "opacity-100"
-                )}
-                onClick={handleCopy}
-            >
-                {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-            </Button>
-        </div>
-    );
+  return (
+    <div className="relative group">
+      <pre {...props}>{children}</pre>
+      <Button
+        size="icon"
+        variant="ghost"
+        className={cn(
+          "absolute top-2 right-2 h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity",
+          isCopied && "opacity-100"
+        )}
+        onClick={handleCopy}
+      >
+        {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+      </Button>
+    </div>
+  );
 };
 
 export function ChatMessageArea({
@@ -137,6 +136,21 @@ export function ChatMessageArea({
   activeChat,
   onRemoveFile,
 }: ChatMessageAreaProps) {
+
+  // ✅ Estado para controlar o formato da mensagem
+  const [messageFormat, setMessageFormat] = useState<'whatsapp' | 'email'>('whatsapp');
+  
+  // ✅ Função para processar conteúdo baseado no formato
+  const processContentForFormat = (content: string, format: 'whatsapp' | 'email'): string => {
+    if (format === 'whatsapp') {
+      // WhatsApp: manter formatação markdown
+      return content.replace(/\\\*/g, '*').replace(/\\#/g, '#').replace(/\\_/g, '_').replace(/\\\[/g, '[').replace(/\\\]/g, ']').replace(/\\\(/g, '(').replace(/\\\)/g, ')');
+    } else {
+      // Email: remover formatação markdown
+      return content.replace(/\\\*/g, '').replace(/\\#/g, '').replace(/\\_/g, '').replace(/\*/g, '').replace(/#/g, '').replace(/_/g, '');
+    }
+  };
+
   const activeChatId = activeChat?.id ?? null;
 
   return (
@@ -166,7 +180,7 @@ export function ChatMessageArea({
                     <div className="flex items-start gap-4">
                       <Wand2 className="h-6 w-6 text-muted-foreground" style={{ color: '#DFB87F' }} />
                       <div>
-                        <p className="font-semibold">Análise de Relatório de Perfomance XP</p>
+                        <p className="font-semibold">Análise de Relatório de Performance XP</p>
                         <p className="text-sm text-muted-foreground">
                           Mensagem de relacionamento com o padrão 3A RIVA
                         </p>
@@ -224,16 +238,70 @@ export function ChatMessageArea({
                       </div>
                     ) : (
                       <>
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                          <ReactMarkdown 
-                            rehypePlugins={[rehypeRaw]}
-                            components={{
+                        {/* RENDERIZAÇÃO CONDICIONAL PARA RELATÓRIOS */}
+                        {(() => {
+                          console.log('🔍 DEBUG - msg.content:', msg.content);
+                          console.log('🔍 DEBUG - contains emojis:', msg.content.includes('🔎') || msg.content.includes('✅') || msg.content.includes('⚠️') || msg.content.includes('🌎'));
+                          
+                          return msg.content.includes('🔎') || msg.content.includes('✅') || msg.content.includes('⚠️') || msg.content.includes('🌎');
+                        })() ? (
+                          // Para relatórios: renderizar com seletor de formato
+                          <div className="space-y-4">
+                            {/* Seletor de formato */}
+                            <div className="flex items-center justify-end">
+                              <div className="flex items-center bg-background/80 backdrop-blur-sm rounded-xl border overflow-hidden">
+                                <button
+                                  onClick={() => setMessageFormat('whatsapp')}
+                                  className={`w-28 px-3 py-1 text-sm rounded-l-xl transition-colors ${
+                                    messageFormat === 'whatsapp' 
+                                      ? 'bg-green-500 text-white' 
+                                      : 'bg-background text-foreground hover:bg-muted'
+                                  }`}
+                                >
+                                  📱 WhatsApp
+                                </button>
+                                <button
+                                  onClick={() => setMessageFormat('email')}
+                                  className={`w-28 px-3 py-1 text-sm rounded-r-xl transition-colors ${
+                                    messageFormat === 'email' 
+                                      ? 'bg-blue-500 text-white' 
+                                      : 'bg-background text-foreground hover:bg-muted'
+                                  }`}
+                                >
+                                  📧 Email
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Conteúdo renderizado com ReactMarkdown (estética original) */}
+                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
+                              <ReactMarkdown 
+                                rehypePlugins={[rehypeRaw]}
+                                components={{
+                                  pre: PreWithCopy
+                                }}
+                              >
+                                {(() => {
+                                  // Processar conteúdo baseado no formato selecionado
+                                  const processedContent = processContentForFormat(msg.content, messageFormat);
+                                  return processedContent;
+                                })()}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        ) : (
+                          // Para outros conteúdos: usar ReactMarkdown normal
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
+                            <ReactMarkdown 
+                              rehypePlugins={[rehypeRaw]}
+                              components={{
                                 pre: PreWithCopy
-                            }}
-                          >
-                            {msg.content}
-                          </ReactMarkdown>
-                        </div>
+                              }}
+                            >
+                              {msg.content}
+                            </ReactMarkdown>
+                          </div>
+                        )}
                         {activeChatId && (
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 text-muted-foreground">
