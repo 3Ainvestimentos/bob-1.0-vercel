@@ -48,3 +48,10 @@ firestore-debug.log
 # Ignorar arquivos compilados do Python
 __pycache__/
 *.py[cod]
+
+/ai-service-antigo
+
+# Environment variables
+.env*
+!.env.dev.example
+!.env.prod.example
