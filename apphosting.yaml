@@ -13,6 +13,13 @@ runConfig:
 # https://firebase.google.com/docs/app-hosting/configure-backend#environment-variables
 env:
   # ==========================================
+  # CONFIGURAÇÃO DO AMBIENTE
+  # ==========================================
+  # Define explicitamente que estamos em produção no Firebase App Hosting
+  - variable: NODE_ENV
+    value: "production"
+  
+  # ==========================================
   # VARIÁVEIS NEXT_PUBLIC_* (Cliente)
   # ==========================================
   # Essas variáveis são expostas ao cliente e devem começar com NEXT_PUBLIC_

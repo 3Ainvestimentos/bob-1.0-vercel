@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Any
 
 
-# ============= REQUEST MODELS =============
+# ============= MEETING ANALYZER REQUEST MODELS =============
 
 class AnalyzeRequest(BaseModel):
     """
@@ -205,5 +205,291 @@ class AnalysisResponse(BaseModel):
                     "chunk_count": 3,
                     "processing_time": 12.5
                 }
+            }
+        }
+
+
+# ============= REPORT ANALYZER MODELS =============
+
+class ReportAnalyzeAutoRequest(BaseModel):
+    """
+    Request para análise automática de relatório XP.
+    """
+    file_content: str = Field(
+        ...,
+        description="PDF em base64 (sem prefixo data:...)",
+        min_length=1
+    )
+    file_name: str = Field(
+        ...,
+        description="Nome do arquivo PDF",
+        example="XPerformance_123456_Ref.29.08.pdf"
+    )
+    user_id: str = Field(
+        ...,
+        description="ID do usuário",
+        min_length=1
+    )
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "file_content": "JVBERi0xLjQKJcfsj6IKNSAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDMgMCBSCi9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCi9SZXNvdXJjZXMgPDwKL0ZvbnQgPDwKL0YxIDYgMCBSCj4+Cj4+Ci9Db250ZW50cyA3IDAgUgo+PgplbmRvYmoK...",
+                "file_name": "XPerformance_123456_Ref.29.08.pdf",
+                "user_id": "user_123"
+            }
+        }
+
+
+class ReportAnalyzePersonalizedRequest(BaseModel):
+    """
+    Request para análise personalizada de relatório XP.
+    """
+    file_content: str = Field(
+        ...,
+        description="PDF em base64 (sem prefixo data:...)",
+        min_length=1
+    )
+    file_name: str = Field(
+        ...,
+        description="Nome do arquivo PDF",
+        example="XPerformance_123456_Ref.29.08.pdf"
+    )
+    user_id: str = Field(
+        ...,
+        description="ID do usuário",
+        min_length=1
+    )
+    selected_fields: Dict[str, Any] = Field(
+        ...,
+        description="Campos selecionados pelo usuário para análise personalizada"
+    )
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "file_content": "JVBERi0xLjQKJcfsj6IKNSAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDMgMCBSCi9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCi9SZXNvdXJjZXMgPDwKL0ZvbnQgPDwKL0YxIDYgMCBSCj4+Cj4+Ci9Db250ZW50cyA3IDAgUgo+PgplbmRvYmoK...",
+                "file_name": "XPerformance_123456_Ref.29.08.pdf",
+                "user_id": "user_123",
+                "selected_fields": {
+                    "monthlyReturn": True,
+                    "yearlyReturn": True,
+                    "classPerformance": {
+                        "Pós Fixado": True,
+                        "Inflação": False
+                    },
+                    "highlights": {
+                        "Pós Fixado": {0: True}
+                    }
+                }
+            }
+        }
+
+
+class BatchReportRequest(BaseModel):
+    """
+    Request para processamento em lote de relatórios XP.
+    """
+    files: List[Dict[str, str]] = Field(
+        ...,
+        description="Lista de arquivos para processamento em lote",
+        min_items=1,
+        max_items=10
+    )
+    user_id: str = Field(
+        ...,
+        description="ID do usuário",
+        min_length=1
+    )
+    
+    @validator('files')
+    def validate_files(cls, v):
+        """Valida estrutura dos arquivos."""
+        for file_data in v:
+            if not isinstance(file_data, dict):
+                raise ValueError('Cada arquivo deve ser um objeto')
+            if 'name' not in file_data or 'dataUri' not in file_data:
+                raise ValueError('Cada arquivo deve ter "name" e "dataUri"')
+            if not file_data['name'].endswith('.pdf'):
+                raise ValueError('Apenas arquivos PDF são aceitos')
+        return v
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "files": [
+                    {
+                        "name": "XPerformance_123456_Ref.29.08.pdf",
+                        "dataUri": "JVBERi0xLjQKJcfsj6IKNSAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDMgMCBSCi9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCi9SZXNvdXJjZXMgPDwKL0ZvbnQgPDwKL0YxIDYgMCBSCj4+Cj4+Ci9Db250ZW50cyA3IDAgUgo+PgplbmRvYmoK..."
+                    },
+                    {
+                        "name": "XPerformance_789012_Ref.30.08.pdf", 
+                        "dataUri": "JVBERi0xLjQKJcfsj6IKNSAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDMgMCBSCi9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCi9SZXNvdXJjZXMgPDwKL0ZvbnQgPDwKL0YxIDYgMCBSCj4+Cj4+Ci9Db250ZW50cyA3IDAgUgo+PgplbmRvYmoK..."
+                    }
+                ],
+                "user_id": "user_123"
+            }
+        }
+
+
+class ReportAnalyzeResponse(BaseModel):
+    """
+    Response para análise de relatório XP.
+    """
+    success: bool = Field(
+        ...,
+        description="Indica se a análise foi bem-sucedida"
+    )
+    extracted_data: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Dados extraídos do relatório"
+    )
+    file_name: Optional[str] = Field(
+        None,
+        description="Nome do arquivo processado"
+    )
+    highlights: Optional[List[Dict]] = Field(
+        None,
+        description="Classes de ativo com performance superior ao benchmark"
+    )
+    detractors: Optional[List[Dict]] = Field(
+        None,
+        description="Classes de ativo com performance inferior ao benchmark"
+    )
+    final_message: Optional[str] = Field(
+        None,
+        description="Mensagem WhatsApp formatada"
+    )
+    metadata: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Metadados do processamento"
+    )
+    error: Optional[str] = Field(
+        None,
+        description="Mensagem de erro, se houver"
+    )
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "extracted_data": {
+                    "accountNumber": "123456",
+                    "reportMonth": "09/2024",
+                    "monthlyReturn": "1,06%",
+                    "benchmarkValues": {
+                        "CDI": "1,16%",
+                        "IPCA": "-0,13%"
+                    }
+                },
+                "file_name": "relatorio_exemplo.pdf",
+                "highlights": [
+                    {
+                        "className": "Inflação",
+                        "return": "0,89%",
+                        "difference": "1,02%"
+                    }
+                ],
+                "detractors": [
+                    {
+                        "className": "Multimercado",
+                        "return": "-1,24%"
+                    }
+                ],
+                "final_message": "Olá, 123456!\n🔎 Resumo da performance...",
+                "metadata": {
+                    "processing_time": 15.2,
+                    "model_used": "gemini-2.0-flash"
+                }
+            }
+        }
+
+
+class BatchReportResponse(BaseModel):
+    """
+    Response para processamento em lote de relatórios XP.
+    """
+    success: bool = Field(
+        ...,
+        description="Indica se o processamento foi bem-sucedido"
+    )
+    results: List[ReportAnalyzeResponse] = Field(
+        ...,
+        description="Resultados de cada arquivo processado (um ReportAnalyzeResponse por arquivo)"
+    )
+    metadata: Dict[str, Any] = Field(
+        ...,
+        description="Metadados do processamento em lote"
+    )
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "results": [
+                    {
+                        "success": True,
+                        "extracted_data": {
+                            "accountNumber": "123456",
+                            "reportMonth": "09/2024"
+                        },
+                        "final_message": "Olá, 123456!\n🔎 Resumo da performance...",
+                        "metadata": {"processing_time": 15.2}
+                    },
+                    {
+                        "success": False,
+                        "extracted_data": None,
+                        "final_message": None,
+                        "error": "Erro ao processar PDF"
+                    }
+                ],
+                "metadata": {
+                    "total_files": 2,
+                    "success_count": 1,
+                    "failure_count": 1
+                }
+            }
+        }
+
+
+
+# --------- ULTRA BATCH MODELS
+class UltraBatchReportRequest(BaseModel):
+    files: List[Dict[str, str]] #min 1 items max 100 items
+    user_id: str
+    chat_id: Optional[str] = Field(
+        None,
+        description="ID do chat/conversa (opcional). Quando fornecido, o backend salvará o batchJobId no documento do chat para facilitar a recuperação do histórico."
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "files": [
+                    {
+                        "name": "XPerformance_123456_Ref.29.08.pdf",
+                        "dataUri": "JVBERi0xLjQKJcfsj6IKNSAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDMgMCBSCi9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCi9SZXNvdXJjZXMgPDwKL0ZvbnQgPDwKL0YxIDYgMCBSCj4+Cj4+Ci9Db250ZW50cyA3IDAgUgo+PgplbmRvYmoK..."
+                    }
+                ],
+                "user_id": "user_123",
+                "chat_id": "chat_abc123"
+            }
+        }
+
+class UltraBatchReportResponse(BaseModel):
+    success:bool
+    job_id:str
+    total_files:int
+    estimated_time_minutes:int
+    error: Optional[str] = None
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                "total_files": 50,
+                "estimated_time_minutes": 25,
+                "error": None
             }
         }

@@ -3,7 +3,7 @@ Endpoint para análise de reuniões.
 """
 import base64
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.workflow import meeting_analysis_app
+from app.workflows.meeting_workflow import meeting_analysis_app
 from app.models.requests import AnalysisResponse, MetadataResponse, AnalyzeResponse
 from app.models.schema import MeetingAnalysisState
 

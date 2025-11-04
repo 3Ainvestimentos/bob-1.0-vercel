@@ -1,0 +1,52 @@
+# ============================================
+# AI-SERVICE - Ambiente de Produção (PROD)
+# ============================================
+# Este arquivo contém todas as variáveis de ambiente necessárias
+# para o serviço Python de análise de relatórios e reuniões.
+#
+# IMPORTANTE: Este arquivo NÃO deve ser commitado no Git.
+# Em produção, essas variáveis são configuradas via Google Cloud Secrets
+
+# --------------------------------------------
+# AMBIENTE
+# --------------------------------------------
+ENVIRONMENT=production
+
+# --------------------------------------------
+# FIREBASE - Service Account (Backend Python)
+# --------------------------------------------
+# Service Account do projeto PROD para acessar o Firestore
+# Formato: JSON da service account codificado em Base64 (sem quebras de linha)
+#
+# Como obter:
+# 1. Baixe a chave JSON da service account do projeto PROD
+# 2. Execute: cat service-account-prod.json | base64 | tr -d '\n'
+# 3. Cole o resultado abaixo
+#
+# Service Account: firebase-adminsdk-fbsvc@datavisor-44i5m.iam.gserviceaccount.com
+# Projeto: datavisor-44i5m
+
+SERVICE_ACCOUNT_KEY_INTERNAL="ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAiZGF0YXZpc29yLTQ0aTVtIiwKICAicHJpdmF0ZV9rZXlfaWQiOiAiZmI5OWRhZWY5M2NmNDNkNmNiZTllZTIwZDhkN2ZmOTlhNjhlYzg0NCIsCiAgInByaXZhdGVfa2V5IjogIi0tLS0tQkVHSU4gUFJJVkFURSBLRVktLS0tLVxuTUlJRXV3SUJBREFOQmdrcWhraUc5dzBCQVFFRkFBU0NCS1V3Z2dTaEFnRUFBb0lCQVFEQmxhd21MUjF2MWtNL1xuNDVLUWk5WW5BVDJDeUVhYlVvV3U2TjlmeGwveWtCbVR0Z2Njc2lJREZGQ3BIaGRqY1FBOXo5TFRiWXNNdFdmSFxuMlB5Ynh3akNBaTZkNXR5aTZwTS8xUlBPd01yU0gxMDJBVkx3OE5USE11czdCRk9qNEFEaG1ER3grcjd2SWc3M1xucEtFTlRHS294YjAvSWZwalNTUTNISFdON0lUYWFLL2dlKzhPNy9xMjVaMWtieFI4UXBvRVZ2cTFXZldHdUZOOVxuOGdmRU5KTWJKYmoxNTlQckdBdkxKZlpUMGFvMmxsYnljVnJkeEpTVGU2Mis0MDZTZ21VWGFkejd0N3I3SHJ0eFxubDJyS0hjSkd6MWFIT3RGUWE4anNFN2ZkRDhuUFlWOEJtd3RFOUVabXBBSGhSM3dtenpOYWlBQ2MvSGxaYkpZOFxudEswK0VKWkZBZ01CQUFFQ2dmODVxSnJkeEJKQWZWRUtkbjN4RDdWNWFLVXBqdjE0eGR1TGZWRUs5Y3NlTkUxcFxuOFkyc3ZtSGpDT245ZFRrQ0pXWXRBdm1JZjlncXNOMTRhT2pVZlRQZWxVZk5RRFgzVUdjTFhDdktLU0kvODVlUFxudmxVMTdvVnh6M2pBMjBrT1Jtbjh4NWdGcXVtejBERWxFYVBta2huUXF4VHkrT3ZiSnEzaXZGZEhMbXRqb2NXQlxuMEd2M3UvNitHUHl4b3JsUE1DNDZ4S3dLd001b2VsTVpWaDBiMWNUekREdldjOTZxOUpvaC83Mlk1c25sc2xkSVxueDdPOGFFeFZlMUxxRWV0MHFoRjFoN2UxVXVieWNwRHJDcWF4eHZhWE5KdVJZMUxmK2NmZ2ZabUpkamprM3prd1xuTG9qbVdXUGRqU2lYRVMyZkhIRXp4UThEZWw1K0hBYkppRm5oOWxrQ2dZRUE5WGFkZ20wOW9JWkg0STI3SzFDUFxuNUxXQlVEK25NS3F0c0w0RkNIK1VlckQvdUNMbllWZytqTk1pL3dDRElnMWkweGJzYkx4aFMxQmZlYVJvZ3JHT1xuaVlSdXdwUTNwNjVWQVluWnhCUW1vUHdKYk0rK3l4b3dJNG1VWHN4Sy9zOXBiL3hSVkUwNXF1M3QwRHV4NUJZSFxubU5sNUxPTUkvK0M1U3puOTlhMTFFS2tDZ1lFQXllVDNBUmF1UjgxREtDS3J5eU9aajlCRDgwZkpHZTVrZ09zSFxuKzBGd3FZRnN1NHNJSlBNZkdFVzdOUjBjamQ5alpiU0F4M2Q0L3BieHROOCtGTkM1QmZkZk95MXlSbTRHOUVWaVxueFBsYWU0dXM1L1djU0hvTnpIMUkzbTI2c0ovM2loanBSK1orQ21JKzdTOVJpNjV4eHNiWjZXLzNPY2VyckxpblxuSlBiTGJqMENnWUVBN2Z2V3NvR2ZZbWRPZ05ScFI1R1FNVG9ZNmVrTS9BNCs0RUViT0NZWm11ckl3NHB6c3RtUFxucTVGNU9Lc1NlSTFwNXljdWlpNEtWcTdTSW1uWU9mNVVKOWdTV3V6QkdQM1l4T2tXRFJsTWFvQngwdUdJSmZwNVxuK2JxRjgzTTJzdDM5WituR0lHblBJMzRUTi9Ub2dDOHJwbklUSGdYd3o4VGRZYVlVSjRISklpRUNnWUJVTUsrelxuKzRKSG5OZnhaNnZkOVFWM1RERFp4VWllRUtSR2dqdjgwWWdxbHpjQmFmUEdmTCt0dm41WG9zRWloRklOdWx5dFxuVVN2YWRwVnFpR0Y2Q3FQdFVmK2JUTk5IZldCWEFvd3llWXo2MGY4VFozOTVWYlJsWHFWQlk5NmpBc0lXQzFkVVxuVFZDb0Fkb2R6RXFrQmVXYUw1ZjFXV1J0NnM2ekl2bElWOFh6UFFLQmdFdUNtTHFzZXJLSGVpWXJKTHIvZStXSFxuMGFWV2dvL3JjbW1LdVA0MlNaYnp0QXFmR3BBa1pIZTY1SGxneWlQK0lKeUx3NzhLWUxKdDFLNlcvOW5QdkhXcFxubERoaVMya3ZTR0prM0FqVXNmSUxHVjJiL1Qwa2d4OTRIVE5sR2YvNzhnRERORXcwVk5BbXdvMkxwY0ZSZG5aU1xudHQ1RUFCWVZCQjhTbVh2cVJNNmdcbi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS1cbiIsCiAgImNsaWVudF9lbWFpbCI6ICJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BkYXRhdmlzb3ItNDRpNW0uaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLAogICJjbGllbnRfaWQiOiAiMTEyNDU3NTUxNjQ2MTE3MjA5ODg3IiwKICAiYXV0aF91cmkiOiAiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tL28vb2F1dGgyL2F1dGgiLAogICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9vYXV0aDIuZ29vZ2xlYXBpcy5jb20vdG9rZW4iLAogICJhdXRoX3Byb3ZpZGVyX3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vb2F1dGgyL3YxL2NlcnRzIiwKICAiY2xpZW50X3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vcm9ib3QvdjEvbWV0YWRhdGEveDUwOS9maXJlYmFzZS1hZG1pbnNkay1mYnN2YyU0MGRhdGF2aXNvci00NGk1bS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgInVuaXZlcnNlX2RvbWFpbiI6ICJnb29nbGVhcGlzLmNvbSIKfQo="
+
+# --------------------------------------------
+# GOOGLE GEMINI API
+# --------------------------------------------
+# Chave de API do Google Gemini para processamento de LLM
+# Usado para análise de relatórios, reuniões e geração de conteúdo
+# 
+# IMPORTANTE: Use a mesma chave do DEV ou uma chave separada para PROD
+
+GEMINI_API_KEY='AIzaSyAj-20Pf4gq0IMd7mcQd2-QsPRo2gsk790'
+
+
+# --------------------------------------------
+# LANGSMITH (Opcional - Para Tracing/Debug)
+# --------------------------------------------
+# LangSmith é usado para rastreamento e debugging de workflows LangGraph
+# Se não configurado, o tracing permanece desabilitado
+
+#LANGSMITH_TRACING=true
+#LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+#LANGSMITH_API_KEY=`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`
+#LANGCHAIN_PROJECT_MEETING=meeting-analyzer
+#LANGCHAIN_PROJECT_REPORT=report-analyzer

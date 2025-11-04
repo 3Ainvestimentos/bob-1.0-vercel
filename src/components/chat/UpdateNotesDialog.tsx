@@ -23,7 +23,6 @@ export const updateDetails: UpdateNotes = {
   ]
 };
 
-
 interface UpdateNotesDialogProps {
   open: boolean;
   onAcknowledge: () => void;

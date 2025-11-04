@@ -49,6 +49,7 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        'custom-dark-green': 'rgb(1, 48, 33)',
         'user-bubble': {
           DEFAULT: 'hsl(var(--user-bubble))',
           foreground: 'hsl(var(--user-bubble-foreground))',

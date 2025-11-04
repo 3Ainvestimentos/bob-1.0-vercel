@@ -18,6 +18,8 @@ import {
   removeFileFromConversation,
   transcribeLiveAudio,
   analyzeMeetingTranscript, 
+  batchAnalyzeReports,
+  ultraBatchAnalyzeReports,
 } from '@/app/actions';
 // Importa a função que foi movida do seu novo local
 import { setUserOnboardingStatus } from '@/app/admin/actions';
@@ -77,7 +79,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { FaqDialog } from '@/components/chat/FaqDialog';
 import { FileUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AttachedFile, UserRole } from '@/types';
+import { AttachedFile, UserRole, Message } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
@@ -86,6 +88,7 @@ import { OnboardingTour } from '@/components/chat/OnboardingTour';
 import { PromptBuilderDialog } from '@/components/chat/PromptBuilderDialog';
 import { UpdateNotificationManager } from '@/components/chat/UpdateNotificationManager';
 import { MeetingInsightsDialog } from "@/components/chat/MeetingInsightsDialog";
+
 
 
 
@@ -99,20 +102,6 @@ export interface Group {
   id: string;
   name: string;
   createdAt: Timestamp;
-}
-
-export interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  fileNames?: string[] | null;
-  source?: 'rag' | 'web' | 'transcription' | 'gemini' | null;
-  sources?: RagSource[] | null;
-  promptTokenCount?: number | null;
-  candidatesTokenCount?: number | null;
-  latencyMs?: number | null;
-  originalContent?: string;
-  isStandardAnalysis?: boolean;
 }
 
 export interface Conversation {
@@ -133,7 +122,7 @@ interface FeedbackDetails {
     assistantResponse: string;
 }
 
-export type SearchSource = 'rag' | 'web';
+export type SearchSource = 'rag' | 'web' | 'ultra_batch' | 'transcription' | 'gemini';
 
 
 // ---- Firestore Functions ----
@@ -301,6 +290,78 @@ async function getConversations(
   }
 }
 
+/**
+ * Função auxiliar para agrupar resultados em lotes de tamanho fixo
+ * 
+ * @param results - Array de resultados para agrupar
+ * @param batchSize - Tamanho de cada lote (padrão: 5)
+ * @returns Array de objetos { batchNumber, files }
+ */
+function groupResultsByBatch(results: any[], batchSize = 5) {
+  const batches = [];
+  for (let i = 0; i < results.length; i += batchSize) {
+    batches.push({
+      batchNumber: Math.floor(i / batchSize) + 1,
+      files: results.slice(i, i + batchSize).map((r: any) => {
+        const content = r.finalMessage || r.error;
+        const cleanedContent = content ? String(content).replace(/^```|```$/g, '').trim() : '';
+        return {
+          fileName: r.fileName || r.file_name,
+          content: cleanedContent,
+          success: r.success
+        };
+      })
+    });
+  }
+  return batches;
+}
+
+/**
+ * 🔗 PADRÃO DE PONTEIRO: Carrega resultados de um ultra batch job do Firestore
+ * 
+ * @param jobId - ID do job de ultra batch
+ * @returns Array de resultados ordenados por índice
+ */
+async function loadUltraBatchResults(jobId: string): Promise<any[]> {
+  try {
+    console.log(`🔗 Carregando resultados do job ${jobId} do Firestore...`);
+    
+    const resultsRef = collection(db, 'ultra_batch_jobs', jobId, 'results');
+    const resultsSnapshot = await getDocs(resultsRef);
+    
+    if (resultsSnapshot.empty) {
+      //console.log(`⚠️ Nenhum resultado encontrado para o job ${jobId}`);
+      return [];
+    }
+    
+    // Ordenar resultados pelo ID do documento (que é o índice numérico)
+    const sortedDocs = resultsSnapshot.docs.sort((a, b) => {
+      const idA = parseInt(a.id, 10);
+      const idB = parseInt(b.id, 10);
+      return idA - idB;
+    });
+    
+    // Mapear para o formato esperado
+    const results = sortedDocs.map(doc => {
+      const data = doc.data();
+      return {
+        fileName: data.fileName || data.file_name,
+        finalMessage: data.final_message || data.finalMessage,
+        success: data.success || false,
+        error: data.error || null,
+        processedAt: data.processedAt
+      };
+    });
+    
+    //console.log(`✅ ${results.length} resultados carregados e ordenados`);
+    return results;
+    
+  } catch (error) {
+    console.error(`❌ Erro ao carregar resultados do job ${jobId}:`, error);
+    return [];
+  }
+}
+
 async function getFullConversation(userId: string, chatId: string): Promise<Conversation | null> {
     try {
         const chatRef = doc(db, 'users', userId, 'chats', chatId);
@@ -309,10 +370,110 @@ async function getFullConversation(userId: string, chatId: string): Promise<Conv
         if (chatSnap.exists()) {
             const data = chatSnap.data();
             const firestoreTimestamp = data.createdAt as Timestamp;
-            const messagesWithIds = (data.messages || []).map((m: any) => ({
+            let messagesWithIds = (data.messages || []).map((m: any) => ({
                 ...m,
                 id: m.id || crypto.randomUUID(),
             }));
+            
+            // 🔗 PADRÃO DE PONTEIRO: Carregar resultados de ultra batch jobs do Firestore
+            const batchJobId = data.batchJobId; // Ponteiro no nível do documento do chat
+            
+            if (batchJobId) {
+                console.log(`🔗 Encontrado batchJobId no chat: ${batchJobId}`);
+                try {
+                    // Buscar resultados da coleção ultra_batch_jobs
+                    const results = await loadUltraBatchResults(batchJobId);
+                    
+                    if (results.length > 0) {
+                        // Agrupar resultados em batches
+                        const batches = groupResultsByBatch(results, 5);
+                        
+                        // ... (dentro de getFullConversation) ...
+
+                        // "Hidratar" mensagens que têm este jobId
+                        messagesWithIds = messagesWithIds.map((msg: any) => {
+                          // ----------------- MENSAGEM DO ASSISTENTE -----------------
+                          if (msg.ultraBatchJobId === batchJobId && msg.role === 'assistant') {
+                              // ✅ CORREÇÃO: Reconstrói o 'content' a partir dos batches carregados
+                              const newContent = `# Análise de ${msg.ultraBatchTotal || results.length} relatório(s) XP\n\n` + 
+                                  batches.map((batch: any) => 
+                                      `## 📁 Lote ${batch.batchNumber} (${batch.files.length} arquivos)\n\n` +
+                                      batch.files.map((file: any, index: number) => 
+                                          `### Arquivo ${index + 1}: ${file.fileName}\n\n${file.content}`
+                                      ).join('\n\n---\n\n')
+                                  ).join('\n\n---\n\n');
+
+                              return {
+                                  ...msg,
+                                  ultraBatchBatches: batches, // Adiciona os batches
+                                  ultraBatchProgress: { current: results.length, total: msg.ultraBatchTotal || results.length }, // ✅ CORREÇÃO: Atualiza progresso para final
+                                  content: newContent, // ✅ CORREÇÃO: Substitui o 'content' antigo
+                              };
+                          }
+
+                          // ----------------- MENSAGEM DO USUÁRIO -----------------
+                          if (msg.ultraBatchJobId === batchJobId && msg.role === 'user') {
+                              // ✅ CORREÇÃO: Atualiza o progresso na mensagem do usuário também
+                              return {
+                                  ...msg,
+                                  ultraBatchProgress: { current: results.length, total: msg.ultraBatchTotal || results.length },
+                              };
+                          }
+                          
+                          return msg;
+                        });
+                        
+                        //console.log(`✅ ${results.length} resultados hidratados nas mensagens`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Erro ao carregar resultados do job ${batchJobId}:`, error);
+                    // Continuar sem os resultados, não falhar o carregamento do chat
+                }
+            }
+            
+           // ========================================================================
+        // BLOCO DE COMPATIBILIDADE: Para jobs antigos sem ponteiro no chat
+        // ========================================================================
+        // Usamos Promise.all para aguardar todas as buscas e reconstruir o array de forma imutável.
+        messagesWithIds = await Promise.all(messagesWithIds.map(async (msg: any) => {
+          // Se a mensagem não tem um jobId ou se os batches já foram hidratados pelo bloco principal, pula.
+          if (!msg.ultraBatchJobId || msg.ultraBatchBatches) {
+              return msg;
+          }
+
+          //console.log(`🔗 (Compatibilidade) Encontrado jobId na mensagem: ${msg.ultraBatchJobId}`);
+          try {
+              const results = await loadUltraBatchResults(msg.ultraBatchJobId);
+              if (results.length > 0) {
+                  const batches = groupResultsByBatch(results, 5);
+
+                  if (msg.role === 'assistant') {
+                      const newContent = `# Análise de ${msg.ultraBatchTotal || results.length} relatório(s) XP\n\n` + 
+                          batches.map((batch: any) => 
+                              `## 📁 Lote ${batch.batchNumber} (${batch.files.length} arquivos)\n\n` +
+                              batch.files.map((file: any, index: number) => 
+                                  `### Arquivo ${index + 1}: ${file.fileName}\n\n${file.content}`
+                              ).join('\n\n---\n\n')
+                          ).join('\n\n---\n\n');
+                      
+                      // Retorna um NOVO objeto de mensagem, hidratado
+                      return {
+                          ...msg,
+                          ultraBatchBatches: batches,
+                          ultraBatchProgress: { current: results.length, total: msg.ultraBatchTotal || results.length },
+                          content: newContent,
+                      };
+                  }
+                  // A mensagem do usuário correspondente será atualizada em um loop separado se necessário,
+                  // mas geralmente a do assistente é a que contém a exibição principal.
+              }
+          } catch (error) {
+              console.error(`❌ (Compatibilidade) Erro ao carregar resultados do job ${msg.ultraBatchJobId}:`, error);
+          }
+          // Se algo falhar ou não houver resultados, retorna a mensagem original
+          return msg;
+      }));
+            
             return {
                 id: chatSnap.id,
                 title: data.title,
@@ -347,19 +508,38 @@ async function saveConversation(
 
   const conversationsRef = collection(db, 'users', userId, 'chats');
 
-  const sanitizedMessages = messages.map(msg => ({
-    id: msg.id,
-    role: msg.role,
-    content: msg.content,
-    fileNames: msg.fileNames ?? null,
-    source: msg.source ?? null,
-    sources: msg.sources?.map(s => ({ title: s.title, uri: s.uri })) ?? null,
-    promptTokenCount: msg.promptTokenCount ?? null,
-    candidatesTokenCount: msg.candidatesTokenCount ?? null,
-    latencyMs: msg.latencyMs ?? null,
-    originalContent: msg.originalContent ?? null,
-    isStandardAnalysis: msg.isStandardAnalysis ?? false,
-  }));
+  const sanitizedMessages = messages.map(msg => {
+    // 🔗 LÓGICA DE DESIDRATAÇÃO:
+    // Se esta é uma mensagem do assistente de um job ultra lote,
+    // NÃO devemos salvar seu conteúdo hidratado. Substituímos por um placeholder.
+    // O conteúdo real será re-hidratado pela getFullConversation ao carregar.
+    let contentToSave = msg.content;
+    if (msg.role === 'assistant' && msg.ultraBatchJobId) {
+        // Este placeholder é o que fica salvo no banco de dados.
+        contentToSave = `# Análise Ultra Lote - ${msg.ultraBatchTotal || 'múltiplos'} arquivos\n\nProcessando...`;
+    }
+
+    return {
+      id: msg.id,
+      role: msg.role,
+      content: contentToSave, // ✅ Usar o conteúdo desidratado
+      fileNames: msg.fileNames ?? null,
+      source: msg.source ?? null,
+      sources: msg.sources?.map(s => ({ title: s.title, uri: s.uri })) ?? null,
+      promptTokenCount: msg.promptTokenCount ?? null,
+      candidatesTokenCount: msg.candidatesTokenCount ?? null,
+      latencyMs: msg.latencyMs ?? null,
+      originalContent: msg.originalContent ?? null,
+      isStandardAnalysis: msg.isStandardAnalysis ?? false,
+
+      // 🔗 PADRÃO DE PONTEIRO: Salvar apenas metadados do ultra batch, não o conteúdo completo
+      ultraBatchJobId: msg.ultraBatchJobId ?? null,
+      ultraBatchTotal: msg.ultraBatchTotal ?? null,
+      ultraBatchProgress: msg.ultraBatchProgress ?? null,
+      // ultraBatchBatches: NÃO SALVAR - será carregado do Firestore usando o jobId
+      ultraBatchEstimatedTimeMinutes: msg.ultraBatchEstimatedTimeMinutes ?? null,
+    };
+  });
 
   const totalTokens = sanitizedMessages.reduce((acc, msg) => {
     const promptTokens = msg.promptTokenCount || 0;
@@ -459,6 +639,7 @@ export default function ChatPageContent() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isSidebarLoading, setIsSidebarLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<Conversation | null>(null);
+  const [lastMessageCount, setLastMessageCount] = useState(0);
   
   const [isNewGroupDialogOpen, setIsNewGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -555,8 +736,11 @@ export default function ChatPageContent() {
   }, [user, toast]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+    if (messages.length > lastMessageCount) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setLastMessageCount(messages.length);
+    }
+  }, [messages, isLoading, lastMessageCount]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -732,7 +916,7 @@ export default function ChatPageContent() {
         {
           fileDataUris,
           useStandardAnalysis,
-          source: searchSource,
+          source: searchSource === 'rag' || searchSource === 'web' ? searchSource : 'rag',
         }
       );
   
@@ -779,6 +963,7 @@ export default function ChatPageContent() {
           setIsPromptBuilderOpen(true);
           return;
       }
+
       //if (suggestion === 'open_meeting_insights') {
         //setIsMeetingInsightsOpen(true);
         //return;
@@ -787,7 +972,20 @@ export default function ChatPageContent() {
       inputRef.current?.focus();
   };
 
-  const handleBatchSubmit = (files: File[]) => {
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleBatchSubmit = async (files: File[]) => {
     if (files.length === 0) {
         toast({
             variant: 'destructive',
@@ -796,19 +994,67 @@ export default function ChatPageContent() {
         });
         return;
     }
-    // 1. A query que vai para o backend é o PREAMBLE completo.
-  const queryParaBackend = POSICAO_CONSOLIDADA_PREAMBLE;
-  
-  // 2. A mensagem que o USUÁRIO VÊ é simples e limpa.
-  const mensagemParaUsuario = `Analisando ${files.length} relatório(s) com o padrão 3A RIVA...`;
+    try {
+      setIsPromptBuilderOpen(false);
+      
+      // Converter todos os arquivos para base64 no frontend
+      const batchFiles = await Promise.all(
+        files.map(async (file) => {
+          const base64Content = await fileToBase64(file);
+          return {
+            name: file.name,
+            dataUri: base64Content
+          };
+        })
+      );
+      
+      // Usar nova API de batch
+      const result = await batchAnalyzeReports(batchFiles, user?.uid || 'anonymous');
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Erro no processamento em lote');
+      }
+      
+      // Processar resultados do batch
+      const messages = result.results.map((reportResult, index) => {
+        if (reportResult.success && reportResult.final_message) {
+          return {
+            fileName: reportResult.file_name,
+            content: reportResult.final_message
+          };
+        } else {
+          return {
+            fileName: reportResult.file_name,
+            content: `**Erro:** ${reportResult.error || 'Processamento falhou'}`
+          };
+        }
+      });
+      
+      const joinedMessages = messages.map(msg => 
+        `## Análise do ${msg.fileName}\n\n${msg.content}`
+      ).join('\n\n');
+      const batchPrompt = `# Análise de ${files.length} relatórios XP\n\n${joinedMessages}`;
 
-  // 3. Chamamos a submitQuery com as duas versões.
-  //    (Vamos ajustar submitQuery para usar isso corretamente no próximo passo)
-  submitQuery(queryParaBackend, files, mensagemParaUsuario);
-  
-  setIsPromptBuilderOpen(false);
-};
+      const fileNames = result.results
+      .map(reportResult => reportResult.file_name)
+      .filter((fileName): fileName is string => fileName !== undefined);
+      //console.log('🔍 DEBUG ChatPage.tsx- result.results:', result.results);
+      //console.log('🔍 DEBUG ChatPage.tsx - fileNames mapeados:', result.results.map(r => r.file_name));
+      //console.log('🔍 DEBUG ChatPage.tsx- fileNames filtrados:', fileNames);
+      //console.log('🔍 DEBUG ChatPage.tsx- fileNames length:', fileNames.length);
 
+      
+      // Usar o handleAnalysisResult existente, antigo handlePromptGenerated
+      handleAnalysisResult(batchPrompt, fileNames);
+      
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro na Análise',
+        description: err.message || 'Erro desconhecido',
+      });
+    }
+  };
 
 // Simplificar a função
 const handleMeetingAnalyzed = async (files: File[]) => {
@@ -837,7 +1083,7 @@ const handleMeetingAnalyzed = async (files: File[]) => {
   try {
     const result = await analyzeMeetingTranscript(file);
 
-    console.log('🔍 DEBUG - Result from Python:', result); // ✅ Adicionar este log
+    //console.log('🔍 DEBUG ChatPage.tsx- Result from Python:', result); // ✅ Adicionar este log
 
     
     if (!result.success) {
@@ -1069,7 +1315,7 @@ const handleMeetingAnalyzed = async (files: File[]) => {
         activeChat.attachedFiles,
         { 
           isStandardAnalysis: userMessage.isStandardAnalysis,
-          source: originalSource
+          source: originalSource === 'rag' || originalSource === 'web' ? originalSource : 'rag'
         },
         user.uid,
         activeChatId
@@ -1270,7 +1516,7 @@ const handleMeetingAnalyzed = async (files: File[]) => {
     setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
-  const handleDragStart = (event: DragEndEvent) => {
+  const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const activeId = active.id.toString();
 
@@ -1449,20 +1695,408 @@ const handleMeetingAnalyzed = async (files: File[]) => {
         }
     };
 
-    const handlePromptGenerated = (prompt: string) => {
-        setInput(prompt);
-        setSearchSource('web');
-        setIsPromptBuilderOpen(false);
-        setTimeout(() => inputRef.current?.focus(), 100);
+    const handleAnalysisResult = async (prompt: string, fileNames?: string[]) => {
+      if (!user) {
+        //console.log('🔍 DEBUG ChatPage.tsx- Usuário não encontrado, retornando');
+        return;
+      }
+      
+      try {
+        //console.log('🔍 DEBUG ChatPage.tsx- Criando mensagens...');
+          // Criar mensagem do usuário
+          const userMessage: Message = {
+              id: crypto.randomUUID(),
+              role: 'user',
+              content: 'Análise de relatório XP',
+              fileNames: fileNames || [],
+              source: 'gemini',
+              sources: [],
+              promptTokenCount: null,
+              candidatesTokenCount: null,
+              latencyMs: null,
+              originalContent: null,
+              isStandardAnalysis: true
+          };
+          
+          // Criar mensagem do assistente
+          const assistantMessage: Message = {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: prompt,
+              fileNames: fileNames || [],
+              source: 'gemini',
+              sources: [],
+              promptTokenCount: null,
+              candidatesTokenCount: null,
+              latencyMs: null,
+              originalContent: null,
+              isStandardAnalysis: true
+          };
+          
+          // Adicionar ambas as mensagens ao chat
+          const newMessages = [...messages, userMessage, assistantMessage];
+          //console.log('🔍 DEBUG ChatPage.tsx- newMessages:', newMessages);
+          setMessages(newMessages);
+          
+          // Salvar no Firestore
+          if (activeChatId) {
+            // Validar mensagens antes de salvar
+            const validMessages = [userMessage, assistantMessage].filter(msg => 
+                msg && 
+                msg.content && 
+                msg.content.trim() !== '' &&
+                msg.id &&
+                msg.role
+            );
+            
+            if (validMessages.length > 0) {
+                await updateDoc(doc(db, 'users', user.uid, 'chats', activeChatId), {
+                    messages: arrayUnion(...validMessages),
+                    updatedAt: serverTimestamp()
+                });
+            }
+        }
+            else {
+              // Novo chat - usar saveConversation
+              const newChatId = await saveConversation(user.uid, newMessages);
+              const newFullChat = await getFullConversation(user.uid, newChatId);
+                setActiveChat(newFullChat);
+                await fetchSidebarData();
+          }
+          
+          // Fechar o dialog
+          setIsPromptBuilderOpen(false);
+          
+          // Scroll para a última mensagem
+          setTimeout(() => {
+              messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+          
+      } catch (err: any) {
+          console.error('Erro ao salvar mensagem:', err);
+          setError('Erro ao salvar a conversa no histórico');
+      }
+  };
+
+// (groupResultsByBatch foi movida para o topo do arquivo, antes de getFullConversation)
+
+const handleUltraBatchResults = async (results: any[], totalFiles: number, jobId: string, estimatedTimeMinutes?: number, chatIdToUpdate?: string) => {
+  if (!user) return;
+
+  console.log('🔍 DEBUG - handleUltraBatchResults chamado:',
+    { 
+    resultsLength: results.length, 
+    jobId, 
+    estimatedTimeMinutes,
+    currentMessagesLength: messages.length 
+  });
+
+  // ⚠️ VERIFICAR se já existe mensagem ultra batch
+  setMessages(prevMessages => {
+    const existingUltraBatchMessage = prevMessages.find(msg => 
+      msg.ultraBatchJobId === jobId && msg.role === 'assistant'
+    );
+
+  if (existingUltraBatchMessage) {
+      // ============================================
+      // CENÁRIO 1: ATUALIZAR mensagem existente
+      // ============================================
+      //console.log('🔍 DEBUG - Atualizando mensagem existente');
+
+    // ---- NOVA LÓGICA DE VERIFICAÇÃO ----
+    // 1. Contar quantos resultados já temos na tela
+    const existingBatches = existingUltraBatchMessage.ultraBatchBatches || [];
+    const existingResultsCount = existingBatches.reduce((acc, batch) => acc + batch.files.length, 0);
+
+    // 2. Contar quantos resultados a API acabou de nos enviar
+    const newResultsCount = results.length;
+
+    // 3. Se a contagem for a mesma, não há nada de novo para mostrar.
+    //    Então, retornamos o array de mensagens *original* sem tocar nele.
+    //    Isso diz ao React: "Não mude nada", e o "pisca-pisca" é evitado.
+    if (newResultsCount === existingResultsCount) {
+        //console.log('🔍 DEBUG - Sem novos resultados, pulando atualização de estado.');
+        return prevMessages; // <-- Ponto-chave da correção!
+    }
+    // ---- FIM DA NOVA LÓGICA ----
+
+    // Se o código chegou até aqui, significa que HÁ novos resultados.
+    // Agora, fazemos o que o código já fazia: criar um novo array atualizado.
+    // Agrupar resultados em lotes
+    const batches = groupResultsByBatch(results, 5);
+    const updatedContent = `# Análise Ultra Lote - ${totalFiles} arquivos\n\n${batches.map(batch => 
+      `## 📁 Lote ${batch.batchNumber} (${batch.files.length} arquivos)\n\n${batch.files.map((file, index) => {
+        `### Arquivo ${index + 1}: ${file.fileName}\n\n${file.content}`;
+    }
+      ).join('\n\n---\n\n')}`
+    ).join('\n\n---\n\n')}`;
+
+    const updatedMessages = prevMessages.map(msg => {
+      if (msg.ultraBatchJobId === jobId && msg.role === 'assistant') {
+        return {
+          ...msg,
+          content: updatedContent,
+          ultraBatchProgress: { current: results.length, total: totalFiles },
+          ultraBatchBatches: batches,
+          ultraBatchEstimatedTimeMinutes: estimatedTimeMinutes
+        };
+      }
+      if (msg.ultraBatchJobId === jobId && msg.role === 'user') {
+        return {
+          ...msg,
+          ultraBatchProgress: { current: results.length, total: totalFiles }
+        };
+      }
+      return msg;
+    });
+    
+    // 🔗 PADRÃO DE PONTEIRO: NÃO salvar batches completos no Firestore
+    // Os resultados já estão na coleção ultra_batch_jobs/{jobId}/results
+    // Apenas mantemos o estado local atualizado para a UI
+    //console.log('🔍 DEBUG - Estado atualizado localmente (sem salvar batches no chat)');
+    
+    // Retorna o novo estado para o React
+    return updatedMessages;
+
+} else {
+      // ============================================
+      // CENÁRIO 2: PRIMEIRA CHAMADA - Criar novas mensagens
+      // ============================================
+  //console.log('🔍 DEBUG - Criando novas mensagens para Ultra Lote');
+
+    const batches = groupResultsByBatch(results, 5);
+    
+    // Criar mensagem do usuário
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: `Análise Ultra Lote - ${totalFiles} arquivos`,
+      fileNames: results.map(r => r.fileName || r.file_name).filter(Boolean),
+      source: 'ultra_batch',
+      ultraBatchJobId: jobId,
+      ultraBatchTotal: totalFiles,
+      ultraBatchProgress: { current: results.length || 0, total: totalFiles }
     };
 
-    const handleStartTour = () => {
-        setIsFaqDialogOpen(false);
-        // Use a timeout to ensure the dialog has closed before starting the tour
-        setTimeout(() => {
-            setShowOnboarding(true);
-        }, 150);
+      // Criar mensagem do assistente - SEMPRE com estrutura de progresso
+    let assistantContent = `# Análise Ultra Lote - ${totalFiles} arquivos\n\n`;
+    
+    if (batches.length > 0) {
+      // Se há resultados, mostrar lotes
+      assistantContent += batches.map(batch => 
+        `## 📁 Lote ${batch.batchNumber} (${batch.files.length} arquivos)\n\n${batch.files.map((file, index) => 
+          `### Arquivo ${index + 1}: ${file.fileName}\n\n${file.content}`
+        ).join('\n\n---\n\n')}`
+      ).join('\n\n---\n\n');
+    } else {
+      // Se não há resultados ainda, mostrar mensagem de processamento
+      assistantContent += `🔄 **Processando ${totalFiles} arquivos...**\n\n`;
+      if (estimatedTimeMinutes) {
+        assistantContent += `⏱️ **Tempo estimado:** ${estimatedTimeMinutes} minutos\n\n`;
+      }
+      assistantContent += `Os resultados aparecerão aqui conforme forem sendo processados.`;
+    }
+    
+    // Criar mensagem do assistente com resultados em lotes
+    const assistantMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: assistantContent,
+      fileNames: results.map(r => r.fileName || r.file_name).filter(Boolean),
+      source: 'ultra_batch',
+      ultraBatchJobId: jobId,
+      ultraBatchTotal: totalFiles,
+      ultraBatchProgress: { current: results.length || 0, total: totalFiles },
+      ultraBatchBatches: batches,
+      ultraBatchEstimatedTimeMinutes: estimatedTimeMinutes
     };
+    
+    // 🔗 REFATORADO: NÃO salvamos mais no Firestore aqui
+    // O chat já foi criado/atualizado em handleStartUltraBatch
+    // Apenas retornamos o novo estado local para a UI
+    const newMessages = [...prevMessages, userMessage, assistantMessage];
+
+    // 🔗 CORREÇÃO: Salvar os placeholders no Firestore para que o histórico carregue corretamente
+    if (chatIdToUpdate) {
+      saveConversation(user.uid, newMessages, chatIdToUpdate).catch(err => {
+        //console.error('Erro ao salvar mensagens placeholder:', err);
+      });
+    }
+    
+    //console.log('🔍 DEBUG - Mensagens de placeholder criadas (apenas estado local)');
+    return newMessages;
+  }
+}); // ✅ AQUI fecha o setMessages corretamente!
+
+// ✅ Setar o jobId FORA do setMessages
+if (!messages.find(msg => msg.ultraBatchJobId === jobId)) {
+  setUltraBatchJobId(jobId);
+}
+};
+
+// 🔗 NOVA FUNÇÃO: Orquestrar o início do ultra batch job
+// Garante que o chat exista antes de criar o job no backend
+const handleStartUltraBatch = async (files: File[]) => {
+  if (!user) {
+    setError('Usuário não autenticado');
+    return;
+  }
+
+  setIsLoading(true);
+  let chatId = activeChatId;
+
+  try {
+    // 1️⃣ Se for um novo chat, criar o documento primeiro
+    if (!chatId) {
+      //console.log('🔗 Criando novo chat antes de iniciar ultra batch...');
+      
+      const tempTitle = `Análise de ${files.length} relatórios`;
+      const userMessage: Message = { 
+        id: crypto.randomUUID(), 
+        role: 'user', 
+        content: tempTitle 
+      };
+      
+      // Criar o chat e obter o ID
+      const newId = await saveConversation(user.uid, [userMessage], null, { 
+        newChatTitle: tempTitle 
+      });
+      chatId = newId;
+      
+      //console.log('✅ Novo chat criado:', chatId);
+      
+      // Atualizar o estado da UI para refletir o novo chat
+      const newFullChat = await getFullConversation(user.uid, newId);
+      setActiveChat(newFullChat);
+      await fetchSidebarData();
+    }
+
+    // 2️⃣ Converter arquivos para base64
+    //console.log('🔗 Convertendo arquivos para base64...');
+    const batchFiles = await Promise.all(
+      files.map(async (file) => {
+        const reader = new FileReader();
+        return new Promise<{ name: string; dataUri: string }>((resolve, reject) => {
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            const result = reader.result as string;
+            const base64 = result.split(',')[1];
+            resolve({ name: file.name, dataUri: base64 });
+          };
+          reader.onerror = () => reject(reader.error);
+        });
+      })
+    );
+
+    // 3️⃣ Chamar a API do backend com o chatId garantido
+    //console.log('🔗 Chamando API ultra-batch-analyze com chatId:', chatId);
+    const result = await ultraBatchAnalyzeReports(batchFiles, user.uid, chatId);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Erro ao criar job de ultra lote');
+    }
+
+    //console.log('✅ Job criado com sucesso:', result.job_id);
+
+    // 4️⃣ Mostrar toast de confirmação
+    toast({
+      title: 'Processamento Iniciado',
+      description: `Analisando ${result.total_files} relatórios. Tempo estimado: ${result.estimated_time_minutes} minutos.`,
+    });
+
+    // 5️⃣ Iniciar a UI e o polling
+    // Chamamos handleUltraBatchResults que criará as mensagens de placeholder
+    // e iniciará o polling automático
+    await handleUltraBatchResults([], result.total_files, result.job_id, result.estimated_time_minutes, chatId);
+
+  } catch (err: any) {
+    console.error('❌ Erro ao iniciar ultra batch:', err);
+    setError(`Erro ao iniciar análise: ${err.message}`);
+    toast({
+      title: 'Erro',
+      description: err.message || 'Não foi possível iniciar a análise',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+const [ultraBatchJobId, setUltraBatchJobId] = useState<string | null>(null);
+
+// Polling contínuo para ultra batch
+useEffect(() => {
+  if (!ultraBatchJobId) return;
+  
+  let intervalId: NodeJS.Timeout;
+  const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+  
+  const pollJobStatus = async () => {
+    try {
+      console.log('🔍 DEBUG - Polling job status:', ultraBatchJobId);
+      const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch-status/${ultraBatchJobId}`);
+      const data = await response.json();
+      
+      console.log('🔍 DEBUG - Polling response:', { 
+        success: data.success, 
+        resultsLength: data.results?.length, 
+        status: data.status,
+        progress: data.progress
+      });
+      
+      if (data.success && data.progress) {
+        // ✅ Chamar SEMPRE, mesmo quando results está vazio (início do processamento)
+        handleUltraBatchResults(
+          data.results || [],  // Array vazio se não houver resultados ainda
+          data.progress.totalFiles, 
+          ultraBatchJobId, 
+          data.estimated_time_minutes
+        );
+      }
+      
+      // Parar quando concluído
+      if (data.status === 'completed' || data.status === 'failed') {
+        //console.log('🔍 DEBUG - Job finalizado, parando polling:', data.status);
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+        setUltraBatchJobId(null);
+        return;
+      }
+
+      // Parar se todos os arquivos foram processados
+      if (data.progress && data.progress.processedFiles >= data.progress.totalFiles) {
+        //console.log('🔍 DEBUG - Todos os arquivos processados, parando polling');
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+        setUltraBatchJobId(null);
+        return;
+      }
+
+    } catch (error) {
+      console.error('Erro ao consultar status do job:', error);
+    }
+  };
+  
+  intervalId = setInterval(pollJobStatus, 20000);
+  pollJobStatus();
+  
+  return () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+  };
+}, [ultraBatchJobId]);
+
+
+const handleStartTour = () => {
+    setIsFaqDialogOpen(false);
+    // Use a timeout to ensure the dialog has closed before starting the tour
+    setTimeout(() => {
+        setShowOnboarding(true);
+    }, 150);
+};
 
 
   if (authLoading || isCheckingTerms) {
@@ -1707,8 +2341,10 @@ const handleMeetingAnalyzed = async (files: File[]) => {
         <PromptBuilderDialog
             open={isPromptBuilderOpen}
             onOpenChange={setIsPromptBuilderOpen}
-            onPromptGenerated={handlePromptGenerated}
+            onAnalysisResult={handleAnalysisResult}
             onBatchSubmit={handleBatchSubmit}
+            onStartUltraBatch={handleStartUltraBatch} // 🔗 REFATORADO: Usar nova função de orquestração
+            activeChatId={activeChatId} // 🔗 PADRÃO DE PONTEIRO: Passar activeChatId
         />
         <UpdateNotificationManager />
 

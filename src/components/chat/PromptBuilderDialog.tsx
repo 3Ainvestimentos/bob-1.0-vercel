@@ -6,15 +6,57 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { ChatInputForm } from './ChatInputForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { extractDataFromXpReport } from '@/app/actions';
-import { useToast } from '@/hooks/use-toast';
+import { extractReportData, analyzeReportAuto, analyzeReportPersonalized, batchAnalyzeReports, analyzeReportPersonalizedFromData, ultraBatchAnalyzeReports } 
+from '@/app/actions';import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, FileText, Loader2, Wand2, AlertTriangle, MessageSquareQuote, CalendarDays, BarChart, TrendingUp, TrendingDown, Star, X, Info, ChevronsRight, ChevronsDown, Repeat, Layers, Gem, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ExtractedData } from '@/types';
+import { useAuth } from '@/context/AuthProvider';
+import { getFirestore, doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 
+
+function convertMarkdownToCodeBlock(content: string): string {
+    //console.log('🔍 DEBUG PromptBuilderDialog.tsx- convertMarkdownToCodeBlock INPUT:', JSON.stringify(content));
+    
+    // Se o conteúdo já está em bloco de código, manter como está (SEM ESCAPE)
+    if (content.includes('```')) {
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- Já está em bloco de código, mantendo original');
+        return content; // MANTER ORIGINAL, SEM ESCAPE
+    }
+    
+    // Se o conteúdo parece ser markdown de relatório (contém emojis específicos)
+    if (content.includes('🔎') || content.includes('✅') || content.includes('⚠️') || content.includes('🌎')) {
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- Convertendo markdown para bloco de código SEM escape');
+        // NÃO ESCAPAR - manter markdown literal
+        return `\`\`\`\n${content}\n\`\`\``;
+    }
+    
+    // Se não for relatório, manter como markdown puro
+    //console.log('🔍 DEBUG PromptBuilderDialog.tsx- Mantendo como markdown puro');
+    return content;
+}
+
+    
+// ============= HELPER FUNCTION =============
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove o prefixo "data:application/pdf;base64,"
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
 
 // ---- Types ----
 
@@ -26,20 +68,6 @@ type AssetClassPerformance = {
     cdiPercentage: string; 
 };
 
-type ExtractedData = {
-    accountNumber: string;
-    reportMonth: string;
-    monthlyReturn: string;
-    monthlyCdi: string;
-    monthlyGain: string;
-    yearlyReturn: string;
-    yearlyCdi: string;
-    yearlyGain: string;
-    highlights: Record<string, Asset[]>;
-    detractors: Record<string, Asset[]>;
-    classPerformance: AssetClassPerformance[];
-    benchmarkValues: { [key in 'CDI' | 'Ibovespa' | 'IPCA' | 'Dólar']?: string };
-};
 
 type SelectedFields = {
     [key in keyof Omit<ExtractedData, 'classPerformance' | 'benchmarkValues'>]?: boolean | { [category: string]: { [index: number]: boolean } };
@@ -48,7 +76,7 @@ type SelectedFields = {
 };
 
 type PromptBuilderPhase = 'upload' | 'loading' | 'selection' | 'error';
-type AnalysisType = 'individual' | 'batch';
+type AnalysisType = 'individual' | 'batch' | 'ultra_batch';
 type PersonalizePrompt = 'yes' | 'no';
 type AssetAnalysisView = 'asset' | 'class';
 
@@ -56,11 +84,14 @@ type AssetAnalysisView = 'asset' | 'class';
 interface PromptBuilderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPromptGenerated: (prompt: string) => void;
+  onAnalysisResult: (prompt: string, fileNames?: string[]) => void;
   onBatchSubmit: (files: File[]) => void;
+  onStartUltraBatch: (files: File[]) => void; // 🔗 Nova prop: delega início do ultra batch para ChatPage
+  activeChatId?: string | null; // 🔗 PADRÃO DE PONTEIRO: ID do chat ativo (opcional)
 }
 
 const BATCH_LIMIT = 5;
+const ULTRA_BATCH_LIMIT = 100;
 
 const assetClassBenchmarks: Record<string, keyof ExtractedData['benchmarkValues']> = {
     'Pre Fixado': 'CDI',
@@ -83,18 +114,40 @@ const findBenchmarkByClassName = (className: string): keyof ExtractedData['bench
 
 // ---- Sub-components for each phase ----
 
-const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (files: File[]) => void; onBatchSubmit: (files: File[]) => void; files: File[] }) => {
+const UploadPhase = ({ onFilesChange, onBatchSubmit, onUltraBatchSubmit, files, isSubmitting, setIsSubmitting  }: {
+    onFilesChange: (files: File[]) => void;
+    onBatchSubmit: (files: File[]) => void; 
+    onUltraBatchSubmit: (files: File[]) => void; 
+    files: File[];
+    isSubmitting: boolean;
+    setIsSubmitting: (isSubmitting: boolean) => void;
+}) => {
+
     const { toast } = useToast();
     const [selectedFiles, setSelectedFiles] = useState<File[]>(files);
     const [analysisType, setAnalysisType] = useState<AnalysisType>('individual');
     const [personalize, setPersonalize] = useState<PersonalizePrompt>('no');
     const [isDraggingOver, setIsDraggingOver] = useState(false);
 
+        // 🆕 Função helper para limite dinâmico
+    const getCurrentLimit = (analysisType: AnalysisType) => {
+        switch (analysisType) {
+            case 'ultra_batch':
+                return ULTRA_BATCH_LIMIT;
+            case 'batch':
+                return BATCH_LIMIT;
+            case 'individual':
+                return 1; // Individual só permite 1 arquivo
+            default:
+                return BATCH_LIMIT;
+        }
+    };
+
     useEffect(() => {
-        if (selectedFiles.length > 1) {
+        if (selectedFiles.length > 1 && analysisType !== 'ultra_batch') {
             setAnalysisType('batch');
         }
-    }, [selectedFiles]);
+    }, [selectedFiles, analysisType]);
 
 
     useEffect(() => {
@@ -103,23 +156,71 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
         }
     }, [analysisType]);
 
-    const handleFileDrop = (droppedFiles: FileList) => {
+    const handleFileDrop = (droppedFiles: FileList, forcedAnalysisType?: AnalysisType) => {
         if (!droppedFiles) return;
 
         const pdfFiles = Array.from(droppedFiles).filter(file => file.type === 'application/pdf');
-        
-        setSelectedFiles(prev => {
-            const totalFiles = prev.length + pdfFiles.length;
-            if (totalFiles > BATCH_LIMIT && prev.length < BATCH_LIMIT) {
+
+        // Se não tiver nenhum PDF, mostrar toast
+        if (pdfFiles.length === 0) {
+            toast({
+                title: 'Nenhum PDF encontrado',
+                description: 'A pasta selecionada não contém arquivos PDF.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+           // Só detectar tipo se NÃO for ultra_batch (já definido pelo handleFolderInputChange)
+        let newAnalysisType = forcedAnalysisType || analysisType;
+
+        if (!forcedAnalysisType && analysisType !== 'ultra_batch') {
+            // Lógica de detecção automática (mantém o código atual)
+            const isFolderUpload = pdfFiles.length > 1 && Array.from(droppedFiles).some(file => 
+                file.webkitRelativePath && file.webkitRelativePath.includes('/')
+            );
+            
+            
+            if (isFolderUpload) {
+                // Upload de pasta → Ultra Batch
+                newAnalysisType = 'ultra_batch';
                 toast({
-                    title: 'Limite de Arquivos Atingido',
-                    description: `Você só pode analisar ${BATCH_LIMIT} relatórios por vez. Apenas os primeiros arquivos foram adicionados.`,
+                    title: 'Pasta Detectada',
+                    description: 'Modo alterado para Ultra Lote automaticamente.',
                     variant: 'default',
                 });
-            } else if (prev.length >= BATCH_LIMIT) {
+            } else if (pdfFiles.length > 1 && analysisType === 'individual') {
+                // Múltiplos arquivos individuais → Batch
+                newAnalysisType = 'batch';
+                toast({
+                    title: 'Múltiplos Arquivos',
+                    description: 'Modo alterado para Lote automaticamente.',
+                    variant: 'default',
+                });
+            }
+            
+            // Atualizar analysisType se necessário
+            if (newAnalysisType !== analysisType) {
+                setAnalysisType(newAnalysisType);
+            }
+
+    }
+    
+        
+        setSelectedFiles(prev => {
+            const currentLimit = getCurrentLimit(newAnalysisType);
+            const totalFiles = prev.length + pdfFiles.length;
+            
+            if (totalFiles > currentLimit && prev.length < currentLimit) {
                 toast({
                     title: 'Limite de Arquivos Atingido',
-                    description: `Você já atingiu o limite de ${BATCH_LIMIT} relatórios.`,
+                    description: `Você só pode analisar ${currentLimit} relatórios por vez. Apenas os primeiros arquivos foram adicionados.`,
+                    variant: 'default',
+                });
+            } else if (prev.length >= currentLimit) {
+                toast({
+                    title: 'Limite de Arquivos Atingido',
+                    description: `Você já atingiu o limite de ${currentLimit} relatórios.`,
                     variant: 'default',
                 });
                 return prev;
@@ -128,11 +229,11 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
             const existingFileNames = new Set(prev.map(f => f.name));
             const uniqueNewFiles = pdfFiles.filter(f => !existingFileNames.has(f.name));
             
-            const filesToAdd = uniqueNewFiles.slice(0, BATCH_LIMIT - prev.length);
-
+            const filesToAdd = uniqueNewFiles.slice(0, currentLimit - prev.length);
+        
             return [...prev, ...filesToAdd];
         });
-    }
+    };
 
     const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -165,25 +266,93 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
         e.target.value = '';
     };
     
-    const handleContinue = () => {
-        if (selectedFiles.length === 0) return;
+    const handleContinue = async () => {
+        if (selectedFiles.length === 0 || isSubmitting) return;
 
-        if (personalize === 'yes' && analysisType === 'individual') {
-            onFilesChange(selectedFiles);
-        } else {
-            onBatchSubmit(selectedFiles);
+        setIsSubmitting(true);
+        try {
+            if (personalize === 'yes' && analysisType === 'individual') {
+                onFilesChange(selectedFiles);
+            } else if (analysisType === 'ultra_batch') {
+                onUltraBatchSubmit(selectedFiles);
+            } else {
+                onBatchSubmit(selectedFiles);
+            }
+        } catch (error) {
+            console.error("Erro ao continuar o processamento:", error);
+            // O erro já deve ser tratado nas funções pai, mas reabilitamos o botão aqui por segurança.
+            setIsSubmitting(false);
         }
+        // Não resetamos isSubmitting aqui, pois o modal vai fechar ou mudar de fase.
+        // O reset principal acontece quando o modal é fechado.
     };
 
     const handleRemoveFile = (fileToRemove: File) => {
         setSelectedFiles(currentFiles => currentFiles.filter(file => file !== fileToRemove));
     };
     
-    const isAddFileDisabled = selectedFiles.length >= BATCH_LIMIT;
+    const isAddFileDisabled = selectedFiles.length >= getCurrentLimit(analysisType);
+
+
+    const [isFolderUpload, setIsFolderUpload] = useState(false);
+    const [folderName, setFolderName] = useState<string>('');
+
+    const handleFolderInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const newFiles = e.target.files;
+        if (!newFiles) return;
+        
+        // Detectar se é upload de pasta
+        const isFolderUpload = Array.from(newFiles).some(file => 
+            file.webkitRelativePath && file.webkitRelativePath.includes('/')
+        );
+        
+        if (isFolderUpload) {
+                    // Capturar nome da pasta do primeiro arquivo
+            const firstFile = Array.from(newFiles)[0];
+            const folderPath = firstFile.webkitRelativePath;
+            const folderName = folderPath.split('/')[0];
+
+            setAnalysisType('ultra_batch');
+            setIsFolderUpload(true);
+            setFolderName(folderName); // ← Aqui você salva o nome da pasta
+    
+            toast({
+                title: 'Pasta Selecionada',
+                description: 'Modo alterado para Ultra Lote automaticamente.',
+                variant: 'default',
+            });
+            handleFileDrop(newFiles, 'ultra_batch');
+
+        } else {
+            handleFileDrop(newFiles);
+            setFolderName('');
+        }
+        e.target.value = '';
+    };
+
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-            <input id="prompt-builder-file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileInputChange} multiple disabled={isAddFileDisabled} />
+         <input 
+            id="prompt-builder-file-upload" 
+            type="file" 
+            accept=".pdf" 
+            className="hidden" 
+            onChange={handleFileInputChange} 
+            multiple 
+            disabled={isAddFileDisabled} 
+        />
+        
+        {/* Input para pastas */}
+        <input 
+            id="prompt-builder-folder-upload" 
+            type="file" 
+            className="hidden" 
+            onChange={handleFolderInputChange} 
+            multiple
+            {...({ webkitdirectory: "true" } as any)}
+            disabled={isAddFileDisabled} 
+        />
             <div 
                 className={cn(
                     "flex flex-col border-2 border-dashed border-muted-foreground/30 rounded-xl p-6 text-center h-full transition-colors",
@@ -200,89 +369,159 @@ const UploadPhase = ({ onFilesChange, onBatchSubmit, files }: { onFilesChange: (
                         <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" style={{ strokeWidth: 1.5 }} />
                         <h3 className="font-semibold text-lg text-foreground">Anexar Relatório de Performance</h3>
                         <p className="text-muted-foreground text-sm mb-6">Arraste e solte o arquivo PDF aqui ou clique para selecionar.</p>
-                        <Button type="button" variant="outline" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Selecionar Arquivo PDF
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                onClick={() => document.getElementById('prompt-builder-file-upload')?.click()}
+                            >
+                                <FileText className="mr-2 h-4 w-4" />
+                                Selecionar PDFs
+                            </Button>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                onClick={() => document.getElementById('prompt-builder-folder-upload')?.click()}
+                            >
+                                <UploadCloud className="mr-2 h-4 w-4" />
+                                Selecionar Pasta
+                            </Button>
+                        </div>
                     </div>
                 ) : (
+                    
                     <div className="flex flex-col h-full w-full">
-                         <h3 className="font-semibold text-lg text-left text-foreground mb-4">Arquivos Anexados ({selectedFiles.length}/{BATCH_LIMIT})</h3>
-                         <div className="space-y-2 flex-1 overflow-y-auto pr-2">
-                            {selectedFiles.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-lg text-sm">
-                                    <div className="flex items-center gap-2 overflow-hidden">
-                                        <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-                                        <span className="font-medium text-foreground truncate">{file.name}</span>
+                    <h3 className="font-semibold text-lg text-left text-foreground mb-4">
+                        {isFolderUpload ? `Pasta: ${folderName}` : `Arquivos Anexados (${selectedFiles.length}/${getCurrentLimit(analysisType)})`}
+                    </h3>
+                    
+                    {isFolderUpload ? (
+                        // Exibição da pasta
+                        <div className="flex items-center justify-between bg-muted p-4 rounded-lg">
+                            <div className="flex items-center gap-2">
+                                <UploadCloud className="h-5 w-5 text-muted-foreground" />
+                                <span className="font-medium text-foreground">{folderName}</span>
+                                <span className="text-sm text-muted-foreground">({selectedFiles.length} arquivos)</span>
+                            </div>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive" 
+                                onClick={() => {
+                                    setSelectedFiles([]);
+                                    setIsFolderUpload(false);
+                                    setFolderName('');
+                                }}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ) : (
+                        // Exibição de arquivos individuais
+                        <>
+                            <div className="space-y-2 flex-1 overflow-y-auto pr-2">
+                                {selectedFiles.map((file, index) => (
+                                    <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-lg text-sm">
+                                        <div className="flex items-center gap-2 overflow-hidden">
+                                            <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                                            <span className="font-medium text-foreground truncate">{file.name}</span>
+                                        </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0" 
+                                            onClick={() => handleRemoveFile(file)}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0" onClick={() => handleRemoveFile(file)}>
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                         </div>
-                         <Button variant="outline" size="sm" className="mt-4" onClick={() => document.getElementById('prompt-builder-file-upload')?.click()} disabled={isAddFileDisabled}>Adicionar outro arquivo</Button>
+                                ))}
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-4" 
+                                onClick={() => document.getElementById('prompt-builder-file-upload')?.click()} 
+                                disabled={isAddFileDisabled}
+                            >
+                                Adicionar outro arquivo
+                            </Button>
+                        </>
+                    )}
                     </div>
                 )}
             </div>
+            
             <div className="space-y-6 flex flex-col justify-between">
-            <TooltipProvider>
-                <div className="space-y-4">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Label htmlFor="analysis-type" className="font-semibold">Quantidade de Itens</Label>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Escolha entre analisar um único arquivo ou múltiplos em lote.</p>
-                                </TooltipContent>
-                            </Tooltip>
+                <TooltipProvider>
+                    <div className="space-y-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Label htmlFor="analysis-type" className="font-semibold">Quantidade de Itens</Label>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Escolha entre analisar um único arquivo ou múltiplos em lote.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                            <Select value={analysisType} onValueChange={(value) => setAnalysisType(value as AnalysisType)} disabled={selectedFiles.length > 1 || isFolderUpload}>
+                                <SelectTrigger id="analysis-type">
+                                    <SelectValue placeholder="Selecione a quantidade" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="individual">Individual</SelectItem>
+                                    <SelectItem value="batch">Lote (Máximo {BATCH_LIMIT} volumes)</SelectItem>
+                                    <SelectItem value="ultra_batch">Ultra Lote (Máximo {ULTRA_BATCH_LIMIT} volumes)</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <Select value={analysisType} onValueChange={(value) => setAnalysisType(value as AnalysisType)} disabled={selectedFiles.length > 1}>
-                            <SelectTrigger id="analysis-type">
-                                <SelectValue placeholder="Selecione a quantidade" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="individual">Individual</SelectItem>
-                                <SelectItem value="batch">Lote (Máximo {BATCH_LIMIT} volumes)</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Label htmlFor="personalize-prompt" className="font-semibold">Tipo de Análise</Label>
-                             <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="max-w-xs space-y-1">
-                                    <p>
-                                        <strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. A perfomance automática é feita considerando 3 principais ativos e 3 detratores relacionadas ao seu percentual do *CDI*. Disponível para um ou múltiplos arquivos (lote).
-                                    </p>
-                                    <p>
-                                        <strong className="text-foreground">Análise Personalizada:</strong> Permite escolher os dados. Disponível apenas para um único arquivo.
-                                    </p>
-                                  </div>
-                                </TooltipContent>
-                            </Tooltip>
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Label htmlFor="personalize-prompt" className="font-semibold">Tipo de Análise</Label>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className="h-4 w-4 text-muted-foreground cursor-help" onClick={(e) => e.preventDefault()} />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <div className="max-w-xs space-y-1">
+                                            <p>
+                                                <strong className="text-foreground">Análise Automática:</strong> Gera a mensagem padrão. A perfomance automática é feita considerando 3 principais ativos e 3 detratores relacionadas ao seu percentual do *CDI*. Disponível para um ou múltiplos arquivos (lote).
+                                            </p>
+                                            <p>
+                                                <strong className="text-foreground">Análise Personalizada:</strong> Permite escolher os dados. Disponível apenas para um único arquivo.
+                                            </p>
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                            <Select value={personalize} onValueChange={(value) => setPersonalize(value as PersonalizePrompt)} disabled={analysisType !== 'individual'}>
+                                <SelectTrigger id="personalize-prompt">
+                                    <SelectValue placeholder="Selecione o tipo de análise" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="no">Análise Automática</SelectItem>
+                                    <SelectItem value="yes">Análise Personalizada</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <Select value={personalize} onValueChange={(value) => setPersonalize(value as PersonalizePrompt)} disabled={analysisType === 'batch'}>
-                            <SelectTrigger id="personalize-prompt">
-                                <SelectValue placeholder="Selecione o tipo de análise" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="no">Análise Automática</SelectItem>
-                                <SelectItem value="yes">Análise Personalizada</SelectItem>
-                            </SelectContent>
-                        </Select>
                     </div>
-                </div>
-            </TooltipProvider>
-                <Button type="button" onClick={handleContinue} disabled={selectedFiles.length === 0}>
-                    Continuar e Processar
+                </TooltipProvider>
+                <Button 
+                  type="button" 
+                  onClick={handleContinue} 
+                  disabled={selectedFiles.length === 0 || isSubmitting}
+                >
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processando...
+                        </>
+                    ) : (
+                        'Continuar e Processar'
+                    )}
                 </Button>
             </div>
         </div>
@@ -349,30 +588,37 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
     const allAssetsByClass = useMemo(() => {
         const assets: Record<string, (Asset & { originalIndex: number, numericReturn: number })[]> = {};
         
-        // Use 'detractors' as the base since it contains all assets
-        Object.entries(data.detractors).forEach(([category, items]) => {
+        // ✅ USAR allAssets (todos os ativos por classe)
+        const sourceData = data.allAssets || {};
+        
+        Object.entries(sourceData).forEach(([category, items]) => {
             if (!assets[category]) {
                 assets[category] = [];
             }
-            items.forEach((item, index) => {
-                // Check if the asset is already added to avoid duplicates if it's also in highlights
-                if (!assets[category].some(a => a.asset === item.asset)) {
-                    assets[category].push({
-                        ...item,
-                        originalIndex: index,
-                        numericReturn: parsePercentage(item.return)
-                    });
-                }
-            });
+            
+            // ✅ VERIFICAR SE ITEMS É UM ARRAY
+            if (Array.isArray(items)) {
+                items.forEach((item, index) => {
+                    if (item && typeof item === 'object' && item.asset) {
+                        if (!assets[category].some(a => a.asset === item.asset)) {
+                            assets[category].push({
+                                ...item,
+                                originalIndex: index,
+                                numericReturn: parsePercentage(item.return)
+                            });
+                        }
+                    }
+                });
+            }
         });
-
+    
         // Sort assets within each class by return
         Object.keys(assets).forEach(category => {
             assets[category].sort((a, b) => b.numericReturn - a.numericReturn);
         });
-
+    
         return assets;
-    }, [data.detractors, data.highlights]);
+    }, [data.allAssets]);
     
     const allClassPerformances = useMemo(() => {
         return (data.classPerformance || []).map(item => ({
@@ -411,14 +657,13 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                     <div key={`asset-${category}-${item.originalIndex}`} className="flex items-start space-x-3 p-2 rounded-md bg-muted/50">
                                         <Checkbox 
                                             id={`asset-${category}-${item.originalIndex}`} 
+                                            // Linhas 462-465: Substituir todo o onCheckedChange por:
                                             onCheckedChange={(c) => {
-                                                const isHighlight = (data.highlights[category] || []).some(h => h.asset === item.asset);
-                                                onCheckboxChange(isHighlight ? 'highlights' : 'detractors', category, item.originalIndex, !!c);
+                                                onCheckboxChange('allAssets', category, item.originalIndex, !!c);
                                             }}
                                             className="mt-1" 
                                             checked={
-                                                !!(selectedFields.highlights as any)?.[category]?.[item.originalIndex] ||
-                                                !!(selectedFields.detractors as any)?.[category]?.[item.originalIndex]
+                                                !!(selectedFields.allAssets as any)?.[category]?.[item.originalIndex]
                                             }
                                         />
                                         <Label htmlFor={`asset-${category}-${item.originalIndex}`} className="flex flex-col">
@@ -586,15 +831,108 @@ const loadingMessages = [
     "Extraindo e preparando dados para você"
 ];
 
+// Adicionar antes da linha 808 (export function PromptBuilderDialog)
+const UltraBatchProgressPhase = ({ 
+    jobId, 
+    progress, 
+    results, 
+    status, 
+    onNewAnalysis 
+  }: {
+    jobId: string | null;
+    progress: { current: number; total: number } | null;
+    results: any[];
+    status: 'processing' | 'completed' | 'error';
+    onNewAnalysis: () => void;
+  }) => {
+    const percentage = progress ? 
+        (progress.current / progress.total) * 100 : 0;
 
-export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onBatchSubmit }: PromptBuilderDialogProps) {
-  const [phase, setPhase] = useState<PromptBuilderPhase>('upload');
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
-  const [selectedFields, setSelectedFields] = useState<SelectedFields>({});
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+    return (
+        <div className="flex flex-col h-full p-6">
+            <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold mb-2">Análise Ultra Lote</h2>
+                <p className="text-muted-foreground">
+                    Job ID: {jobId}
+                </p>
+            </div>
+
+            {/* Barra de Progresso */}
+
+            {/* Status */}
+            <div className="text-center mb-4">
+                {status === 'processing' && (
+                    <p className="text-white-600">🔄 Processando arquivos...</p>
+                )}
+                {status === 'completed' && (
+                    <p className="text-green-600">✅ Análise concluída!</p>
+                )}
+                {status === 'error' && (
+                    <p className="text-red-600">❌ Erro na análise</p>
+                )}
+            </div>
+
+            {/* Resultados Parciais */}
+            <div className="flex-1 overflow-hidden">
+                <div className="space-y-2 overflow-y-auto max-h-96">
+                    {results.map((result, index) => (
+                        <div key={result.id} className="border rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium text-sm">
+                                    {result.fileName}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    #{index + 1}
+                                </span>
+                            </div>
+                            {result.error ? (
+                                <p className="text-red-500 text-sm">❌ {result.error}</p>
+                            ) : (
+                                <div className="text-sm text-muted-foreground">
+                                    <p className="line-clamp-3">{result.finalMessage}</p>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+        
+            <div className="flex gap-2 mt-4">
+            <h2 className="font-semibold mb-3">
+                    Os resultados serão exibidos a medida que forem finalizando
+                </h2>
+                {status === 'completed' && (
+                    <Button 
+                        onClick={() => {
+                            //console.log('Resultados finais:', results);
+                            // Aqui você pode implementar download ou outras ações
+                        }}
+                        className="flex-1"
+                    >
+                        Ver Detalhes
+                    </Button>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export function PromptBuilderDialog({ open, onOpenChange, onAnalysisResult, onBatchSubmit, onStartUltraBatch, activeChatId }: PromptBuilderDialogProps) {
+    const [phase, setPhase] = useState<PromptBuilderPhase>('upload');
+    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+    const [selectedFields, setSelectedFields] = useState<SelectedFields>({});
+    const [error, setError] = useState<string | null>(null);
+    const { toast } = useToast();
+    const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+    const { user } = useAuth(); //pega o uid fo firestore
+  
+    const [ultraBatchJobId, setUltraBatchJobId] = useState<string | null>(null);
+    const [ultraBatchProgress, setUltraBatchProgress] = useState<{current: number, total: number}>({current: 0, total:0});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -615,6 +953,9 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onB
     setSelectedFields({});
     setError(null);
     setLoadingMessageIndex(0);
+    setUltraBatchJobId(null);
+    setUltraBatchProgress({current: 0, total: 0});
+    setIsSubmitting(false);
   };
   
   const processIndividualFile = async (files: File[]) => {
@@ -633,37 +974,131 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onB
     setPhase('loading');
     
     try {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async () => {
-            const fileDataUri = reader.result as string;
-            const result = await extractDataFromXpReport({ name: file.name, mimeType: file.type, dataUri: fileDataUri });
+        // Converter para base64 no frontend
+        const base64Content = await fileToBase64(file);
+        
+        // ✅ MUDANÇA: Usar análise personalizada diretamente
+        const result = await extractReportData(
+            base64Content, 
+            file.name, 
+            user?.uid || 'anonymous'
+        );
 
-            if (!result.success || !result.data) {
-                throw new Error(result.error || "A extração de dados falhou.");
-            }
-            
-            setExtractedData(result.data);
-            setPhase('selection');
-        };
-        reader.onerror = () => {
-            throw new Error("Não foi possível ler o arquivo.");
-        };
+        if (!result.success || !result.data) {
+            throw new Error(result.error || "A extração de dados falhou.");
+        }
+        
+        // ✅ MUDANÇA: Usar result.data como extractedData
+        setExtractedData(result.data);
+        setPhase('selection');
     } catch (err: any) {
         setError(err.message);
         setPhase('error');
     }
-  }
+}
 
   const handleFilesChange = (files: File[]) => {
     setUploadedFiles(files);
     processIndividualFile(files);
   };
   
-  const handleBatchSubmit = (files: File[]) => {
-    onBatchSubmit(files);
-    handleClose();
+  const handleBatchSubmit = async (files: File[]) => {
+    try {
+        setPhase('loading');
+        
+        // Converter todos os arquivos para base64 no frontend
+        const batchFiles = await Promise.all(
+          files.map(async (file) => {
+            const base64Content = await fileToBase64(file);
+            return {
+              name: file.name,
+              dataUri: base64Content
+            };
+          })
+        );
+        
+        // Usar nova API de batch
+        const result = await batchAnalyzeReports(batchFiles, user?.uid || 'anonymous'); // TODO: usar userId real
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Erro no processamento em lote');
+        }
+        
+        // Processar resultados do batch
+        const messages = result.results.map((reportResult, index) => {
+            if (reportResult.success && reportResult.final_message) {
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- final_message original:', reportResult.final_message);
+                
+                // ✅ REATIVAR A CONVERSÃO
+                const convertedMessage = convertMarkdownToCodeBlock(reportResult.final_message);
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- final_message convertido:', convertedMessage);
+                
+                // ✅ CORREÇÃO: Usar o nome que vem do backend, não do array files
+                const fileName = reportResult.file_name || files[index]?.name || `Relatório ${index + 1}`;
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- reportResult completo:', reportResult);
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- reportResult.file_name:', reportResult.file_name);
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- files[index]?.name:', files[index]?.name);
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- fileName final:', fileName);
+                return `## Análise do ${fileName}\n\n${convertedMessage}`;
+
+            } else {
+                const fileName = reportResult.file_name || files[index]?.name || `Relatório ${index + 1}`;
+                return `## Análise do ${fileName}\n\n**Erro:** ${reportResult.error || 'Processamento falhou'}`;
+            }
+        });
+        
+        // Debug do join
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- messages array length:', messages.length);
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- messages[0] preview:', messages[0]?.substring(0, 200));
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- messages[1] preview:', messages[1]?.substring(0, 200));
+        
+        const joinedMessages = messages.join('\n\n');
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- joinedMessages length:', joinedMessages.length);
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- joinedMessages preview:', joinedMessages.substring(0, 300));
+        
+        // Gerar prompt com todos os resultados
+        const batchPrompt = `# Análise de ${files.length} relatórios XP
+
+        ${joinedMessages}`;
+
+        // 🔍 DEBUG COMPLETO
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- messages array:', messages);
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- messages length:', messages.length);
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- batchPrompt final:', JSON.stringify(batchPrompt));
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- batchPrompt length:', batchPrompt.length);
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- batchPrompt preview (primeiros 500 chars):', batchPrompt.substring(0, 500));
+        //console.log('🔍 DEBUG PromptBuilderDialog.tsx- batchPrompt preview (últimos 500 chars):', batchPrompt.substring(batchPrompt.length - 500));
+
+        
+        const fileNames = result.results.map(r => r.file_name).filter((fileName): fileName is string => fileName !== undefined);
+        //console.log('🔍 DEBUG PromptBuilderDialog - fileNames para onAnalysisResult:', fileNames);
+        onAnalysisResult(batchPrompt, fileNames);
+        handleClose();
+        
+    } catch (err: any) {
+        setError(err.message);
+        setPhase('error');
+    }
   };
+
+    const handleUltraBatchSubmit = async (files: File[]) => {
+        // 🔗 REFATORADO: Delegar toda a lógica de criação do job para ChatPage
+        // O dialog apenas coleta os arquivos e passa para o componente pai
+        try {
+            onStartUltraBatch(files);
+            handleClose();
+        } catch (err: any) {
+            console.error('Erro ao iniciar ultra batch:', err);
+            toast({
+                title: 'Erro no Ultra Lote',
+                description: err.message || 'Erro desconhecido',
+                variant: 'destructive'
+            });
+            setPhase('upload');
+        }
+    };
+
+
 
   const handleCheckboxChange = (category: keyof ExtractedData, assetOrClass: string, index: number, checked: boolean, isClass: boolean = false) => {
     setSelectedFields(prev => {
@@ -697,180 +1132,78 @@ export function PromptBuilderDialog({ open, onOpenChange, onPromptGenerated, onB
       return isNaN(value) ? NaN : value;
   };
 
+  const handleGeneratePrompt = async () => {
+    if (!extractedData || uploadedFiles.length === 0) return;
 
-  const handleGeneratePrompt = () => {
-    if (!extractedData) return;
-
-    const economicScenarioText = `Em agosto de 2025, o Copom manteve a Selic em 15% a.a., sinalizando prudência diante das incertezas e preservando a âncora monetária. A leitura do IPCA-15 em deflação de 0,14% ajudou a reduzir a percepção de pressões de curto prazo, reforçando a decisão de estabilidade dos juros e melhorando o apetite ao risco doméstico. Nesse ambiente, o Ibovespa avançou 6,28% no mês e atingiu recorde nominal de 141.422 pontos, movimento sustentado por rotação para ativos de risco e pela leitura de que o ciclo de política monetária se encerrou com a inflação cedendo na margem.
-No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal Reserve de vigilância ao mercado de trabalho, com ênfase em flexibilidade na condução da política — comunicação interpretada como ligeiramente “dovish”. Esse tom contribuiu para a melhora das condições financeiras globais e para a sustentação dos índices de ações, com o S&P 500 registrando alta de 1,9% no mês. O pano de fundo externo mais benigno, combinado ao alívio inflacionário local, criou um vetor positivo para ativos brasileiros, conectando a narrativa de juros estáveis, inflação mais comportada e valorização de bolsas no Brasil e nos Estados Unidos.`;
-
-    let prompt = `Você é um especialista em finanças. Sua tarefa é usar os dados extraídos de um relatório de investimentos da XP para formatar uma mensagem para WhatsApp, seguindo um modelo específico.
-
-**REGRAS ESTRITAS:**
-1.  **Use APENAS os dados fornecidos** para preencher a mensagem. Se um dado não foi fornecido, omita a frase correspondente.
-2.  **Mantenha a formatação EXATA** do modelo, incluindo quebras de linha e asteriscos para negrito.
-3.  **Não inclua** \`\`\`, Markdown, ou qualquer outra formatação que não seja a do modelo.
-
----
-**DADOS EXTRAÍDOS PARA USO:**
-- **Mês de Referência:** ${extractedData.reportMonth}`;
-
-    const selectedHighlights: Asset[] = [];
-    if (selectedFields.highlights && typeof selectedFields.highlights === 'object') {
-        for (const category in selectedFields.highlights) {
-            for (const index in selectedFields.highlights[category]) {
-                if (selectedFields.highlights[category][index]) {
-                    selectedHighlights.push(extractedData.highlights[category][parseInt(index, 10)]);
-                }
-            }
-        }
-    }
-    
-    const selectedDetractors: Asset[] = [];
-    if (selectedFields.detractors && typeof selectedFields.detractors === 'object') {
-        for (const category in selectedFields.detractors) {
-            for (const index in selectedFields.detractors[category]) {
-                if (selectedFields.detractors[category][index]) {
-                     selectedDetractors.push(extractedData.detractors[category][parseInt(index, 10)]);
-                }
-            }
-        }
-    }
-    
-    const selectedClasses: AssetClassPerformance[] = [];
-    if (selectedFields.classPerformance && typeof selectedFields.classPerformance === 'object') {
-        for (const className in selectedFields.classPerformance) {
-            if (selectedFields.classPerformance[className]) {
-                const classData = (extractedData.classPerformance || []).find(c => c.className === className);
-                if (classData) {
-                    selectedClasses.push(classData);
-                }
-            }
-        }
-    }
-
-    const dataPairs = [
-        { key: 'monthlyReturn', data: extractedData.monthlyReturn },
-        { key: 'monthlyCdi', data: extractedData.monthlyCdi },
-        { key: 'monthlyGain', data: extractedData.monthlyGain },
-        { key: 'yearlyReturn', data: extractedData.yearlyReturn },
-        { key: 'yearlyCdi', data: extractedData.yearlyCdi },
-        { key: 'yearlyGain', data: extractedData.yearlyGain }
-    ];
-
-    dataPairs.forEach(pair => {
-        if (selectedFields[pair.key as keyof SelectedFields]) {
-            prompt += `\n- **${pair.key}:** ${pair.data}`;
-        }
-    });
-
-    if (selectedHighlights.length > 0) {
-        prompt += "\n- **Principais Destaques Positivos (Ativos):**";
-        selectedHighlights.forEach(h => {
-            prompt += `\n  - ${h.asset} (${h.return}): ${h.reason}`;
-        });
-    }
-
-    if (selectedDetractors.length > 0) {
-        prompt += "\n- **Principais Detratores (Ativos):**";
-        selectedDetractors.forEach(d => {
-            prompt += `\n  - ${d.asset} (${d.cdiPercentage} do CDI)`;
-        });
-    }
-
-    if (selectedClasses.length > 0) {
-        prompt += "\n- **Performance das Classes Selecionadas:**";
-        selectedClasses.forEach(c => {
-            const benchmarkName = findBenchmarkByClassName(c.className);
-            const benchmarkValue = extractedData.benchmarkValues?.[benchmarkName] ?? 'N/A';
-            const classReturn = parsePercentage(c.return);
-            const benchReturn = parsePercentage(benchmarkValue);
-            let diffText = '';
-            if (!isNaN(classReturn) && !isNaN(benchReturn)) {
-                const diff = classReturn - benchReturn;
-                diffText = `, ${Math.abs(diff).toFixed(2).replace('.', ',')}% ${diff >= 0 ? 'superior' : 'inferior'}`;
-            }
-
-            prompt += `\n  - ${c.className}: Retorno ${c.return}, Benchmark (${benchmarkName}): ${benchmarkValue}${diffText}`;
-        });
-    }
-
-    // --- Dynamic Message Construction ---
-    let messageBody = `Olá, [NOME]!\n`;
-    
-    let monthlyPerformanceParts: string[] = [];
-    if (selectedFields.monthlyReturn) monthlyPerformanceParts.push(`rendeu *${extractedData.monthlyReturn}*`);
-    if (selectedFields.monthlyCdi) monthlyPerformanceParts.push(`o que equivale a *${extractedData.monthlyCdi}* do CDI`);
-    if (selectedFields.monthlyGain) monthlyPerformanceParts.push(`um ganho bruto de *${extractedData.monthlyGain}*`);
-    
-    if (monthlyPerformanceParts.length > 0) {
-        messageBody += `Em ${extractedData.reportMonth} sua carteira ${monthlyPerformanceParts.join(', ')}!\n`;
-    }
-
-    let yearlyPerformanceParts: string[] = [];
-    if (selectedFields.yearlyReturn) yearlyPerformanceParts.push(`rentabilidade de *${extractedData.yearlyReturn}*`);
-    if (selectedFields.yearlyCdi) yearlyPerformanceParts.push(`uma performance de *${extractedData.yearlyCdi}* do CDI`);
-    if (selectedFields.yearlyGain) yearlyPerformanceParts.push(`um ganho financeiro de *${extractedData.yearlyGain}*`);
-
-    if (yearlyPerformanceParts.length > 0) {
-        messageBody += `No ano, estamos com ${yearlyPerformanceParts.join(', ')}!\n`;
-    }
-    
-    if (selectedHighlights.length > 0) {
-        messageBody += `\nOs principais destaques foram:\n`;
-        messageBody += selectedHighlights.map(h => `*${h.asset}*, com *${h.return}*`).join('\n');
-    }
-
-    if (selectedDetractors.length > 0) {
-        messageBody += `\n\nOs principais detratores foram:\n`;
-        messageBody += selectedDetractors.map(d => `*${d.asset}*: *${d.return}*`).join('\n');
-    }
-    
-    if (selectedClasses.length > 0) {
-        const classPerformancesText = selectedClasses.map(c => {
-            const isGlobal = c.className.toLowerCase().includes('global');
-            if (isGlobal) {
-                return `A classe *${c.className}* teve um desempenho com *${c.return}*. Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.`;
-            }
-
-            const benchmarkName = findBenchmarkByClassName(c.className);
-            const benchmarkValue = extractedData.benchmarkValues?.[benchmarkName] ?? 'N/A';
-            const classReturn = parsePercentage(c.return);
-            const benchReturn = parsePercentage(benchmarkValue);
-
-            if (!isNaN(classReturn) && !isNaN(benchReturn)) {
-                 const diff = classReturn - benchReturn;
-                 const comparison = diff >= 0 ? 'superior' : 'inferior';
-                 return `A classe *${c.className}* teve um bom desempenho com *${c.return}* de rentabilidade, *${Math.abs(diff).toFixed(2).replace('.',',')}%* ${comparison} ao seu benchmark *${benchmarkName}*, com *${benchmarkValue}*`;
-            } else {
-                return `A classe *${c.className}* teve um desempenho com *${c.return}*.`;
-            }
-        }).join('\n');
+    try {
+        setPhase('loading');
         
-        if(classPerformancesText) {
-            messageBody += `\n\n${classPerformancesText}`;
+        const file = uploadedFiles[0];
+        
+        // Converter para base64 no frontend
+        const base64Content = await fileToBase64(file);
+        
+        const apiSelectedFields = {
+            monthlyReturn: !!selectedFields.monthlyReturn,
+            monthlyCdi: !!selectedFields.monthlyCdi,
+            monthlyGain: !!selectedFields.monthlyGain,
+            yearlyReturn: !!selectedFields.yearlyReturn,
+            yearlyCdi: !!selectedFields.yearlyCdi,
+            yearlyGain: !!selectedFields.yearlyGain,
+            classPerformance: selectedFields.classPerformance || {},
+            allAssets: selectedFields.allAssets || {}
+        };
+
+                // Em src/components/chat/PromptBuilderDialog.tsx
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- apiSelectedFields sendo enviado:', JSON.stringify(apiSelectedFields, null, 2));
+
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- ANTES de chamar analyzeReportPersonalizedFromData');
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- extractedData:', extractedData);
+                //console.log('🔍 DEBUG PromptBuilderDialog.tsx- file.name:', file.name);
+
+
+        // ✅ MUDANÇA: Usar nova API que aceita dados já extraídos
+        const result = await analyzeReportPersonalizedFromData(
+            extractedData, 
+            apiSelectedFields, 
+            file.name, 
+            user?.uid || 'anonymous'
+        );
+        
+        //console.log('🔍 DEBUG - PromptBuilderDialog result:', result);
+
+        //console.log('🔍 DEBUG PromptBuilderDialog- result.success:', result.success);
+        //console.log('🔍 DEBUG PromptBuilderDialog- result.final_message:', result.final_message);
+        //console.log('🔍 DEBUG PromptBuilderDialog- result.final_message length:', result.final_message?.length);
+
+        if (!result.success || !result.final_message) {
+            //console.log('🔍 DEBUG PromptBuilderDialog- ERRO: result.success =', result.success, 'result.final_message =', result.final_message);
+            throw new Error(result.error || 'Falha na geração da mensagem');
         }
+
+        //console.log('🔍 DEBUG PromptBuilderDialog- Chamando onPromptGenerated...');
+        onAnalysisResult(result.final_message, [file.name]);
+        //console.log('🔍 DEBUG PromptBuilderDialog- onPromptGenerated chamado com sucesso');
+        handleClose();
+        
+    } catch (err: any) {
+        //console.log('🔍 DEBUG PromptBuilderDialog- err.message:', err.message);
+        setError(err.message);
+        setPhase('error');
     }
-
-
-    messageBody += `\n\n${economicScenarioText}`;
-
-    prompt += `\n---\n**MODELO OBRIGATÓRIO DA MENSAGEM (PREENCHA COM OS DADOS ACIMA):**\n\n${messageBody}`;
-    
-    onPromptGenerated(prompt);
-    handleClose();
   };
-
 
   const handleClose = () => {
     resetState();
     onOpenChange(false);
   }
+
+  const ULTRA_BATCH_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutos
   
   const renderContent = () => {
     switch (phase) {
         case 'upload':
-            return <UploadPhase onFilesChange={handleFilesChange} onBatchSubmit={handleBatchSubmit} files={uploadedFiles} />;
+            return <UploadPhase onFilesChange={handleFilesChange} onBatchSubmit={handleBatchSubmit}  onUltraBatchSubmit={handleUltraBatchSubmit} files={uploadedFiles} isSubmitting={isSubmitting} setIsSubmitting={setIsSubmitting}/>;
         case 'loading':
             return <LoadingPhase loadingMessage={loadingMessages[loadingMessageIndex]} />;
         case 'error':
@@ -880,25 +1213,29 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
                 return <SelectionPhase data={extractedData} onCheckboxChange={handleCheckboxChange} selectedFields={selectedFields} />;
             }
             return <ErrorPhase error="Não foi possível exibir os dados extraídos." onRetry={resetState} />;
-        default:
-            return null;
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); else onOpenChange(true); }}>
+    <Dialog open={open} onOpenChange={(isOpen) => { 
+        if (!isOpen) {
+          handleClose();
+        } else {
+          onOpenChange(true);
+        }
+      }}>
       <DialogContent 
-        className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0"
-        style={{ borderRadius: '10px' }}
-      >
+    className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0"
+    style={{ borderRadius: '10px' }}
+  >
         <DialogHeader className='p-6 pb-2 border-b shrink-0'>
-          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
             <Wand2 className="h-6 w-6" />
-            <DialogTitle className="text-xl">Assistente de Prompt Estruturado</DialogTitle>
-          </div>
-          <DialogDescription className="pb-4">
+            <DialogTitle className="text-xl">Assistente de Mensagem</DialogTitle>
+            </div>
+            <DialogDescription className="pb-4">
             Anexe um relatório de performance da XP para extrair os dados e construir uma análise personalizada.
-          </DialogDescription>
+            </DialogDescription>
         </DialogHeader>
         
         {phase === 'selection' && extractedData && (
@@ -934,5 +1271,3 @@ No cenário externo, o Simpósio de Jackson Hole trouxe uma mensagem do Federal 
     </Dialog>
   );
 }
-
-    

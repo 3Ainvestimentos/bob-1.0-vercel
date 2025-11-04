@@ -30,14 +30,32 @@ export interface LegalIssueAlert {
 }
 
 export interface Message {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
-  latencyMs?: number;
-  source?: 'rag' | 'web';
+  fileNames?: string[] | null;
+  source?: 'rag' | 'web' | 'transcription' | 'gemini' | 'ultra_batch' | null;
   sources?: {
     title: string;
     uri: string;
-  }[];
+  }[] | null;
+  promptTokenCount?: number | null;
+  candidatesTokenCount?: number | null;
+  latencyMs?: number | null;
+  originalContent?: string | undefined | null;
+  isStandardAnalysis?: boolean;
+  ultraBatchJobId?: string; 
+  ultraBatchTotal?: number; 
+  ultraBatchProgress?: { current: number; total: number };
+  ultraBatchBatches?: Array<{
+    batchNumber: number;
+    files: Array<{
+      fileName: string;
+      content: string;
+      success: boolean;
+    }>;
+  }>;
+  ultraBatchEstimatedTimeMinutes?: number;
 }
 
 // Primeiro, precisamos definir o que é uma 'ClientRagSource', que é usado dentro da resposta
@@ -55,4 +73,157 @@ export interface GeminiResponse {
   promptTokenCount?: number;
   candidatesTokenCount?: number;
   error?: string; // Mantemos o 'error' opcional para o tratamento de falhas
+}
+
+
+// ============= TYPES PARA API DE RELATÓRIOS =============
+
+// Request types
+export interface ReportAnalyzeAutoRequest {
+  file_content: string; // base64
+  file_name: string;
+  user_id: string;
+}
+
+export interface ReportAnalyzePersonalizedRequest {
+  file_content: string; // base64
+  file_name: string;
+  user_id: string;
+  selected_fields: {
+    monthlyReturn?: boolean;
+    yearlyReturn?: boolean;
+    classPerformance?: { [className: string]: boolean };
+  };
+}
+
+export interface BatchReportRequest {
+  files: Array<{
+    name: string;
+    dataUri: string; // base64
+  }>;
+  user_id: string;
+}
+
+// Response types
+export interface ReportAnalyzeResponse {
+  success: boolean;
+  extracted_data?: any;
+  file_name?: string;
+  highlights?: Array<{
+    className: string;
+    return: string;
+    difference?: string;
+  }>;
+  detractors?: Array<{
+    className: string;
+    return: string;
+  }>;
+  final_message?: string;
+  metadata?: any;
+  error?: string;
+}
+
+export interface BatchReportResponse {
+  success: boolean;
+  results: ReportAnalyzeResponse[];
+  metadata?: {
+    total_files: number;
+    success_count: number;
+    failure_count: number;
+  };
+  error?: string;
+}
+
+export interface Asset {
+  asset: string;
+  return: string;
+  cdiPercentage: string;
+  reason?: string;
+}
+
+
+// Types para compatibilidade com PromptBuilderDialog existente
+export interface ExtractedData {
+  accountNumber: string;
+  reportMonth: string;
+  monthlyReturn: string;
+  monthlyCdi: string;
+  monthlyGain: string;
+  yearlyReturn: string;
+  yearlyCdi: string;
+  yearlyGain: string;
+  highlights: Record<string, Array<{
+    asset: string;
+    return: string;
+    cdiPercentage: string;
+    reason?: string;
+  }>>;
+  detractors: Record<string, Array<{
+    asset: string;
+    return: string;
+    cdiPercentage: string;
+  }>>;
+  classPerformance: Array<{
+    className: string;
+    return: string;
+    cdiPercentage: string;
+  }>;
+  benchmarkValues: { [key in 'CDI' | 'Ibovespa' | 'IPCA' | 'Dólar']?: string };
+  allAssets: Record<string, Asset[]>;
+}
+
+export interface SelectedFields {
+  monthlyReturn?: boolean;
+  monthlyCdi?: boolean;
+  monthlyGain?: boolean;
+  yearlyReturn?: boolean;
+  yearlyCdi?: boolean;
+  yearlyGain?: boolean;
+  highlights?: { [category: string]: { [index: number]: boolean } };
+  detractors?: { [category: string]: { [index: number]: boolean } };
+  allAssets?: { [category: string]: { [index: number]: boolean } };
+  classPerformance?: { [className: string]: boolean };
+}
+
+// Interafces da analise ultra batch
+
+// Job que é salvo no Firestore
+export interface UltraBatchJob {
+  userId: string;
+  status: 'processing' | 'completed' | 'failed';
+  totalFiles: number;
+  processedFiles: number;
+  successCount: number;
+  failureCount: number;
+  createdAt: any; // Firebase Timestamp
+  completedAt: any | null; // Firebase Timestamp ou null
+  error?: string | null;
+}
+
+// Resultado individual de cada arquivo
+export interface UltraBatchResult {
+  fileName: string;
+  success: boolean;
+  final_message: string | null; // null se falhou
+  error: string | null; // null se sucesso
+  processedAt: any; // Firebase Timestamp
+}
+
+// Request que enviamos ao backend
+export interface UltraBatchReportRequest {
+  files: Array<{
+    name: string;
+    dataUri: string;
+  }>;
+  user_id: string;
+  chat_id?: string; // 🔗 PADRÃO DE PONTEIRO: ID do chat (opcional)
+}
+
+// Response que recebemos do backend
+export interface UltraBatchReportResponse {
+  success: boolean;
+  job_id: string;
+  total_files: number;
+  estimated_time_minutes: number;
+  error?: string | null;
 }

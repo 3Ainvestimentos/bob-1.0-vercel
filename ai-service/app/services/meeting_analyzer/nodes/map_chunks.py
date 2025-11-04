@@ -8,7 +8,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from app.models.schema import MeetingAnalysisState, Opportunity
 from app.services.meeting_analyzer.prompts import MAP_PROMPT
-from app.config import GOOGLE_API_KEY, MODEL_NAME, MODEL_TEMPERATURE
+from app.config import GOOGLE_API_KEY, MODEL_NAME, MODEL_TEMPERATURE, LANGCHAIN_PROJECT_MEETING
+import os
 
 
 def map_chunks(state: MeetingAnalysisState) -> Dict[str, Any]:
@@ -34,6 +35,9 @@ def map_chunks(state: MeetingAnalysisState) -> Dict[str, Any]:
         
         if not chunks:
             raise ValueError("Lista de chunks está vazia")
+
+            # Definir projeto LangSmith para este workflow
+        os.environ["LANGCHAIN_PROJECT"] = LANGCHAIN_PROJECT_MEETING
         
         # Inicializar o modelo Gemini
         llm = ChatGoogleGenerativeAI(

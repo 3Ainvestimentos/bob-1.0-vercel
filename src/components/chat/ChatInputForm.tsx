@@ -145,11 +145,11 @@ export function ChatInputForm({
         setSelectedFiles([audioFile]);
       } else {
         setSelectedFiles(prev => [...prev, ...files].filter(
-          (file, index, self) => index === self.findIndex(f => f.name === file.name && f.size === file.size)
-        ));
+            (file, index, self) => index === self.findIndex(f => f.name === file.name && f.size === file.size)
+          ));
+        }
       }
-    }
-  };
+    };
 
   const handleAttachClick = () => {
     fileInputRef.current?.click();

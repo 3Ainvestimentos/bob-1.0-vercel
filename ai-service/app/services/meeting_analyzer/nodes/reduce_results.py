@@ -7,8 +7,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from app.models.schema import MeetingAnalysisState, Opportunity
 from app.services.meeting_analyzer.prompts import REDUCE_PROMPT
-from app.config import GOOGLE_API_KEY, MODEL_NAME, MODEL_TEMPERATURE
-
+from app.config import GOOGLE_API_KEY, MODEL_NAME, MODEL_TEMPERATURE, LANGCHAIN_PROJECT_MEETING
+import os
 
 def reduce_results(state: MeetingAnalysisState) -> Dict[str, Any]:
     """
@@ -49,6 +49,9 @@ def reduce_results(state: MeetingAnalysisState) -> Dict[str, Any]:
                 formatted_results += f"  Descrição: {opp.get('description', 'N/A')}\n"
                 formatted_results += f"  Prioridade: {opp.get('priority', 'N/A')}\n"
                 formatted_results += f"  Menções: {opp.get('mentions', [])}\n"
+
+        # Definir projeto LangSmith para este workflow
+        os.environ["LANGCHAIN_PROJECT"] = LANGCHAIN_PROJECT_MEETING
         
         # Inicializar o modelo
         llm = ChatGoogleGenerativeAI(

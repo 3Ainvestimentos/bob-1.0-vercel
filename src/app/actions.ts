@@ -5,12 +5,17 @@ import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseAdminApp, getServiceAccountCredentialsFromEnv } from '@/lib/server/firebase';
-import { AttachedFile, UserRole } from '@/types';
-import { Message, RagSource as ClientRagSource } from '@/app/chat/page';
+import { AttachedFile, UltraBatchReportResponse, UltraBatchReportRequest, UserRole, Message } from '@/types';
+// Definição local para evitar import de componente client-side
+type ClientRagSource = {
+  title: string;
+  uri: string;
+};
 import { SpeechClient } from '@google-cloud/speech';
 import { estimateTokens, getFileContent, formatTutorialToMarkdown } from '@/lib/server/utils';
 import { POSICAO_CONSOLIDADA_PREAMBLE, XP_REPORT_EXTRACTION_PREAMBLE } from './chat/preambles';
 import { acknowledgeUpdate as coreAcknowledgeUpdate } from '@/lib/server/core/userActions';
+import { ReportAnalyzeAutoRequest, ReportAnalyzePersonalizedRequest, BatchReportRequest, ReportAnalyzeResponse, BatchReportResponse, ExtractedData } from '@/types';
 
 
 
@@ -934,7 +939,7 @@ export async function analyzeMeetingTranscript(file: File): Promise<{
       formData.append('file', file);
   
       // URL do serviço Python (ajustar conforme necessário)
-      const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
+      const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
       
       // Fazer requisição para o serviço Python
       const response = await fetch(`${pythonServiceUrl}/api/analyze`, {
@@ -955,3 +960,292 @@ export async function analyzeMeetingTranscript(file: File): Promise<{
       throw new Error('Erro interno do servidor');
     }
   }
+
+  // ============= NOVAS ACTIONS PARA API DE RELATÓRIOS =============
+
+/**
+ * Análise automática de relatório
+ */
+export async function analyzeReportAuto(
+    base64Content: string,
+    fileName: string,
+    userId: string
+  ): Promise<ReportAnalyzeResponse> {
+    try {
+      const request: ReportAnalyzeAutoRequest = {
+        file_content: base64Content,
+        file_name: fileName,
+        user_id: userId
+      };
+  
+      const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${pythonServiceUrl}/api/report/analyze-auto`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Erro ao processar relatório');
+      }
+  
+      const result: ReportAnalyzeResponse = await response.json();
+      return result;
+  
+    } catch (error: any) {
+      console.error('Erro ao analisar relatório (auto):', error);
+      return {
+        success: false,
+        error: error.message || 'Erro interno do servidor'
+      };
+    }
+  }
+  
+  /**
+   * Análise personalizada de relatório
+   */
+  export async function analyzeReportPersonalized(
+    base64Content: string,
+    fileName: string,
+    userId: string,
+    selectedFields: {
+      monthlyReturn?: boolean;
+      yearlyReturn?: boolean;
+      classPerformance?: { [className: string]: boolean };
+    }
+  ): Promise<ReportAnalyzeResponse> {
+    try {
+      const request: ReportAnalyzePersonalizedRequest = {
+        file_content: base64Content,
+        file_name: fileName,
+        user_id: userId,
+        selected_fields: selectedFields
+      };
+  
+      const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${pythonServiceUrl}/api/report/analyze-personalized`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Erro ao processar relatório');
+      }
+  
+      const result: ReportAnalyzeResponse = await response.json();
+      return result;
+  
+    } catch (error: any) {
+      console.error('Erro ao analisar relatório (personalizado):', error);
+      return {
+        success: false,
+        error: error.message || 'Erro interno do servidor'
+      };
+    }
+  }
+  
+  /**
+   * Apenas extração de dados (para UI de seleção)
+   */
+  export async function extractReportData(
+    base64Content: string,
+    fileName: string,
+    userId: string
+  ): Promise<{ success: boolean; data?: ExtractedData; error?: string }> {
+    try {
+      const request: ReportAnalyzeAutoRequest = {
+        file_content: base64Content,
+        file_name: fileName,
+        user_id: userId
+      };
+  
+      const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${pythonServiceUrl}/api/report/extract`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Erro ao extrair dados');
+      }
+  
+      const result: ReportAnalyzeResponse = await response.json();
+      
+      if (!result.success || !result.extracted_data) {
+        throw new Error(result.error || 'Falha na extração de dados');
+      }
+  
+      // Converter para formato compatível com PromptBuilderDialog
+      const extractedData: ExtractedData = result.extracted_data;
+      
+      return {
+        success: true,
+        data: extractedData
+      };
+  
+    } catch (error: any) {
+      console.error('Erro ao extrair dados do relatório:', error);
+      return {
+        success: false,
+        error: error.message || 'Erro interno do servidor'
+      };
+    }
+  }
+  
+  /**
+   * Processamento em lote de relatórios
+   */
+  export async function batchAnalyzeReports(
+    files: Array<{ name: string; dataUri: string }>,
+    userId: string
+  ): Promise<BatchReportResponse> {
+    try {
+      const request: BatchReportRequest = {
+        files: files,
+        user_id: userId
+      };
+  
+      const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+
+      // 🔍 LOG: Confirmar endpoint sendo usado
+      console.log('🔍 API Call - an[alise XP report:', `${pythonServiceUrl}/api/analyze`);
+      console.log('🔍 NEXT_PUBLIC_PYTHON_SERVICE_URL:', process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'fallback-localhost');
+            
+      const response = await fetch(`${pythonServiceUrl}/api/report/batch-analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Erro ao processar lote');
+      }
+  
+      const result: BatchReportResponse = await response.json();
+      return result;
+  
+    } catch (error: any) {
+      console.error('Erro ao processar lote de relatórios:', error);
+      return {
+        success: false,
+        results: [],
+        error: error.message || 'Erro interno do servidor'
+      };
+    }
+  }
+
+  /**
+ * Processamento em ultra lote de relatórios (até 100 arquivos)
+ * 
+ * @param files - Array de arquivos para processar
+ * @param userId - ID do usuário
+ * @param chatId - (opcional) ID do chat. Quando fornecido, o backend salvará o ponteiro batchJobId no documento do chat
+ */
+export async function ultraBatchAnalyzeReports(
+  files: Array<{ name: string; dataUri: string }>,
+  userId: string,
+  chatId?: string
+): Promise<UltraBatchReportResponse> {
+  try {
+    const request: UltraBatchReportRequest = {
+      files: files,
+      user_id: userId,
+      ...(chatId && { chat_id: chatId }) // 🔗 PADRÃO DE PONTEIRO: Incluir chat_id se fornecido
+    };
+    console.log('🔗 PADRÃO DE PONTEIRO - Corpo da Requisição:', JSON.stringify(request, null, 2));
+
+
+    const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+
+    // 🔍 LOG: Confirmar endpoint sendo usado
+    console.log('🔍 API Call - ultra batch analyze XP reports:', `${pythonServiceUrl}/api/report/ultra-batch-analyze`);
+    console.log('🔍 NEXT_PUBLIC_PYTHON_SERVICE_URL:', process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'fallback-localhost');
+          
+    const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch-analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Erro ao criar job de ultra lote');
+    }
+
+    const result: UltraBatchReportResponse = await response.json();
+    return result;
+
+  } catch (error: any) {
+    console.error('Erro ao criar job de ultra lote:', error);
+    return {
+      success: false,
+      job_id: '',
+      total_files: 0,
+      estimated_time_minutes: 0,
+      error: error.message || 'Erro interno do servidor'
+    };
+  }
+}
+
+  // Em src/app/actions.ts
+export async function analyzeReportPersonalizedFromData(
+  extractedData: ExtractedData,
+  selectedFields: any,
+  fileName: string,
+  userId: string
+): Promise<ReportAnalyzeResponse> {
+  try {
+      // ✅ CORREÇÃO: Adicionar fallback para PYTHON_SERVICE_URL
+      const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+      console.log('🔍 DEBUG - NEXT_PUBLIC_PYTHON_SERVICE_URL:', pythonServiceUrl);
+      
+      const response = await fetch(`${pythonServiceUrl}/api/report/analyze-personalized-from-data`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+              extracted_data: extractedData,
+              selected_fields: selectedFields,
+              file_name: fileName,
+              user_id: userId
+          }),
+      });
+
+      if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('🔍 DEBUG - analyzeReportPersonalizedFromData result:', result);
+      console.log('🔍 DEBUG - Retornando result para PromptBuilderDialog');
+      return result;
+
+  } catch (error) {
+    console.log('🔍 DEBUG - ERRO em analyzeReportPersonalizedFromData:', error);
+    console.error('Erro na análise personalizada:', error);
+    return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+    };
+}
+}
