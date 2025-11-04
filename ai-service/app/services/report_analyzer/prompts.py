@@ -188,8 +188,8 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       - *[className]*: *[classReturn]*.
 
       🌎 *Cenário Econômico de [mês de referência]:*
-      - Cenário Nacional: O cenário doméstico em setembro foi marcado pela cautela. A prévia da inflação (IPCA-15) veio pressionada em 0,48%, frustrando as expectativas de alívio e confirmando a persistência dos preços no setor de serviços. Como consequência direta, o mercado consolidou a visão de que o Banco Central manterá a taxa Selic em 15% a.a. até o fim de 2025, adiando o início do ciclo de cortes para 2026. O foco, portanto, permanece no desafio de controlar a inflação interna.
-      - Cenário Internacional: O ambiente externo tornou-se mais otimista. O principal destaque foi a decisão do Federal Reserve (Fed) de iniciar o ciclo de corte de juros nos Estados Unidos, em resposta à desaceleração do mercado de trabalho. Essa mudança para uma política monetária mais branda melhora a liquidez global e aumenta o apetite por risco, criando um pano de fundo favorável para mercados emergentes, incluindo o Brasil.
+      - Cenário Nacional: O mercado brasileiro viveu um mês de outubro tranquilo, com a bolsa em alta – renovando máximas acima dos 148 mil pontos – e a Selic mantida em 15%. O cenário de inflação sob controle e expectativas de queda dos juros em 2026 ajudou a atrair capital estrangeiro e fortalecer o otimismo dos investidores.
+      - Cenário Internacional: No exterior, o Federal Reserve reduziu a taxa de juros, impulsionando novas altas nas bolsas e beneficiando emergentes. O clima ficou ainda mais favorável após a trégua comercial entre EUA e China, apesar da paralisação do governo americano não ter trazido volatilidade.
       ```
 
       **IMPORTANTE: Comece com ``` e termine com ```**
@@ -387,14 +387,17 @@ Olá, [N° do Cliente]!
 [Incluir apenas métricas selecionadas pelo cliente]
 
 ✅ *Destaques do mês:*
+
 [Incluir apenas highlights selecionados pelo cliente]
 
 ⚠️ *Pontos de Atenção:*
+
 [Incluir apenas detractors selecionados pelo cliente]
 
 🌎 *Cenário Econômico de [mês de referência]:*
-- Cenário Nacional: O cenário doméstico em setembro foi marcado pela cautela. A prévia da inflação (IPCA-15) veio pressionada em 0,48%, frustrando as expectativas de alívio e confirmando a persistência dos preços no setor de serviços. Como consequência direta, o mercado consolidou a visão de que o Banco Central manterá a taxa Selic em 15% a.a. até o fim de 2025, adiando o início do ciclo de cortes para 2026. O foco, portanto, permanece no desafio de controlar a inflação interna.
-- Cenário Internacional: O ambiente externo tornou-se mais otimista. O principal destaque foi a decisão do Federal Reserve (Fed) de iniciar o ciclo de corte de juros nos Estados Unidos, em resposta à desaceleração do mercado de trabalho. Essa mudança para uma política monetária mais branda melhora a liquidez global e aumenta o apetite por risco, criando um pano de fundo favorável para mercados emergentes, incluindo o Brasil.
+
+      - Cenário Nacional: O mercado brasileiro viveu um mês de outubro tranquilo, com a bolsa em alta – renovando máximas acima dos 148 mil pontos – e a Selic mantida em 15%. O cenário de inflação sob controle e expectativas de queda dos juros em 2026 ajudou a atrair capital estrangeiro e fortalecer o otimismo dos investidores.
+      - Cenário Internacional: No exterior, o Federal Reserve reduziu a taxa de juros, impulsionando novas altas nas bolsas e beneficiando emergentes. O clima ficou ainda mais favorável após a trégua comercial entre EUA e China, apesar da paralisação do governo americano não ter trazido volatilidade.
 ```
 
 **IMPORTANTE: Comece com ``` e termine com ```**

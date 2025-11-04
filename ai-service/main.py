@@ -24,14 +24,25 @@ app = FastAPI(
 allowed_origins = [
     "http://localhost:3000",  # Next.js dev
     "http://localhost:3001",
-    "https://www.3arivaconnect.com.br/chatbot",  # Firebase Hosting
-    "https://bob-develop-3a.firebaseapp.com",  # Firebase Hosting alternativo
+    "https://www.3arivaconnect.com.br",  # Firebase Hosting
+    "https://bob-develop-3a.firebaseapp.com",
+    "https://studio--datavisor-44i5m.us-central1.hosted.app"  # Firebase Hosting alternativo
 ]
 
 # Adicionar domínios de produção via variável de ambiente
 if os.getenv("ALLOWED_ORIGINS"):
     production_origins = os.getenv("ALLOWED_ORIGINS").split(",")
-    allowed_origins.extend([origin.strip() for origin in production_origins])
+    # Filtrar origens vazias e inválidas
+    valid_origins = [
+        origin.strip() 
+        for origin in production_origins 
+        if origin.strip() and origin.strip().startswith(('http://', 'https://'))
+    ]
+    allowed_origins.extend(valid_origins)
+
+# Log para debug
+print(f"🔍 CORS - Environment: {ENVIRONMENT}")
+print(f"🔍 CORS - Allowed origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,

@@ -120,7 +120,6 @@ if (shouldLoadEnvFile) {
   console.log('✅ Todas as variáveis críticas estão disponíveis via Secret Manager!');
 }
 
-
 const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
@@ -146,45 +145,6 @@ const nextConfig: NextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'clipboard-write=*',
-          },
-        ],
-      },
-      // Headers para prevenir cache de Server Actions e assets desatualizados
-      {
-        // HTML e rotas da aplicação - NÃO cachear (sempre buscar versão mais recente)
-        source: '/:path((?!_next/static|_next/image|favicon.ico).*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate, max-age=0',
-          },
-          {
-            key: 'Pragma',
-            value: 'no-cache',
-          },
-          {
-            key: 'Expires',
-            value: '0',
-          },
-        ],
-      },
-      {
-        // Assets estáticos do Next.js - cachear por 1 ano (eles têm hash único)
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
-        // Imagens do Next.js - cachear por 1 mês
-        source: '/_next/image/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=2592000, must-revalidate',
           },
         ],
       },
