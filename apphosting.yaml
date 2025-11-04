@@ -5,3 +5,58 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+
+# Environment variables are used to configure your application's behavior.
+# App Hosting uses Google Cloud Secret Manager to securely store and manage
+# secrets for your application.
+# To use these variables, you need to create the secrets in Secret Manager.
+# https://firebase.google.com/docs/app-hosting/configure-backend#environment-variables
+env:
+  # ==========================================
+  # VARIÁVEIS NEXT_PUBLIC_* (Cliente)
+  # ==========================================
+  # Essas variáveis são expostas ao cliente e devem começar com NEXT_PUBLIC_
+  # Elas são incorporadas no bundle durante o build
+  
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: projects/629342546806/secrets/NEXT_PUBLIC_FIREBASE_API_KEY/versions/latest
+  
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    secret: projects/629342546806/secrets/NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN/versions/latest
+  
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    secret: projects/629342546806/secrets/NEXT_PUBLIC_FIREBASE_PROJECT_ID/versions/latest
+  
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    secret: projects/629342546806/secrets/NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET/versions/latest
+  
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    secret: projects/629342546806/secrets/NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID/versions/latest
+  
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    secret: projects/629342546806/secrets/NEXT_PUBLIC_FIREBASE_APP_ID/versions/latest
+
+  # ==========================================
+  # VARIÁVEIS DO SERVIDOR
+  # ==========================================
+  # Essas variáveis são apenas acessíveis no servidor (server actions, API routes)
+  
+  # Chave de API do Google Gemini
+  - variable: GEMINI_API_KEY
+    secret: projects/629342546806/secrets/GEMINI_API_KEY/versions/latest
+  
+  # Conta de Serviço para Vertex AI, DLP e outras APIs do Google Cloud
+  # IMPORTANTE: Esta chave deve estar em formato Base64 no Secret Manager
+  # Nota: Você tem ambos SERVICE_ACCOUNT_KEY_INTERNAL e SERVICE_ACCOUNT_KEY_INTERNAL_SECRET
+  # Usando SERVICE_ACCOUNT_KEY_INTERNAL conforme o código espera
+  - variable: SERVICE_ACCOUNT_KEY_INTERNAL
+    secret: projects/629342546806/secrets/SERVICE_ACCOUNT_KEY_INTERNAL/versions/latest
+  
+  # ID da conta de faturamento do Google Cloud
+  - variable: GOOGLE_BILLING_ACCOUNT_ID
+    secret: projects/629342546806/secrets/GOOGLE_BILLING_ACCOUNT_ID_SECRET/versions/latest
+  
+  # URL do serviço Python (opcional - se não definir, usa http://localhost:8000)
+  # Se você não usar o serviço Python em produção, pode comentar esta linha
+  - variable: NEXT_PUBLIC_PYTHON_SERVICE_URL
+    secret: projects/629342546806/secrets/NEXT_PUBLIC_PYTHON_SERVICE_URL/versions/latest
