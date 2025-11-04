@@ -3,21 +3,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Regra para dados de usuário: um usuário só pode ler e escrever em seus próprios documentos.
+    // Regra para dados de usuário: um usuário só pode ler e escrever seus próprios documentos.
     match /users/{userId}/{documents=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Nova regra para arquivamento: permite que um usuário crie um documento em 'archived_chats'.
-    // A segurança é garantida ao verificar se o ID do usuário que está fazendo a requisição
-    // é o mesmo que está sendo salvo no campo 'deletedBy' do documento de arquivamento.
+    // Regra para arquivamento: permite que um usuário crie um documento em 'archived_chats'.
     match /archived_chats/{chatId} {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.deletedBy;
       
-      // Nega a leitura, atualização ou exclusão de chats arquivados pelo cliente para segurança.
+      // Nega leitura, atualização ou exclusão de chats arquivados pelo cliente para segurança.
       allow read, update, delete: if false;
     }
     
-    // Nega acesso a qualquer outra coleção na raiz por padrão.
+    // Regra para jobs de ultra-lote: permite a leitura de um job e seus resultados
+    // se o user_id no documento do job corresponder ao do usuário autenticado.
+    match /ultra_batch_jobs/{jobId}/{documents=**} {
+      allow read: if request.auth != null && get(/databases/$(database)/documents/ultra_batch_jobs/$(jobId)).data.user_id == request.auth.uid;
+      
+      // Nega a escrita para clientes (apenas o backend pode escrever).
+      allow write: if false;
+    }
+
+    // É uma boa prática negar o acesso a qualquer outra coleção que não tenha sido
+    // explicitamente permitida, mas vamos deixar em aberto por enquanto para
+    // evitar bloqueios inesperados durante o desenvolvimento.
+    // Em uma próxima etapa de segurança, poderíamos adicionar regras mais restritivas.
   }
 }
