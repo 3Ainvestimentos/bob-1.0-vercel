@@ -2029,16 +2029,7 @@ useEffect(() => {
   if (!ultraBatchJobId) return;
   
   let intervalId: NodeJS.Timeout;
-  const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL;
-    console.log(
-      '🔍 DEBUG: Tentando chamar a API em:', 
-      pythonServiceUrl
-    );
-
-    if (!pythonServiceUrl) {
-      console.error('❌ ERRO CRÍTICO: A URL do serviço Python não está definida no cliente!');
-      throw new Error('A URL do serviço Python não está configurada.');
-    }
+  const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
   
   const pollJobStatus = async () => {
     try {
