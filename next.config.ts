@@ -132,13 +132,12 @@ const nextConfig: NextConfig = {
         "9000-firebase-studio-1749227479654.cluster-qhrn7lb3szcfcud6uanedbkjnm.cloudworkstations.dev"
     ],
     serverActions: {
-      bodySizeLimit: '4.5mb',
-      // Extend the timeout for server actions to 120 seconds for batch processing
-      serverActions: {
-        bodySizeLimit: '4.5mb',
-        // Extend the timeout to 120s for batch processing
-        timeout: 120,
-      }
+      bodySizeLimit: '10mb', // ✅ Aumentado para 10mb (mesmo que a Vercel limite em 4.5mb)
+      allowedOrigins: [
+        'bob1-0.vercel.app',
+        '*.vercel.app',
+        'localhost:3000',
+      ],
     },
   },
   async headers() {

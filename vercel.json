@@ -1,0 +1,21 @@
+{
+    "functions": {
+      "app/**/*.ts": {
+        "maxDuration": 120
+      },
+      "src/app/**/*.ts": {
+        "maxDuration": 120
+      }
+    },
+    "headers": [
+      {
+        "source": "/(.*)",
+        "headers": [
+          {
+            "key": "Permissions-Policy",
+            "value": "clipboard-write=*"
+          }
+        ]
+      }
+    ]
+  }
