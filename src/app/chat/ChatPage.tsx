@@ -1988,6 +1988,12 @@ const handleStartUltraBatch = async (files: File[]) => {
       })
     );
 
+     // ==========================================================
+    // LOG DE DEPURAÇÃO #1: Antes da Server Action
+    // ==========================================================
+    console.log('🔍 DEBUG [1/2]: Preparando para chamar a Server Action `ultraBatchAnalyzeReports`...');
+    // ==========================================================
+
     // 3️⃣ Chamar a API do backend com o chatId garantido
     //console.log('🔗 Chamando API ultra-batch-analyze com chatId:', chatId);
     const result = await ultraBatchAnalyzeReports(batchFiles, user.uid, chatId);
@@ -2029,7 +2035,22 @@ useEffect(() => {
   if (!ultraBatchJobId) return;
   
   let intervalId: NodeJS.Timeout;
-  const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+  const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL;
+    
+    // ==========================================================
+    // LOG DE DEPURAÇÃO #2: No início do Polling
+    // ==========================================================
+    console.log('🔍 DEBUG [2/2]: Iniciando polling para o job.', { 
+      jobId: ultraBatchJobId,
+      pythonServiceUrl: pythonServiceUrl 
+    });
+    // ==========================================================
+
+    if (!pythonServiceUrl) {
+      console.error('❌ ERRO CRÍTICO [Polling]: A URL do serviço Python não está definida no cliente!');
+      setUltraBatchJobId(null); 
+      return;
+    }
   
   const pollJobStatus = async () => {
     try {
