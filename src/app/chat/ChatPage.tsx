@@ -1937,6 +1937,10 @@ if (!messages.find(msg => msg.ultraBatchJobId === jobId)) {
 // 🔗 NOVA FUNÇÃO: Orquestrar o início do ultra batch job
 // Garante que o chat exista antes de criar o job no backend
 const handleStartUltraBatch = async (files: File[]) => {
+   // LOG IMEDIATO: Esta função foi chamada?
+  // ==========================================================
+  console.log('🚀 FUNÇÃO handleStartUltraBatch FOI EXECUTADA!', { filesCount: files.length });
+  // ==========================================================
   if (!user) {
     setError('Usuário não autenticado');
     return;
