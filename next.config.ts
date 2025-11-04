@@ -122,6 +122,10 @@ if (shouldLoadEnvFile) {
 
 const nextConfig: NextConfig = {
   /* config options here */
+  env: {
+    // Expor explicitamente a variável do serviço Python para o cliente
+    NEXT_PUBLIC_PYTHON_SERVICE_URL: process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000',
+  },
   experimental: {
     allowedDevOrigins: [
         "6000-firebase-studio-1749227479654.cluster-qhrn7lb3szcfcud6uanedbkjnm.cloudworkstations.dev",

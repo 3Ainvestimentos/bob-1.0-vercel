@@ -1173,6 +1173,18 @@ export async function ultraBatchAnalyzeReports(
 
 
     const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+    
+    // LOGS CRÍTICOS PARA DEBUG
+    console.log('🔍 DEBUG - Window origin:', typeof window !== 'undefined' ? window.location.origin : 'server-side');
+    console.log('🔍 DEBUG - Python Service URL:', pythonServiceUrl);
+    console.log('🔍 DEBUG - Is using fallback?:', pythonServiceUrl === 'http://localhost:8000');
+    
+    // ALERTA SE ESTIVER USANDO FALLBACK NO FIREBASE
+    if (pythonServiceUrl === 'http://localhost:8000' && typeof window !== 'undefined' && window.location.origin.includes('hosted.app')) {
+      console.error('❌ ERRO CRÍTICO: NEXT_PUBLIC_PYTHON_SERVICE_URL não está disponível no Firebase!');
+      console.error('❌ A variável não foi embedada no bundle durante o build');
+      throw new Error('Configuração incorreta: URL do serviço Python não encontrada');
+    }
 
     // 🔍 LOG: Confirmar endpoint sendo usado
     console.log('🔍 API Call - ultra batch analyze XP reports:', `${pythonServiceUrl}/api/report/ultra-batch-analyze`);
