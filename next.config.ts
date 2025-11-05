@@ -151,7 +151,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: 'frame-ancestors https://studio--a-riva-hub.us-central1.hosted.app;',
+            value: 'frame-ancestors https://studio--a-riva-hub.us-central1.hosted.app https://*.cloudworkstations.dev http://localhost:3000 http://localhost:*;',
           },
         ],
       },
