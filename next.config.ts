@@ -149,6 +149,10 @@ const nextConfig: NextConfig = {
             key: 'Permissions-Policy',
             value: 'clipboard-write=*',
           },
+          {
+            key: 'Content-Security-Policy',
+            value: 'frame-ancestors https://studio--a-riva-hub.us-central1.hosted.app;',
+          },
         ],
       },
     ];
