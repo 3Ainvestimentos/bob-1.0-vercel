@@ -1,0 +1,275 @@
+{
+  "metadata": {
+    "extraction_mode": "personalized",
+    "prompt_used": "full",
+    "response_length": 6876,
+    "fields_extracted": 13,
+    "images_processed": 11,
+    "validation_warnings": []
+  },
+  "extracted_data": {
+    "accountNumber": "5629450",
+    "reportMonth": "08/2025",
+    "monthlyReturn": "1,06%",
+    "monthlyCdi": "90,96%",
+    "monthlyGain": "R$ 1.988,05",
+    "yearlyReturn": "8,97%",
+    "yearlyCdi": "99,40%",
+    "yearlyGain": "R$ 15.802,21",
+    "benchmarkValues": {
+      "CDI": "1,16%",
+      "Ibovespa": "6,28%",
+      "IPCA": "-0,13%",
+      "Dólar": "-3,14%"
+    },
+    "classPerformance": [
+      {
+        "className": "Pós Fixado",
+        "return": "1,17%",
+        "cdiPercentage": "100,82%"
+      },
+      {
+        "className": "Inflação",
+        "return": "0,89%",
+        "cdiPercentage": "76,18%"
+      },
+      {
+        "className": "Multimercado",
+        "return": "-1,24%",
+        "cdiPercentage": "-106,75%"
+      },
+      {
+        "className": "Fundos Listados",
+        "return": "1,64%",
+        "cdiPercentage": "141,19%"
+      }
+    ],
+    "highlights": {
+      "Pós Fixado": {
+        "className": "Pós Fixado",
+        "return": "1,17%",
+        "benchmark": "CDI",
+        "benchmarkValue": "1,16%",
+        "difference": "0,01%",
+        "topAssets": []
+      },
+      "Inflação": {
+        "className": "Inflação",
+        "return": "0,89%",
+        "benchmark": "IPCA",
+        "benchmarkValue": "-0,13%",
+        "difference": "1,02%",
+        "topAssets": []
+      },
+      "Fundos Listados": {
+        "className": "Fundos Listados",
+        "return": "1,64%",
+        "benchmark": "CDI",
+        "benchmarkValue": "1,16%",
+        "difference": "0,48%",
+        "topAssets": []
+      }
+    },
+    "detractors": {
+      "Multimercado": {
+        "className": "Multimercado",
+        "return": "-1,24%",
+        "benchmark": "CDI",
+        "benchmarkValue": "1,16%",
+        "difference": "-2,40%"
+      }
+    },
+    "allAssets": {
+      "Pós Fixado": [
+        {
+          "asset": "AZ Quest Altro Advisory FIC de FIF Multimercado CP",
+          "return": "1,29%",
+          "cdiPercentage": "111,12%",
+          "yearlyReturn": "10,04%",
+          "yearlyCdi": "111,27%"
+        },
+        {
+          "asset": "AZQA11 - AZ Quest Luna - FIAgro",
+          "return": "1,02%",
+          "cdiPercentage": "87,92%",
+          "yearlyReturn": "9,36%",
+          "yearlyCdi": "103,71%"
+        },
+        {
+          "asset": "LCA BANCO ITAU - DEZ/2025 - 84,00% CDI",
+          "return": "1,15%",
+          "cdiPercentage": "98,74%",
+          "yearlyReturn": "5,22%",
+          "yearlyCdi": "98,42%"
+        },
+        {
+          "asset": "LCA BANCO ITAU - DEZ/2025 - 84,00% CDI",
+          "return": "1,15%",
+          "cdiPercentage": "98,74%",
+          "yearlyReturn": "5,22%",
+          "yearlyCdi": "98,42%"
+        },
+        {
+          "asset": "LCA BANCO ITAU - DEZ/2025 - 84,00% CDI",
+          "return": "1,15%",
+          "cdiPercentage": "98,74%",
+          "yearlyReturn": "5,17%",
+          "yearlyCdi": "98,42%"
+        },
+        {
+          "asset": "LCA BANCO ITAU - DEZ/2025 - 84,00% CDI",
+          "return": "1,15%",
+          "cdiPercentage": "98,74%",
+          "yearlyReturn": "4,52%",
+          "yearlyCdi": "98,47%"
+        },
+        {
+          "asset": "LCA BANCO ITAU - NOV/2025 - 93,00% CDI",
+          "return": "1,27%",
+          "cdiPercentage": "109,37%",
+          "yearlyReturn": "9,84%",
+          "yearlyCdi": "109,08%"
+        },
+        {
+          "asset": "Riza Lotus FIF RF - Referenciada DI CP RL",
+          "return": "1,20%",
+          "cdiPercentage": "103,45%",
+          "yearlyReturn": "9,62%",
+          "yearlyCdi": "106,63%"
+        },
+        {
+          "asset": "Trend Investback FIC FIRF Simples RL",
+          "return": "1,17%",
+          "cdiPercentage": "100,22%",
+          "yearlyReturn": "9,10%",
+          "yearlyCdi": "100,88%"
+        },
+        {
+          "asset": "XP Referenciado FIF RF Referenciado DI CP RL",
+          "return": "1,16%",
+          "cdiPercentage": "99,68%",
+          "yearlyReturn": "8,97%",
+          "yearlyCdi": "99,45%"
+        }
+      ],
+      "Inflação": [
+        {
+          "asset": "CRA MINERVA - JUL/2029 - IPC-A + 6,40%",
+          "return": "1,94%",
+          "cdiPercentage": "166,96%",
+          "yearlyReturn": "11,58%",
+          "yearlyCdi": "128,41%"
+        },
+        {
+          "asset": "CRA RAIZEN - AGO/2032 - IPC-A + 5,70%",
+          "return": "-5,55%",
+          "cdiPercentage": "-476,82%",
+          "yearlyReturn": "1,27%",
+          "yearlyCdi": "14,04%"
+        },
+        {
+          "asset": "CRA VAMOS - MAI/2037 - IPC-A + 6,26%",
+          "return": "2,57%",
+          "cdiPercentage": "220,68%",
+          "yearlyReturn": "11,38%",
+          "yearlyCdi": "126,10%"
+        },
+        {
+          "asset": "DEB ENEVA - SET/2032 - IPC-A + 6,00%",
+          "return": "2,17%",
+          "cdiPercentage": "186,23%",
+          "yearlyReturn": "13,98%",
+          "yearlyCdi": "154,99%"
+        },
+        {
+          "asset": "NTN-B - AGO/2026 - IPC-A + 7,34%",
+          "return": "1,09%",
+          "cdiPercentage": "93,56%",
+          "yearlyReturn": "4,10%",
+          "yearlyCdi": "58,29%"
+        },
+        {
+          "asset": "NTN-B - AGO/2026 - IPC-A + 8,00%",
+          "return": "1,09%",
+          "cdiPercentage": "93,56%",
+          "yearlyReturn": "3,84%",
+          "yearlyCdi": "59,46%"
+        },
+        {
+          "asset": "NTN-B - MAI/2027 - IPC-A + 6,01%",
+          "return": "1,09%",
+          "cdiPercentage": "93,66%",
+          "yearlyReturn": "7,92%",
+          "yearlyCdi": "87,81%"
+        },
+        {
+          "asset": "NTN-B - MAI/2027 - IPC-A + 7,28%",
+          "return": "1,09%",
+          "cdiPercentage": "93,66%",
+          "yearlyReturn": "3,08%",
+          "yearlyCdi": "47,74%"
+        },
+        {
+          "asset": "NTN-B - MAI/2027 - IPC-A + 7,72%",
+          "return": "1,09%",
+          "cdiPercentage": "93,66%",
+          "yearlyReturn": "1,98%",
+          "yearlyCdi": "43,18%"
+        },
+        {
+          "asset": "NTN-B - MAI/2035 - IPC-A + 5,38%",
+          "return": "0,58%",
+          "cdiPercentage": "50,18%",
+          "yearlyReturn": "9,36%",
+          "yearlyCdi": "103,74%"
+        },
+        {
+          "asset": "NTN-B - MAI/2035 - IPC-A + 5,54%",
+          "return": "0,58%",
+          "cdiPercentage": "50,18%",
+          "yearlyReturn": "9,36%",
+          "yearlyCdi": "103,74%"
+        }
+      ],
+      "Multimercado": [
+        {
+          "asset": "XP MAP Trend - Bidirecional Alavancado - 5,5 anos - 30.08.2021",
+          "return": "-1,24%",
+          "cdiPercentage": "-106,75%",
+          "yearlyReturn": "0,99%",
+          "yearlyCdi": "10,93%"
+        }
+      ],
+      "Fundos Listados": [
+        {
+          "asset": "KNCR11",
+          "return": "2,57%",
+          "cdiPercentage": "220,85%",
+          "yearlyReturn": "12,72%",
+          "yearlyCdi": "140,98%"
+        },
+        {
+          "asset": "PLCR11",
+          "return": "-0,00%",
+          "cdiPercentage": "0,00%",
+          "yearlyReturn": "12,64%",
+          "yearlyCdi": "140,06%"
+        },
+        {
+          "asset": "RBRL11",
+          "return": "0,59%",
+          "cdiPercentage": "50,96%",
+          "yearlyReturn": "34,74%",
+          "yearlyCdi": "385,07%"
+        },
+        {
+          "asset": "TGAR11",
+          "return": "6,18%",
+          "cdiPercentage": "531,13%",
+          "yearlyReturn": "7,00%",
+          "yearlyCdi": "77,62%"
+        }
+      ]
+    }
+  }
+}
