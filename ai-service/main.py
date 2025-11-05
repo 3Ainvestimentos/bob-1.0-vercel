@@ -30,6 +30,7 @@ allowed_origins = [
     # Vercel (produção)
     "https://bob1-0.vercel.app",
     "https://bob1-0-jve9aajkq-3-ariva.vercel.app",
+    "https://bob-1-0-backup.vercel.app",
 ]
 # Adicionar domínios de produção via variável de ambiente
 if os.getenv("ALLOWED_ORIGINS"):

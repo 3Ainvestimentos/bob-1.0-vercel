@@ -77,7 +77,7 @@ echo "🔐 Verificando secrets..."
 
 
 # Defina as origens permitidas aqui (com a vírgula escapada para o gcloud)
-ALLOWED_ORIGINS_PROD="http://localhost:3000,http://localhost:3001,https://www.3arivaconnect.com.br,https://studio--datavisor-44i5m.us-central1.hosted.app,https://bob1-0.vercel.app,https://bob1-0-jve9aajkq-3-ariva.vercel.app"
+ALLOWED_ORIGINS_PROD="http://localhost:3000,http://localhost:3001,https://www.3arivaconnect.com.br,https://studio--datavisor-44i5m.us-central1.hosted.app,https://bob1-0.vercel.app,https://bob-1-0-backup.vercel.app,https://bob-1-0-backup-q5tl976x8-3-ariva.vercel.app,https://bob1-0-jve9aajkq-3-ariva.vercel.app"
 # Nomes dos secrets no GCP
 SERVICE_ACCOUNT_SECRET_NAME="SERVICE_ACCOUNT_KEY_INTERNAL" # <-- CONFIRME ESTE NOME
 GOOGLE_SECRET_NAME="GOOGLE_API_KEY_SECRET" # Exemplo: GOOGLE_API_KEY_DEV
