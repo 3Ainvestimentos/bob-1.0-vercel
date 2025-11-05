@@ -5,7 +5,7 @@ import { GoogleAuth } from 'google-auth-library';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuthenticatedFirestoreAdmin, getAuthenticatedAuthAdmin, getFirebaseAdminApp, getServiceAccountCredentialsFromEnv } from '@/lib/server/firebase';
-import { AttachedFile, UltraBatchReportResponse, UltraBatchReportRequest, UserRole, Message } from '@/types';
+import { AttachedFile, UltraBatchReportResponse, UltraBatchReportRequest, UserRole, Message, GenerateUploadUrlsRequest, GenerateUploadUrlsResponse} from '@/types';
 // Definição local para evitar import de componente client-side
 type ClientRagSource = {
   title: string;
@@ -1152,45 +1152,37 @@ export async function analyzeReportAuto(
   }
 
   /**
- * Processamento em ultra lote de relatórios (até 100 arquivos)
+ * Gera Signed URLs para upload direto ao GCS.
  * 
- * @param files - Array de arquivos para processar
+ * Frontend usa essas URLs para fazer upload paralelo dos arquivos,
+ * bypassando completamente o servidor Next.js.
+ * 
+ * @param fileNames - Lista de nomes dos arquivos para upload
  * @param userId - ID do usuário
- * @param chatId - (opcional) ID do chat. Quando fornecido, o backend salvará o ponteiro batchJobId no documento do chat
+ * @param chatId - ID do chat (opcional)
+ * @returns Response com batch_id e Signed URLs para cada arquivo
  */
-export async function ultraBatchAnalyzeReports(
-  files: Array<{ name: string; dataUri: string }>,
+export async function generateUploadUrls(
+  fileNames: string[],
   userId: string,
   chatId?: string
-): Promise<UltraBatchReportResponse> {
+): Promise<GenerateUploadUrlsResponse> {
   try {
-    const request: UltraBatchReportRequest = {
-      files: files,
-      user_id: userId,
-      ...(chatId && { chat_id: chatId }) // 🔗 PADRÃO DE PONTEIRO: Incluir chat_id se fornecido
-    };
-    console.log('🔗 PADRÃO DE PONTEIRO - Corpo da Requisição:', JSON.stringify(request, null, 2));
-
-
     const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
     
-    // LOGS CRÍTICOS PARA DEBUG
-    console.log('🔍 DEBUG - Window origin:', typeof window !== 'undefined' ? window.location.origin : 'server-side');
-    console.log('🔍 DEBUG - Python Service URL:', pythonServiceUrl);
-    console.log('🔍 DEBUG - Is using fallback?:', pythonServiceUrl === 'http://localhost:8000');
-    
-    // ALERTA SE ESTIVER USANDO FALLBACK NO FIREBASE
-    if (pythonServiceUrl === 'http://localhost:8000' && typeof window !== 'undefined' && window.location.origin.includes('hosted.app')) {
-      console.error('❌ ERRO CRÍTICO: NEXT_PUBLIC_PYTHON_SERVICE_URL não está disponível no Firebase!');
-      console.error('❌ A variável não foi embedada no bundle durante o build');
-      throw new Error('Configuração incorreta: URL do serviço Python não encontrada');
+    if (!pythonServiceUrl) {
+      throw new Error("A URL do serviço Python não está configurada.");
     }
 
-    // 🔍 LOG: Confirmar endpoint sendo usado
-    console.log('🔍 API Call - ultra batch analyze XP reports:', `${pythonServiceUrl}/api/report/ultra-batch-analyze`);
-    console.log('🔍 NEXT_PUBLIC_PYTHON_SERVICE_URL:', process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'fallback-localhost');
-          
-    const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch-analyze`, {
+    const request: GenerateUploadUrlsRequest = {
+      file_names: fileNames,
+      user_id: userId,
+      ...(chatId && { chat_id: chatId })
+    };
+
+    console.log('🔗 [SIGNED-URL] Solicitando Signed URLs para', fileNames.length, 'arquivos...');
+
+    const response = await fetch(`${pythonServiceUrl}/api/report/generate-upload-urls`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1199,24 +1191,70 @@ export async function ultraBatchAnalyzeReports(
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Erro ao criar job de ultra lote');
+      const errorBody = await response.text();
+      console.error(`❌ [SIGNED-URL] Erro na API do Python: ${response.status}`, errorBody);
+      throw new Error(`Falha ao gerar Signed URLs: ${response.statusText}`);
     }
 
-    const result: UltraBatchReportResponse = await response.json();
+    const result: GenerateUploadUrlsResponse = await response.json();
+    console.log('✅ [SIGNED-URL] Signed URLs recebidas, batch_id:', result.batch_id);
     return result;
-
   } catch (error: any) {
-    console.error('Erro ao criar job de ultra lote:', error);
-    return {
-      success: false,
-      job_id: '',
-      total_files: 0,
-      estimated_time_minutes: 0,
-      error: error.message || 'Erro interno do servidor'
-    };
+    console.error("❌ [SIGNED-URL] Erro ao solicitar Signed URLs:", error);
+    throw new Error('Falha ao gerar Signed URLs para upload.', { cause: error });
   }
 }
+
+  /**
+ * Processamento em ultra lote de relatórios (até 100 arquivos)
+ * 
+ * @param batchId - ID do batch (retornado por generateUploadUrls)
+ * @param userId - ID do usuário
+ * @param chatId - ID do chat (opcional)
+ * @returns Response com job_id e informações do processamento
+ */
+  export async function ultraBatchAnalyzeReports(
+    batchId: string,
+    userId: string,
+    chatId?: string
+  ): Promise<UltraBatchReportResponse> {
+    try {
+      const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+      
+      if (!pythonServiceUrl) {
+        throw new Error("A URL do serviço Python não está configurada.");
+      }
+  
+      const request: UltraBatchReportRequest = {
+        batch_id: batchId,
+        user_id: userId,
+        ...(chatId && { chat_id: chatId })
+      };
+  
+      console.log('🚀 [ULTRA-BATCH] Notificando backend para iniciar processamento, batch_id:', batchId);
+  
+      const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch-analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+  
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`❌ [ULTRA-BATCH] Erro na API do Python: ${response.status}`, errorBody);
+        throw new Error(`A análise de relatórios falhou: ${response.statusText}`);
+      }
+  
+      const result: UltraBatchReportResponse = await response.json();
+      console.log('✅ [ULTRA-BATCH] Processamento iniciado, job_id:', result.job_id);
+      return result;
+    } catch (error: any) {
+      console.error("❌ [ULTRA-BATCH] Erro ao iniciar análise em ultra lote:", error);
+      throw new Error('Falha ao processar a solicitação de análise em ultra lote.', { cause: error });
+    }
+  }
 
   // Em src/app/actions.ts
 export async function analyzeReportPersonalizedFromData(

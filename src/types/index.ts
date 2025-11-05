@@ -211,10 +211,7 @@ export interface UltraBatchResult {
 
 // Request que enviamos ao backend
 export interface UltraBatchReportRequest {
-  files: Array<{
-    name: string;
-    dataUri: string;
-  }>;
+  batch_id: string; // ID do batch (retornado pelo endpoint /generate-upload-urls)
   user_id: string;
   chat_id?: string; // 🔗 PADRÃO DE PONTEIRO: ID do chat (opcional)
 }
@@ -226,4 +223,23 @@ export interface UltraBatchReportResponse {
   total_files: number;
   estimated_time_minutes: number;
   error?: string | null;
+}
+
+// ============= GENERATE UPLOAD URLS TYPES =============
+
+// Request para gerar Signed URLs
+export interface GenerateUploadUrlsRequest {
+  file_names: string[];
+  user_id: string;
+  chat_id?: string; // 🔗 PADRÃO DE PONTEIRO: ID do chat (opcional)
+}
+
+// Response com Signed URLs
+export interface GenerateUploadUrlsResponse {
+  batch_id: string;
+  upload_urls: Array<{
+    fileName: string;
+    signedUrl: string;
+    storagePath: string;
+  }>;
 }
