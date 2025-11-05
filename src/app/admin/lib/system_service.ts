@@ -16,7 +16,17 @@ export async function getMaintenanceModeService(): Promise<{ isMaintenanceMode: 
         const docSnap = await settingsRef.get();
 
         if (docSnap.exists) {
-            return { isMaintenanceMode: docSnap.data()?.isMaintenanceMode || false };
+            const data = docSnap.data();
+            
+            // Verificar se está na Vercel (usando variável automática ou compartilhada)
+            const isVercel = process.env.VERCEL === '1' || process.env.IS_VERCEL_MODE === 'true' || process.env.IS_VERCEL === 'true';
+            
+            // Se estiver na Vercel, ler isMaintenanceModeVercel, senão ler o original
+            if (isVercel) {
+                return { isMaintenanceMode: data?.isMaintenanceModeVercel ?? false };
+            } else {
+                return { isMaintenanceMode: data?.isMaintenanceMode ?? false };
+            }
         }
         return { isMaintenanceMode: false }; // Valor padrão
     } catch (error: any) {
