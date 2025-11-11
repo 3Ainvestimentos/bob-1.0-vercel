@@ -243,8 +243,8 @@ export function ChatMessageArea({
                       <>
                                 {/* RENDERIZAÇÃO CONDICIONAL PARA RELATÓRIOS */}
                           {(() => {
-                            console.log('🔍 DEBUG ChatMessageArea- msg.content:', msg.content);
-                            console.log('🔍 DEBUG ChatMessageArea- contains emojis:', msg.content.includes('🔎') || msg.content.includes('✅') || msg.content.includes('⚠️') || msg.content.includes('🌎'));
+                            //console.log('🔍 DEBUG ChatMessageArea- msg.content:', msg.content);
+                            //console.log('🔍 DEBUG ChatMessageArea- contains emojis:', msg.content.includes('🔎') || msg.content.includes('✅') || msg.content.includes('⚠️') || msg.content.includes('🌎'));
                             
                             return msg.content.includes('🔎') || msg.content.includes('✅') || msg.content.includes('⚠️') || msg.content.includes('🌎') || msg.ultraBatchJobId;
                           })() ? (

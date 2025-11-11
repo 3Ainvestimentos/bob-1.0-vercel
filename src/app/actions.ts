@@ -1122,8 +1122,8 @@ export async function analyzeReportAuto(
       const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
 
       // 🔍 LOG: Confirmar endpoint sendo usado
-      console.log('🔍 API Call - an[alise XP report:', `${pythonServiceUrl}/api/analyze`);
-      console.log('🔍 NEXT_PUBLIC_PYTHON_SERVICE_URL:', process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'fallback-localhost');
+      //console.log('🔍 API Call - analise XP report:', `${pythonServiceUrl}/api/analyze`);
+      //console.log('🔍 NEXT_PUBLIC_PYTHON_SERVICE_URL:', process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'fallback-localhost');
             
       const response = await fetch(`${pythonServiceUrl}/api/report/batch-analyze`, {
         method: 'POST',
@@ -1286,8 +1286,8 @@ export async function analyzeReportPersonalizedFromData(
       }
 
       const result = await response.json();
-      console.log('🔍 DEBUG - analyzeReportPersonalizedFromData result:', result);
-      console.log('🔍 DEBUG - Retornando result para PromptBuilderDialog');
+      //console.log('🔍 DEBUG - analyzeReportPersonalizedFromData result:', result);
+      //console.log('🔍 DEBUG - Retornando result para PromptBuilderDialog');
       return result;
 
   } catch (error) {

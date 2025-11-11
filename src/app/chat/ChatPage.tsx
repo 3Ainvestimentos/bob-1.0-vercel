@@ -330,7 +330,7 @@ async function loadUltraBatchResults(jobId: string): Promise<any[]> {
     const resultsSnapshot = await getDocs(resultsRef);
     
     if (resultsSnapshot.empty) {
-      //console.log(`⚠️ Nenhum resultado encontrado para o job ${jobId}`);
+      console.log(`⚠️ Nenhum resultado encontrado para o job ${jobId}`);
       return [];
     }
     
@@ -1960,7 +1960,7 @@ const handleStartUltraBatch = async (files: File[]) => {
   try {
     // 1️⃣ Se for um novo chat, criar o documento primeiro
     if (!chatId) {
-      console.log('📦 [UPLOAD] Criando novo chat antes de iniciar ultra batch...');
+      //console.log('📦 [UPLOAD] Criando novo chat antes de iniciar ultra batch...');
       
       const tempTitle = `Análise de ${files.length} relatórios`;
       const userMessage: Message = { 
@@ -1975,7 +1975,7 @@ const handleStartUltraBatch = async (files: File[]) => {
       });
       chatId = newId;
       
-      console.log('✅ [UPLOAD] Novo chat criado:', chatId);
+      //console.log('✅ [UPLOAD] Novo chat criado:', chatId);
       
       // Atualizar o estado da UI para refletir o novo chat
       const newFullChat = await getFullConversation(user.uid, newId);
@@ -1984,12 +1984,12 @@ const handleStartUltraBatch = async (files: File[]) => {
     }
 
     // 2️⃣ Solicitar Signed URLs ao backend
-    console.log('🔗 [UPLOAD] Solicitando Signed URLs para', files.length, 'arquivos...');
+    //console.log('🔗 [UPLOAD] Solicitando Signed URLs para', files.length, 'arquivos...');
     
     const fileNames = files.map(f => f.name);
     const { batch_id, upload_urls } = await generateUploadUrls(fileNames, user.uid, chatId);
     
-    console.log('✅ [UPLOAD] Signed URLs recebidas, batch_id:', batch_id);
+    //console.log('✅ [UPLOAD] Signed URLs recebidas, batch_id:', batch_id);
     console.log(`✅ [UPLOAD] ${upload_urls.length} URLs geradas com sucesso`);
 
     // 3️⃣ Fazer upload paralelo dos arquivos para GCS usando Signed URLs
@@ -2010,9 +2010,9 @@ const handleStartUltraBatch = async (files: File[]) => {
 
           // Fazer upload direto para GCS usando Signed URL
           console.log(`📤 [UPLOAD] Iniciando upload de ${fileName}...`);
-          console.log(`📤 [UPLOAD] URL: ${signedUrl.substring(0, 150)}...`);
-          console.log(`📤 [UPLOAD] Tamanho do arquivo: ${file.size} bytes`);
-          console.log(`📤 [UPLOAD] Tipo do arquivo: ${file.type || 'não especificado'}`);
+          //console.log(`📤 [UPLOAD] URL: ${signedUrl.substring(0, 150)}...`);
+          //console.log(`📤 [UPLOAD] Tamanho do arquivo: ${file.size} bytes`);
+          //console.log(`📤 [UPLOAD] Tipo do arquivo: ${file.type || 'não especificado'}`);
 
           const response = await fetch(signedUrl, {
             method: 'PUT',
@@ -2030,7 +2030,7 @@ const handleStartUltraBatch = async (files: File[]) => {
           }
 
           uploadSuccessCount++;
-          console.log(`✅ [UPLOAD] Upload concluído para: ${fileName}`);
+          //console.log(`✅ [UPLOAD] Upload concluído para: ${fileName}`);
         } catch (error: any) {
           uploadErrorCount++;
           const errorMsg = `Erro no upload de ${fileName}: ${error.message}`;
@@ -2069,7 +2069,7 @@ const handleStartUltraBatch = async (files: File[]) => {
       throw new Error(result.error || 'Erro ao criar job de ultra lote');
     }
 
-    console.log('✅ [UPLOAD] Job criado com sucesso:', result.job_id);
+    //console.log('✅ [UPLOAD] Job criado com sucesso:', result.job_id);
 
     // 6️⃣ Mostrar toast de confirmação
     toast({
