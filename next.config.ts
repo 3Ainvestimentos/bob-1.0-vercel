@@ -137,6 +137,8 @@ const nextConfig: NextConfig = {
         'bob1-0.vercel.app',
         '*.vercel.app',
         'localhost:3000',
+        'www.3arivaconnect.com.br',
+        '3arivaconnect.com.br',
       ],
     },
   },
@@ -151,7 +153,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: 'frame-ancestors https://studio--a-riva-hub.us-central1.hosted.app https://*.cloudworkstations.dev http://localhost:3000 http://localhost:* https://connect-backup-five.vercel.app https://connect-backup-git-master-henriques-projects-7f498294.vercel.app https://connect-backup-65lkx0nm1-henriques-projects-7f498294.vercel.app;',
+            value: 'frame-ancestors https://studio--a-riva-hub.us-central1.hosted.app https://*.cloudworkstations.dev http://localhost:3000 http://localhost:* https://connect-backup-five.vercel.app https://www.3arivaconnect.com.br https://3arivaconnect.com.br;',
           },
         ],
       },
