@@ -184,8 +184,9 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       - [se existir... máximo de um ativo]
 
       ⚠️ *Pontos de Atenção:*
-      - *[className]*: *[classReturn]*.
-      - *[className]*: *[classReturn]*.
+      - *[className]*: *[classReturn]*, ([classBenchmarkDifference]% abaixo do [classBenchmark]).
+      - *[className]*: *[classReturn]*, ([classBenchmarkDifference]% abaixo do [classBenchmark]).
+
 
       🌎 *Cenário Econômico de [mês de referência]:*
       - Cenário Nacional: O mercado brasileiro viveu um mês de outubro tranquilo, com a bolsa em alta – renovando máximas acima dos 148 mil pontos – e a Selic mantida em 15%. O cenário de inflação sob controle e expectativas de queda dos juros em 2026 ajudou a atrair capital estrangeiro e fortalecer o otimismo dos investidores.
