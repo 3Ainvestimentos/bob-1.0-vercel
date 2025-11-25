@@ -184,8 +184,8 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       - [se existir... máximo de um ativo]
 
       ⚠️ *Pontos de Atenção:*
-      - *[className]*: *[classReturn]*, ([classBenchmarkDifference]% abaixo do [classBenchmark]).
-      - *[className]*: *[classReturn]*, ([classBenchmarkDifference]% abaixo do [classBenchmark]).
+      - *[className]*: *[classReturn]*, (-[classBenchmarkDifference]% em relação ao [classBenchmark]).
+      - *[className]*: *[classReturn]*, (-[classBenchmarkDifference]% em relação ao [classBenchmark]).
 
 
       🌎 *Cenário Econômico de [mês de referência]:*
@@ -385,15 +385,11 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 Olá, [N° do Cliente]!
 
 🔎 *Resumo da performance:*
-[Incluir apenas métricas selecionadas pelo cliente]
+[Incluir as métricas selecionadas pelo cliente]
 
-✅ *Destaques do mês:*
+👀 *Destaques da Carteira:*
 
-[Incluir apenas highlights selecionados pelo cliente]
-
-⚠️ *Pontos de Atenção:*
-
-[Incluir apenas detractors selecionados pelo cliente]
+[Incluir as classes e ativos selecionados pelo cliente]
 
 🌎 *Cenário Econômico de [mês de referência]:*
 

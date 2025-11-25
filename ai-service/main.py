@@ -28,9 +28,7 @@ allowed_origins = [
     "https://bob-develop-3a.firebaseapp.com",
     "https://studio--datavisor-44i5m.us-central1.hosted.app",  # Firebase Hosting alternativo
     # Vercel (produção)
-    "https://bob1-0.vercel.app",
-    "https://bob1-0-jve9aajkq-3-ariva.vercel.app",
-    "https://bob-1-0-backup.vercel.app",
+    "https://bob-1-0-vercel.vercel.app"  #vercel deployed
 ]
 # Adicionar domínios de produção via variável de ambiente
 if os.getenv("ALLOWED_ORIGINS"):

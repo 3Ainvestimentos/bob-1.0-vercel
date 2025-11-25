@@ -77,17 +77,17 @@ echo "🔐 Verificando secrets..."
 
 
 # Defina as origens permitidas aqui (com a vírgula escapada para o gcloud)
-ALLOWED_ORIGINS_PROD="http://localhost:3000,http://localhost:3001,https://www.3arivaconnect.com.br,https://studio--datavisor-44i5m.us-central1.hosted.app,https://bob1-0.vercel.app,https://bob-1-0-backup.vercel.app,https://bob-1-0-backup-q5tl976x8-3-ariva.vercel.app,https://bob1-0-jve9aajkq-3-ariva.vercel.app"
+ALLOWED_ORIGINS_PROD="http://localhost:3000,http://localhost:3001,https://www.3arivaconnect.com.br,https://studio--datavisor-44i5m.us-central1.hosted.app,https://bob1-0.vercel.app,https://bob-1-0-backup.vercel.app,https://bob-1-0-vercel.vercel.app"
 # Nomes dos secrets no GCP
 SERVICE_ACCOUNT_SECRET_NAME="SERVICE_ACCOUNT_KEY_INTERNAL" # <-- CONFIRME ESTE NOME
-GOOGLE_SECRET_NAME="GOOGLE_API_KEY_SECRET" # Exemplo: GOOGLE_API_KEY_DEV
+GEMINI_SECRET_NAME="GEMINI_API_KEY" # Exemplo: Gemini_API_KEY_DEV
 LANGCHAIN_SECRET_NAME="LANGCHAIN_API_KEY_SECRET" # Exemplo: LANGCHAIN_API_KEY_DEV
 
 
 # Verificar se secrets existem
-if ! gcloud secrets describe ${GOOGLE_SECRET_NAME} --project=$PROJECT_ID &> /dev/null; then
-    echo "❌ Secret ${GOOGLE_SECRET_NAME} não encontrado"
-    echo "   Crie com: gcloud secrets create ${GOOGLE_SECRET_NAME} --data-file=-"
+if ! gcloud secrets describe ${GEMINI_SECRET_NAME} --project=$PROJECT_ID &> /dev/null; then
+    echo "❌ Secret ${GEMINI_SECRET_NAME} não encontrado"
+    echo "   Crie com: gcloud secrets create ${GEMINI_SECRET_NAME} --data-file=-"
     exit 1
 fi
 
@@ -124,16 +124,16 @@ gcloud run deploy $SERVICE_NAME \
     --platform managed \
     --region $REGION \
     --allow-unauthenticated \
-     --memory 2Gi \
+    --memory 1.5Gi \
     --cpu 2 \
     --timeout 900 \
-    --min-instances 1 \
-    --max-instances 5 \
+    --min-instances 0 \
+    --max-instances 3 \
     --concurrency 80 \
     --no-cpu-throttling \
     --execution-environment gen2 \
     --set-env-vars "^@^ENVIRONMENT=${ENVIRONMENT}@ALLOWED_ORIGINS=${ALLOWED_ORIGINS_PROD}@FIREBASE_STORAGE_BUCKET=${PROJECT_ID}.firebasestorage.app" \
-
+    --set-secrets "GEMINI_API_KEY=${GEMINI_SECRET_NAME}:latest,LANGCHAIN_API_KEY=${LANGCHAIN_SECRET_NAME}:latest,SERVICE_ACCOUNT_KEY_INTERNAL=${SERVICE_ACCOUNT_SECRET_NAME}:latest"
 
 # ============================================
 # 5. VERIFICAÇÃO FINAL
