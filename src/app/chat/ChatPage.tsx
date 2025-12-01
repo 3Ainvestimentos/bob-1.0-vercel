@@ -92,6 +92,13 @@ import { getAnalytics, logEvent } from "firebase/analytics";
 
 
 
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from 'firebase/storage';
+import { createParser } from 'eventsource-parser';
+
 // ---- Data Types ----
 export interface RagSource {
   title: string;
@@ -112,6 +119,8 @@ export interface Conversation {
   groupId?: string | null;
   totalTokens?: number;
   attachedFiles: AttachedFile[];
+  batchJobId?: string | null;
+  statusJob?: 'processing' | 'completed' | 'failed' | 'cancelled' | null;
 }
 
 export type ConversationSidebarItem = Omit<Conversation, 'messages' | 'totalTokens' | 'attachedFiles'>;
@@ -330,7 +339,7 @@ async function loadUltraBatchResults(jobId: string): Promise<any[]> {
     const resultsSnapshot = await getDocs(resultsRef);
     
     if (resultsSnapshot.empty) {
-      console.log(`⚠️ Nenhum resultado encontrado para o job ${jobId}`);
+      //console.log(`⚠️ Nenhum resultado encontrado para o job ${jobId}`);
       return [];
     }
     
@@ -482,6 +491,8 @@ async function getFullConversation(userId: string, chatId: string): Promise<Conv
                 groupId: data.groupId || null,
                 totalTokens: data.totalTokens || 0,
                 attachedFiles: data.attachedFiles || [],
+                batchJobId: data.batchJobId || null,
+                statusJob: data.statusJob || null,
             } as Conversation;
         } else {
             console.log('No such document!');
@@ -834,6 +845,106 @@ export default function ChatPageContent() {
       setIsLoading(false);
     }
   };
+
+  // ✅ RECONEXÃO: Polling para jobs em processamento após reload da página
+  useEffect(() => {
+    if (!user || !activeChat || !activeChat.batchJobId) return;
+    
+    const batchJobId = activeChat.batchJobId;
+    const statusJob = activeChat.statusJob;
+    
+    // Só iniciar polling se o job estiver em processamento
+    if (statusJob !== 'processing') {
+      return;
+    }
+    
+    console.log(`🔄 [RECONNECT] Job ${batchJobId} ainda em processamento. Iniciando polling...`);
+    
+    const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+    let lastResultsCount = 0;
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch-status/${batchJobId}`);
+        
+        if (!response.ok) {
+          console.error(`❌ [POLL] Erro HTTP ${response.status}`);
+          return;
+        }
+        
+        const statusData = await response.json();
+        
+        if (!statusData.success) {
+          console.error(`❌ [POLL] Job não encontrado`);
+          clearInterval(pollInterval);
+          return;
+        }
+        
+        const jobStatus = statusData.status;
+        const results = statusData.results || [];
+        const currentResultsCount = results.length;
+        
+        // Só atualizar se houver novos resultados
+        if (currentResultsCount > lastResultsCount) {
+          console.log(`📊 [POLL] Novos resultados: ${currentResultsCount} arquivos processados`);
+          
+          // Converter resultados para formato esperado
+          const formattedResults = results.map((r: any) => ({
+            fileName: r.fileName,
+            finalMessage: r.finalMessage,
+            success: r.success,
+            error: r.error || null,
+            processedAt: r.processedAt
+          }));
+          
+          // Buscar jobId da mensagem
+          const ultraBatchMessage = messages.find(msg => 
+            msg.ultraBatchJobId === batchJobId && msg.role === 'assistant'
+          );
+          
+          if (ultraBatchMessage) {
+            handleUltraBatchResults(
+              formattedResults,
+              statusData.progress.totalFiles,
+              batchJobId,
+              statusData.estimatedTimeMinutes || 0,
+              activeChat.id
+            );
+          }
+          
+          lastResultsCount = currentResultsCount;
+        }
+        
+        // Se o job finalizou, parar polling
+        if (jobStatus === 'completed' || jobStatus === 'failed' || jobStatus === 'cancelled') {
+          console.log(`✅ [POLL] Job ${batchJobId} finalizou com status: ${jobStatus}`);
+          clearInterval(pollInterval);
+          
+          // Atualizar status no chat e estado local
+          if (activeChat.id) {
+              try {
+                const chatRef = doc(db, 'users', user.uid, 'chats', activeChat.id);
+                await updateDoc(chatRef, { statusJob: jobStatus });
+                
+                setActiveChat(prev => prev ? { ...prev, statusJob: jobStatus } : null);
+              } catch (updateError) {
+                console.error(`⚠️ [POLL] Erro ao atualizar status do chat:`, updateError);
+              }
+          }
+        }
+        
+      } catch (pollError) {
+        console.error(`❌ [POLL] Erro no polling:`, pollError);
+      }
+    }, 15000); // Poll a cada 5 segundos
+    
+    // Cleanup: limpar intervalo ao desmontar ou mudar de chat
+    return () => {
+      console.log(`🧹 [RECONNECT] Limpando polling para job ${batchJobId}`);
+      clearInterval(pollInterval);
+    };
+    
+  }, [user, activeChat?.id, activeChat?.batchJobId, activeChat?.statusJob, messages]);
 
   const readFileAsDataURL = (file: File): Promise<{name: string, mimeType: string, dataUri: string}> => {
     return new Promise((resolve, reject) => {
@@ -1927,217 +2038,253 @@ const handleUltraBatchResults = async (results: any[], totalFiles: number, jobId
     return newMessages;
   }
 }); // ✅ AQUI fecha o setMessages corretamente!
-
-// ✅ Setar o jobId FORA do setMessages
-if (!messages.find(msg => msg.ultraBatchJobId === jobId)) {
-  setUltraBatchJobId(jobId);
-}
 };
 
-// 🔗 NOVA FUNÇÃO: Orquestrar o início do ultra batch job
-// Garante que o chat exista antes de criar o job no backend
-// 🔗 NOVA FUNÇÃO: Orquestrar o início do ultra batch job com Signed URLs
-// Garante que o chat exista antes de criar o job no backend
-// Faz upload direto para GCS usando Signed URLs (bypass do Next.js)
-const handleStartUltraBatch = async (files: File[]) => {
-  if (!user) {
-    setError('Usuário não autenticado');
-    return;
-  }
-
-  if (files.length === 0) {
-    toast({
-      title: 'Erro',
-      description: 'Nenhum arquivo selecionado',
-      variant: 'destructive',
-    });
-    return;
-  }
-
-  setIsLoading(true);
-  let chatId = activeChatId;
-
-  try {
-    // 1️⃣ Se for um novo chat, criar o documento primeiro
-    if (!chatId) {
-      //console.log('📦 [UPLOAD] Criando novo chat antes de iniciar ultra batch...');
-      
-      const tempTitle = `Análise de ${files.length} relatórios`;
-      const userMessage: Message = { 
-        id: crypto.randomUUID(), 
-        role: 'user', 
-        content: tempTitle 
-      };
-      
-      // Criar o chat e obter o ID
-      const newId = await saveConversation(user.uid, [userMessage], null, { 
-        newChatTitle: tempTitle 
-      });
-      chatId = newId;
-      
-      //console.log('✅ [UPLOAD] Novo chat criado:', chatId);
-      
-      // Atualizar o estado da UI para refletir o novo chat
-      const newFullChat = await getFullConversation(user.uid, newId);
-      setActiveChat(newFullChat);
-      await fetchSidebarData();
+  // 🔗 NOVA FUNÇÃO: Orquestrar o início do ultra batch job com Signed URLs e Streaming SSE
+  const handleStartUltraBatch = async (files: File[]) => {
+    if (!user) {
+      setError('Usuário não autenticado');
+      return;
     }
 
-    // 2️⃣ Solicitar Signed URLs ao backend
-    //console.log('🔗 [UPLOAD] Solicitando Signed URLs para', files.length, 'arquivos...');
-    
-    const fileNames = files.map(f => f.name);
-    const { batch_id, upload_urls } = await generateUploadUrls(fileNames, user.uid, chatId);
-    
-    //console.log('✅ [UPLOAD] Signed URLs recebidas, batch_id:', batch_id);
-    console.log(`✅ [UPLOAD] ${upload_urls.length} URLs geradas com sucesso`);
-
-    // 3️⃣ Fazer upload paralelo dos arquivos para GCS usando Signed URLs
-    console.log('📤 [UPLOAD] Iniciando upload paralelo para GCS...');
-    
-    let uploadSuccessCount = 0;
-    let uploadErrorCount = 0;
-    const uploadErrors: string[] = [];
-
-    await Promise.all(
-      upload_urls.map(async ({ fileName, signedUrl, storagePath }) => {
-        try {
-          // Encontrar o arquivo correspondente
-          const file = files.find(f => f.name === fileName);
-          if (!file) {
-            throw new Error(`Arquivo não encontrado: ${fileName}`);
-          }
-
-          // Fazer upload direto para GCS usando Signed URL
-          console.log(`📤 [UPLOAD] Iniciando upload de ${fileName}...`);
-          //console.log(`📤 [UPLOAD] URL: ${signedUrl.substring(0, 150)}...`);
-          //console.log(`📤 [UPLOAD] Tamanho do arquivo: ${file.size} bytes`);
-          //console.log(`📤 [UPLOAD] Tipo do arquivo: ${file.type || 'não especificado'}`);
-
-          const response = await fetch(signedUrl, {
-            method: 'PUT',
-            body: file,
-          });
-
-          console.log(`📤 [UPLOAD] Response status: ${response.status} ${response.statusText}`);
-          console.log(`📤 [UPLOAD] Response headers:`, [...response.headers.entries()]);
-
-
-          if (!response.ok) {
-            const errorText = await response.text().catch(() => '');
-            console.error(`❌ [UPLOAD] Response error:`, errorText);
-            throw new Error(`Upload falhou para ${fileName}: ${response.status} ${response.statusText}`);
-          }
-
-          uploadSuccessCount++;
-          //console.log(`✅ [UPLOAD] Upload concluído para: ${fileName}`);
-        } catch (error: any) {
-          uploadErrorCount++;
-          const errorMsg = `Erro no upload de ${fileName}: ${error.message}`;
-          uploadErrors.push(errorMsg);
-          console.error(`❌ [UPLOAD] ${errorMsg}`);
-        }
-      })
-    );
-
-    // 4️⃣ Validar que todos os uploads foram bem-sucedidos
-    if (uploadErrorCount > 0) {
-      const errorMessage = `${uploadErrorCount} arquivo(s) falharam no upload:\n${uploadErrors.join('\n')}`;
-      console.error('❌ [UPLOAD] Erros no upload:', errorMessage);
-      
+    if (files.length === 0) {
       toast({
-        title: 'Erro no Upload',
-        description: `${uploadErrorCount} arquivo(s) falharam no upload. Verifique o console para detalhes.`,
+        title: 'Erro',
+        description: 'Nenhum arquivo selecionado',
         variant: 'destructive',
       });
+      return;
+    }
+
+    setIsLoading(true);
+    let chatId = activeChatId;
+
+    try {
+      // 1️⃣ Se for um novo chat, criar o documento primeiro
+      if (!chatId) {
+        console.log('📦 [UPLOAD] Criando novo chat antes de iniciar ultra batch...');
+        
+        const tempTitle = `Análise de ${files.length} relatórios`;
+        const userMessage: Message = { 
+          id: crypto.randomUUID(), 
+          role: 'user', 
+          content: tempTitle 
+        };
+        
+        // Criar o chat e obter o ID
+        const newId = await saveConversation(user.uid, [userMessage], null, { 
+          newChatTitle: tempTitle 
+        });
+        chatId = newId;
+        
+        console.log('✅ [UPLOAD] Novo chat criado:', chatId);
+        
+        // Atualizar o estado da UI para refletir o novo chat
+        const newFullChat = await getFullConversation(user.uid, newId);
+        setActiveChat(newFullChat);
+        await fetchSidebarData();
+      }
+
+      // 2️⃣ Solicitar Signed URLs ao backend
+      console.log('🔗 [UPLOAD] Solicitando Signed URLs para', files.length, 'arquivos...');
       
-      // Continuar mesmo com erros? Ou parar aqui?
-      // Decisão: Parar se TODOS falharam, continuar se alguns falharam
+      const fileNames = files.map(f => f.name);
+      const { batch_id, upload_urls } = await generateUploadUrls(fileNames, user.uid, chatId);
+      
+      console.log('✅ [UPLOAD] Signed URLs recebidas, batch_id:', batch_id);
+
+      // 3️⃣ Fazer upload paralelo dos arquivos para GCS usando Signed URLs
+      console.log('📤 [UPLOAD] Iniciando upload paralelo para GCS...');
+      
+      let uploadSuccessCount = 0;
+      let uploadErrorCount = 0;
+      const uploadErrors: string[] = [];
+
+      await Promise.all(
+        upload_urls.map(async ({ fileName, signedUrl, storagePath }) => {
+          try {
+            const file = files.find(f => f.name === fileName);
+            if (!file) throw new Error(`Arquivo não encontrado: ${fileName}`);
+
+            const response = await fetch(signedUrl, {
+              method: 'PUT',
+              body: file,
+            });
+
+            if (!response.ok) {
+              throw new Error(`Upload falhou: ${response.status}`);
+            }
+
+            uploadSuccessCount++;
+          } catch (error: any) {
+            uploadErrorCount++;
+            uploadErrors.push(`Erro no upload de ${fileName}: ${error.message}`);
+            console.error(`❌ [UPLOAD] ${error.message}`);
+          }
+        })
+      );
+
+      // 4️⃣ Validar uploads
       if (uploadSuccessCount === 0) {
         throw new Error('Todos os uploads falharam. Não é possível continuar.');
       }
-    }
 
-    console.log(`✅ [UPLOAD] Upload concluído: ${uploadSuccessCount} sucessos, ${uploadErrorCount} erros`);
+      console.log(`✅ [UPLOAD] Upload concluído. Iniciando stream...`);
+      
+      // 5️⃣ Iniciar STREAM SSE
+      const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+      const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch-analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          batch_id,
+          user_id: user.uid,
+          chat_id: chatId
+        })
+      });
 
-    // 5️⃣ Notificar backend que uploads concluíram (iniciar processamento)
-    console.log('🚀 [UPLOAD] Notificando backend para iniciar processamento, batch_id:', batch_id);
-    
-    const result = await ultraBatchAnalyzeReports(batch_id, user.uid, chatId);
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Erro ao criar job de ultra lote');
-    }
-
-    //console.log('✅ [UPLOAD] Job criado com sucesso:', result.job_id);
-
-    // 6️⃣ Mostrar toast de confirmação
-    toast({
-      title: 'Processamento Iniciado',
-      description: `Analisando ${result.total_files} relatórios. Tempo estimado: ${result.estimated_time_minutes} minutos.`,
-    });
-
-    // 7️⃣ Iniciar a UI e o polling
-    // Chamamos handleUltraBatchResults que criará as mensagens de placeholder
-    // e iniciará o polling automático
-    await handleUltraBatchResults([], result.total_files, result.job_id, result.estimated_time_minutes, chatId);
-
-  } catch (err: any) {
-    console.error('❌ [UPLOAD] Erro ao iniciar ultra batch:', err);
-    setError(`Erro ao iniciar análise: ${err.message}`);
-    toast({
-      title: 'Erro',
-      description: err.message || 'Não foi possível iniciar a análise',
-      variant: 'destructive',
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-  const [ultraBatchJobId, setUltraBatchJobId] = useState<string | null>(null);
-
-  // Polling contínuo para ultra batch
-  useEffect(() => {
-    if (!ultraBatchJobId) return;
-    
-    let intervalId: NodeJS.Timeout;
-    const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
-    
-    const pollJobStatus = async () => {
-      try {
-        const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch-status/${ultraBatchJobId}`);
-        const data = await response.json();
-        
-        if (data.success && data.progress) {
-          handleUltraBatchResults(
-            data.results || [],
-            data.progress.totalFiles, 
-            ultraBatchJobId, 
-            data.estimated_time_minutes
-          );
-        }
-        
-        if (data.status === 'completed' || data.status === 'failed' || (data.progress && data.progress.processedFiles >= data.progress.totalFiles)) {
-          if (intervalId) {
-            clearInterval(intervalId);
-          }
-          setUltraBatchJobId(null);
-        }
-      } catch (error) {
-        console.error('Erro ao consultar status do job:', error);
+      if (!response.ok) {
+        throw new Error(`Falha ao iniciar stream: ${response.status}`);
       }
-    };
-    
-    intervalId = setInterval(pollJobStatus, 20000);
-    pollJobStatus();
-    
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Falha ao obter leitor do stream');
+
+      const decoder = new TextDecoder();
+      
+      // Estado local acumulado para este stream
+      let accumulatedResults: any[] = [];
+      let totalFiles = 0;
+      let jobId = '';
+      let estimatedTimeMinutes = 0;
+      
+      // ✅ BUFFER PARA PARSER MANUAL (Corrige o problema de chunks fragmentados)
+      let buffer = '';
+
+      // Loop de leitura do stream
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        
+        // 1. Adicionar chunk ao buffer
+        buffer += chunk;
+        
+        // 2. Separar mensagens completas (SSE usa duplo newline)
+        const parts = buffer.split('\n\n');
+        
+        // 3. O último pedaço pode estar incompleto, mantemos no buffer para o próximo chunk
+        buffer = parts.pop() || '';
+        
+        // 4. Processar mensagens completas
+        for (const part of parts) {
+            const line = part.trim();
+            if (!line || line.startsWith(':')) continue; // Ignorar vazios e keep-alives
+            
+            if (line.startsWith('data: ')) {
+                try {
+                    const jsonStr = line.substring(6); // Remover "data: "
+                    const data = JSON.parse(jsonStr);
+                    console.log('📡 [SSE RECONSTRUÍDO]', data.event);
+
+                    switch (data.event) {
+                        case 'started':
+                          totalFiles = data.total_files;
+                          jobId = data.job_id;
+                          estimatedTimeMinutes = data.estimated_time_minutes || 0
+                          // Inicializar placeholder na UI
+                          handleUltraBatchResults([], totalFiles, jobId, estimatedTimeMinutes, chatId || undefined);
+                          break;
+                        
+                        case 'chunks_prepared':
+                           console.log(`✅ [SSE] ${data.total_chunks} chunks preparados.`);
+                           break;
+
+                        case 'file_completed':
+                          if (data.result) {
+                            accumulatedResults.push({
+                              ...data.result,
+                              processedAt: new Date().toISOString()
+                            });
+                            
+                            // 🔥 ATUALIZAÇÃO VISUAL: Chama a função existente com o array atualizado
+                            handleUltraBatchResults(
+                              [...accumulatedResults], 
+                              data.total,
+                              jobId,
+                              estimatedTimeMinutes,
+                              chatId || undefined
+                            );
+                          }
+                          break;
+
+                        case 'file_error':
+                          accumulatedResults.push({
+                            fileName: data.fileName || data.file_name,
+                            success: false,
+                            error: data.error,
+                            processedAt: new Date().toISOString()
+                          });
+                          
+                          handleUltraBatchResults(
+                            [...accumulatedResults],
+                            data.total,
+                            jobId,
+                            estimatedTimeMinutes,
+                            chatId || undefined
+                          );
+                          break;
+
+                        case 'completed':
+                          toast({
+                            title: 'Concluído',
+                            description: `Processamento finalizado. Sucessos: ${data.success_count}, Falhas: ${data.failure_count}`,
+                          });
+                          // Forçar última atualização
+                          handleUltraBatchResults(
+                              [...accumulatedResults],
+                              data.total || accumulatedResults.length,
+                              jobId,
+                              data.duration_seconds ? Math.round(data.duration_seconds / 60) : 0,
+                              chatId || undefined
+                          );
+                          break;
+                          
+                        case 'fatal_error':
+                          toast({
+                            title: 'Erro no Processamento',
+                            description: data.error,
+                            variant: 'destructive',
+                          });
+                          break;
+                    }
+                } catch (e) {
+                    console.error('Erro de parse no SSE manual:', e, line.substring(0, 50));
+                }
+            }
+        }
       }
-    };
-  }, [ultraBatchJobId]);
+
+    } catch (err: any) {
+      console.error('❌ [ULTRA-BATCH] Erro:', err);
+      setError(`Erro no processamento: ${err.message}`);
+      toast({
+        title: 'Erro',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // REMOVIDO: useEffect de Polling
+  // REMOVIDO: state ultraBatchJobId
+
 
 
   const handleStartTour = () => {

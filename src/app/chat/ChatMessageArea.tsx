@@ -243,8 +243,8 @@ export function ChatMessageArea({
                       <>
                                 {/* RENDERIZAÇÃO CONDICIONAL PARA RELATÓRIOS */}
                           {(() => {
-                            //console.log('🔍 DEBUG ChatMessageArea- msg.content:', msg.content);
-                            //console.log('🔍 DEBUG ChatMessageArea- contains emojis:', msg.content.includes('🔎') || msg.content.includes('✅') || msg.content.includes('⚠️') || msg.content.includes('🌎'));
+                            console.log('🔍 DEBUG ChatMessageArea- msg.content:', msg.content);
+                            console.log('🔍 DEBUG ChatMessageArea- contains emojis:', msg.content.includes('🔎') || msg.content.includes('✅') || msg.content.includes('⚠️') || msg.content.includes('🌎'));
                             
                             return msg.content.includes('🔎') || msg.content.includes('✅') || msg.content.includes('⚠️') || msg.content.includes('🌎') || msg.ultraBatchJobId;
                           })() ? (
@@ -301,7 +301,7 @@ export function ChatMessageArea({
         <span className="text-sm text-muted-foregroun font-medium">
           {msg.ultraBatchProgress?.current || 0}/{msg.ultraBatchTotal || 0} arquivos
         </span>
-        {msg.ultraBatchEstimatedTimeMinutes && (
+        {!msg.ultraBatchEstimatedTimeMinutes && (
           <span className="text-sm text-muted-foregroun">
             ⏱️ ~{msg.ultraBatchEstimatedTimeMinutes} min
           </span>
