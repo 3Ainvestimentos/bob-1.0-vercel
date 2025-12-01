@@ -56,7 +56,7 @@ MODEL_FLASH_LITE = "gemini-2.5-flash-lite"
 MODEL_TEMPERATURE = 0.2
 
 # Configurações de Concorrência e Resiliência
-MAX_CONCURRENT_JOBS = 3  # Reduzido de 10 para 3 para evitar OOM
+MAX_CONCURRENT_JOBS = 5  # Reduzido de 10 para 3 para evitar OOM
 LLM_MAX_RETRIES = 5       # Aumentado para lidar com backpressure
 LLM_RETRY_DELAY = 2.0     # Delay inicial (base para exponencial)
 

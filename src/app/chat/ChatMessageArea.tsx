@@ -143,6 +143,15 @@ export function ChatMessageArea({
 
   // ✅ MOVER o useState para DENTRO do componente
   const [messageFormat, setMessageFormat] = useState<'whatsapp' | 'email'>('whatsapp');
+
+  // ✅ Função para verificar se há ultra lote processando
+  const isUltraBatchProcessing = () => {
+    return messages.some(msg => 
+      msg.ultraBatchJobId && 
+      msg.ultraBatchProgress && 
+      (msg.ultraBatchProgress.current || 0) < (msg.ultraBatchProgress.total || 1)
+    );
+  };
   
   // ✅ MOVER a função para DENTRO do componente
   const processContentForFormat = (content: string, format: 'whatsapp' | 'email'): string => {
@@ -233,7 +242,7 @@ export function ChatMessageArea({
                       </Avatar>
                       <span className="font-semibold text-foreground">Bob</span>
                     </div>
-                    {regeneratingMessageId === msg.id ? (
+                    {regeneratingMessageId === msg.id && !isUltraBatchProcessing()? (
                       <div className="w-fit rounded-xl bg-muted px-4 py-2">
                           <p className="animate-pulse text-sm italic text-muted-foreground">
                               Bob está pensando...
@@ -389,8 +398,12 @@ export function ChatMessageArea({
                                   return (
                                     <Accordion key={index} type="single" collapsible className="w-full" defaultValue={`chunk-${index}`}>
                                       <AccordionItem value={`chunk-${index}`}>
-                                        <AccordionTrigger className="text-md font-medium text-foreground hover:no-underline">
-                                          {msg.fileNames?.[index] || `Chunk ${index + 1}`}
+                                      <AccordionTrigger className="text-md font-medium text-foreground hover:no-underline">
+                                          {msg.fileNames && msg.fileNames.length > 0 
+                                            ? (msg.fileNames.length === 1 
+                                                ? msg.fileNames[0] 
+                                                : (msg.fileNames[index] || `Chunk ${index + 1}`))
+                                            : `Chunk ${index + 1}`}
                                         </AccordionTrigger>
                                         <AccordionContent>
                                           <div className="w-full h-90 rounded-xl bg-slate-800 dark:bg-gray-950 px-4 py-2 overflow-x-auto overflow-y-hidden">   
@@ -482,7 +495,7 @@ export function ChatMessageArea({
                 )}
               </React.Fragment>
             ))}
-            {isLoading && (
+            {isLoading && !isUltraBatchProcessing() && (
               <div className="flex items-start gap-3">
                 <Avatar className="h-8 w-8 shrink-0">
                   <AvatarFallback>

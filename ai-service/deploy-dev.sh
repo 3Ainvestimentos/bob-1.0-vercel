@@ -144,7 +144,7 @@ echo ""
 echo "✅ Deploy concluído!"
 echo ""
 echo "🌐 URL do serviço:"
-SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)')
+SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --project=$PROJECT_ID --format 'value(status.url)')
 echo "   $SERVICE_URL"
 echo ""
 echo "🔍 Testando health check..."

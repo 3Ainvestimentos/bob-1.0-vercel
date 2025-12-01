@@ -37,13 +37,13 @@ XP_REPORT_EXTRACTION_PROMPT_OPTIMIZED ="""
             - className: nome da classe
             - classReturn: rentabilidade percentual do mês
             
-          11. topAssets: Objeto organizado por classe de ativo com os 2-3 melhores ativos de cada classe:
+          11. topAssets: Objeto organizado por classe de ativo com os 2 melhores ativos de cada classe:
         - Estrutura: {{className: [lista de ativos]}}
         - Para cada ativo:
-          * asset: nome do ativo
-          * return: rentabilidade do ativo
+          * assetName: nome do ativo
+          * assetReturn: rentabilidade do ativo
           * assetType: tipo específico do ativo
-        - Exemplo: {{"Pós Fixado": [{{"asset": "CDB BANCO MASTER", "return": "1,56%", "assetType": "CDB"}}, {{"asset": "CDB BANCO MASTER", "return": "1,54%", "assetType": "CDB"}}], "Inflação": [{{"asset": "NTN-B AGO/2026", "return": "1,06%", "assetType": "NTN-B"}}, {{"asset": "Tesouro IPCA+ 2026", "return": "1,16%", "assetType": "Tesouro IPCA+"}}]}}
+        - Exemplo: {{"Pós Fixado": [{{"assetName": "CDB BANCO MASTER", "assetReturn": "1,56%", "assetType": "CDB"}}, {{"assetName": "CDB BANCO MASTER", "assetReturn": "1,54%", "assetType": "CDB"}}], "Inflação": [{{"assetName": "NTN-B", "assetReturn": "1,06%", "assetType": "NTN-B"}}, {{"assetName": "Tesouro IPCA+ 2026", "assetReturn": "1,16%", "assetType": "Tesouro IPCA+"}}]}}
 
         **FORMATO DE SAÍDA:**
         - Use formato brasileiro (vírgula para decimal)
@@ -103,9 +103,9 @@ XP_REPORT_ANALYSIS_PROMPT = """
           "benchmarkDifference": "diferença em relação ao benchmark",
           "drivers": [
             {{
-              "asset": "Nome do ativo",
-              "return": "rentabilidade do ativo"
-              "difference": "diferença em relação ao benchmark",
+              "assetName": "Nome do ativo",
+              "assetReturn": "Rentabilidade do ativo",
+              "assetType": "Tipo específico do ativo"
             }}
           ]
         }}
@@ -156,6 +156,17 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       4. **PRIORIZE os highlights pela maior diferença em relação ao benchmark**
       5. **SEMPRE mencione o highlight com maior diferença primeiro**
       6. Na seção de "Highlights", nos ativos individuais que foram responsáveis pela valorização, cite os de maior rentabilidade como os impulsionadores do resultado.
+      7. **ABREVIAÇÃO DE NOMES DE ATIVOS (REGRA CRÍTICA):** Ao usar o campo "assetName" dos drivers na mensagem, SEMPRE abrevie o nome antes de inserir:
+         - Para ativos com código (ex: AZQI11, HGLG11, HCTR11): use APENAS o código do "assetName"
+         - Para ativos com nome composto: use apenas a primeira parte até o primeiro hífen "-" do "assetName"
+         - Remova sufixos técnicos como "FIC FIDC", "FIP IE", "FIDCR", etc. do "assetName"
+         - Remova datas, índices, percentuais e informações técnicas após o nome principal do "assetName"
+         - Mantenha apenas o nome essencial que identifica o ativo de forma clara e concisa
+         - Exemplos de transformação do "assetName":
+           * "CRA VAMOS - JAN/2030 - IPC-A + 7,16%" → "CRA VAMOS"
+           * "DEB MOVIDA - JUN/2028 - IPC-A + 6,55%" → "DEB MOVIDA"
+           * "AZQI11 - AZ Quest Infra Yield FIP IE" → "AZQI11"
+           * "Brave 90 FIC FIDC" → "Brave 90"
       8. **Se houver múltiplos highlights, ordene por diferença decrescente**
       9. **OBRIGATÓRIO: Retorne a mensagem COMPLETA dentro de um bloco de código markdown (```)**
       10. **IMPORTANTE: Comece com ``` e termine com ```**
@@ -179,12 +190,15 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um ganho financeiro de *[yearlyGain]*!
 
       ✅ *Destaques do mês:*
-      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference]% a cima do [classBenchmark], valorização puxada por [tipo de investimento] como *[Nome do Ativo] (+[rent_ativo])%* e *[Nome do Ativo] (+[rent_ativo])%*.
-      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference]% a cima do [classBenchmark], sustentada por [tipo de investimento] como *[Nome do Ativo] (+[rent_ativo])%* e *[Nome do Ativo] (+[rent_ativo])%*.
+      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference]% a cima do [classBenchmark], valorização puxada por ativos como *[assetName] (+[assetReturn])%* e *[assetName] (+[assetReturn])%*.
+
+      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference]% a cima do [classBenchmark], sustentada por ativos como *[assetName] (+[assetReturn])%* e *[assetName] (+[assetReturn])%*.
+
       - [se existir... máximo de um ativo]
 
       ⚠️ *Pontos de Atenção:*
       - *[className]*: *[classReturn]*, (-[classBenchmarkDifference]% em relação ao [classBenchmark]).
+
       - *[className]*: *[classReturn]*, (-[classBenchmarkDifference]% em relação ao [classBenchmark]).
 
 
