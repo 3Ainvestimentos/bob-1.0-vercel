@@ -189,8 +189,8 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
 
 
       🌎 *Cenário Econômico de [mês de referência]:*
-      - Cenário Nacional: O mercado brasileiro viveu um mês de outubro tranquilo, com a bolsa em alta – renovando máximas acima dos 148 mil pontos – e a Selic mantida em 15%. O cenário de inflação sob controle e expectativas de queda dos juros em 2026 ajudou a atrair capital estrangeiro e fortalecer o otimismo dos investidores.
-      - Cenário Internacional: No exterior, o Federal Reserve reduziu a taxa de juros, impulsionando novas altas nas bolsas e beneficiando emergentes. O clima ficou ainda mais favorável após a trégua comercial entre EUA e China, apesar da paralisação do governo americano não ter trazido volatilidade.
+      - Cenário Nacional: Em novembro, o Ibovespa renovou recordes aos 159 mil pontos pela primeira vez, enquanto o dólar recuou e encerrou o mês próximo de R$ 5,33, impulsionado pela entrada de capital estrangeiro. A inflação, medida pelo IPCA, retornou ao intervalo da meta pela primeira vez desde janeiro, o que reforçou expectativas de cortes na Selic em 2026. Paralelamente, o Ministério da Fazenda revisou a projeção de crescimento de 2025 para 2,2%, sinalizando desaceleração da atividade econômica.
+      - Cenário Internacional: No exterior, novembro foi marcado por sinais de cautela: parte do dinheiro saindo de ativos dos EUA e migrando para economias emergentes, o que caracteriza um “rotation”, em busca de melhores oportunidades de retorno / menor risco relativo. Mercados asiáticos e japoneses tiveram desempenho mais firme.
       ```
 
       **IMPORTANTE: Comece com ``` e termine com ```**
@@ -393,8 +393,8 @@ Olá, [N° do Cliente]!
 
 🌎 *Cenário Econômico de [mês de referência]:*
 
-      - Cenário Nacional: O mercado brasileiro viveu um mês de outubro tranquilo, com a bolsa em alta – renovando máximas acima dos 148 mil pontos – e a Selic mantida em 15%. O cenário de inflação sob controle e expectativas de queda dos juros em 2026 ajudou a atrair capital estrangeiro e fortalecer o otimismo dos investidores.
-      - Cenário Internacional: No exterior, o Federal Reserve reduziu a taxa de juros, impulsionando novas altas nas bolsas e beneficiando emergentes. O clima ficou ainda mais favorável após a trégua comercial entre EUA e China, apesar da paralisação do governo americano não ter trazido volatilidade.
+      - Cenário Nacional: Em novembro, o Ibovespa renovou recordes aos 159 mil pontos pela primeira vez, enquanto o dólar recuou e encerrou o mês próximo de R$ 5,33, impulsionado pela entrada de capital estrangeiro. A inflação, medida pelo IPCA, retornou ao intervalo da meta pela primeira vez desde janeiro, o que reforçou expectativas de cortes na Selic em 2026. Paralelamente, o Ministério da Fazenda revisou a projeção de crescimento de 2025 para 2,2%, sinalizando desaceleração da atividade econômica.
+      - Cenário Internacional: No exterior, novembro foi marcado por sinais de cautela: parte do dinheiro saindo de ativos dos EUA e migrando para economias emergentes, o que caracteriza um “rotation”, em busca de melhores oportunidades de retorno / menor risco relativo. Mercados asiáticos e japoneses tiveram desempenho mais firme.
 ```
 
 **IMPORTANTE: Comece com ``` e termine com ```**

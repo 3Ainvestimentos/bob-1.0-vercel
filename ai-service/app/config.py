@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from google import genai
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
+from typing import Optional, List
 
 # Firebase Admin SDK
 import firebase_admin
@@ -53,6 +54,11 @@ MODEL_FLASH = "gemini-2.5-flash"
 MODEL_PRO = "gemini-2.5-pro"
 MODEL_FLASH_LITE = "gemini-2.5-flash-lite"
 MODEL_TEMPERATURE = 0.2
+
+# Configurações de Concorrência e Resiliência
+MAX_CONCURRENT_JOBS = 3  # Reduzido de 10 para 3 para evitar OOM
+LLM_MAX_RETRIES = 5       # Aumentado para lidar com backpressure
+LLM_RETRY_DELAY = 2.0     # Delay inicial (base para exponencial)
 
 # Configurações de chunking
 CHUNK_SIZE = 10000  # caracteres por chunk

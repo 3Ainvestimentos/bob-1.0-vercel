@@ -1,9 +1,9 @@
 """
 Endpoints para análise de relatórios XP.
 """
-from typing import Dict, Any  # ← ADICIONAR Dict
+from typing import Dict, Any
 import json
-from fastapi import APIRouter, HTTPException, BackgroundTasks 
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 from fastapi.responses import StreamingResponse
 
 from app.models.requests import (    
@@ -14,21 +14,22 @@ from app.models.requests import (
     BatchReportResponse,
     UltraBatchReportRequest, 
     UltraBatchReportResponse,
-    GenerateUploadUrlsRequest,  # ← NOVO
+    GenerateUploadUrlsRequest,
     GenerateUploadUrlsResponse 
 )
 from app.workflows.report_workflow import create_report_analysis_workflow, create_report_analysis_workflow_from_data
 
 from app.services.report_analyzer.batch_processing import process_batch_reports
 from app.services.report_analyzer.ultra_batch_processing import process_ultra_batch_reports  
-from app.services.report_analyzer.signed_url import generate_signed_url_for_upload  # ← NOVO
+from app.services.report_analyzer.signed_url import generate_signed_url_for_upload
 
 from pydantic import BaseModel
 from typing import Dict, Any
 
 from app.config import get_firestore_client, logger
 from firebase_admin import firestore  
-import uuid 
+import uuid
+from app.services.metrics import record_metric_call, record_ultra_batch_start, record_ultra_batch_complete 
 
 
 
@@ -57,6 +58,13 @@ async def analyze_report_auto(request: ReportAnalyzeAutoRequest):
         
         app = create_report_analysis_workflow()
         result = await app.ainvoke(state)
+        
+        # Registrar métrica após processamento bem-sucedido
+        if result.get("error") is None:
+            try:
+                record_metric_call(request.user_id, "automatica")
+            except Exception as e:
+                logger.error(f"Erro ao registrar métrica analise_automatica: {e}")
         
         return ReportAnalyzeResponse(
             success=True,
@@ -93,6 +101,13 @@ async def analyze_report_personalized(request: ReportAnalyzePersonalizedRequest)
         
         app = create_report_analysis_workflow()
         result = await app.ainvoke(state)
+        
+        # Registrar métrica após processamento bem-sucedido
+        if result.get("error") is None:
+            try:
+                record_metric_call(request.user_id, "personalized")
+            except Exception as e:
+                logger.error(f"Erro ao registrar métrica analise_personalized: {e}")
         
         return ReportAnalyzeResponse(
             success=True,
@@ -158,6 +173,14 @@ async def batch_analyze_reports(request: BatchReportRequest):
             )
         
         results = await process_batch_reports(request.files, request.user_id)
+        
+        # Registrar métrica após processamento bem-sucedido (se pelo menos um arquivo foi processado com sucesso)
+        success_count = sum(1 for r in results if r.get("success"))
+        if success_count > 0:
+            try:
+                record_metric_call(request.user_id, "automatica")
+            except Exception as e:
+                logger.error(f"Erro ao registrar métrica analise_automatica: {e}")
         
         # Converter resultados para ReportAnalyzeResponse
         report_responses = []
@@ -303,38 +326,37 @@ async def generate_upload_urls(request: GenerateUploadUrlsRequest):
         )
 
 # Implementar o endpoint (adicionar no final do arquivo):
-@router.post("/ultra-batch-analyze", response_model=UltraBatchReportResponse)
-async def ultra_batch_analyze_reports(request: UltraBatchReportRequest, background_tasks: BackgroundTasks):
+@router.post("/ultra-batch-analyze")
+async def ultra_batch_analyze_reports(request: Request, body: UltraBatchReportRequest):
     """
-    Análise em ultra lote (até 100 relatórios).
+    Análise em ultra lote (até 100 relatórios) com Streaming Response (SSE).
     
     Agora recebe apenas batch_id (arquivos já estão no GCS via upload direto).
-    Busca metadados do batch no Firestore e processa os arquivos em background.
+    Mantém conexão HTTP aberta enviando eventos de progresso.
     """
-    logger.info(f"🔗 [ULTRA-BATCH] Request recebido: batch_id={request.batch_id}, user_id={request.user_id}, chat_id={request.chat_id}")
+    logger.info(f"🔗 [ULTRA-BATCH] Request recebido: batch_id={body.batch_id}, user_id={body.user_id}, chat_id={body.chat_id}")
 
     try:
         # 1. Obter cliente Firestore
         db = get_firestore_client()
         
         # 2. Buscar metadados do batch no Firestore
-        batch_ref = db.collection('ultra_batch_uploads').document(request.batch_id)
+        batch_ref = db.collection('ultra_batch_uploads').document(body.batch_id)
         batch_doc = batch_ref.get()
         
         if not batch_doc.exists:
-            logger.error(f"❌ [ULTRA-BATCH] Batch não encontrado: {request.batch_id}")
+            logger.error(f"❌ [ULTRA-BATCH] Batch não encontrado: {body.batch_id}")
             raise HTTPException(
                 status_code=404,
-                detail=f"Batch {request.batch_id} não encontrado. Verifique se o upload foi concluído."
+                detail=f"Batch {body.batch_id} não encontrado. Verifique se o upload foi concluído."
             )
         
         batch_data = batch_doc.to_dict()
         total_files = batch_data.get('total_files', 0)
-        storage_paths = batch_data.get('storage_paths', [])
         
         # 3. Validar que o batch pertence ao usuário
-        if batch_data.get('user_id') != request.user_id:
-            logger.error(f"❌ [ULTRA-BATCH] Batch {request.batch_id} não pertence ao usuário {request.user_id}")
+        if batch_data.get('user_id') != body.user_id:
+            logger.error(f"❌ [ULTRA-BATCH] Batch {body.batch_id} não pertence ao usuário {body.user_id}")
             raise HTTPException(
                 status_code=403,
                 detail="Você não tem permissão para processar este batch."
@@ -347,8 +369,8 @@ async def ultra_batch_analyze_reports(request: UltraBatchReportRequest, backgrou
         # 5. Salvar job no Firestore
         job_ref = db.collection('ultra_batch_jobs').document(job_id)
         job_data = {
-            'user_id': request.user_id,
-            'batch_id': request.batch_id,  # Vincular job ao batch
+            'user_id': body.user_id,
+            'batch_id': body.batch_id,  # Vincular job ao batch
             'total_files': total_files,
             'status': 'processing',
             'current_file': 0,
@@ -357,11 +379,17 @@ async def ultra_batch_analyze_reports(request: UltraBatchReportRequest, backgrou
         }
         
         # Se chat_id foi fornecido, salvá-lo no job
-        if request.chat_id:
-            job_data['chat_id'] = request.chat_id
+        if body.chat_id:
+            job_data['chat_id'] = body.chat_id
         
         job_ref.set(job_data)
         logger.info(f"✅ [ULTRA-BATCH] Job criado no Firestore: {job_id}")
+        
+        # Registrar métrica de ultra-batch após criar job
+        try:
+            record_ultra_batch_start(body.user_id, job_id, total_files)
+        except Exception as e:
+            logger.error(f"Erro ao registrar métrica ultra-batch: {e}")
         
         # 6. Atualizar status do batch para 'processing'
         batch_ref.update({
@@ -370,34 +398,44 @@ async def ultra_batch_analyze_reports(request: UltraBatchReportRequest, backgrou
         })
         
         # 7. 🔗 PADRÃO DE PONTEIRO: Se chat_id foi fornecido, salvar batchJobId no documento do chat
-        if request.chat_id:
+        if body.chat_id:
             try:
-                chat_ref = db.collection('users').document(request.user_id).collection('chats').document(request.chat_id)
+                chat_ref = db.collection('users').document(body.user_id).collection('chats').document(body.chat_id)
                 chat_ref.update({
                     'batchJobId': job_id,
                     'statusJob': 'processing'
                 })
-                logger.info(f"✅ [ULTRA-BATCH] Ponteiro salvo: chat {request.chat_id} -> job {job_id}")
+                logger.info(f"✅ [ULTRA-BATCH] Ponteiro salvo: chat {body.chat_id} -> job {job_id}")
             except Exception as e:
                 # Não falhar o job se não conseguir atualizar o chat
-                logger.warning(f"⚠️ [ULTRA-BATCH] Erro ao salvar ponteiro no chat {request.chat_id}: {e}")
+                logger.warning(f"⚠️ [ULTRA-BATCH] Erro ao salvar ponteiro no chat {body.chat_id}: {e}")
         
-        # 8. Iniciar processamento em background
-        # Passar batch_id em vez de files (arquivos já estão no GCS)
-        background_tasks.add_task(
-            process_ultra_batch_reports,
-            request.batch_id,  # ← MUDANÇA: passar batch_id em vez de files
-            request.user_id,
-            job_id
-        )
         
-        logger.info(f"✅ [ULTRA-BATCH] Processamento iniciado em background para job {job_id}")
+        logger.info(f"✅ [ULTRA-BATCH] Iniciando stream para job {job_id}")
         
-        return UltraBatchReportResponse(
-            success=True,
-            job_id=job_id,
-            total_files=total_files,
-            estimated_time_minutes=total_files * 2
+        async def stream_wrapper():
+            try:
+                # Consumir o generator do serviço
+                async for event in process_ultra_batch_reports(body.batch_id, body.user_id, job_id):
+                    # Verificar desconexão (apenas logar, não cancelar para permitir refresh)
+                    if await request.is_disconnected():
+                        logger.warning(f"⚠️ [ULTRA-BATCH] Cliente desconectou do job {job_id} (mantendo processamento)")
+                        # Não cancelar o job aqui. O Cloud Run deve manter a instância viva pelo tempo que puder.
+                        # Se quisermos cancelar explicitamente, deve ser via outro endpoint ou lógica de timeout.
+                    
+                    yield event
+            except Exception as e:
+                logger.error(f"❌ [ULTRA-BATCH] Erro no stream wrapper: {e}")
+                yield f"data: {json.dumps({'event': 'fatal_error', 'error': str(e)})}\n\n"
+
+        return StreamingResponse(
+            stream_wrapper(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
         )
         
     except HTTPException:
@@ -405,13 +443,7 @@ async def ultra_batch_analyze_reports(request: UltraBatchReportRequest, backgrou
         raise
     except Exception as e:
         logger.error(f"❌ [ULTRA-BATCH] Erro crítico: {e}")
-        return UltraBatchReportResponse(
-            success=False,
-            job_id="",
-            total_files=0,
-            estimated_time_minutes=0,
-            error=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 

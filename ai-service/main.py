@@ -5,7 +5,6 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import ENVIRONMENT
-from app.api.meeting import router as meeting_router
 from app.api.report import router as report_router  
 import sys
 
@@ -52,7 +51,6 @@ app.add_middleware(
 )
 
 # Registrar routers
-app.include_router(meeting_router, prefix="/api/meeting", tags=["meeting"])
 app.include_router(report_router, prefix="/api/report", tags=["report"])  # ← ADICIONAR ESTA LINHA
 
 # Health check básico

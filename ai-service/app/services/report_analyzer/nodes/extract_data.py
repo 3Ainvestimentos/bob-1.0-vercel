@@ -5,6 +5,7 @@ Versão otimizada com prompts separados por modo de análise.
 """
 import json
 import base64
+import re 
 from typing import Dict, Any, List
 from app.models.schema import ReportAnalysisState
 from app.config import GOOGLE_API_KEY, LANGCHAIN_PROJECT_REPORT, MODEL_NAME, MODEL_TEMPERATURE, get_gemini_client, generate_content_with_timeout
@@ -17,11 +18,7 @@ import os
 
 def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
 
-    print("[extract_data] 🔍 DEBUG - INÍCIO DA FUNÇÃO")
-    print(f"[extract_data] 🔍 DEBUG - GOOGLE_API_KEY disponível: {bool(os.getenv('GOOGLE_API_KEY'))}")
-    print(f"[extract_data] 🔍 DEBUG - GOOGLE_API_KEY length: {len(os.getenv('GOOGLE_API_KEY', ''))}")
-    print(f"[extract_data] 🔍 DEBUG - GOOGLE_API_KEY prefix: {os.getenv('GOOGLE_API_KEY', '')[:10]}...")
-    print("[extract_data] Iniciando extração de dados")
+    print("[extract_data] 🔍 DEBUG - Iniciando extração de dados")
     """
     Extrai dados estruturados usando LLM multimodal.
     Usa prompt otimizado ou completo baseado no modo de análise.
@@ -37,7 +34,8 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
     """
 
     try:
-        # 1. Verificações iniciais
+        # ========== ETAPA 1: VALIDAÇÃO DE ENTRADAS ==========
+        # Verifica se os dados necessários estão presentes no estado
         print(f"[extract_data] Verificando dados de entrada...")
         print(f"[extract_data] raw_text disponível: {bool(state.get('raw_text'))}")
         print(f"[extract_data] pdf_images disponível: {bool(state.get('pdf_images'))}")
@@ -53,11 +51,14 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
             print(f"[extract_data] ❌ {error_msg}")
             return {"error": error_msg}
 
-        # 2. Determinar modo de análise
+        # ========== ETAPA 2: DETERMINAR MODO DE ANÁLISE ==========
+        # O modo determina qual prompt usar e quais campos extrair
         analysis_mode = state.get("analysis_mode", "auto")
         print(f"[extract_data] Modo de análise: {analysis_mode}")
 
-        # 3. Escolher prompt baseado no modo
+        # ========== ETAPA 3: CONSTRUIR PROMPT ==========
+        # Prompt otimizado: menos campos (sem allAssets) - mais rápido
+        # Prompt completo: todos os campos (com allAssets) - mais detalhado
         if analysis_mode == "personalized":
             print(f"[extract_data] Usando prompt completo (com allAssets)")
             prompt = _build_full_extraction_prompt(
@@ -71,8 +72,9 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
                 state["pdf_images"]
             )
 
-        # 4. Preparar conteúdo multimodal
-        content_parts = [prompt]
+        # ========== ETAPA 4: PREPARAR CONTEÚDO MULTIMODAL ==========
+        # O Gemini pode processar texto + imagens simultaneamente
+        content_parts = [prompt] # Primeiro elemento é sempre o prompt de texto
         
         # Adicionar imagens do PDF
         for img_data in state["pdf_images"]:
@@ -102,7 +104,8 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
 
         print(f"[extract_data] Chamando LLM multimodal com {len(content_parts)-1} imagens...")
 
-        # Preparar conteúdo multimodal para LangChain
+        # ========== ETAPA 5: PREPARAR FORMATO PARA GEMINI SDK ==========
+        # Converter formato intermediário para formato do Gemini SDK
         message_content = [
             {"type": "text", "text": content_parts[0]}  # Primeiro é o prompt
         ]
@@ -127,7 +130,7 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
                 image_data = item.get('image_url', '').replace('data:image/png;base64,', '')
                 images.append(image_data)
 
-        #Usar SDK Gemini em vez do Langchain
+         # ========== ETAPA 6: CHAMAR GEMINI SDK ==========
         try:
             client = get_gemini_client()
             print(f"[extract_data] 🔍 DEBUG - Cliente Gemini criado com sucesso")
@@ -135,9 +138,7 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
             print(f"[extract_data] ❌ Erro ao criar cliente Gemini: {e}")
             return {"error": f"Erro ao criar cliente Gemini: {str(e)}"}
 
-    # Substitua as linhas 130-152 por:
-# Substitua as linhas 130-168 por:
-        # Substitua as linhas 132-163 por:
+        # Se há imagens, usar formato multimodal
         if images:
             print(f"[extract_data] Processando {len(images)} imagens + texto")
             
@@ -166,7 +167,7 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
                 model=MODEL_NAME,
                 contents=contents,
                 config={
-                "temperature": 0.2,
+                "temperature": 0.1,
                 "max_output_tokens": 8192 
             }
             )
@@ -174,9 +175,14 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
             print("[extract_data] Processando apenas texto")
             response = client.models.generate_content(
                 model=MODEL_NAME,
-                contents=text_content
+                contents=contents,
+                config={
+                "temperature": 0.1,
+                "max_output_tokens": 8192 
+            }
             )
 
+        # ========== ETAPA 7: VALIDAR RESPOSTA ==========
         if not response or not response.text:
             error_msg = "LLM retornou resposta vazia"
             print(f"[extract_data] ❌ {error_msg}")
@@ -184,7 +190,8 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
 
         print(f"[extract_data] ✅ LLM respondeu com {len(response.text)} caracteres")
 
-        # 6. Limpar resposta (remover markdown se presente)
+        # ========== ETAPA 8: LIMPAR RESPOSTA ==========
+        # Remove markdown, texto extra, e isola o JSON
         cleaned_response = _clean_llm_response(response.text)
         
         # 7. Parsear JSON
@@ -281,11 +288,6 @@ def _clean_llm_response(response_text: str) -> str:
     first_brace = response_text.find("{")
     if first_brace != -1:
         response_text = response_text[first_brace:]
-    
-    # Remover texto antes do primeiro {
-    first_brace = response_text.find("{")
-    if first_brace == -1:
-        return ""
     
     response_text = response_text[first_brace:]
     

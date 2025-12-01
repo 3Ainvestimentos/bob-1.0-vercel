@@ -3,37 +3,46 @@ Serviços de processamento em lote para relatórios XP.
 """
 import asyncio
 from app.workflows.report_workflow import create_report_analysis_workflow
+from app.config import MAX_CONCURRENT_JOBS
+
+# Semáforo global para limitar concorrência de jobs em toda a instância
+semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
 
 async def process_batch_reports(files_data: list, user_id: str) -> list:
     """
-    Processa múltiplos relatórios em paralelo.
+    Processa múltiplos relatórios em paralelo, respeitando o limite global de concorrência.
     """
     async def process_single_file(file_data: dict) -> dict:
         try:
             print(f"[batch] Iniciando processamento de: {file_data['name']}")
             
-            state = {
-                "file_content": file_data["dataUri"],
-                "file_name": file_data["name"],
-                "user_id": user_id,
-                "analysis_mode": "auto",
-                "selected_fields": None
-            }
+            # Adquirir semáforo antes de processar
+            async with semaphore:
+                print(f"[batch] 🟢 Semáforo adquirido para: {file_data['name']} (Livres: {MAX_CONCURRENT_JOBS - semaphore._value})")
+                
+                state = {
+                    "file_content": file_data["dataUri"],
+                    "file_name": file_data["name"],
+                    "user_id": user_id,
+                    "analysis_mode": "auto",
+                    "selected_fields": None
+                }
+                
+                print(f"[batch] Chamando report_analysis_app.ainvoke para: {file_data['name']}")
+                
+                # Adicionar timeout de 4 minutos por arquivo
+                try:
+                    app = create_report_analysis_workflow()
+                    result = await asyncio.wait_for(
+                        app.ainvoke(state),
+                        timeout=240.0  # 4 minutos
+                    )
+                    print(f"[batch] ✅ Concluído: {file_data['name']}")
+                except asyncio.TimeoutError:
+                    print(f"[batch] ⏰ Timeout em: {file_data['name']}")
+                    raise Exception(f"Timeout no processamento de {file_data['name']}")
             
-            print(f"[batch] Chamando report_analysis_app.ainvoke para: {file_data['name']}")
-            
-            # Adicionar timeout de 2 minutos por arquivo
-            try:
-                app = create_report_analysis_workflow()
-                result = await asyncio.wait_for(
-                    app.ainvoke(state),
-                    timeout=240.0  # 4 minutos
-                )
-                print(f"[batch] ✅ Concluído: {file_data['name']}")
-            except asyncio.TimeoutError:
-                print(f"[batch] ⏰ Timeout em: {file_data['name']}")
-                raise Exception(f"Timeout no processamento de {file_data['name']}")
-            
+            # Semáforo liberado automaticamente aqui
             return {
                 "success": True,
                 "file_name": file_data["name"],

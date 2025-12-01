@@ -2,10 +2,15 @@
 Serviço de processamento ultra batch para relatórios XP.
 """
 import asyncio
-import base64  # ← NOVO: para converter bytes em base64
+import base64
+import json
+import time
+import gc
+from typing import AsyncGenerator
 from firebase_admin import firestore
-from app.config import get_firestore_client, get_firebase_bucket  # ← MODIFICAR: adicionar get_firebase_bucket
+from app.config import get_firestore_client, get_firebase_bucket
 from app.services.report_analyzer.batch_processing import process_batch_reports
+from app.services.metrics import record_ultra_batch_complete
 
 async def read_file_from_gcs(storage_path: str) -> bytes:
     """
@@ -44,21 +49,22 @@ async def read_file_from_gcs(storage_path: str) -> bytes:
         print(f"[GCS-READ] ❌ Erro ao ler {storage_path}: {e}")
         raise Exception(f"Erro ao ler arquivo do GCS {storage_path}: {str(e)}")
 
-async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str):
+async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) -> AsyncGenerator[str, None]:
     """
-    Processa múltiplos relatórios em chunks de 5 (ultra batch).
+    Processa múltiplos relatórios em chunks de 5 (ultra batch) e emite eventos SSE.
     
-    Agora recebe batch_id e lê arquivos diretamente do GCS.
+    Agora é um AsyncGenerator que faz yield de eventos SSE ("data: {...}\n\n").
     
     Args:
         batch_id: ID do batch (arquivos já estão no GCS)
         user_id: ID do usuário
         job_id: ID do job no Firestore
     
-    Returns:
-        None (resultados são salvos no Firestore)
+    Yields:
+        str: Eventos SSE
     """
-    print(f"[ULTRA-BATCH] Iniciando processamento para job {job_id}, batch {batch_id}")
+    print(f"[ULTRA-BATCH] Iniciando processamento STREAM para job {job_id}, batch {batch_id}")
+    start_time = time.time()
     
     # Lista para coletar storage_paths para limpeza
     storage_paths_to_delete = []
@@ -81,19 +87,49 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str):
         
         print(f"[ULTRA-BATCH] Batch encontrado: {len(file_names)} arquivos")
         
+        # Emitir evento de início
+        yield f"data: {json.dumps({
+            'event': 'started',
+            'job_id': job_id,
+            'total_files': len(file_names),
+            'estimated_time_minutes': len(file_names) * 2
+        })}\n\n"
+        
         # Coletar storage_paths para limpeza (independente de sucesso/falha)
         storage_paths_to_delete = storage_paths.copy()
         
-        # 3. Ler todos os arquivos do GCS em paralelo e converter para base64
-        print(f"[ULTRA-BATCH] Lendo {len(storage_paths)} arquivos do GCS...")
+        # =========================================================================================
+        # ✅ ESTRATÉGIA: STREAMING / LEITURA PREGUIÇOSA (LAZY LOADING)
+        # Em vez de ler tudo para a memória, dividimos os CAMINHOS em chunks e lemos sob demanda.
+        # =========================================================================================
         
+        # Combinar caminhos e nomes para iterar juntos
+        all_files_metadata = list(zip(storage_paths, file_names))
+        
+        chunk_size = 5
+        # Dividir a LISTA DE METADADOS em chunks (não os arquivos em si)
+        metadata_chunks = [all_files_metadata[i:i + chunk_size] for i in range(0, len(all_files_metadata), chunk_size)]
+        total_chunks = len(metadata_chunks)
+        
+        print(f"[ULTRA-BATCH] Dividido em {total_chunks} chunks de metadados")
+        
+        yield f"data: {json.dumps({
+            'event': 'chunks_prepared',
+            'total_chunks': total_chunks
+        })}\n\n"
+        
+        # Inicializar contadores globais
+        processed_files = 0
+        success_count = 0
+        failure_count = 0
+        
+        # Função auxiliar para ler arquivo e tratar erro individualmente
         async def read_and_convert_file(storage_path: str, file_name: str) -> dict:
-            """Lê arquivo do GCS e converte para formato compatível com process_batch_reports"""
             try:
-                # Ler bytes do GCS
+                # Ler bytes do GCS (agora acontece dentro do loop do chunk)
                 file_bytes = await read_file_from_gcs(storage_path)
                 
-                # Converter bytes para base64 (formato esperado por process_batch_reports)
+                # Converter bytes para base64
                 file_base64 = base64.b64encode(file_bytes).decode('utf-8')
                 
                 return {
@@ -102,131 +138,208 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str):
                 }
             except Exception as e:
                 print(f"[ULTRA-BATCH] ❌ Erro ao ler {file_name} do GCS: {e}")
-                # Retornar objeto de erro para ser processado
                 return {
                     "name": file_name,
                     "dataUri": None,
                     "error": str(e)
                 }
-        
-        # Ler todos os arquivos em paralelo
-        read_tasks = [
-            read_and_convert_file(storage_path, file_name)
-            for storage_path, file_name in zip(storage_paths, file_names)
-        ]
-        
-        files_data = await asyncio.gather(*read_tasks)
-        
-        # Filtrar arquivos que falharam na leitura
-        files_with_errors = [f for f in files_data if f.get("error")]
-        files_to_process = [f for f in files_data if not f.get("error")]
-        
-        # Marcar arquivos com erro como falha no Firestore
-        for error_file in files_with_errors:
-            error_index = file_names.index(error_file["name"])
-            result_ref = job_ref.collection('results').document(str(error_index))
-            result_ref.set({
-                "fileName": error_file["name"],
-                "success": False,
-                "final_message": None,
-                "error": f"Erro ao ler arquivo do GCS: {error_file.get('error')}",
-                "processedAt": firestore.SERVER_TIMESTAMP
-            })
-        
-        if not files_to_process:
-            raise Exception("Nenhum arquivo foi lido com sucesso do GCS")
-        
-        print(f"[ULTRA-BATCH] ✅ {len(files_to_process)} arquivos lidos do GCS, {len(files_with_errors)} erros")
-        
-        # 4. Dividir arquivos em chunks de 5 (MESMA LÓGICA DE ANTES)
-        chunk_size = 5
-        chunks = [files_to_process[i:i + chunk_size] for i in range(0, len(files_to_process), chunk_size)]
-        total_chunks = len(chunks)
-        
-        print(f"[ULTRA-BATCH] Dividido em {total_chunks} chunks de até {chunk_size} arquivos")
-        
-        # Inicializar contadores
-        processed_files = len(files_with_errors)  # Contar arquivos com erro já processados
-        success_count = 0
-        failure_count = len(files_with_errors)
-        
-        # 5. Processar cada chunk sequencialmente (MESMA LÓGICA DE ANTES)
-        for chunk_index, chunk in enumerate(chunks):
-            print(f"[ULTRA-BATCH] Processando chunk {chunk_index + 1}/{total_chunks} com {len(chunk)} arquivos")
+
+        # Loop principal de processamento
+        for chunk_index, metadata_chunk in enumerate(metadata_chunks):
+            print(f"[ULTRA-BATCH] 🔄 Iniciando Chunk {chunk_index + 1}/{total_chunks} ({len(metadata_chunk)} arquivos)")
             
-            try:
-                # Reutilizar função de batch existente (MESMA LÓGICA DE ANTES)
-                chunk_results = await process_batch_reports(chunk, user_id)
+            # Emitir keep-alive antes de operação pesada
+            yield ": keepalive\n\n"
+            
+            # 1. Ler arquivos DESTE chunk do GCS
+            # Isso garante que só temos 5 arquivos na memória RAM por vez.
+            read_tasks = [
+                read_and_convert_file(path, name)
+                for path, name in metadata_chunk
+            ]
+            
+            # Carregar arquivos do chunk atual para a memória
+            chunk_files_data = await asyncio.gather(*read_tasks)
+            
+            # Separar arquivos válidos e com erro de leitura
+            files_to_process = []
+            files_with_read_errors = []
+            
+            for f in chunk_files_data:
+                if f.get("error"):
+                    files_with_read_errors.append(f)
+                else:
+                    files_to_process.append(f)
+            
+            print(f"[ULTRA-BATCH] Chunk carregado: {len(files_to_process)} prontos, {len(files_with_read_errors)} erros de leitura")
+            
+            # 2. Processar erros de leitura imediatamente
+            current_chunk_offset = chunk_index * chunk_size
+            
+            for error_file in files_with_read_errors:
+                # Encontrar o índice original global desse arquivo
+                relative_index = -1
+                for idx, (p, n) in enumerate(metadata_chunk):
+                    if n == error_file["name"]:
+                        relative_index = idx
+                        break
                 
-                # Calcular offset para índices globais (considerando arquivos com erro)
-                offset = len(files_with_errors) + (chunk_index * chunk_size)
-                
-                # Salvar resultados no Firestore
-                for result_index, result in enumerate(chunk_results):
-                    # Calcular índice global do arquivo
-                    global_file_index = offset + result_index
+                if relative_index != -1:
+                    global_file_index = current_chunk_offset + relative_index
                     
-                    # Preparar dados do resultado
-                    result_data = {
-                        "fileName": result.get("file_name", f"arquivo_{global_file_index}"),
-                        "success": result.get("success", False),
-                        "processedAt": firestore.SERVER_TIMESTAMP
-                    }
+                    error_msg = f"Erro de leitura: {error_file.get('error')}"
                     
-                    if result.get("success"):
-                        # Sucesso: salvar mensagem final
-                        result_data["final_message"] = result.get("data", {}).get("final_message")
-                        result_data["error"] = None
-                        success_count += 1
-                    else:
-                        # Falha: salvar erro
-                        result_data["final_message"] = None
-                        result_data["error"] = result.get("error", "Erro desconhecido")
-                        failure_count += 1
-                    
-                    # Salvar na subcoleção results
+                    # Salvar erro no Firestore (persistência)
                     result_ref = job_ref.collection('results').document(str(global_file_index))
-                    result_ref.set(result_data)
-                    
-                    processed_files += 1
-                
-                # Atualizar progresso no documento principal
-                job_ref.update({
-                    "processedFiles": processed_files,
-                    "successCount": success_count,
-                    "failureCount": failure_count
-                })
-                
-                print(f"[ULTRA-BATCH] Chunk {chunk_index + 1} concluído. Progresso: {processed_files}/{len(file_names)}")
-                
-            except Exception as chunk_error:
-                print(f"[ULTRA-BATCH] Erro no chunk {chunk_index + 1}: {chunk_error}")
-                
-                # Calcular offset para índices globais
-                offset = len(files_with_errors) + (chunk_index * chunk_size)
-                
-                # Marcar arquivos do chunk como falha
-                for result_index in range(len(chunk)):
-                    global_file_index = offset + result_index
-                    result_data = {
-                        "fileName": chunk[result_index].get("name", f"arquivo_{global_file_index}"),
+                    result_ref.set({
+                        "fileName": error_file["name"],
                         "success": False,
                         "final_message": None,
-                        "error": f"Erro no chunk: {str(chunk_error)}",
+                        "error": error_msg,
                         "processedAt": firestore.SERVER_TIMESTAMP
-                    }
-                    
-                    result_ref = job_ref.collection('results').document(str(global_file_index))
-                    result_ref.set(result_data)
+                    })
                     
                     processed_files += 1
                     failure_count += 1
-                
-                # Atualizar contadores
-                job_ref.update({
-                    "processedFiles": processed_files,
-                    "failureCount": failure_count
-                })
+                    
+                    # Emitir evento de erro
+                    yield f"data: {json.dumps({
+                        'event': 'file_error',
+                        'index': global_file_index,
+                        'fileName': error_file['name'],
+                        'error': error_msg,
+                        'total': len(file_names)
+                    })}\n\n"
+
+            # 3. Processar arquivos válidos com a IA (batch_processing)
+            if files_to_process:
+                try:
+                    # Emitir keep-alive antes de chamar a IA
+                    yield ": keepalive\n\n"
+                    
+                    # Chama o processamento (que agora tem Semáforo global)
+                    # Nota: Como chunk_size (5) < MAX_CONCURRENT (10), isso roda livre.
+                    ia_results = await process_batch_reports(files_to_process, user_id)
+                    
+                    # Salvar resultados da IA
+                    for result in ia_results:
+                        # Encontrar índice global
+                        file_name = result.get("file_name")
+                        relative_index = -1
+                        for idx, (p, n) in enumerate(metadata_chunk):
+                            if n == file_name:
+                                relative_index = idx
+                                break
+                        
+                        # Fallback se não achar nome (improvável)
+                        if relative_index == -1:
+                            print(f"[ULTRA-BATCH] ⚠️ Nome de arquivo não encontrado no metadado: {file_name}")
+                            continue
+                            
+                        global_file_index = current_chunk_offset + relative_index
+                        
+                        # Preparar dados
+                        result_data = {
+                            "fileName": file_name,
+                            "success": result.get("success", False),
+                            "processedAt": firestore.SERVER_TIMESTAMP
+                        }
+                        
+                        if result.get("success"):
+                            result_data["final_message"] = result.get("data", {}).get("final_message")
+                            result_data["error"] = None
+                            success_count += 1
+                            
+                            # Emitir evento de sucesso com payload COMPLETO
+                            yield f"data: {json.dumps({
+                                'event': 'file_completed',
+                                'index': global_file_index,
+                                'fileName': file_name,
+                                'success': True,
+                                'result': {
+                                    'fileName': file_name,
+                                    'finalMessage': result_data["final_message"],
+                                    'success': True
+                                },
+                                'total': len(file_names)
+                            })}\n\n"
+                            
+                        else:
+                            result_data["final_message"] = None
+                            result_data["error"] = result.get("error", "Erro desconhecido")
+                            failure_count += 1
+                            
+                            # Emitir evento de erro
+                            yield f"data: {json.dumps({
+                                'event': 'file_error',
+                                'index': global_file_index,
+                                'fileName': file_name,
+                                'error': result_data["error"],
+                                'total': len(file_names)
+                            })}\n\n"
+                        
+                        # Salvar no Firestore (persistência em background, não bloqueante na teoria, mas aqui é síncrono da lib)
+                        # Como é rápido, mantemos.
+                        result_ref = job_ref.collection('results').document(str(global_file_index))
+                        result_ref.set(result_data)
+                        
+                        processed_files += 1
+                        
+                except Exception as ia_error:
+                    print(f"[ULTRA-BATCH] ❌ Erro crítico no processamento do chunk: {ia_error}")
+                    # Se falhar o process_batch_reports inteiro, marcar todos os files_to_process como erro
+                    for f in files_to_process:
+                        file_name = f["name"]
+                        relative_index = -1
+                        for idx, (p, n) in enumerate(metadata_chunk):
+                            if n == file_name:
+                                relative_index = idx
+                                break
+                        
+                        if relative_index != -1:
+                            global_file_index = current_chunk_offset + relative_index
+                            
+                            error_msg = f"Erro IA: {str(ia_error)}"
+                            
+                            result_ref = job_ref.collection('results').document(str(global_file_index))
+                            result_ref.set({
+                                "fileName": file_name,
+                                "success": False,
+                                "error": error_msg,
+                                "processedAt": firestore.SERVER_TIMESTAMP
+                            })
+                            processed_files += 1
+                            failure_count += 1
+                            
+                            yield f"data: {json.dumps({
+                                'event': 'file_error',
+                                'index': global_file_index,
+                                'fileName': file_name,
+                                'error': error_msg,
+                                'total': len(file_names)
+                            })}\n\n"
+
+            # 4. Atualizar progresso global no job
+            job_ref.update({
+                "processedFiles": processed_files,
+                "successCount": success_count,
+                "failureCount": failure_count
+            })
+            
+            print(f"[ULTRA-BATCH] Chunk {chunk_index + 1} concluído. Memória liberada.")
+            
+            # LIBERAÇÃO EXPLÍCITA DE MEMÓRIA
+            del chunk_files_data
+            del files_to_process
+            del files_with_read_errors
+            gc.collect()
+
+            # Pequeno sleep para garantir yield ao loop de eventos e GC
+            await asyncio.sleep(0.1)
+
+        # =========================================================================================
+        # FIM DO LOOP DE CHUNKS - PROCESSO DE CONCLUSÃO NORMAL
+        # =========================================================================================
         
         # 6. Marcar job como concluído
         job_ref.update({
@@ -250,6 +363,23 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str):
         
         print(f"[ULTRA-BATCH] ✅ Job {job_id} concluído! {success_count} sucessos, {failure_count} falhas")
         
+        duration = time.time() - start_time
+        
+        # Registrar conclusão de ultra-batch
+        try:
+            record_ultra_batch_complete(user_id, job_id)
+        except Exception as e:
+            print(f"[ULTRA-BATCH] ⚠️ Erro ao registrar conclusão de métrica: {e}")
+            
+        # Emitir evento final
+        yield f"data: {json.dumps({
+            'event': 'completed',
+            'job_id': job_id,
+            'success_count': success_count,
+            'failure_count': failure_count,
+            'duration_seconds': duration
+        })}\n\n"
+        
     except Exception as e:
         print(f"[ULTRA-BATCH] ❌ Erro crítico no job {job_id}: {e}")
         
@@ -262,7 +392,7 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str):
                 "completedAt": firestore.SERVER_TIMESTAMP
             })
             
-            # 🔗 PADRÃO DE PONTEIRO: Atualizar statusJob no chat como 'failed' (se houver chat_id)
+            # 🔗 PADRÃO DE PONTEIRO
             try:
                 job_doc = job_ref.get()
                 if job_doc.exists:
@@ -272,13 +402,16 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str):
                         user_id_from_job = job_data.get('user_id')
                         chat_ref = db.collection('users').document(user_id_from_job).collection('chats').document(chat_id)
                         chat_ref.update({'statusJob': 'failed'})
-                        print(f"[ULTRA-BATCH] ❌ Status do chat {chat_id} atualizado para 'failed'")
-            except Exception as update_error:
-                print(f"[ULTRA-BATCH] ⚠️ Erro ao atualizar status do chat: {update_error}")
+            except Exception:
+                pass
         except:
             print(f"[ULTRA-BATCH] Não foi possível atualizar status de erro no Firestore")
         
-        raise e
+        # Emitir evento de erro fatal
+        yield f"data: {json.dumps({
+            'event': 'fatal_error',
+            'error': str(e)
+        })}\n\n"
     
     finally:
         # 8. LIMPEZA: Deletar arquivos do GCS após processamento (sucesso ou falha)
@@ -314,4 +447,3 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str):
                     
             except Exception as cleanup_error:
                 print(f"[CLEANUP] ❌ Erro crítico na limpeza: {cleanup_error}")
-                # Não falhar o job se limpeza falhar

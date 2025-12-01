@@ -4,15 +4,25 @@ Gera insights com drill-down nos ativos drivers de cada classe.
 """
 import json
 import time
+import asyncio
 from typing import Dict, Any, Optional
 from app.models.schema import ReportAnalysisState
 from app.services.report_analyzer.prompts import (
     XP_REPORT_ANALYSIS_PROMPT,
     XP_REPORT_ANALYSIS_PROMPT_PERSONALIZED
 )
-from app.config import GOOGLE_API_KEY, LANGCHAIN_PROJECT_REPORT, MODEL_NAME, MODEL_TEMPERATURE, get_llm, get_gemini_client
+from app.config import (
+    GOOGLE_API_KEY, 
+    LANGCHAIN_PROJECT_REPORT, 
+    MODEL_NAME, 
+    MODEL_TEMPERATURE, 
+    get_llm, 
+    get_gemini_client,
+    LLM_MAX_RETRIES,
+    LLM_RETRY_DELAY
+)
 import os
-
+from google.api_core.exceptions import ResourceExhausted
 
 def call_response_gemini(prompt: str) -> str:
     try:
@@ -26,19 +36,22 @@ def call_response_gemini(prompt: str) -> str:
             }]
         )
         
-        print(f"[analyze_report]🔍 DEBUG - Resposta recebida: {type(response)}")
-        print(f"[analyze_report]🔍 DEBUG - Response.text: {repr(response.text)}")
+        # print(f"[analyze_report]🔍 DEBUG - Resposta recebida: {type(response)}")
+        # print(f"[analyze_report]🔍 DEBUG - Response.text: {repr(response.text)}")
         
         result = response.text.strip()
-        print(f"[analyze_report]🔍 DEBUG - Resultado final: {repr(result)}")
+        # print(f"[analyze_report]🔍 DEBUG - Resultado final: {repr(result)}")
         
         return result
         
+    except ResourceExhausted as e:
+        # Relançar ResourceExhausted para ser tratado no nível superior com backoff
+        raise e
     except Exception as e:
         print(f"❌ Erro na chamada do Gemini: {e}")
         import traceback
         print(f"❌ Traceback: {traceback.format_exc()}")
-        return ""
+        raise e  # Relançar para retry genérico se necessário
 
 def validate_extracted_data(extracted_data: Dict[str, Any]) -> tuple[bool, Optional[str]]:
     """
@@ -70,24 +83,24 @@ def validate_extracted_data(extracted_data: Dict[str, Any]) -> tuple[bool, Optio
 
 
 def parse_json_response(response_text: str) -> Optional[Dict[str, Any]]:
-    print(f"[analyze_report]🔍 DEBUG - Texto original (completo): {repr(response_text)}")
+    # print(f"[analyze_report]🔍 DEBUG - Texto original (completo): {repr(response_text)}")
     
     # Remover markdown code blocks
     text = response_text.strip()
-    print(f"[analyze_report]🔍 DEBUG - Após strip: {repr(text)}")
+    # print(f"[analyze_report]🔍 DEBUG - Após strip: {repr(text)}")
     
     if text.startswith("```json"):
         text = text[7:]
-        print(f"[analyze_report]🔍 DEBUG - Após remover ```json: {repr(text)}")
+        # print(f"[analyze_report]🔍 DEBUG - Após remover ```json: {repr(text)}")
     if text.startswith("```"):
         text = text[3:]
-        print(f"[analyze_report]🔍 DEBUG - Após remover ```: {repr(text)}")
+        # print(f"[analyze_report]🔍 DEBUG - Após remover ```: {repr(text)}")
     if text.endswith("```"):
         text = text[:-3]
-        print(f"[analyze_report]🔍 DEBUG - Após remover ``` final: {repr(text)}")
+        # print(f"[analyze_report]🔍 DEBUG - Após remover ``` final: {repr(text)}")
     
     text = text.strip()
-    print(f"[analyze_report]🔍 DEBUG - Texto final: {repr(text)}")
+    # print(f"[analyze_report]🔍 DEBUG - Texto final: {repr(text)}")
     
     # Se o texto estiver vazio, retornar erro
     if not text:
@@ -104,39 +117,21 @@ def parse_json_response(response_text: str) -> Optional[Dict[str, Any]]:
 
 def call_llm_with_retry(
     prompt: str,
-    max_retries: int = 3,
+    max_retries: int = LLM_MAX_RETRIES,
     simplify_on_last: bool = True
 ) -> Optional[Dict[str, Any]]:
     """
-    Chama o LLM com retry logic.
-    
-    Args:
-        prompt: Prompt completo
-        max_retries: Número máximo de tentativas
-        simplify_on_last: Se True, simplifica o prompt na última tentativa
-    
-    Returns:
-        Dados parseados ou None em caso de falha
+    Chama o LLM com retry logic e Exponential Backoff para erro 429.
     """
-    # Definir projeto LangSmith para este workflow
-    #os.environ["LANGCHAIN_PROJECT"] = LANGCHAIN_PROJECT_REPORT
-
-    # Inicializar LLM com Langchain
-    #llm = get_llm()
     
-
     for attempt in range(max_retries):
         try:
             # Ajustar prompt baseado na tentativa
             if attempt == 0:
-            # Primeira tentativa: prompt padrão
                 current_prompt = prompt
-
             elif attempt == 1:
-                # Segunda tentativa: reforçar JSON válido
                 current_prompt = prompt + "\n\nCRITICAL: Respond ONLY with valid JSON. No additional text."
-            elif attempt == 2 and simplify_on_last:
-                # Terceira tentativa: simplificar removendo drill-down detalhado
+            elif attempt == max_retries - 1 and simplify_on_last:
                 current_prompt = prompt.replace(
                     "identifique os 2 ou 3 **ativos individuais**",
                     "identifique os principais ativos individuais (se disponíveis)"
@@ -146,29 +141,35 @@ def call_llm_with_retry(
             
             print(f"🔄 Tentativa {attempt + 1}/{max_retries} de análise...")
             
-
+            # Chamada ao Gemini
             response_text = call_response_gemini(current_prompt)
             
-            print(f"🔍 Resposta bruta: {response_text[:200]}...")
             # Tentar parsear
             parsed = parse_json_response(response_text)
-            print(f"🔍 Após parse: {parsed}")
+            
             if parsed:
                 print(f"✅ Análise bem-sucedida na tentativa {attempt + 1}")
                 return parsed
             
+            # Falha de parsing (JSON inválido)
             print(f"⚠️ Falha no parsing na tentativa {attempt + 1}")
-            if attempt < max_retries - 1:  # ← ADICIONAR CONDICIONAL
-                time.sleep(1)  # Pequeno delay entre tentativas
+            if attempt < max_retries - 1:
+                time.sleep(1)
+            
+        except ResourceExhausted:
+            # Tratamento específico para Rate Limit (429)
+            delay = LLM_RETRY_DELAY * (2 ** attempt)  # 2, 4, 8, 16...
+            print(f"⚠️ Quota Excedida (429). Aguardando {delay}s antes da tentativa {attempt + 2}...")
+            time.sleep(delay)
+            continue
             
         except Exception as e:
-            print(f"❌ Erro na tentativa {attempt + 1}: {e}")
+            print(f"❌ Erro genérico na tentativa {attempt + 1}: {e}")
             if attempt < max_retries - 1:
                 time.sleep(1)
             continue
     
     return None
-
 
 def validate_analysis_structure(analysis: Dict[str, Any]) -> tuple[bool, Optional[str]]:
     """
@@ -187,7 +188,6 @@ def validate_analysis_structure(analysis: Dict[str, Any]) -> tuple[bool, Optiona
         return False, "detractors deve ser lista"
     
     return True, None
-
 
 def analyze_report(state: ReportAnalysisState) -> Dict[str, Any]:
     print("[analyze_report] Iniciando análise de relatório")
@@ -259,7 +259,7 @@ def analyze_report(state: ReportAnalysisState) -> Dict[str, Any]:
         # 4. Chamar LLM com retry
         analysis = call_llm_with_retry(
             prompt=prompt,
-            max_retries=3,
+            max_retries=LLM_MAX_RETRIES,
             simplify_on_last=True
         )
         

@@ -124,13 +124,14 @@ gcloud run deploy $SERVICE_NAME \
     --platform managed \
     --region $REGION \
     --allow-unauthenticated \
-    --memory 1.5Gi \
-    --cpu 2 \
-    --timeout 900 \
+    --memory 4Gi \
+    --cpu 4 \
+    --timeout 3600 \
     --min-instances 0 \
-    --max-instances 3 \
-    --concurrency 80 \
+    --max-instances 15 \
+    --concurrency 150 \
     --no-cpu-throttling \
+    --cpu-boost \
     --execution-environment gen2 \
     --set-env-vars "^@^ENVIRONMENT=${ENVIRONMENT}@ALLOWED_ORIGINS=${ALLOWED_ORIGINS_PROD}@FIREBASE_STORAGE_BUCKET=${PROJECT_ID}.firebasestorage.app" \
     --set-secrets "GEMINI_API_KEY=${GEMINI_SECRET_NAME}:latest,LANGCHAIN_API_KEY=${LANGCHAIN_SECRET_NAME}:latest,SERVICE_ACCOUNT_KEY_INTERNAL=${SERVICE_ACCOUNT_SECRET_NAME}:latest"
