@@ -1,5 +1,10 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -15,6 +20,15 @@ const firebaseConfig = {
 // Inicializa o Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+
+// ✨ NOVO: Configurar persistência explícita do Firebase Auth
+// Garante que a sessão persista entre recarregamentos da página
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error('Erro ao configurar persistência do Firebase:', error);
+  });
+}
+
 const googleProvider = new GoogleAuthProvider();
 const db = getFirestore(app);
 const storage = getStorage(app);
