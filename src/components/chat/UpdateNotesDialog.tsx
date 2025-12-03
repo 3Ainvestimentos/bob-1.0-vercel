@@ -5,21 +5,25 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Rocket, Sparkles, CheckCircle } from 'lucide-react';
+import Image from 'next/image';
 
 interface UpdateNotes {
   title: string;
   features: string[];
   fixes: string[];
+  imageUrl?: string;
 }
 
 export const updateDetails: UpdateNotes = {
-  title: "Novidades e Melhorias na Análise de Relatórios do Bob!",
+  title: "Novidades e Melhorias no Bob!",
+  imageUrl:"/images/caixasSelecionadasRelatorioXp.jpeg",
   features: [
-    "Botão para mais de uma análise de relatório XPerformance na mesma conversa (ao lado do microfone).",
-    "Formatação otimizada na análise de relatório XPerformance.",
+    "Análise Ultra-Lote já está disponivel",
+    "Uma pasta com até 100 arquivos",
+    
   ],
   fixes: [
-    "Botão de 'copiar' na análise de relatório XPerformance ativo.",
+    "Para a análise ser completa, lembre-se de extrair o Relatório XP com todas as caixas selecionadas:"
   ]
 };
 
@@ -58,13 +62,28 @@ export function UpdateNotesDialog({ open, onAcknowledge }: UpdateNotesDialogProp
             <div>
               <h3 className="font-semibold flex items-center gap-2 mb-2">
                 <CheckCircle className="h-4 w-4 text-gray-500" />
-                Correções
+                Atenção
               </h3>
               <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
                 {updateDetails.fixes.map((fix, index) => (
                   <li key={`fix-${index}`}>{fix}</li>
                 ))}
               </ul>
+
+              {/* Imagem abaixo do tópico Atenção */}
+              {updateDetails.imageUrl && (
+                <div className="w-full mt-4 mb-2 rounded-lg overflow-hidden border border-gray-200">
+                  <div className="relative w-full h-64 bg-gray-50">
+                    <Image
+                      src={updateDetails.imageUrl}
+                      alt="Instruções para extrair relatório XPerformance - todas as caixas selecionadas"
+                      fill
+                      className="object-contain p-2"
+                      sizes="(max-width: 768px) 100vw, 600px"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

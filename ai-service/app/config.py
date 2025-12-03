@@ -195,3 +195,18 @@ def get_firebase_bucket():
         return client.bucket(bucket_name)
 
 
+# ========================================
+# MONITORAMENTO
+# ========================================
+MONITORING_ENABLED = os.getenv("MONITORING_ENABLED", "true").lower() == "true"
+MONITORING_ENVIRONMENT = os.getenv("MONITORING_ENVIRONMENT", "production")
+MONITORING_MIN_SEVERITY = os.getenv("MONITORING_MIN_SEVERITY", "ERROR")
+GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "datavisor-44i5m")
+GCP_LOG_NAME = os.getenv("GCP_LOG_NAME", "bob-ai-service")
+
+# Ativar apenas em produção
+MONITORING_ACTIVE = MONITORING_ENABLED and MONITORING_ENVIRONMENT == "production"
+
+print(f"[CONFIG] Monitoramento: {'ATIVO' if MONITORING_ACTIVE else 'DESATIVADO'} (env: {MONITORING_ENVIRONMENT})")
+
+

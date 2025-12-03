@@ -4,9 +4,19 @@ Entry point da aplicação FastAPI.
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.config import ENVIRONMENT
-from app.api.report import router as report_router  
+from app.api.report import router as report_router
+from app.api.test import router as test_router  # ⚠️ TEMPORÁRIO - REMOVER APÓS TESTES
 import sys
+
+# Importar error handlers
+from app.middleware.error_handler import (
+    global_exception_handler,
+    http_exception_handler,
+    validation_exception_handler
+)
 
 
 
@@ -50,8 +60,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ========================================
+# REGISTRAR ERROR HANDLERS
+# ========================================
+
+# Handler para HTTPException (FastAPI/Starlette)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+
+# Handler para erros de validação (Pydantic)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+# Handler global para TODAS as outras exceções
+app.add_exception_handler(Exception, global_exception_handler)
+
+print("[MAIN] ✅ Error handlers registrados")
+
 # Registrar routers
-app.include_router(report_router, prefix="/api/report", tags=["report"])  # ← ADICIONAR ESTA LINHA
+app.include_router(report_router, prefix="/api/report", tags=["report"])
 
 # Health check básico
 @app.get("/")

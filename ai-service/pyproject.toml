@@ -23,6 +23,7 @@ dependencies = [
     "firebase-admin>=7.1.0",
     "zhipuai>=1.0.7",
     "google-api-core>=2.25.2",
+    "google-cloud-logging>=3.12.1",
 ]
 
 [project.optional-dependencies]
