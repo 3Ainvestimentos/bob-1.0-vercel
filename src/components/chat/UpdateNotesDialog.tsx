@@ -73,7 +73,7 @@ export function UpdateNotesDialog({ open, onAcknowledge }: UpdateNotesDialogProp
               {/* Imagem abaixo do tópico Atenção */}
               {updateDetails.imageUrl && (
                 <div className="w-full mt-4 mb-2 rounded-lg overflow-hidden border border-gray-200">
-                  <div className="relative w-full h-64 bg-gray-50">
+                  <div className="relative w-full h-60 bg-gray-50">
                     <Image
                       src={updateDetails.imageUrl}
                       alt="Instruções para extrair relatório XPerformance - todas as caixas selecionadas"
