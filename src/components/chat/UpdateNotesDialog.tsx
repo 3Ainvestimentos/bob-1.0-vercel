@@ -23,6 +23,7 @@ export const updateDetails: UpdateNotes = {
     
   ],
   fixes: [
+    "Correção pontual aplicada no analisador de relatório",
     "Para a análise ser completa, lembre-se de extrair o Relatório XP com todas as caixas selecionadas:"
   ]
 };

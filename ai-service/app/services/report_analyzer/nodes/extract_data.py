@@ -271,8 +271,17 @@ def _build_full_extraction_prompt(raw_text: str, pdf_images: List[Dict]) -> str:
 def _clean_llm_response(response_text: str) -> str:
     """
     Limpa a resposta do LLM removendo markdown e texto extra.
+    Suporta tanto objetos JSON ({...}) quanto arrays JSON ([...]).
+    
+    Returns:
+        str: JSON limpo ou string vazia se inválido
     """
-    # Remover markdown code blocks
+    # ========== VALIDAÇÃO INICIAL ==========
+    if not response_text or not response_text.strip():
+        print("[extract_data] ⚠️ Resposta do LLM está vazia")
+        return ""
+    
+    # ========== REMOVER MARKDOWN CODE BLOCKS ==========
     if "```json" in response_text:
         start = response_text.find("```json") + 7
         end = response_text.find("```", start)
@@ -284,30 +293,60 @@ def _clean_llm_response(response_text: str) -> str:
         if end != -1:
             response_text = response_text[start:end].strip()
     
-    # Remover texto antes do primeiro {
+    # ========== ENCONTRAR INÍCIO DO JSON ==========
+    # Procurar por { (objeto) ou [ (array)
     first_brace = response_text.find("{")
-    if first_brace != -1:
-        response_text = response_text[first_brace:]
+    first_bracket = response_text.find("[")
     
-    response_text = response_text[first_brace:]
+    # Determinar qual vem primeiro e qual tipo de JSON é
+    if first_brace == -1 and first_bracket == -1:
+        print(f"[extract_data] ⚠️ Não encontrou '{{' ou '[' na resposta.")
+        print(f"[extract_data] 🔍 Primeiros 200 chars: {response_text[:200]}")
+        return ""
     
-    # NOVA LÓGICA: Contar chaves para encontrar o JSON completo
-    brace_count = 0
-    last_valid_brace = -1
+    # Usar o que vier primeiro
+    if first_bracket != -1 and (first_brace == -1 or first_bracket < first_brace):
+        # É um array JSON
+        start_char = '['
+        end_char = ']'
+        first_char_pos = first_bracket
+        json_type = "array"
+    else:
+        # É um objeto JSON
+        start_char = '{'
+        end_char = '}'
+        first_char_pos = first_brace
+        json_type = "objeto"
+    
+    response_text = response_text[first_char_pos:]
+    
+    # ========== ENCONTRAR FIM DO JSON (CHAVES/COLCHETES BALANCEADOS) ==========
+    count = 0
+    last_valid_pos = -1
     
     for i, char in enumerate(response_text):
-        if char == '{':
-            brace_count += 1
-        elif char == '}':
-            brace_count -= 1
-            if brace_count == 0:
-                last_valid_brace = i
+        if char == start_char:
+            count += 1
+        elif char == end_char:
+            count -= 1
+            if count == 0:
+                last_valid_pos = i
                 break
     
-    if last_valid_brace != -1:
-        response_text = response_text[:last_valid_brace + 1]
+    # Validar se encontrou JSON completo (balanceado)
+    if last_valid_pos == -1:
+        print(f"[extract_data] ⚠️ JSON incompleto ({json_type} não balanceado).")
+        print(f"[extract_data] 🔍 Primeiros 200 chars: {response_text[:200]}")
+        return ""
     
-    return response_text.strip()
+    cleaned = response_text[:last_valid_pos + 1].strip()
+    
+    # ========== VALIDAÇÃO FINAL ==========
+    if not cleaned:
+        print("[extract_data] ⚠️ String vazia após limpeza")
+        return ""
+    
+    return cleaned
 
 def _validate_extracted_data(data: Dict[str, Any], analysis_mode: str) -> Dict[str, Any]:
     """

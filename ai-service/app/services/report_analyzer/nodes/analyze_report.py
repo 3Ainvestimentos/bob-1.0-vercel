@@ -224,7 +224,8 @@ def analyze_report(state: ReportAnalysisState) -> Dict[str, Any]:
         
         is_valid, error_msg = validate_extracted_data(extracted_data)
         if not is_valid:
-            print(f"[analyze_report] ❌ Dados extraídos inválidos: {error_msg}")
+            account_number = extracted_data.get('accountNumber', 'N/A')
+            print(f"[analyze_report] ❌ Dados extraídos inválidos (accountNumber: {account_number}): {error_msg}")
             return {
                 'error': f'Dados extraídos inválidos: {error_msg}',
                 'file_name': '',
