@@ -11,7 +11,7 @@ import { acknowledgeUpdate } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
 // IMPORTANTE: Para futuras atualizações, basta mudar esta string.
-const CURRENT_UPDATE_VERSION = 'update-2025-12-08-v1';
+const CURRENT_UPDATE_VERSION = 'update-2025-12-09-v1';
 
 export function UpdateNotificationManager() {
   const { user, loading: authLoading } = useAuth();
