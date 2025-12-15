@@ -190,16 +190,16 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um resultado financeiro de *[yearlyGain]*!
 
       ✅ *Destaques do mês:*
-      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference]% a cima do [classBenchmark], valorização puxada por ativos como *[assetName] (+[assetReturn])%* e *[assetName] (+[assetReturn])%*.
+      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference] a cima do [classBenchmark], valorização puxada por ativos como *[assetName] (+[assetReturn])* e *[assetName] (+[assetReturn])*.
 
-      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference]% a cima do [classBenchmark], sustentada por ativos como *[assetName] (+[assetReturn])%* e *[assetName] (+[assetReturn])%*.
+      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference] a cima do [classBenchmark], sustentada por ativos como *[assetName] (+[assetReturn])* e *[assetName] (+[assetReturn])*.
 
       - [daqui pra frente, se existir... máximo de um ativo]
 
       ⚠️ *Pontos de Atenção:*
-      - *[className]*: *[classReturn]*, (-[classBenchmarkDifference]% em relação ao [classBenchmark]).
+      - *[className]*: *[classReturn]*, (-[classBenchmarkDifference] em relação ao [classBenchmark]).
 
-      - *[className]*: *[classReturn]*, (-[classBenchmarkDifference]% em relação ao [classBenchmark]).
+      - *[className]*: *[classReturn]*, (-[classBenchmarkDifference] em relação ao [classBenchmark]).
 
 
       🌎 *Cenário Econômico de [mês de referência]:*
@@ -399,7 +399,18 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 6. **IMPORTANTE: Comece com ``` e termine com ```**
 7. **CRÍTICO: Inclua ativos individuais APENAS se houver "allAssets" nos dados fornecidos. Se apenas a classe foi selecionada (sem "allAssets"), mostre APENAS a comparação da classe com o benchmark, sem listar ativos individuais.**
 8. **Se tanto a classe quanto ativos individuais estiverem selecionados, mostre AMBOS: primeiro a classe (com comparação ao benchmark), depois os ativos individuais selecionados.**
-
+9. **ABREVIAÇÃO DE NOMES DE ATIVOS (REGRA CRÍTICA):** Ao usar o campo "assetName" dos drivers na mensagem, SEMPRE abrevie o nome antes de inserir:
+         - Para ativos com código (ex: AZQI11, HGLG11, HCTR11): use APENAS o código do "assetName"
+         - Para ativos com nome composto: use apenas a primeira parte até o primeiro hífen "-" do "assetName"
+         - Remova sufixos técnicos como "FIC FIDC", "FIP IE", "FIDCR", etc. do "assetName"
+         - Remova datas, índices, percentuais e informações técnicas após o nome principal do "assetName"
+         - Mantenha apenas o nome essencial que identifica o ativo de forma clara e concisa
+         - Exemplos de transformação do "assetName":
+           * "CRA VAMOS - JAN/2030 - IPC-A + 7,16%" → "CRA VAMOS"
+           * "DEB MOVIDA - JUN/2028 - IPC-A + 6,55%" → "DEB MOVIDA"
+           * "AZQI11 - AZ Quest Infra Yield FIP IE" → "AZQI11"
+           * "Brave 90 FIC FIDC" → "Brave 90"
+           
 **MODELO OBRIGATÓRIO (ANÁLISE PERSONALIZADA):**
 
 **FORMATO OBRIGATÓRIO DA RESPOSTA (em MARKDOWN) retorne crase tripla no início ``` e ``` no final:**
@@ -414,7 +425,7 @@ Olá, [N° do Cliente]!
 ✅ *Destaques do mês:*
 [Incluir os ativos/classes "highlights" selecionados pelo cliente]
 
-- *[className]*, com *[classReturn]*, [classBenchmarkDifference]% acima do [classBenchmark].
+- *[className]*, com *[classReturn]*, [classBenchmarkDifference] acima do [classBenchmark].
 
 [APENAS se houver "allAssets" nos dados: incluir ativos individuais destacados]
 - *[assetName]*, com *[assetReturn]* de rentabilidade.
@@ -422,7 +433,7 @@ Olá, [N° do Cliente]!
 ⚠️ *Pontos de Atenção:*
 [Incluir os ativos/classes "detractors" selecionados pelo cliente]
 
-- *[className]*, com *[classReturn]*, [classBenchmarkDifference]% abaixo do [classBenchmark].
+- *[className]*, com *[classReturn]*, [classBenchmarkDifference] abaixo do [classBenchmark].
 
 [APENAS se houver "allAssets" nos dados: incluir ativos individuais que precisam de atenção]
 - *[assetName]*, com *[assetReturn]* de rentabilidade.
