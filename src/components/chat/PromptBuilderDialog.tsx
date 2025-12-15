@@ -60,11 +60,11 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 // ---- Types ----
 
-type Asset = { asset: string; return: string; cdiPercentage: string; reason?: string; };
+type Asset = { assetName: string; assetReturn: string; cdiPercentage: string; reason?: string; };
 
 type AssetClassPerformance = { 
     className: string; 
-    return: string; 
+    classReturn: string; 
     cdiPercentage: string; 
 };
 
@@ -599,12 +599,12 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
             // ✅ VERIFICAR SE ITEMS É UM ARRAY
             if (Array.isArray(items)) {
                 items.forEach((item, index) => {
-                    if (item && typeof item === 'object' && item.asset) {
-                        if (!assets[category].some(a => a.asset === item.asset)) {
+                    if (item && typeof item === 'object' && item.assetName) {
+                        if (!assets[category].some(a => a.assetName === item.assetName)) {
                             assets[category].push({
                                 ...item,
                                 originalIndex: index,
-                                numericReturn: parsePercentage(item.return)
+                                numericReturn: parsePercentage(item.assetReturn)
                             });
                         }
                     }
@@ -624,7 +624,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
         return (data.classPerformance || []).map(item => ({
             ...item,
             benchmarkName: findBenchmarkByClassName(item.className),
-            numericReturn: parsePercentage(item.return),
+            numericReturn: parsePercentage(item.classReturn),
             numericCdi: parsePercentage(item.cdiPercentage)
         }));
     }, [data.classPerformance]);
@@ -667,7 +667,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             }
                                         />
                                         <Label htmlFor={`asset-${category}-${item.originalIndex}`} className="flex flex-col">
-                                            <span><strong>{item.asset}</strong> (Rentabilidade: {item.return})</span>
+                                            <span><strong>{item.assetName}</strong> (Rentabilidade: {item.assetReturn})</span>
                                             {item.reason && <span className="text-xs text-muted-foreground italic">"{item.reason}"</span>}
                                         </Label>
                                     </div>
@@ -716,13 +716,13 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                                             <div className="text-xs text-muted-foreground">
                                                 {isGlobalClass ? (
                                                     <>
-                                                        <span>Rentabilidade: {item.return}</span>
+                                                        <span>Rentabilidade: {item.classReturn}</span>
                                                         <span className='mx-2'>|</span>
                                                         <span>Esta classe de ativo não possui benchmarking disponibilizado no relatório XP.</span>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <span>Rentabilidade: {item.return}</span>
+                                                        <span>Rentabilidade: {item.classReturn}</span>
                                                         {benchmarkValue && <span className="mx-2">|</span>}
                                                         {benchmarkValue && <span>Benchmark ({item.benchmarkName}): {benchmarkValue}</span>}
                                                     </>

@@ -187,14 +187,14 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
 
       🔎 *Resumo da performance:*
       Em [reportMonth] sua carteira rendeu *[monthlyReturn]*, o que equivale a *[monthlyCdi]* do CDI, um ganho bruto de *[monthlyGain]*!
-      No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um ganho financeiro de *[yearlyGain]*!
+      No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um resultado financeiro de *[yearlyGain]*!
 
       ✅ *Destaques do mês:*
       - *[className]*, com *[classReturn]*, com [classBenchmarkDifference]% a cima do [classBenchmark], valorização puxada por ativos como *[assetName] (+[assetReturn])%* e *[assetName] (+[assetReturn])%*.
 
       - *[className]*, com *[classReturn]*, com [classBenchmarkDifference]% a cima do [classBenchmark], sustentada por ativos como *[assetName] (+[assetReturn])%* e *[assetName] (+[assetReturn])%*.
 
-      - [se existir... máximo de um ativo]
+      - [daqui pra frente, se existir... máximo de um ativo]
 
       ⚠️ *Pontos de Atenção:*
       - *[className]*: *[classReturn]*, (-[classBenchmarkDifference]% em relação ao [classBenchmark]).
@@ -264,7 +264,7 @@ Analise o TEXTO e as IMAGENS do PDF para extrair dados com máxima precisão.
 - Dólar: percentual (ATENÇÃO: pode ser negativo!)
 10. classPerformance: Array com performance por classe de ativo:
 - className: nome da classe
-- return: rentabilidade percentual do mês
+- classReturn: rentabilidade percentual do mês
 - benchmark: benchmark correspondente
 - benchmarkDifference": diferença em relação ao benchmark correspondente
 - Compare cada classe com seu benchmark específico:
@@ -276,19 +276,16 @@ Analise o TEXTO e as IMAGENS do PDF para extrair dados com máxima precisão.
 11. allAssets: Objeto com TODOS os ativos listados, agrupados por classe de ativo.
 Para cada classe (Pós Fixado, Inflação, Multimercado, Renda Variável Brasil, Fundos Listados),
 liste TODOS os ativos individuais com:
-- asset: Nome completo do ativo (ex: "CRA VAMOS - MAI/2037 - IPC-A + 6,26%")
-- return: Rentabilidade do mês (ex: "2,57%")
+- assetName: Nome completo do ativo
+- assetReturn: Rentabilidade do mês
+- assetType: Tipo específico do ativo (opcional, mas recomendado para consistência)
 
 
 Estrutura:
 {{
     "Pós Fixado": [
-        {{"asset": "Jive BossaNova High Yield Advisory FIC FIDCR", "return": "1,35%"}},
-        {{"asset": "Brave 90 FIC FIDCR", "return": "1,30%"}}
-    ],
-    "Inflação": [
-        {{"asset": "CRA VAMOS - MAI/2037 - IPC-A + 6,26%", "return": "2,57%"}},
-        {{"asset": "DEB ENEVA - SET/2032 - IPC-A + 6,00%", "return": "2,17%"}}
+        {{"assetName": "Jive BossaNova High Yield Advisory FIC FIDCR", "assetReturn": "1,35%"}},
+        {{"assetName": "Brave 90 FIC FIDCR", "assetReturn": "1,30%"}}
     ],
     "Multimercado": [...],
     "Renda Variável Brasil": [...],
@@ -341,13 +338,15 @@ Sua tarefa é realizar uma análise profunda de relatórios de investimentos da 
   "highlights": [
     {{
       "className": "Nome da classe",
-      "return": "rentabilidade da classe",
-      "benchmark": "benchmark correspondente",
-      "difference": "diferença em relação ao benchmark",
+      "classReturn": "rentabilidade da classe",
+      "classBenchmark": "benchmark correspondente",
+      "classBenchmarkValue": "valor do benchmark",
+      "benchmarkDifference": "diferença em relação ao benchmark",
       "drivers": [
         {{
-          "asset": "Nome do ativo",
-          "return": "rentabilidade do ativo"
+          "assetName": "Nome do ativo",
+          "assetReturn": "Rentabilidade do ativo",
+          "assetType": "Tipo específico do ativo"
         }}
       ]
     }}
@@ -355,15 +354,18 @@ Sua tarefa é realizar uma análise profunda de relatórios de investimentos da 
   "detractors": [
     {{
       "className": "Nome da classe",
-      "return": "rentabilidade da classe"
-      "difference": "diferença em relação ao benchmark",
+      "classReturn": "rentabilidade da classe",
+      "classBenchmark": "benchmark correspondente",
+      "classBenchmarkValue": "valor do benchmark",
+      "benchmarkDifference": "diferença em relação ao benchmark"
     }}
   ],
   "allAssets": {{
     "Nome da Classe": [
       {{
-        "asset": "Nome completo do ativo",
-        "return": "rentabilidade do mês",
+        "assetName": "Nome completo do ativo",
+        "assetReturn": "rentabilidade do mês",
+        "assetType": "Tipo específico do ativo",
         "cdiPercentage": "rentabilidade em %CDI do mês",
         "yearlyReturn": "rentabilidade do ano",
         "yearlyCdi": "rentabilidade do ano em %CDI"
@@ -382,6 +384,11 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 
 **DADOS SELECIONADOS PELO CLIENTE:**
 {extracted_data}
+**DESTAQUES (classes selecionadas que superaram benchmark):**
+{highlights}
+
+**PONTOS DE ATENÇÃO (classes selecionadas abaixo do benchmark):**
+{detractors}
 
 **INSTRUÇÕES CRÍTICAS:**
 1. Use APENAS os dados fornecidos (já filtrados pela seleção do cliente)
@@ -390,6 +397,8 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 4. Mantenha tom profissional mas conciso
 5. Foque nos pontos que o cliente escolheu analisar
 6. **IMPORTANTE: Comece com ``` e termine com ```**
+7. **CRÍTICO: Inclua ativos individuais APENAS se houver "allAssets" nos dados fornecidos. Se apenas a classe foi selecionada (sem "allAssets"), mostre APENAS a comparação da classe com o benchmark, sem listar ativos individuais.**
+8. **Se tanto a classe quanto ativos individuais estiverem selecionados, mostre AMBOS: primeiro a classe (com comparação ao benchmark), depois os ativos individuais selecionados.**
 
 **MODELO OBRIGATÓRIO (ANÁLISE PERSONALIZADA):**
 
@@ -399,17 +408,38 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 Olá, [N° do Cliente]!
 
 🔎 *Resumo da performance:*
-[Incluir as métricas selecionadas pelo cliente]
+[Incluir as métricas gerais da carteira selecionadas pelo cliente]
+[Não incluir métricas sobre classes/ativos]
 
-👀 *Destaques da Carteira:*
+✅ *Destaques do mês:*
+[Incluir os ativos/classes "highlights" selecionados pelo cliente]
 
-[Incluir as classes e ativos selecionados pelo cliente]
+- *[className]*, com *[classReturn]*, [classBenchmarkDifference]% acima do [classBenchmark].
+
+[APENAS se houver "allAssets" nos dados: incluir ativos individuais destacados]
+- *[assetName]*, com *[assetReturn]* de rentabilidade.
+
+⚠️ *Pontos de Atenção:*
+[Incluir os ativos/classes "detractors" selecionados pelo cliente]
+
+- *[className]*, com *[classReturn]*, [classBenchmarkDifference]% abaixo do [classBenchmark].
+
+[APENAS se houver "allAssets" nos dados: incluir ativos individuais que precisam de atenção]
+- *[assetName]*, com *[assetReturn]* de rentabilidade.
+
 
 🌎 *Cenário Econômico de [mês de referência]:*
 
-      - Cenário Nacional: Em novembro, o Ibovespa renovou recordes aos 159 mil pontos pela primeira vez, enquanto o dólar recuou e encerrou o mês próximo de R$ 5,33, impulsionado pela entrada de capital estrangeiro. A inflação, medida pelo IPCA, retornou ao intervalo da meta pela primeira vez desde janeiro, o que reforçou expectativas de cortes na Selic em 2026. Paralelamente, o Ministério da Fazenda revisou a projeção de crescimento de 2025 para 2,2%, sinalizando desaceleração da atividade econômica.
-      - Cenário Internacional: No exterior, novembro foi marcado por sinais de cautela: parte do dinheiro saindo de ativos dos EUA e migrando para economias emergentes, o que caracteriza um “rotation”, em busca de melhores oportunidades de retorno / menor risco relativo. Mercados asiáticos e japoneses tiveram desempenho mais firme.
+- Cenário Nacional: Em novembro, o Ibovespa renovou recordes aos 159 mil pontos pela primeira vez, enquanto o dólar recuou e encerrou o mês próximo de R$ 5,33, impulsionado pela entrada de capital estrangeiro. A inflação, medida pelo IPCA, retornou ao intervalo da meta pela primeira vez desde janeiro, o que reforçou expectativas de cortes na Selic em 2026. Paralelamente, o Ministério da Fazenda revisou a projeção de crescimento de 2025 para 2,2%, sinalizando desaceleração da atividade econômica.
+- Cenário Internacional: No exterior, novembro foi marcado por sinais de cautela: parte do dinheiro saindo de ativos dos EUA e migrando para economias emergentes, o que caracteriza um "rotation", em busca de melhores oportunidades de retorno / menor risco relativo. Mercados asiáticos e japoneses tiveram desempenho mais firme.
 ```
+
+**REGRAS IMPORTANTES:**
+- Se os dados NÃO contiverem "allAssets", NÃO inclua ativos individuais na mensagem
+- Se os dados contiverem "allAssets", inclua apenas os ativos que estão listados em "allAssets"
+- Quando apenas a classe for selecionada, mostre APENAS: "*[className]*, com *[classReturn]*, [classBenchmarkDifference]% acima/abaixo do [classBenchmark]"
+- Quando ativos individuais forem selecionados (com ou sem a classe), mostre a classe (se presente) E os ativos individuais selecionados
+- Se tanto "classPerformance" quanto "allAssets" estiverem presentes, mostre primeiro a classe, depois os ativos individuais
 
 **IMPORTANTE: Comece com ``` e termine com ```**
 

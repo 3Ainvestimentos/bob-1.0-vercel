@@ -71,7 +71,7 @@ def get_llm():
     return ChatGoogleGenerativeAI(
         model = MODEL_NAME,         
         temperature = MODEL_TEMPERATURE,
-        max_output_tokens = 4096,
+        max_output_tokens = 6096,
         google_api_key = GOOGLE_API_KEY,
         convert_system_message_to_human = True,
         request_timeout = 300,

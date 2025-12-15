@@ -13,6 +13,10 @@ from app.services.report_analyzer.prompts import (
     XP_REPORT_EXTRACTION_PROMPT_OPTIMIZED,
     XP_REPORT_EXTRACTION_PROMPT_FULL
 )
+from app.services.report_analyzer.schemas import (
+    EXTRACTED_DATA_SCHEMA_OPTIMIZED,
+    EXTRACTED_DATA_SCHEMA_FULL
+)
 import os
 
 
@@ -59,7 +63,7 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
         # ========== ETAPA 3: CONSTRUIR PROMPT ==========
         # Prompt otimizado: menos campos (sem allAssets) - mais rápido
         # Prompt completo: todos os campos (com allAssets) - mais detalhado
-        if analysis_mode == "personalized":
+        if analysis_mode == "personalized" or analysis_mode == "extract_only":
             print(f"[extract_data] Usando prompt completo (com allAssets)")
             prompt = _build_full_extraction_prompt(
                 state["raw_text"], 
@@ -138,6 +142,14 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
             print(f"[extract_data] ❌ Erro ao criar cliente Gemini: {e}")
             return {"error": f"Erro ao criar cliente Gemini: {str(e)}"}
 
+        # Selecionar schema baseado no modo de análise
+        if analysis_mode == "personalized" or analysis_mode == "extract_only":
+            json_schema = EXTRACTED_DATA_SCHEMA_FULL
+            print(f"[extract_data] Usando schema FULL (personalizado)")
+        else:
+            json_schema = EXTRACTED_DATA_SCHEMA_OPTIMIZED
+            print(f"[extract_data] Usando schema OPTIMIZED (automático)")
+
         # Se há imagens, usar formato multimodal
         if images:
             print(f"[extract_data] Processando {len(images)} imagens + texto")
@@ -168,7 +180,9 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
                 contents=contents,
                 config={
                 "temperature": 0.1,
-                "max_output_tokens": 8192 
+                "max_output_tokens": 10000,
+                "response_mime_type": "application/json",
+                "response_json_schema": json_schema
             }
             )
         else:
@@ -178,7 +192,9 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
                 contents=contents,
                 config={
                 "temperature": 0.1,
-                "max_output_tokens": 8192 
+                "max_output_tokens": 10000,
+                "response_mime_type": "application/json",
+                "response_json_schema": json_schema
             }
             )
 
@@ -194,13 +210,28 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
         # Remove markdown, texto extra, e isola o JSON
         cleaned_response = _clean_llm_response(response.text)
         
+        # ✅ Validar se a limpeza retornou algo válido
+        if not cleaned_response:
+            print(f"[extract_data] ⚠️ Limpeza retornou string vazia, tentando usar resposta original")
+            cleaned_response = response.text.strip()
+        
         # 7. Parsear JSON
         try:
             extracted_data = json.loads(cleaned_response)
         except json.JSONDecodeError as e:
-            error_msg = f"Erro ao parsear JSON: {str(e)}"
+            error_msg = f"Erro ao parsear JSON (mesmo com structured output): {str(e)}"
             print(f"[extract_data] ❌ {error_msg}")
-            return {"error": error_msg}
+            print(f"[extract_data] 🔍 Resposta recebida (primeiros 500 chars): {response.text[:500]}")
+            # ✅ Tentar reparar JSON comum (strings não escapadas)
+            try:
+                # Tentar escapar caracteres problemáticos
+                repaired = cleaned_response.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+                # Tentar encontrar e fechar strings não terminadas
+                # (lógica mais complexa seria necessária aqui)
+                extracted_data = json.loads(repaired)
+                print(f"[extract_data] ✅ JSON reparado com sucesso")
+            except:
+                return {"error": error_msg}
 
         # 8. Validar dados extraídos
         validation_result = _validate_extracted_data(extracted_data, analysis_mode)
@@ -213,7 +244,7 @@ def extract_data(state: ReportAnalysisState) -> Dict[str, Any]:
             "extracted_data": extracted_data,
             "metadata": {
                 "extraction_mode": analysis_mode,
-                "prompt_used": "full" if analysis_mode == "personalized" else "optimized",
+                "prompt_used": "full" if (analysis_mode == "personalized" or analysis_mode == "extract_only") else "optimized",  
                 "response_length": len(response.text),
                 "fields_extracted": len(extracted_data),
                 "images_processed": len(content_parts) - 1,
@@ -367,7 +398,7 @@ def _validate_extracted_data(data: Dict[str, Any], analysis_mode: str) -> Dict[s
             warnings.append(f"Campo obrigatório '{field}' não encontrado")
     
     # Verificar campo específico do modo
-    if analysis_mode == "personalized" and "allAssets" not in data:
+    if (analysis_mode == "personalized" or analysis_mode == "extract_only") and "allAssets" not in data:
         warnings.append("Campo 'allAssets' obrigatório para análise personalizada não encontrado")
     
     # Verificar estrutura dos highlights/detractors

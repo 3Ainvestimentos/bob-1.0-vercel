@@ -40,6 +40,7 @@ def create_report_analysis_workflow():
     workflow.add_node("extract_data", extract_data)
     workflow.add_node("analyze_report", analyze_report)
     workflow.add_node("format_message_auto", format_message_auto)
+    workflow.add_node("format_message_custom", format_message_custom) 
     
     # Definir ponto de entrada
     workflow.set_entry_point("extract_pdf")
@@ -52,8 +53,6 @@ def create_report_analysis_workflow():
     def route_after_extraction(state: ReportAnalysisState) -> str:
         mode = state.get("analysis_mode", "auto")
         if mode == "extract_only":
-            return END
-        if mode == "personalized":
             return END
         return "analyze_report"
     
@@ -70,7 +69,7 @@ def create_report_analysis_workflow():
     def route_after_analysis(state: ReportAnalysisState) -> str:
         mode = state.get("analysis_mode", "auto")
         if mode == "personalized":
-            return END
+            return "format_message_custom" 
         return "format_message_auto"
     
     workflow.add_conditional_edges(
@@ -78,12 +77,14 @@ def create_report_analysis_workflow():
         route_after_analysis,
         {
             "format_message_auto": "format_message_auto",
+            "format_message_custom": "format_message_custom", 
             END: END
         }
     )
     
     # Transições finais
     workflow.add_edge("format_message_auto", END)
+    workflow.add_edge("format_message_custom", END)
     
     
     # Compilar
@@ -105,14 +106,33 @@ def create_report_analysis_workflow_from_data():
     """
     workflow = StateGraph(ReportAnalysisState)
     
-    # Adicionar apenas nós de formatação
+    # ✅ Adicionar nós necessários (análise + formatação)
+    workflow.add_node("analyze_report", analyze_report)
     workflow.add_node("format_message_auto", format_message_auto)
     workflow.add_node("format_message_custom", format_message_custom)
     
     # Definir ponto de entrada
-    workflow.set_entry_point("format_message_custom")
+    workflow.set_entry_point("analyze_report")
     
-    # Transição final
+    # ✅ Roteamento após análise
+    def route_after_analysis(state: ReportAnalysisState) -> str:
+        mode = state.get("analysis_mode", "auto")
+        if mode == "personalized":
+            return "format_message_custom" 
+        return "format_message_auto"
+    
+    workflow.add_conditional_edges(
+        "analyze_report",
+        route_after_analysis,
+        {
+            "format_message_auto": "format_message_auto",
+            "format_message_custom": "format_message_custom", 
+            END: END
+        }
+    )
+    
+    # Transições finais
+    workflow.add_edge("format_message_auto", END)
     workflow.add_edge("format_message_custom", END)
     
     return workflow.compile()

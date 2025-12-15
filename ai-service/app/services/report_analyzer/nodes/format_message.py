@@ -139,20 +139,23 @@ def format_message_custom(state: ReportAnalysisState) -> Dict[str, Any]:
             selected_fields
         )
         
-        # Em ai-service/app/services/report_analyzer/nodes/format_message.py
-# Substitua a linha 142 por:
+        # 3. Pegar highlights/detractors do analyze_report (já calculados)
+        highlights = state.get('highlights', [])
+        detractors = state.get('detractors', [])
 
         # 3. Debug antes da construção do prompt
         print(f"[format_message_custom] DEBUG - filtered_data antes do prompt:")
         print(f"  - Tipo: {type(filtered_data)}")
         print(f"  - Conteúdo: {filtered_data}")
         print(f"  - JSON serializado: {json.dumps(filtered_data, ensure_ascii=False)}")
+        print(f"[format_message_custom] Highlights recebidos: {len(highlights)}")
+        print(f"[format_message_custom] Detractors recebidos: {len(detractors)}")
 
         # 4. Construir prompt diretamente
         prompt = XP_MESSAGE_FORMAT_PROMPT_CUSTOM.format(
             extracted_data=json.dumps(filtered_data, ensure_ascii=False),
-            highlights="[]",  # Sempre vazio no seu fluxo
-            detractors="[]",  # Sempre vazio no seu fluxo
+            highlights=json.dumps(highlights, ensure_ascii=False),  # ← Já filtrados pelo analyze_report
+            detractors=json.dumps(detractors, ensure_ascii=False),  # ← Já filtrados pelo analyze_report
             file_name=state.get('file_name', 'Relatório XP')
         )
 
@@ -246,4 +249,90 @@ def _filter_data_by_selection(
                         filtered['allAssets'][category] = filtered_assets
                 else:
                     print(f"[_filter_data_by_selection] DEBUG - Categoria {category} não está em selected_assets")
+    return filtered
+
+def _filter_data_for_analysis(
+    extracted_data: Dict[str, Any],
+    selected_fields: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Filtra extracted_data para análise personalizada.
+    Inclui dados completos necessários para o analyze_report fazer comparações corretas.
+    
+    Diferente de _filter_data_by_selection, esta função:
+    - SEMPRE inclui benchmarkValues (necessário para comparações)
+    - Inclui classPerformance completo das classes selecionadas
+    - Inclui allAssets completo das classes selecionadas (se disponível)
+    """
+    filtered = {}
+    
+    # 1. Sempre incluir campos essenciais para contexto
+    if 'accountNumber' in extracted_data:
+        filtered['accountNumber'] = extracted_data['accountNumber']
+    if 'reportMonth' in extracted_data:
+        filtered['reportMonth'] = extracted_data['reportMonth']
+    
+    # 2. ✅ CRÍTICO: Sempre incluir benchmarkValues (necessário para comparações)
+    if 'benchmarkValues' in extracted_data:
+        filtered['benchmarkValues'] = extracted_data['benchmarkValues']
+        print(f"[_filter_data_for_analysis] ✅ benchmarkValues incluído: {list(extracted_data['benchmarkValues'].keys())}")
+    
+    # 3. Incluir campos top-level se selecionados
+    top_level_fields = [
+        'monthlyReturn', 'monthlyCdi', 'monthlyGain',
+        'yearlyReturn', 'yearlyCdi', 'yearlyGain'
+    ]
+    
+    for field in top_level_fields:
+        if selected_fields.get(field, False) and field in extracted_data:
+            filtered[field] = extracted_data[field]
+    
+    # 4. ✅ NOVO: Identificar classes selecionadas (explicitamente OU implicitamente via ativos)
+    selected_class_names = set()
+    
+    # 4a. Classes explicitamente selecionadas em classPerformance
+    if 'classPerformance' in selected_fields and isinstance(selected_fields['classPerformance'], dict):
+        selected_classes = selected_fields['classPerformance']
+        for class_name, is_selected in selected_classes.items():
+            if is_selected:
+                selected_class_names.add(class_name)
+    
+    # 4b. ✅ Classes implicitamente selecionadas via ativos individuais
+    if 'allAssets' in selected_fields and isinstance(selected_fields['allAssets'], dict):
+        selected_assets = selected_fields['allAssets']
+        for class_name in selected_assets.keys():
+            selected_class_names.add(class_name)
+            print(f"[_filter_data_for_analysis] ✅ Classe '{class_name}' incluída implicitamente (via ativos selecionados)")
+    
+    # 4c. Filtrar classPerformance baseado nas classes identificadas
+    if selected_class_names and 'classPerformance' in extracted_data:
+        filtered['classPerformance'] = [
+            cls for cls in extracted_data['classPerformance']
+            if cls['className'] in selected_class_names
+        ]
+        print(f"[_filter_data_for_analysis] ✅ classPerformance filtrado: {len(filtered['classPerformance'])} classes")
+    
+    # 5. Filtrar allAssets - incluir TODOS os ativos das classes selecionadas (não apenas os ativos individuais selecionados)
+    # Para análise, precisamos de todos os ativos da classe para fazer drill-down
+    if selected_class_names and 'allAssets' in extracted_data:
+        filtered['allAssets'] = {}
+        for category, assets in extracted_data['allAssets'].items():
+            # Se a classe foi selecionada (explicitamente ou implicitamente), incluir TODOS os ativos dela
+            if category in selected_class_names:
+                filtered['allAssets'][category] = assets
+                print(f"[_filter_data_for_analysis] ✅ allAssets incluído para classe '{category}': {len(assets)} ativos")
+    
+    # 6. Se o usuário selecionou ativos específicos (não apenas classes), filtrar também
+    if 'allAssets' in selected_fields and isinstance(selected_fields['allAssets'], dict):
+        selected_assets = selected_fields['allAssets']
+        if 'allAssets' in filtered:  # Se já existe (do passo 5)
+            for category, assets in filtered['allAssets'].items():
+                if category in selected_assets:
+                    selected_indices = selected_assets[category]
+                    filtered['allAssets'][category] = [
+                        asset for i, asset in enumerate(assets)
+                        if selected_indices.get(str(i), False)
+                    ]
+                    print(f"[_filter_data_for_analysis] ✅ allAssets refinado para '{category}': {len(filtered['allAssets'][category])} ativos selecionados")
+    
     return filtered

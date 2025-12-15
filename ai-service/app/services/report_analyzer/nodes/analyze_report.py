@@ -7,9 +7,14 @@ import time
 import asyncio
 from typing import Dict, Any, Optional
 from app.models.schema import ReportAnalysisState
+from app.services.report_analyzer.nodes.format_message import _filter_data_by_selection, _filter_data_for_analysis
 from app.services.report_analyzer.prompts import (
     XP_REPORT_ANALYSIS_PROMPT,
     XP_REPORT_ANALYSIS_PROMPT_PERSONALIZED
+)
+from app.services.report_analyzer.schemas import (
+    ANALYSIS_SCHEMA,
+    ANALYSIS_SCHEMA_PERSONALIZED
 )
 from app.config import (
     GOOGLE_API_KEY, 
@@ -24,24 +29,32 @@ from app.config import (
 import os
 from google.api_core.exceptions import ResourceExhausted
 
-def call_response_gemini(prompt: str) -> str:
+def call_response_gemini(prompt: str, json_schema: dict = None) -> str:
     try:
         print(f"[analyze_report]🔍 DEBUG - Chamando Gemini com prompt de {len(prompt)} caracteres")
         client =  get_gemini_client()
+
+        # ✅ STRUCTURED OUTPUT conforme documentação
+        config = {
+            "temperature": MODEL_TEMPERATURE
+        }
+        
+        if json_schema:
+            config["response_mime_type"] = "application/json"
+            config["response_json_schema"] = json_schema
+            print(f"[analyze_report]🔍 Usando structured output")
         
         response = client.models.generate_content(
             model = MODEL_NAME,
             contents = [{
                 "parts": [{"text": prompt}]
-            }]
+            }],
+            config = config
         )
-        
         # print(f"[analyze_report]🔍 DEBUG - Resposta recebida: {type(response)}")
-        # print(f"[analyze_report]🔍 DEBUG - Response.text: {repr(response.text)}")
-        
+        # print(f"[analyze_report]🔍 DEBUG - Response.text: {repr(response.text)}") 
         result = response.text.strip()
         # print(f"[analyze_report]🔍 DEBUG - Resultado final: {repr(result)}")
-        
         return result
         
     except ResourceExhausted as e:
@@ -118,7 +131,8 @@ def parse_json_response(response_text: str) -> Optional[Dict[str, Any]]:
 def call_llm_with_retry(
     prompt: str,
     max_retries: int = LLM_MAX_RETRIES,
-    simplify_on_last: bool = True
+    simplify_on_last: bool = True,
+    json_schema: dict = None 
 ) -> Optional[Dict[str, Any]]:
     """
     Chama o LLM com retry logic e Exponential Backoff para erro 429.
@@ -142,7 +156,7 @@ def call_llm_with_retry(
             print(f"🔄 Tentativa {attempt + 1}/{max_retries} de análise...")
             
             # Chamada ao Gemini
-            response_text = call_response_gemini(current_prompt)
+            response_text = call_response_gemini(current_prompt, json_schema=json_schema)
             
             # Tentar parsear
             parsed = parse_json_response(response_text)
@@ -236,6 +250,25 @@ def analyze_report(state: ReportAnalysisState) -> Dict[str, Any]:
         # 2. ✅ NOVA LÓGICA: Verificar analysis_mode
         analysis_mode = state.get('analysis_mode', 'auto')
         print(f"[analyze_report] Modo de análise: {analysis_mode}")
+
+        # 3. ✅ NOVO: Filtrar dados se modo personalizado
+        if analysis_mode == "personalized":
+            selected_fields = state.get('selected_fields', {})
+            if selected_fields:
+                print(f"[analyze_report] Filtrando dados baseado em selected_fields...")
+                extracted_data = _filter_data_for_analysis(extracted_data, selected_fields)
+                print(f"[analyze_report] Dados filtrados: {len(extracted_data.get('classPerformance', []))} classes selecionadas")
+
+                # Validar que após filtragem ainda há dados suficientes
+                if not extracted_data.get('classPerformance') or len(extracted_data.get('classPerformance', [])) == 0:
+                    print(f"[analyze_report] ⚠️ Nenhuma classe selecionada após filtragem")
+                    return {
+                        'error': 'Nenhuma classe de ativo foi selecionada para análise',
+                        'highlights': [],
+                        'detractors': []
+                    }
+            else:
+                print(f"[analyze_report] ⚠️ Modo personalized mas selected_fields vazio - usando todos os dados")
         
         # 3. Preparar prompt baseado no modo de análise
         extracted_data_json = json.dumps(extracted_data, indent=2, ensure_ascii=False)
@@ -254,6 +287,14 @@ def analyze_report(state: ReportAnalysisState) -> Dict[str, Any]:
                 extracted_data_json
             )
             print(f"[analyze_report] Usando prompt PADRÃO para análise automática")
+
+            # Selecionar schema baseado no modo de análise
+        if analysis_mode == "personalized":
+            json_schema = ANALYSIS_SCHEMA_PERSONALIZED
+            print(f"[analyze_report] Usando schema PERSONALIZED")
+        else:
+            json_schema = ANALYSIS_SCHEMA
+            print(f"[analyze_report] Usando schema AUTOMÁTICO")
         
         print(f"[analyze_report] Chamando LLM com prompt de {len(prompt)} caracteres")
         
@@ -261,7 +302,8 @@ def analyze_report(state: ReportAnalysisState) -> Dict[str, Any]:
         analysis = call_llm_with_retry(
             prompt=prompt,
             max_retries=LLM_MAX_RETRIES,
-            simplify_on_last=True
+            simplify_on_last=True,
+            json_schema=json_schema
         )
         
         if not analysis:

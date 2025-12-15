@@ -136,7 +136,7 @@ async def extract_report_data(request: ReportAnalyzeAutoRequest):
             "file_content": request.file_content,
             "file_name": request.file_name,
             "user_id": request.user_id,
-            "analysis_mode": "personalized",
+            "analysis_mode": "extract_only",
             "selected_fields": None
         }
         
@@ -567,7 +567,8 @@ async def analyze_report_personalized_stream(request: ReportAnalyzePersonalizedR
         
         # TODO: Implementar analyze_report_with_progress
         # Por enquanto, usar o workflow normal
-        result = await report_analysis_app.ainvoke(state)
+        app = create_report_analysis_workflow()
+        result = await app.ainvoke(state)
         
         # Enviar resultado final
         yield f"data: {json.dumps({'done': True, 'result': result})}\n\n"

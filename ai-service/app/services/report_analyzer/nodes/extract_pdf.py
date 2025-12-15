@@ -84,12 +84,18 @@ def extract_pdf(state: ReportAnalysisState) -> Dict[str, Any]:
 def _extract_with_pymupdf(pdf_bytes: bytes) -> Dict[str, Any]:
     """✅ MÉTODO PRINCIPAL: PyMuPDF (fluxo atual mantido)"""
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    print(f"[extract_pdf] PDF aberto com PyMuPDF, {len(doc)} páginas")
+    total_pages = len(doc)
+    print(f"[extract_pdf] PDF aberto com PyMuPDF, {total_pages} páginas")
+
+    # OTIMIZAÇÃO: Remover última página (sempre duplicada)
+    pages_to_process = total_pages - 1 if total_pages > 1 else total_pages
+    if total_pages > 1:
+        print(f"[extract_pdf] ⚠️ Removendo última página duplicada ({total_pages} → {pages_to_process} páginas)")
     
     raw_text = ""
     pdf_images = []
     
-    for page_num in range(len(doc)):
+    for page_num in range(pages_to_process):
         page = doc.load_page(page_num)
         
         # Extrair texto
