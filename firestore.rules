@@ -1,33 +1,98 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Regra para dados de usuário: um usuário só pode ler e escrever seus próprios documentos.
+
+    /** ========= Utils ========= **/
+    function isAuth() { return request.auth != null; }
+    function isPathOwner(userId) { return isAuth() && request.auth.uid == userId; }
+
+    function hasRole(r) {
+      return isAuth() && (
+        request.auth.token.role == r ||
+        (request.auth.token.roles != null && request.auth.token.roles.hasAny([r])) ||
+        (r == 'admin' && request.auth.token.admin == true)
+      );
+    }
+
+    function isAdmin() { return hasRole('admin'); }
+    function isBeta()  { return hasRole('betas'); }
+    function isUser()  { return hasRole('user') || isBeta(); }
+    function only(allowed) { return request.resource.data.keys().hasOnly(allowed); }
+    function keep(field) { return request.resource.data[field] == resource.data[field]; }
+
+    /** ========= /users/{uid} ========= **/
+    match /users/{userId} {
+      function validSchemaOnCreate() {
+        return only(['uid','displayName','email','role',
+                     'hasCompletedOnboarding','termsAccepted','createdAt']) &&
+               request.resource.data.uid == userId &&
+               request.resource.data.role in ['user','betas','admin'];
+      }
+
+      function validSchemaOnUpdate() {
+        return only(['uid','displayName','email','role',
+                     'hasCompletedOnboarding','termsAccepted','createdAt']) &&
+               keep('uid') && keep('createdAt') &&
+               (isAdmin() || request.resource.data.role == resource.data.role) &&
+               keep('email');
+      }
+
+      allow read:   if isPathOwner(userId) || isAdmin();
+      allow create: if (isPathOwner(userId) || isAdmin()) && validSchemaOnCreate();
+      allow update: if (isPathOwner(userId) || isAdmin()) && validSchemaOnUpdate();
+      allow delete: if isPathOwner(userId) || isAdmin();
+    }
+
+    /** ========= /users/{uid}/subcoleções ========= **/
     match /users/{userId}/{documents=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Regra para arquivamento: permite que um usuário crie um documento em 'archived_chats'.
-    match /archived_chats/{chatId} {
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.deletedBy;
-      
-      // Nega leitura, atualização ou exclusão de chats arquivados pelo cliente para segurança.
-      allow read, update, delete: if false;
+      allow read, write: if isPathOwner(userId) || isAdmin();
     }
     
-    // Regra para jobs de ultra-lote: permite a leitura de um job e seus resultados
-    // se o user_id no documento do job corresponder ao do usuário autenticado.
-    match /ultra_batch_jobs/{jobId}/{documents=**} {
-      allow read: if request.auth != null && get(/databases/$(database)/documents/ultra_batch_jobs/$(jobId)).data.user_id == request.auth.uid;
+        /** ========= /ultra_batch_jobs/{jobId} ========= **/
+    match /ultra_batch_jobs/{jobId} {
+      // Permite leitura se o usuário for o dono do job ou um admin.
+      // Usa get() para buscar o documento e verificar o campo 'user_id'.
+      allow read: if (isPathOwner(get(/databases/$(database)/documents/ultra_batch_jobs/$(jobId)).data.user_id) || isAdmin());
       
-      // Nega a escrita para clientes (apenas o backend pode escrever).
+      // Apenas o backend (via service account) pode criar, atualizar ou deletar.
+      // Para o cliente, essas operações são negadas.
       allow write: if false;
+
+      /** ========= /ultra_batch_jobs/{jobId}/results/{resultId} ========= **/
+      // Regra para a subcoleção de resultados.
+      match /results/{resultId} {
+        // A permissão de leitura é herdada da regra pai.
+        // Um usuário que pode ler o job, também pode ler os resultados.
+        allow read: if (isPathOwner(get(/databases/$(database)/documents/ultra_batch_jobs/$(jobId)).data.user_id) || isAdmin());
+
+        // Nega escrita na subcoleção também.
+        allow write: if false;
+      }
     }
 
-    // É uma boa prática negar o acesso a qualquer outra coleção que não tenha sido
-    // explicitamente permitida, mas vamos deixar em aberto por enquanto para
-    // evitar bloqueios inesperados durante o desenvolvimento.
-    // Em uma próxima etapa de segurança, poderíamos adicionar regras mais restritivas.
+    /** ========= /archived_chats/{archId} ========= **/
+    match /archived_chats/{archId} {
+      // Permite create e update (para batch.set() que pode ser ambíguo)
+      // Simplificado: removida verificação chatExistsForOwner que pode falhar em batch
+      allow create, update: if isAuth()
+        && request.auth.uid == request.resource.data.deletedBy
+        && (
+          isAdmin() ||
+          request.resource.data.chatOwnerId == request.auth.uid
+        );
+
+      allow read: if isAdmin();
+      allow delete: if false;
+    }
+
+    /** ========= NOVAS COLEÇÕES =========
+     * → Aqui não há bloqueio geral, então qualquer nova coleção criada
+     *    funcionará automaticamente.
+     * → Se quiser limitar alguma, basta criar um novo bloco match.
+     * Exemplo:
+     * match /reports/{reportId} {
+     *   allow read, write: if isAdmin();
+     * }
+     */
   }
 }

@@ -199,9 +199,9 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um resultado financeiro de *[yearlyGain]*!
 
       ✅ *Destaques do mês:*
-      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference] a cima do [classBenchmark], valorização puxada por ativos como *[assetName] (+[assetReturn])* e *[assetName] (+[assetReturn])*.
+      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference] acima do [classBenchmark], valorização puxada por ativos como *[assetName] (+[assetReturn])* e *[assetName] (+[assetReturn])*.
 
-      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference] a cima do [classBenchmark], sustentada por ativos como *[assetName] (+[assetReturn])* e *[assetName] (+[assetReturn])*.
+      - *[className]*, com *[classReturn]*, com [classBenchmarkDifference] acima do [classBenchmark], sustentada por ativos como *[assetName] (+[assetReturn])* e *[assetName] (+[assetReturn])*.
 
       - [daqui pra frente, se existir... máximo de um ativo]
 

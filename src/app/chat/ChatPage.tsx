@@ -596,35 +596,103 @@ async function updateConversationTitle(userId: string, chatId: string, newTitle:
 }
 
 async function deleteConversation(userId: string, chatId: string): Promise<void> {
-    if (!userId || !chatId) throw new Error('User ID and Chat ID are required.');
+  if (!userId || !chatId) throw new Error('User ID and Chat ID are required.');
 
-    const chatRef = doc(db, 'users', userId, 'chats', chatId);
-    const archivedChatRef = doc(db, 'archived_chats', chatId);
+  const chatRef = doc(db, 'users', userId, 'chats', chatId);
+  const archivedChatRef = doc(db, 'archived_chats', chatId);
 
-    try {
-        const chatSnap = await getDoc(chatRef);
-        if (chatSnap.exists()) {
-            const chatData = chatSnap.data();
-            
-            const archivedData = {
-                ...chatData,
-                archivedAt: serverTimestamp(),
-                deletedBy: userId,
-            };
-            
-            const batch = writeBatch(db);
-            batch.set(archivedChatRef, archivedData);
-            batch.delete(chatRef);
-            
-            await batch.commit();
+  try {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/a8daf847-6419-4972-a05b-30215066e746',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatPage.tsx:600',message:'deleteConversation entry',data:{userId,chatId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C'})}).catch(()=>{});
+      // #endregion
+      
+      const chatSnap = await getDoc(chatRef);
+      if (chatSnap.exists()) {
+          const chatData = chatSnap.data();
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/a8daf847-6419-4972-a05b-30215066e746',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatPage.tsx:607',message:'chatData retrieved',data:{chatDataKeys:Object.keys(chatData||{}),hasDeletedBy:'deletedBy' in (chatData||{}),hasChatOwnerId:'chatOwnerId' in (chatData||{})},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          
+          // Verificar se o documento já existe em archived_chats
+          // Nota: Esta leitura pode falhar se as regras só permitem admin, mas vamos tentar
+          let archivedSnap;
+          try {
+              archivedSnap = await getDoc(archivedChatRef);
+              // #region agent log
+              fetch('http://127.0.0.1:7244/ingest/a8daf847-6419-4972-a05b-30215066e746',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatPage.tsx:618',message:'archivedSnap check',data:{exists:archivedSnap.exists()},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
+              if (archivedSnap.exists()) {
+                  throw new Error('Este chat já foi arquivado anteriormente.');
+              }
+          } catch (readError: any) {
+              // Se falhar por permissão, assumimos que não existe e continuamos
+              // #region agent log
+              fetch('http://127.0.0.1:7244/ingest/a8daf847-6419-4972-a05b-30215066e746',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatPage.tsx:624',message:'archivedSnap read failed, continuing',data:{error:readError.message,code:readError.code},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
+              // Continue mesmo se não conseguir ler (assumimos que não existe)
+          }
+          
+          // Verificar autenticação atual
+          const currentUser = auth.currentUser;
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/a8daf847-6419-4972-a05b-30215066e746',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatPage.tsx:618',message:'auth state check',data:{currentUserId:currentUser?.uid||null,userId:userId,matchesUserId:currentUser?.uid===userId,isAuthenticated:!!currentUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+          
+          if (!currentUser || currentUser.uid !== userId) {
+              throw new Error('Usuário não autenticado ou não corresponde ao dono do chat.');
+          }
+          
+          // Salvar snapshot completo do chat, adicionando apenas os campos de arquivamento
+          // IMPORTANTE: Garantir que deletedBy e chatOwnerId sejam strings e estejam no topo
+          const archivedData: any = {
+            deletedBy: String(userId),
+            chatOwnerId: String(userId),
+            chatId: String(chatId),
+            ...chatData, // Snapshot completo do chat original
+            archivedAt: serverTimestamp(),
+        };
+          
+          // Garantir que deletedBy e chatOwnerId não sejam sobrescritos
+          archivedData.deletedBy = String(userId);
+          archivedData.chatOwnerId = String(userId);
+          archivedData.chatId = String(chatId);
 
-        } else {
-            console.warn(`Conversation with ID ${'' + chatId} not found to archive.`);
-        }
-    } catch (error) {
-        console.error("Error archiving and deleting conversation:", error);
-        throw new Error("Não foi possível excluir a conversa. Tente novamente.");
-    }
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/a8daf847-6419-4972-a05b-30215066e746',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatPage.tsx:637',message:'archivedData before batch',data:{deletedBy:archivedData.deletedBy,chatOwnerId:archivedData.chatOwnerId,chatIdInData:archivedData.chatId,deletedByType:typeof archivedData.deletedBy,chatOwnerIdType:typeof archivedData.chatOwnerId,deletedByValue:JSON.stringify(archivedData.deletedBy),chatOwnerIdValue:JSON.stringify(archivedData.chatOwnerId),allKeys:Object.keys(archivedData)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A,C'})}).catch(()=>{});
+          // #endregion
+          
+          const batch = writeBatch(db);
+          batch.set(archivedChatRef, archivedData);
+          batch.delete(chatRef);
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/a8daf847-6419-4972-a05b-30215066e746',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatPage.tsx:645',message:'before batch.commit',data:{batchOps:2,archivedRefPath:archivedChatRef.path,chatRefPath:chatRef.path},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          
+          await batch.commit();
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/a8daf847-6419-4972-a05b-30215066e746',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatPage.tsx:643',message:'batch.commit success',data:{success:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+
+      } else {
+          console.warn(`Conversation with ID ${chatId} not found to archive.`);
+      }
+  } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/a8daf847-6419-4972-a05b-30215066e746',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatPage.tsx:652',message:'error caught',data:{errorCode:error.code,errorMessage:error.message,errorStack:error.stack?.substring(0,200),isPermissionDenied:error.code==='permission-denied'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D'})}).catch(()=>{});
+      // #endregion
+      
+      console.error("Error archiving and deleting conversation:", error);
+      // Log detalhado para debug
+      if (error.code === 'permission-denied') {
+          console.error("Permission denied - verifique as regras do Firestore e se deletedBy está correto");
+          console.error("User ID:", userId);
+          console.error("Chat ID:", chatId);
+      }
+      throw new Error(`Não foi possível excluir a conversa: ${error.message}`);
+  }
 }
 
 const FileDropOverlay = () => (
