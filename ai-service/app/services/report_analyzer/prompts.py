@@ -197,7 +197,8 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
 
       🔎 *Resumo da performance:*
       Em [reportMonth] sua carteira rendeu *[monthlyReturn]*, o que equivale a *[monthlyCdi]* do CDI, um ganho bruto de *[monthlyGain]*!
-      No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um resultado financeiro de *[yearlyGain]*. Finalizamos o mês com o patrimônio bruto de *[grossEquity]*!
+      No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um resultado financeiro de *[yearlyGain]*. 
+      Finalizamos o mês com o patrimônio bruto de *[grossEquity]*!
 
       ✅ *Destaques do mês:*
       - *[className]*, com *[classReturn]*, com [classBenchmarkDifference] acima do [classBenchmark], valorização puxada por ativos como *[assetName] (+[assetReturn])* e *[assetName] (+[assetReturn])*.
