@@ -387,7 +387,7 @@ def _validate_extracted_data(data: Dict[str, Any], analysis_mode: str) -> Dict[s
     
     # Campos obrigatórios
     required_fields = [
-        "accountNumber", "reportMonth", "monthlyReturn", "monthlyCdi", 
+        "accountNumber", "reportMonth", "grossEquity", "monthlyReturn", "monthlyCdi", 
         "monthlyGain", "yearlyReturn", "yearlyCdi", "yearlyGain",
         "benchmarkValues", "classPerformance", "highlights", "detractors"
     ]

@@ -22,22 +22,23 @@ XP_REPORT_EXTRACTION_PROMPT_OPTIMIZED ="""
         **CAMPOS A EXTRAIR (TODOS OBRIGATÓRIOS):**
         1. accountNumber: Número da conta do cliente
         2. reportMonth: Mês de referência do relatório (formato: MM/AAAA)
-        3. monthlyReturn: Rentabilidade percentual do mês
-        4. monthlyCdi: Rentabilidade em %CDI do mês
-        5. monthlyGain: Ganho financeiro do mês (formato: R$ X.XXX,XX)
-        6. yearlyReturn: Rentabilidade percentual do ano
-        7. yearlyCdi: Rentabilidade em %CDI do ano
-        8. yearlyGain: Ganho financeiro do ano (formato: R$ X.XXX,XX)
-        9. benchmarkValues: Objeto com valores dos benchmarks (índices de referencia) do mês atual (pode ser negativo!):
+        3. grossEquity: Patrimônio total bruto (formato: R$ X.XXX,XX) - Procure por "PATRIMÔNIO TOTAL BRUTO" ou "PATRIMÔNIO BRUTO" no relatório
+        4. monthlyReturn: Rentabilidade percentual do mês
+        5. monthlyCdi: Rentabilidade em %CDI do mês
+        6. monthlyGain: Ganho financeiro do mês (formato: R$ X.XXX,XX)
+        7. yearlyReturn: Rentabilidade percentual do ano
+        8. yearlyCdi: Rentabilidade em %CDI do ano
+        9. yearlyGain: Ganho financeiro do ano (formato: R$ X.XXX,XX)
+        10. benchmarkValues: Objeto com valores dos benchmarks (índices de referencia) do mês atual (pode ser negativo!):
         - CDI: percentual
         - Ibovespa: percentual
         - IPCA: percentual 
         - Dólar: percentual 
-        10. classPerformance: Array com performance por classe de ativo:
+        11. classPerformance: Array com performance por classe de ativo:
             - className: nome da classe
             - classReturn: rentabilidade percentual do mês
             
-          11. topAssets: Objeto organizado por classe de ativo com os 2 melhores ativos de cada classe:
+        12. topAssets: Objeto organizado por classe de ativo com os 2 melhores ativos de cada classe:
         - Estrutura: {{className: [lista de ativos]}}
         - Para cada ativo:
           * assetName: nome do ativo
@@ -196,7 +197,7 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
 
       🔎 *Resumo da performance:*
       Em [reportMonth] sua carteira rendeu *[monthlyReturn]*, o que equivale a *[monthlyCdi]* do CDI, um ganho bruto de *[monthlyGain]*!
-      No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um resultado financeiro de *[yearlyGain]*!
+      No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um resultado financeiro de *[yearlyGain]*. Finalizamos o mês com o patrimônio bruto de *[grossEquity]*!
 
       ✅ *Destaques do mês:*
       - *[className]*, com *[classReturn]*, com [classBenchmarkDifference] acima do [classBenchmark], valorização puxada por ativos como *[assetName] (+[assetReturn])* e *[assetName] (+[assetReturn])*.
@@ -264,18 +265,19 @@ Analise o TEXTO e as IMAGENS do PDF para extrair dados com máxima precisão.
 **CAMPOS A EXTRAIR (TODOS OBRIGATÓRIOS):**
 1. accountNumber: Número da conta do cliente
 2. reportMonth: Mês de referência do relatório (formato: MM/AAAA)
-3. monthlyReturn: Rentabilidade percentual do mês
-4. monthlyCdi: Rentabilidade em %CDI do mês
-5. monthlyGain: Ganho financeiro do mês (formato: R$ X.XXX,XX)
-6. yearlyReturn: Rentabilidade percentual do ano
-7. yearlyCdi: Rentabilidade em %CDI do ano
-8. yearlyGain: Ganho financeiro do ano (formato: R$ X.XXX,XX)
-9. benchmarkValues: Objeto com valores dos benchmarks do mês atual:
+3. grossEquity: Patrimônio total bruto (formato: R$ X.XXX,XX) - Procure por "PATRIMÔNIO TOTAL BRUTO" ou "PATRIMÔNIO BRUTO" no relatório
+4. monthlyReturn: Rentabilidade percentual do mês
+5. monthlyCdi: Rentabilidade em %CDI do mês
+6. monthlyGain: Ganho financeiro do mês (formato: R$ X.XXX,XX)
+7. yearlyReturn: Rentabilidade percentual do ano
+8. yearlyCdi: Rentabilidade em %CDI do ano
+9. yearlyGain: Ganho financeiro do ano (formato: R$ X.XXX,XX)
+10. benchmarkValues: Objeto com valores dos benchmarks do mês atual:
 - CDI: percentual
 - Ibovespa: percentual
 - IPCA: percentual (ATENÇÃO: pode ser negativo!)
 - Dólar: percentual (ATENÇÃO: pode ser negativo!)
-10. classPerformance: Array com performance por classe de ativo:
+11. classPerformance: Array com performance por classe de ativo:
 - className: nome da classe
 - classReturn: rentabilidade percentual do mês
 - benchmark: benchmark correspondente
@@ -286,7 +288,7 @@ Analise o TEXTO e as IMAGENS do PDF para extrair dados com máxima precisão.
             * Renda Variável Brasil → Ibovespa
             * Multimercado → CDI
             * Fundos Listados → CDI
-11. allAssets: Objeto com TODOS os ativos listados, agrupados por classe de ativo.
+12. allAssets: Objeto com TODOS os ativos listados, agrupados por classe de ativo.
 Para cada classe (Pós Fixado, Inflação, Multimercado, Renda Variável Brasil, Fundos Listados),
 liste TODOS os ativos individuais com:
 - assetName: Nome completo do ativo
@@ -411,6 +413,7 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 4. Mantenha tom profissional mas conciso
 5. Foque nos pontos que o cliente escolheu analisar
 6. **IMPORTANTE: Comece com ``` e termine com ```**
+7. **PATRIMÔNIO BRUTO: Se o campo "grossEquity" estiver presente nos dados fornecidos, inclua-o no resumo da performance logo após as outras métricas.**
 7. **CRÍTICO: Inclua ativos individuais APENAS se houver "allAssets" nos dados fornecidos. Se apenas a classe foi selecionada (sem "allAssets"), mostre APENAS a comparação da classe com o benchmark, sem listar ativos individuais.**
 8. **Se tanto a classe quanto ativos individuais estiverem selecionados, mostre AMBOS: primeiro a classe (com comparação ao benchmark), depois os ativos individuais selecionados.**
 9. **ABREVIAÇÃO DE NOMES DE ATIVOS (REGRA CRÍTICA):** Ao usar o campo "assetName" dos drivers na mensagem, SEMPRE abrevie o nome antes de inserir:
@@ -441,7 +444,8 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 Olá, [N° do Cliente]!
 
 🔎 *Resumo da performance:*
-[Incluir as métricas gerais da carteira selecionadas pelo cliente]
+[Incluir as métricas gerais da carteira selecionadas pelo cliente (monthlyReturn, yearlyReturn, etc.)]
+[Se "grossEquity" estiver presente nos dados: "Finalizamos o mês com o patrimônio bruto de *[grossEquity]*!"]
 [Não incluir métricas sobre classes/ativos]
 
 ✅ *Destaques do mês:*

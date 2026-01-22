@@ -16,6 +16,10 @@ EXTRACTED_DATA_SCHEMA_OPTIMIZED = {
             "type": "string",
             "description": "Mês de referência do relatório (formato: MM/AAAA)"
         },
+        "grossEquity": {
+            "type": "string",
+            "description": "Patrimônio total bruto (formato: R$ X.XXX,XX)"
+        },
         "monthlyReturn": {
             "type": "string",
             "description": "Rentabilidade percentual do mês (ex: '1,32%')"
@@ -118,6 +122,7 @@ EXTRACTED_DATA_SCHEMA_OPTIMIZED = {
     "required": [
         "accountNumber",
         "reportMonth",
+        "grossEquity",
         "monthlyReturn",
         "monthlyCdi",
         "monthlyGain",
@@ -232,6 +237,10 @@ EXTRACTED_DATA_SCHEMA_FULL = {
             "type": "string",
             "description": "Mês de referência do relatório (formato: MM/AAAA)"
         },
+        "grossEquity": {
+            "type": "string",
+            "description": "Patrimônio total bruto (formato: R$ X.XXX,XX)"
+        },
         "monthlyReturn": {
             "type": "string",
             "description": "Rentabilidade percentual do mês (ex: '1,32%')"
@@ -334,6 +343,7 @@ EXTRACTED_DATA_SCHEMA_FULL = {
     "required": [
         "accountNumber",
         "reportMonth",
+        "grossEquity",
         "monthlyReturn",
         "monthlyCdi",
         "monthlyGain",

@@ -155,6 +155,7 @@ reason?: string;
 export interface ExtractedData {
 accountNumber: string;
 reportMonth: string;
+grossEquity: string;
 monthlyReturn: string;
 monthlyCdi: string;
 monthlyGain: string;
@@ -182,6 +183,7 @@ allAssets: Record<string, Asset[]>;
 }
 
 export interface SelectedFields {
+grossEquity?: boolean;
 monthlyReturn?: boolean;
 monthlyCdi?: boolean;
 monthlyGain?: boolean;
