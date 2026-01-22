@@ -747,6 +747,7 @@ const SelectionPhase = ({ data, onCheckboxChange, selectedFields }: { data: Extr
                     <CardTitle className="flex items-center gap-2 text-base"><CalendarDays className="h-5 w-5" />Resultados do Mês da Carteira</CardTitle>
                  </CardHeader>
                  <CardContent className="space-y-4 text-sm">
+                    <div className="flex items-center space-x-3"><Checkbox id="grossEquity" onCheckedChange={(c) => onCheckboxChange('grossEquity', '', -1, !!c)} /><Label htmlFor="grossEquity">Patrimônio Bruto: <strong>{data.grossEquity}</strong></Label></div>
                     <div className="flex items-center space-x-3"><Checkbox id="monthlyReturn" onCheckedChange={(c) => onCheckboxChange('monthlyReturn', '', -1, !!c)} /><Label htmlFor="monthlyReturn">Rentabilidade: <strong>{data.monthlyReturn}</strong></Label></div>
                     <div className="flex items-center space-x-3"><Checkbox id="monthlyCdi" onCheckedChange={(c) => onCheckboxChange('monthlyCdi', '', -1, !!c)} /><Label htmlFor="monthlyCdi">% CDI: <strong>{data.monthlyCdi}</strong></Label></div>
                     <div className="flex items-center space-x-3"><Checkbox id="monthlyGain" onCheckedChange={(c) => onCheckboxChange('monthlyGain', '', -1, !!c)} /><Label htmlFor="monthlyGain">Ganho Financeiro: <strong>{data.monthlyGain}</strong></Label></div>
@@ -1144,6 +1145,7 @@ export function PromptBuilderDialog({ open, onOpenChange, onAnalysisResult, onBa
         const base64Content = await fileToBase64(file);
         
         const apiSelectedFields = {
+            grossEquity: !!selectedFields.grossEquity,
             monthlyReturn: !!selectedFields.monthlyReturn,
             monthlyCdi: !!selectedFields.monthlyCdi,
             monthlyGain: !!selectedFields.monthlyGain,

@@ -200,7 +200,7 @@ def _filter_data_by_selection(
 
     # Campos top-level (booleanos simples) - REMOVER accountNumber e reportMonth daqui
     top_level_fields = [
-        'monthlyReturn', 'monthlyCdi', 'monthlyGain',
+        'grossEquity', 'monthlyReturn', 'monthlyCdi', 'monthlyGain',
         'yearlyReturn', 'yearlyCdi', 'yearlyGain'
     ]
     
@@ -279,7 +279,7 @@ def _filter_data_for_analysis(
     
     # 3. Incluir campos top-level se selecionados
     top_level_fields = [
-        'monthlyReturn', 'monthlyCdi', 'monthlyGain',
+        'grossEquity', 'monthlyReturn', 'monthlyCdi', 'monthlyGain',
         'yearlyReturn', 'yearlyCdi', 'yearlyGain'
     ]
     

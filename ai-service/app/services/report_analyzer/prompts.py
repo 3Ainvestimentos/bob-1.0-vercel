@@ -22,22 +22,23 @@ XP_REPORT_EXTRACTION_PROMPT_OPTIMIZED ="""
         **CAMPOS A EXTRAIR (TODOS OBRIGATÓRIOS):**
         1. accountNumber: Número da conta do cliente
         2. reportMonth: Mês de referência do relatório (formato: MM/AAAA)
-        3. monthlyReturn: Rentabilidade percentual do mês
-        4. monthlyCdi: Rentabilidade em %CDI do mês
-        5. monthlyGain: Ganho financeiro do mês (formato: R$ X.XXX,XX)
-        6. yearlyReturn: Rentabilidade percentual do ano
-        7. yearlyCdi: Rentabilidade em %CDI do ano
-        8. yearlyGain: Ganho financeiro do ano (formato: R$ X.XXX,XX)
-        9. benchmarkValues: Objeto com valores dos benchmarks (índices de referencia) do mês atual (pode ser negativo!):
+        3. grossEquity: Patrimônio total bruto (formato: R$ X.XXX,XX) - Procure por "PATRIMÔNIO TOTAL BRUTO" ou "PATRIMÔNIO BRUTO" no relatório
+        4. monthlyReturn: Rentabilidade percentual do mês
+        5. monthlyCdi: Rentabilidade em %CDI do mês
+        6. monthlyGain: Ganho financeiro do mês (formato: R$ X.XXX,XX)
+        7. yearlyReturn: Rentabilidade percentual do ano
+        8. yearlyCdi: Rentabilidade em %CDI do ano
+        9. yearlyGain: Ganho financeiro do ano (formato: R$ X.XXX,XX)
+        10. benchmarkValues: Objeto com valores dos benchmarks (índices de referencia) do mês atual (pode ser negativo!):
         - CDI: percentual
         - Ibovespa: percentual
         - IPCA: percentual 
         - Dólar: percentual 
-        10. classPerformance: Array com performance por classe de ativo:
+        11. classPerformance: Array com performance por classe de ativo:
             - className: nome da classe
             - classReturn: rentabilidade percentual do mês
             
-          11. topAssets: Objeto organizado por classe de ativo com os 2 melhores ativos de cada classe:
+        12. topAssets: Objeto organizado por classe de ativo com os 2 melhores ativos de cada classe:
         - Estrutura: {{className: [lista de ativos]}}
         - Para cada ativo:
           * assetName: nome do ativo
@@ -78,7 +79,7 @@ XP_REPORT_ANALYSIS_PROMPT = """
         * **Renda Fixa Global e Renda Variável Global: NÃO têm benchmark válido no relatório - NÃO incluir em highlights ou detractors**
 
         -   **Pontos Positivos:** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **SUPERIOR** ao seu benchmark de referência correspondente. (benchmarkDifference > 0,00).
-        -   **Pontos de Atenção (Máximo dois):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência (benchmarkDifference < 0,00).
+        -   **Detratores do mês (Máximo dois):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência (benchmarkDifference < 0,00).
         -   **REGRA CRÍTICA - CLASSES GLOBAIS:** As classes "Renda Fixa Global" e "Renda Variável Global" **NUNCA** devem aparecer em highlights ou detractors, mesmo que tenham benchmarkDifference positivo ou negativo. Essas classes serão tratadas separadamente na formatação final.
 
     2.  **ANÁLISE DETALHADA (DRILL-DOWN):**
@@ -132,7 +133,7 @@ XP_REPORT_ANALYSIS_PROMPT = """
     - Use os dados de "topAssets" para os drivers
 
     -   **Pontos Positivos (highlights):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **SUPERIOR** ao seu benchmark de referência correspondente. **NUNCA** inclua classes que estão abaixo do benchmark. **NUNCA** inclua "Renda Fixa Global" ou "Renda Variável Global".
-    -   **Pontos de Atenção (detractors):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência. **NUNCA** inclua classes que estão acima do benchmark. **NUNCA** inclua "Renda Fixa Global" ou "Renda Variável Global".
+    -   **Detratores do mês (detractors):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência. **NUNCA** inclua classes que estão acima do benchmark. **NUNCA** inclua "Renda Fixa Global" ou "Renda Variável Global".
 
 
 
@@ -149,7 +150,7 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       **DESTAQUES:**
       {highlights}
 
-      **PONTOS DE ATENÇAO:**
+      **DETRATORES DO MÊS:**
       {detractors}
 
       **INSTRUÇÕES:**
@@ -173,7 +174,7 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       9. **OBRIGATÓRIO: Retorne a mensagem COMPLETA dentro de um bloco de código markdown (```)**
       10. **IMPORTANTE: Comece com ``` e termine com ```**
       11. **RENDIMENTOS GLOBAIS (REGRA CRÍTICA):**
-         - As classes "Renda Fixa Global" e "Renda Variável Global" devem ser REMOVIDAS dos destaques e pontos de atenção
+         - As classes "Renda Fixa Global" e "Renda Variável Global" devem ser REMOVIDAS dos destaques e detratores do mês
          - Essas classes devem aparecer APENAS na seção "🌐 *Rendimentos Globais:*"
          - **BUSQUE essas classes no campo "classPerformance" do "extracted_data" (NÃO nos highlights/detractors)**
          - NÃO mencione benchmark (Dólar) para essas classes, apenas a rentabilidade e os ativos (se houver em "topAssets" ou "allAssets")
@@ -182,9 +183,9 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
 
     
     -   **Pontos Positivos (Destaques):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **SUPERIOR** ao seu benchmark de referência correspondente. **NUNCA** inclua classes que estão abaixo do benchmark.
-    -   **Pontos de Atenção [Máximo dois pontos] (Detractors):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência. **NUNCA** inclua classes que estão acima do benchmark.
+    -   **Detratores do mês [Máximo dois pontos] (Detractors):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência. **NUNCA** inclua classes que estão acima do benchmark.
 
-    **OMISSÃO DE SEÇÃO VAZIA (REGRA CRÍTICA):** Se não houver nenhuma classe de ativo na categoria "Pontos de Atenção", você DEVE omitir completamente a seção ":atenção: Pontos de Atenção:" do resultado final. Se não houver nenhuma classe global ("Renda Fixa Global" ou "Renda Variável Global"), você DEVE omitir completamente a seção "🌐 Rendimentos Globais:".
+    **OMISSÃO DE SEÇÃO VAZIA (REGRA CRÍTICA):** Se não houver nenhuma classe de ativo na categoria "Detratores do mês", você DEVE omitir completamente a seção ":atenção: Detratores do mês:" do resultado final. Se não houver nenhuma classe global ("Renda Fixa Global" ou "Renda Variável Global"), você DEVE omitir completamente a seção "🌐 Rendimentos Globais:".
 
 
       **MODELO OBRIGATÓRIO (ANÁLISE COMPLETA):**
@@ -196,7 +197,7 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
 
       🔎 *Resumo da performance:*
       Em [reportMonth] sua carteira rendeu *[monthlyReturn]*, o que equivale a *[monthlyCdi]* do CDI, um ganho bruto de *[monthlyGain]*!
-      No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um resultado financeiro de *[yearlyGain]*!
+      No ano, estamos com uma rentabilidade de *[yearlyReturn:]*, o que equivale a uma performance de *[yearlyCdi]* do CDI e um resultado financeiro de *[yearlyGain]*. Finalizamos o mês com o patrimônio bruto de *[grossEquity]*!
 
       ✅ *Destaques do mês:*
       - *[className]*, com *[classReturn]*, com [classBenchmarkDifference] acima do [classBenchmark], valorização puxada por ativos como *[assetName] (+[assetReturn])* e *[assetName] (+[assetReturn])*.
@@ -210,7 +211,7 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       - *[className]*, com *[classReturn]*, valorização puxada por ativos como *[assetName] (+[assetReturn])*.
       [Se houver ambas as classes globais, mostrar ambas]
 
-      ⚠️ *Pontos de Atenção:*
+      📉 *Detratores do mês:*
       - *[className]*: *[classReturn]*, (-[classBenchmarkDifference] em relação ao [classBenchmark]).
 
       - *[className]*: *[classReturn]*, (-[classBenchmarkDifference] em relação ao [classBenchmark]).
@@ -226,8 +227,8 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       Responda APENAS com a mensagem formatada em markdown puro.
 
       # Adicionar após a linha 299:
-    -   **IMPORTANTE**: Se uma classe está abaixo do benchmark, ela DEVE ir para "Pontos de Atenção", NUNCA para "Destaques"
-    -   **IMPORTANTE**: Se uma classe está acima do benchmark, ela DEVE ir para "Destaques", NUNCA para "Pontos de Atenção"
+    -   **IMPORTANTE**: Se uma classe está abaixo do benchmark, ela DEVE ir para "Detratores do mês", NUNCA para "Destaques"
+    -   **IMPORTANTE**: Se uma classe está acima do benchmark, ela DEVE ir para "Destaques", NUNCA para "Detratores do mês"
       """
 
 
@@ -264,18 +265,19 @@ Analise o TEXTO e as IMAGENS do PDF para extrair dados com máxima precisão.
 **CAMPOS A EXTRAIR (TODOS OBRIGATÓRIOS):**
 1. accountNumber: Número da conta do cliente
 2. reportMonth: Mês de referência do relatório (formato: MM/AAAA)
-3. monthlyReturn: Rentabilidade percentual do mês
-4. monthlyCdi: Rentabilidade em %CDI do mês
-5. monthlyGain: Ganho financeiro do mês (formato: R$ X.XXX,XX)
-6. yearlyReturn: Rentabilidade percentual do ano
-7. yearlyCdi: Rentabilidade em %CDI do ano
-8. yearlyGain: Ganho financeiro do ano (formato: R$ X.XXX,XX)
-9. benchmarkValues: Objeto com valores dos benchmarks do mês atual:
+3. grossEquity: Patrimônio total bruto (formato: R$ X.XXX,XX) - Procure por "PATRIMÔNIO TOTAL BRUTO" ou "PATRIMÔNIO BRUTO" no relatório
+4. monthlyReturn: Rentabilidade percentual do mês
+5. monthlyCdi: Rentabilidade em %CDI do mês
+6. monthlyGain: Ganho financeiro do mês (formato: R$ X.XXX,XX)
+7. yearlyReturn: Rentabilidade percentual do ano
+8. yearlyCdi: Rentabilidade em %CDI do ano
+9. yearlyGain: Ganho financeiro do ano (formato: R$ X.XXX,XX)
+10. benchmarkValues: Objeto com valores dos benchmarks do mês atual:
 - CDI: percentual
 - Ibovespa: percentual
 - IPCA: percentual (ATENÇÃO: pode ser negativo!)
 - Dólar: percentual (ATENÇÃO: pode ser negativo!)
-10. classPerformance: Array com performance por classe de ativo:
+11. classPerformance: Array com performance por classe de ativo:
 - className: nome da classe
 - classReturn: rentabilidade percentual do mês
 - benchmark: benchmark correspondente
@@ -286,7 +288,7 @@ Analise o TEXTO e as IMAGENS do PDF para extrair dados com máxima precisão.
             * Renda Variável Brasil → Ibovespa
             * Multimercado → CDI
             * Fundos Listados → CDI
-11. allAssets: Objeto com TODOS os ativos listados, agrupados por classe de ativo.
+12. allAssets: Objeto com TODOS os ativos listados, agrupados por classe de ativo.
 Para cada classe (Pós Fixado, Inflação, Multimercado, Renda Variável Brasil, Fundos Listados),
 liste TODOS os ativos individuais com:
 - assetName: Nome completo do ativo
@@ -337,12 +339,12 @@ Sua tarefa é realizar uma análise profunda de relatórios de investimentos da 
     -   Compare a rentabilidade mensal de cada classe de ativo com seu respectivo benchmark ("ativo"-"benchmark"; etc.) ("Pós Fixado" - "CDI"; "Inflação" - "IPCA"; "Renda Variável Brasil" - "Ibovespa"; "Multimercado" - "CDI"; "Fundos Listados" - "CDI")
     -   **REGRA CRÍTICA - CLASSES GLOBAIS:** As classes "Renda Fixa Global" e "Renda Variável Global" **NÃO têm benchmark válido no relatório** e **NUNCA** devem aparecer em highlights ou detractors, mesmo que tenham benchmarkDifference positivo ou negativo. Essas classes serão tratadas separadamente na formatação final.
     -   **Pontos Positivos:** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **SUPERIOR** ao seu benchmark de referência correspondente. **EXCETO "Renda Fixa Global" e "Renda Variável Global".**
-    -   **Pontos de Atenção (Máximo dois):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência. **EXCETO "Renda Fixa Global" e "Renda Variável Global".**
+    -   **Detratores do mês (Máximo dois):** São **EXCLUSIVAMENTE** as classes de ativo cuja rentabilidade no mês foi **INFERIOR** ao seu benchmark de referência. **EXCETO "Renda Fixa Global" e "Renda Variável Global".**
 
 2.  **ANÁLISE DETALHADA (DRILL-DOWN):**
     -   **[MELHORIA-CHAVE: ANÁLISE DOS DESTAQUES]** Para as 1 ou 2 principais classes de "Destaques", consulte a seção "POSIÇÃO DETALHADA DOS ATIVOS". Identifique os 2 ou 3 **ativos individuais** com maior rentabilidade no mês dentro daquela classe e cite-os como os impulsionadores do resultado.
 
-3.  **OMISSÃO DE SEÇÃO VAZIA (REGRA CRÍTICA):** Se não houver nenhuma classe de ativo na categoria "Pontos de Atenção", você DEVE omitir completamente a seção ":atenção: Pontos de Atenção:" do resultado final.
+3.  **OMISSÃO DE SEÇÃO VAZIA (REGRA CRÍTICA):** Se não houver nenhuma classe de ativo na categoria "Detratores do mês", você DEVE omitir completamente a seção ":atenção: Detratores do mês:" do resultado final.
 
 **DADOS EXTRAÍDOS:**
 {{extracted_data}}
@@ -401,7 +403,7 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 **DESTAQUES (classes selecionadas que superaram benchmark):**
 {highlights}
 
-**PONTOS DE ATENÇÃO (classes selecionadas abaixo do benchmark):**
+**DETRATORES DO MES (classes selecionadas abaixo do benchmark):**
 {detractors}
 
 **INSTRUÇÕES CRÍTICAS:**
@@ -411,6 +413,7 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 4. Mantenha tom profissional mas conciso
 5. Foque nos pontos que o cliente escolheu analisar
 6. **IMPORTANTE: Comece com ``` e termine com ```**
+7. **PATRIMÔNIO BRUTO: Se o campo "grossEquity" estiver presente nos dados fornecidos, inclua-o no resumo da performance logo após as outras métricas.**
 7. **CRÍTICO: Inclua ativos individuais APENAS se houver "allAssets" nos dados fornecidos. Se apenas a classe foi selecionada (sem "allAssets"), mostre APENAS a comparação da classe com o benchmark, sem listar ativos individuais.**
 8. **Se tanto a classe quanto ativos individuais estiverem selecionados, mostre AMBOS: primeiro a classe (com comparação ao benchmark), depois os ativos individuais selecionados.**
 9. **ABREVIAÇÃO DE NOMES DE ATIVOS (REGRA CRÍTICA):** Ao usar o campo "assetName" dos drivers na mensagem, SEMPRE abrevie o nome antes de inserir:
@@ -425,7 +428,7 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
            * "AZQI11 - AZ Quest Infra Yield FIP IE" → "AZQI11"
            * "Brave 90 FIC FIDC" → "Brave 90"
 10. **RENDIMENTOS GLOBAIS (REGRA CRÍTICA):**
-    - As classes "Renda Fixa Global" e "Renda Variável Global" devem ser REMOVIDAS dos destaques e pontos de atenção
+    - As classes "Renda Fixa Global" e "Renda Variável Global" devem ser REMOVIDAS dos destaques e Detratores do mês
     - Essas classes devem aparecer APENAS na seção "🌐 *Rendimentos Globais:*" (se o cliente as selecionou)
     - **BUSQUE essas classes no campo "classPerformance" do "extracted_data" fornecido (NÃO nos highlights/detractors)**
     - NÃO mencione benchmark (Dólar) para essas classes, apenas a rentabilidade e os ativos (se houver "allAssets" para essas classes)
@@ -441,7 +444,8 @@ Você é um especialista em comunicação financeira. Sua tarefa é formatar uma
 Olá, [N° do Cliente]!
 
 🔎 *Resumo da performance:*
-[Incluir as métricas gerais da carteira selecionadas pelo cliente]
+[Incluir as métricas gerais da carteira selecionadas pelo cliente (monthlyReturn, yearlyReturn, etc.)]
+[Se "grossEquity" estiver presente nos dados: "Finalizamos o mês com o patrimônio bruto de *[grossEquity]*!"]
 [Não incluir métricas sobre classes/ativos]
 
 ✅ *Destaques do mês:*
@@ -459,7 +463,7 @@ Olá, [N° do Cliente]!
 [Se o cliente selecionou ambas as classes globais, mostrar ambas]
 [Busque as classes globais no "extracted_data.classPerformance" e os ativos em "extracted_data.allAssets"]
 
-⚠️ *Pontos de Atenção:*
+📉 *Detratores do mês:*
 [Incluir os ativos/classes "detractors" selecionados pelo cliente]
 
 - *[className]*, com *[classReturn]*, [classBenchmarkDifference] abaixo do [classBenchmark].
