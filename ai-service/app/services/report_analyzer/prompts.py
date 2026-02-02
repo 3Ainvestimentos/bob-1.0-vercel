@@ -218,8 +218,9 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
       - *[className]*: *[classReturn]*, (-[classBenchmarkDifference] em relação ao [classBenchmark]).
 
       🌎 *Cenário Econômico de [mês de referência]:*
-      - Cenário Nacional: Em dezembro, o Ibovespa avançou 1,29%, emendando o quinto ganho mensal consecutivo, e encerrou 2025 com alta de 33,95%, em um ano marcado por sucessivas renovações de máximas e forte participação do investidor estrangeiro. No macro, a prévia da inflação (IPCA-15) de dezembro subiu 0,25% e fechou 2025 em 4,41%, reforçando que o debate sobre desinflação segue relevante, mas ainda sensível. Em linha, o Copom manteve a Selic em 15% a.a., preservando o tom de cautela para garantir a convergência da inflação.
-      - Cenário Internacional: No exterior, o mês foi guiado pelo desempenho dos metais preciosos: o ouro subiu 1,8% em dezembro, enquanto a prata avançou 24% no mês, em ambiente de elevada volatilidade e busca por proteção. Na política monetária, o Fed cortou os juros em 0,25 p.p., levando a taxa para o intervalo de 3,5% a 3,75%, movimento que influenciou o apetite a risco e a precificação global de ativos.
+
+      - Cenário Nacional: Em janeiro de 2026, no Brasil, os mercados foram puxados pela forte entrada de capital estrangeiro: o Ibovespa subiu 12,56% no mês, registrando o melhor janeiro desde 2006. No câmbio, o real se fortaleceu, com o dólar chegando a fechar abaixo de R$ 5,20. A prévia da inflação desacelerou para 0,20% e ficou em 4,50% em 12 meses, enquanto o Copom manteve a Selic em 15% e sinalizou que pode iniciar cortes na reunião seguinte (março).
+      - Cenário Internacional: No mundo, o Fed manteve os juros em 3,50%–3,75% (após cortes em 2025), preservando a leitura de política ainda restritiva. Em paralelo, houve sinais de rotação de portfólio e busca por diversificação: ETFs de ações de emergentes concentraram entradas relevantes no mês, enquanto produtos focados em EUA registraram saídas em alguns recortes. Nas commodities, o mês foi dominado pela volatilidade alta de ouro e prata. Ambos finalizaram o mês em alta relevante, mas não antes de ajustes no final de mês.
       ```
 
       **IMPORTANTE: Comece com ``` e termine com ```**
@@ -475,8 +476,8 @@ Olá, [N° do Cliente]!
 
 🌎 *Cenário Econômico de [mês de referência]:*
 
-- Cenário Nacional: Em dezembro, o Ibovespa avançou 1,29%, emendando o quinto ganho mensal consecutivo, e encerrou 2025 com alta de 33,95%, em um ano marcado por sucessivas renovações de máximas e forte participação do investidor estrangeiro. No macro, a prévia da inflação (IPCA-15) de dezembro subiu 0,25% e fechou 2025 em 4,41%, reforçando que o debate sobre desinflação segue relevante, mas ainda sensível. Em linha, o Copom manteve a Selic em 15% a.a., preservando o tom de cautela para garantir a convergência da inflação.
-- Cenário Internacional: No exterior, o mês foi guiado pelo desempenho dos metais preciosos: o ouro subiu 1,8% em dezembro, enquanto a prata avançou 24% no mês, em ambiente de elevada volatilidade e busca por proteção. Na política monetária, o Fed cortou os juros em 0,25 p.p., levando a taxa para o intervalo de 3,5% a 3,75%, movimento que influenciou o apetite a risco e a precificação global de ativos.
+- Cenário Nacional: Em janeiro de 2026, no Brasil, os mercados foram puxados pela forte entrada de capital estrangeiro: o Ibovespa subiu 12,56% no mês, registrando o melhor janeiro desde 2006. No câmbio, o real se fortaleceu, com o dólar chegando a fechar abaixo de R$ 5,20. A prévia da inflação desacelerou para 0,20% e ficou em 4,50% em 12 meses, enquanto o Copom manteve a Selic em 15% e sinalizou que pode iniciar cortes na reunião seguinte (março).
+- Cenário Internacional: No mundo, o Fed manteve os juros em 3,50%–3,75% (após cortes em 2025), preservando a leitura de política ainda restritiva. Em paralelo, houve sinais de rotação de portfólio e busca por diversificação: ETFs de ações de emergentes concentraram entradas relevantes no mês, enquanto produtos focados em EUA registraram saídas em alguns recortes. Nas commodities, o mês foi dominado pela volatilidade alta de ouro e prata. Ambos finalizaram o mês em alta relevante, mas não antes de ajustes no final de mês.
 ```
 
 **REGRAS IMPORTANTES:**
