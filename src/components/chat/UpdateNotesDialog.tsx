@@ -95,3 +95,4 @@ export function UpdateNotesDialog({ open, onAcknowledge }: UpdateNotesDialogProp
     </Dialog>
   );
 }
+
