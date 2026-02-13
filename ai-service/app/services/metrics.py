@@ -9,6 +9,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_METRIC_TYPES = ("automatica", "personalized")
+
 
 def _get_date_string(date: Optional[str] = None) -> str:
     """
@@ -31,6 +33,7 @@ def record_metric_call(user_id: str, metric_type: str, date: Optional[str] = Non
     
     Incrementa o contador correspondente no documento do usuário para o dia.
     Usa transação Firestore para garantir atomicidade.
+    _update_daily_total assume metric_type já validado por esta função.
     
     Args:
         user_id: ID do usuário
@@ -40,6 +43,11 @@ def record_metric_call(user_id: str, metric_type: str, date: Optional[str] = Non
     Raises:
         Exception: Se houver erro ao registrar métrica (não deve bloquear processamento principal)
     """
+    if metric_type not in ALLOWED_METRIC_TYPES:
+        logger.warning(
+            f"metric_type inválido ignorado: {metric_type!r}. Esperado: {ALLOWED_METRIC_TYPES}"
+        )
+        return
     try:
         date_str = _get_date_string(date)
         db = get_firestore_client()
@@ -219,10 +227,10 @@ def record_ultra_batch_start(user_id: str, job_id: str, file_count: int, date: O
 
 def record_ultra_batch_complete(user_id: str, job_id: str, date: Optional[str] = None) -> None:
     """
-    Marca job de ultra-batch como completo.
+    Marca job de ultra-batch como completo e persiste status no Firestore.
     
-    Atualmente apenas loga a conclusão. Pode ser estendido para adicionar
-    campo 'completed' ou 'status' no array ultra_batch_runs se necessário.
+    Atualiza o array ultra_batch_runs no documento do usuário: localiza a entrada
+    com jobId == job_id e adiciona status "completed" e completedAt.
     
     Args:
         user_id: ID do usuário
@@ -234,12 +242,38 @@ def record_ultra_batch_complete(user_id: str, job_id: str, date: Optional[str] =
     """
     try:
         date_str = _get_date_string(date)
+        db = get_firestore_client()
+        doc_ref = db.collection("metrics").document(date_str).collection("users").document(user_id)
+
+        @firestore.transactional
+        def update_complete(transaction):
+            doc = doc_ref.get(transaction=transaction)
+            if not doc.exists:
+                logger.warning(f"Documento de métricas não encontrado para user {user_id} em {date_str}")
+                return
+            runs = list(doc.get("ultra_batch_runs") or [])
+            for i, run in enumerate(runs):
+                if run.get("jobId") == job_id:
+                    runs[i] = {
+                        **run,
+                        "status": "completed",
+                        "completedAt": firestore.SERVER_TIMESTAMP,
+                    }
+                    transaction.update(
+                        doc_ref,
+                        {
+                            "ultra_batch_runs": runs,
+                            "last_updated": firestore.SERVER_TIMESTAMP,
+                            "date": date_str,
+                        },
+                    )
+                    return
+            logger.warning(f"Job {job_id} não encontrado em ultra_batch_runs para user {user_id}")
+
+        transaction = db.transaction()
+        update_complete(transaction)
         logger.info(f"✅ Ultra-batch completo: job {job_id} para usuário {user_id} em {date_str}")
-        
-        # Por enquanto apenas loga. Pode ser estendido no futuro para atualizar
-        # o array ultra_batch_runs com status de conclusão se necessário.
-        
+
     except Exception as e:
-        # Não falhar o processamento principal se tracking falhar
         logger.error(f"❌ Erro ao registrar conclusão de ultra-batch {job_id} para {user_id}: {e}", exc_info=True)
 

@@ -173,10 +173,9 @@ async def batch_analyze_reports(request: BatchReportRequest):
             )
         
         results = await process_batch_reports(request.files, request.user_id)
-        
-        # Registrar métrica após processamento bem-sucedido (se pelo menos um arquivo foi processado com sucesso)
+
         success_count = sum(1 for r in results if r.get("success"))
-        if success_count > 0:
+        for _ in range(success_count):
             try:
                 record_metric_call(request.user_id, "automatica")
             except Exception as e:
@@ -532,10 +531,15 @@ async def analyze_report_auto_stream(request: ReportAnalyzeAutoRequest):
         # Por enquanto, usar o workflow normal
         app = create_report_analysis_workflow()
         result = await app.ainvoke(state)
-        
-        # Enviar resultado final
+
+        if result.get("error") is None:
+            try:
+                record_metric_call(request.user_id, "automatica")
+            except Exception as e:
+                logger.error(f"Erro ao registrar métrica analise_automatica: {e}")
+
         yield f"data: {json.dumps({'done': True, 'result': result})}\n\n"
-    
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
@@ -569,10 +573,15 @@ async def analyze_report_personalized_stream(request: ReportAnalyzePersonalizedR
         # Por enquanto, usar o workflow normal
         app = create_report_analysis_workflow()
         result = await app.ainvoke(state)
-        
-        # Enviar resultado final
+
+        if result.get("error") is None:
+            try:
+                record_metric_call(request.user_id, "personalized")
+            except Exception as e:
+                logger.error(f"Erro ao registrar métrica analise_personalized: {e}")
+
         yield f"data: {json.dumps({'done': True, 'result': result})}\n\n"
-    
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
@@ -612,8 +621,14 @@ async def analyze_personalized_from_data(
         app = create_report_analysis_workflow_from_data()
         result = await app.ainvoke(state)
 
+        if result.get("error") is None:
+            try:
+                record_metric_call(request.user_id, "personalized")
+            except Exception as e:
+                logger.error(f"Erro ao registrar métrica analise_personalized: {e}")
+
         print(f"[analyze_personalized_from_data] ✅ Análise concluída")
-        
+
         return ReportAnalyzeResponse(
             success=True,
             extracted_data=result.get("extracted_data"),
