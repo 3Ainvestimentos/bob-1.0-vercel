@@ -24,7 +24,6 @@ from app.services.report_analyzer.ultra_batch_processing import process_ultra_ba
 from app.services.report_analyzer.signed_url import generate_signed_url_for_upload
 
 from pydantic import BaseModel
-from typing import Dict, Any
 
 from app.config import get_firestore_client, logger
 from firebase_admin import firestore  
@@ -223,7 +222,6 @@ async def batch_analyze_reports(request: BatchReportRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-        # ============= ultra_batch (ultra lote) =============
 
 # ============= GENERATE UPLOAD URLS =============
 
@@ -597,7 +595,6 @@ class PersonalizedAnalysisRequest(BaseModel):
     file_name: str
     user_id: str
 
-# Substituir linhas 270-311 por:
 @router.post("/analyze-personalized-from-data")
 async def analyze_personalized_from_data(
     request: PersonalizedAnalysisRequest
@@ -606,8 +603,11 @@ async def analyze_personalized_from_data(
     Análise personalizada usando dados já extraídos.
     """
     try:
-        print(f"[analyze_personalized_from_data] Iniciando análise com dados já extraídos")
-        print(f"[analyze_personalized_from_data] Campos selecionados: {len(request.selected_fields)}")
+        logger.info("[analyze_personalized_from_data] Iniciando análise com dados já extraídos")
+        logger.debug(
+            "[analyze_personalized_from_data] Campos selecionados: %d",
+            len(request.selected_fields),
+        )
 
         state = {
             "extracted_data": request.extracted_data,
@@ -627,7 +627,7 @@ async def analyze_personalized_from_data(
             except Exception as e:
                 logger.error(f"Erro ao registrar métrica analise_personalized: {e}")
 
-        print(f"[analyze_personalized_from_data] ✅ Análise concluída")
+        logger.info("[analyze_personalized_from_data] Análise concluída")
 
         return ReportAnalyzeResponse(
             success=True,
@@ -640,5 +640,5 @@ async def analyze_personalized_from_data(
             error=result.get("error")
         )
     except Exception as e:
-        print(f"[analyze_personalized_from_data] ❌ Erro: {e}")
+        logger.error("[analyze_personalized_from_data] Erro: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
