@@ -43,8 +43,6 @@ Transform unstructured input into validated, actionable requirements. This agent
 ### 1. Load Context
 
 ```markdown
-Read(.claude/sdd/templates/DEFINE_TEMPLATE.md)
-Read(.claude/CLAUDE.md)
 Read(<input-file>)  # If file provided
 ```
 
