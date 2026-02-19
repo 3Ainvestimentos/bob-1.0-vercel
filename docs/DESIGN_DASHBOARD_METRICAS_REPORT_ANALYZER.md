@@ -7,8 +7,8 @@
 | **Feature** | Dashboard de métricas report_analyzer (painel admin) |
 | **Input** | `docs/DEFINE_DASHBOARD_METRICAS_REPORT_ANALYZER.md` |
 | **Fase** | 2 – Design |
-| **Status** | Ready for Build |
-| **Próximo passo** | /build |
+| **Status** | ✅ Complete (Built) |
+| **Próximo passo** | /ship |
 
 ---
 
@@ -31,12 +31,17 @@
 │                                                                                         │
 │  Admin (browser)                                                                        │
 │  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │  /admin → page.tsx (Tabs: Análise Geral | RAG | ... | Métricas Report)           │   │
+│  │  /admin → page.tsx                                                               │   │
+│  │  Tabs de primeiro nível: Chat/RAG | Report Analyzer | Feedbacks | Usuários | Sistema │
 │  │       │                                                                          │   │
-│  │       └─ Tab "Métricas Report" → seleção from_month / to_month                   │   │
-│  │              │                                                                    │   │
-│  │              ▼                                                                    │   │
-│  │         getReportAnalyzerMetricsSummary(fromMonth, toMonth)  [Server Action]     │   │
+│  │       ├─ Tab "Chat/RAG" → sub-tabs: Análise Geral | Análise RAG | Latência | Alertas Jurídicos │
+│  │       ├─ Tab "Report Analyzer" → seleção from_month / to_month + métricas         │   │
+│  │       │      │                                                                    │   │
+│  │       │      ▼                                                                    │   │
+│  │       │   getReportAnalyzerMetricsSummary(fromMonth, toMonth)  [Server Action]   │   │
+│  │       ├─ Tab "Feedbacks"                                                         │   │
+│  │       ├─ Tab "Usuários"                                                          │   │
+│  │       └─ Tab "Sistema"                                                           │   │
 │  └─────────────────────────────────────────────────────────────────────────────────┘   │
 │       │                                                                                 │
 │       ▼ HTTP GET                                                                        │
@@ -54,11 +59,21 @@
 
 ### 2.2 Fluxo de dados
 
-1. Admin abre a aba "Métricas Report" no painel.
+1. Admin abre a aba "Report Analyzer" no painel (segunda tab de primeiro nível).
 2. Frontend chama a server action `getReportAnalyzerMetricsSummary(fromMonth, toMonth)` com intervalo padrão (ex.: últimos 12 meses).
 3. A server action faz `fetch` ao ai-service `GET /api/report/metrics-summary?from_month=...&to_month=...` (URL via env).
 4. Resposta `{ summaries: [...] }` é retornada ao cliente.
 5. UI exibe: cards com totais ou último mês; tabela por mês com as 6 métricas e metas; opcionalmente gráfico de tendência (recharts).
+
+### 2.3 Estrutura de abas do painel (resumo)
+
+| 1º nível | Conteúdo |
+|----------|----------|
+| **Chat/RAG** | Sub-tabs: Análise Geral, Análise RAG, Latência, Alertas Jurídicos (conteúdo atual dessas abas) |
+| **Report Analyzer** | Dashboard de métricas (MAU, volume, intensidade, qualidade, escala); seletor de intervalo de meses |
+| **Feedbacks** | Conteúdo atual da aba Feedbacks |
+| **Usuários** | Conteúdo atual da aba Usuários |
+| **Sistema** | Conteúdo atual da aba Sistema |
 
 ---
 
@@ -81,20 +96,29 @@
 
 ---
 
-### Decisão 2: Aba no painel vs página separada
+### Decisão 2: Estrutura de abas do painel admin
 
 | Atributo | Valor |
 |----------|--------|
 | **Status** | Aceita |
 | **Data** | 2026-02-19 |
 
-**Contexto:** O painel admin já usa Tabs (Análise Geral, RAG, Latência, Usuários, Feedbacks, Alertas Jurídicos, Sistema).
+**Contexto:** O painel admin hoje usa Tabs planas (Análise Geral, RAG, Latência, Usuários, Feedbacks, Alertas Jurídicos, Sistema). Deseja-se agrupar as abas relacionadas a Chat/RAG e dar destaque à aba de métricas do Report Analyzer.
 
-**Escolha:** **Nova aba** "Métricas Report" (ou "Report Analyzer") no mesmo `page.tsx`, com `TabsTrigger` e `TabsContent` dedicados.
+**Escolha:** **Reestruturar as abas** em dois níveis:
 
-**Rationale:** (1) Consistente com o resto do painel. (2) Um único lugar para todas as funções admin. (3) Menos navegação e deploy (sem nova rota).
+- **Primeiro nível (5 abas):**
+  1. **Chat/RAG** – agrupa as atuais: Análise Geral, Análise RAG, Latência, Alertas Jurídicos (sub-tabs dentro desta aba).
+  2. **Report Analyzer** – dashboard de métricas do report_analyzer (MAU, volume, intensidade, qualidade, escala), conforme planejamento.
+  3. **Feedbacks**
+  4. **Usuários**
+  5. **Sistema**
 
-**Consequências:** Ajustar `TabsList` para 8 colunas (ou layout que acomode 8 abas); adicionar estado para intervalo (from_month, to_month) e para os dados da API; opcionalmente extrair o conteúdo da aba para um componente `ReportAnalyzerMetricsTab` para manter page.tsx legível.
+- **Dentro de "Chat/RAG":** sub-tabs (Tabs aninhadas) com: Análise Geral | Análise RAG | Latência | Alertas Jurídicos.
+
+**Rationale:** (1) Agrupa métricas e diagnósticos do chat/RAG em um único lugar. (2) "Report Analyzer" vira aba de primeiro nível, alinhada à importância da funcionalidade. (3) Menos abas no topo (5 em vez de 7), navegação mais clara.
+
+**Consequências:** Refatorar `page.tsx`: primeiro nível com 5 `TabsTrigger`/`TabsContent`; dentro do `TabsContent` de "Chat/RAG", renderizar um segundo `<Tabs>` com as 4 sub-abas e o conteúdo já existente (analytics, rag, latency, legal). A aba "Report Analyzer" terá estado próprio (from_month, to_month, summaries, loading, error) e opcionalmente componente `ReportAnalyzerMetricsTab`.
 
 ---
 
@@ -119,7 +143,7 @@
 |---|------|--------|---------|--------------|-------|
 | 1 | `src/app/admin/lib/report_analyzer_metrics_service.ts` | Create | Fetch GET /api/report/metrics-summary (server-side); retorna { summaries } ou erro | None | @python-developer / (general) |
 | 2 | `src/app/admin/actions.ts` | Modify | Adicionar getReportAnalyzerMetricsSummary(fromMonth, toMonth) que chama o serviço acima | 1 | (general) |
-| 3 | `src/app/admin/page.tsx` | Modify | Nova aba "Métricas Report"; estado from_month/to_month; chamada à action; Cards + Tabela (e opcional gráfico) para métricas e metas | 2 | (general) |
+| 3 | `src/app/admin/page.tsx` | Modify | Reestruturar tabs: 1º nível Chat/RAG \| Report Analyzer \| Feedbacks \| Usuários \| Sistema; dentro de Chat/RAG, sub-tabs Análise Geral \| Análise RAG \| Latência \| Alertas Jurídicos; aba Report Analyzer com estado e conteúdo de métricas | 2 | (general) |
 | 4 | `src/app/admin/components/ReportAnalyzerMetricsTab.tsx` | Create | Componente da aba: seletor de intervalo, cards, tabela, gráfico; recebe summaries e loading/error | None | (general) |
 
 **Observação:** O projeto pode usar `components` dentro de `admin` ou em `src/components`; se já existir padrão de componentes por feature, seguir (ex.: `src/app/admin/components/`). O agente (general) indica execução direta pelo Build; não há agente específico de frontend no manifest — usar padrões do design e do codebase.
@@ -182,12 +206,21 @@ export async function getReportAnalyzerMetricsSummary(fromMonth: string, toMonth
 
 ---
 
-## 8. Padrão de código – Aba no page.tsx
+## 8. Padrão de código – Estrutura de abas no page.tsx
 
-- Adicionar `TabsTrigger value="report-metrics">Métricas Report</TabsTrigger>` e `TabsContent value="report-metrics">...</TabsContent>`.
-- Estado: `reportMetricsSummaries`, `reportMetricsLoading`, `reportMetricsError`, `reportMetricsFrom`, `reportMetricsTo`.
-- Efeito ou handler: ao montar a aba ou ao mudar from/to, chamar `getReportAnalyzerMetricsSummary(reportMetricsFrom, reportMetricsTo)` e preencher estado.
-- Render: se loading, spinner; se error, mensagem; senão, componente `ReportAnalyzerMetricsTab` (ou inline) com cards, tabela e opcionalmente gráfico.
+**Primeiro nível (TabsList com 5 itens):**
+
+- `TabsTrigger value="chat-rag">Chat/RAG</TabsTrigger>`
+- `TabsTrigger value="report-analyzer">Report Analyzer</TabsTrigger>`
+- `TabsTrigger value="feedback">Feedbacks</TabsTrigger>`
+- `TabsTrigger value="users">Usuários</TabsTrigger>`
+- `TabsTrigger value="system">Sistema</TabsTrigger>`
+
+**Conteúdo:**
+
+- `TabsContent value="chat-rag">` → dentro, um segundo `<Tabs>` com sub-tabs: Análise Geral (`analytics`), Análise RAG (`rag`), Latência (`latency`), Alertas Jurídicos (`legal`). O conteúdo existente de cada uma permanece.
+- `TabsContent value="report-analyzer">` → estado `reportMetricsSummaries`, `reportMetricsLoading`, `reportMetricsError`, `reportMetricsFrom`, `reportMetricsTo`; ao montar ou ao mudar from/to, chamar `getReportAnalyzerMetricsSummary(reportMetricsFrom, reportMetricsTo)`; render: loading → spinner, error → mensagem, senão → `ReportAnalyzerMetricsTab` (cards, tabela, gráfico).
+- `TabsContent value="feedback">`, `value="users">`, `value="system">` → conteúdo já existente das abas Feedbacks, Usuários e Sistema.
 
 ---
 
@@ -197,7 +230,7 @@ export async function getReportAnalyzerMetricsSummary(fromMonth: string, toMonth
 |------|--------|-------------|
 | Unit | `fetchReportAnalyzerMetricsSummary`: mock fetch; retorna dados ou erro | jest ou vitest |
 | Integration | Admin page: usuário admin vê aba e dados mockados (MSW ou mock da action) | React Testing Library |
-| Manual | Admin acessa /admin, abre aba Métricas Report, seleciona intervalo, vê cards e tabela; API indisponível exibe erro | — |
+| Manual | Admin acessa /admin; vê 5 abas (Chat/RAG, Report Analyzer, Feedbacks, Usuários, Sistema); em Chat/RAG vê 4 sub-abas; em Report Analyzer seleciona intervalo, vê cards e tabela; API indisponível exibe erro | — |
 
 ---
 

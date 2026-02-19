@@ -8,6 +8,7 @@ import { calculateAdminMetrics, getAdminCostsFromService } from './lib/metrics_s
 import { getUsersWithRolesService, getPreRegisteredUsersService, preRegisterUserService, setUserRoleService, setUserOnboardingStatusService, deleteUserService,} from './lib/user_service';
 import { getMaintenanceModeService, setMaintenanceModeService, runApiHealthCheckService,} from './lib/system_service';
 import { getLegalIssueAlertsService, getFeedbacksService} from './lib/content_service';
+import { fetchReportAnalyzerMetricsSummary } from './lib/report_analyzer_metrics_service';
 
 
 // Esta é a única função que o seu front-end (page.tsx) irá importar.
@@ -153,4 +154,15 @@ export async function getFeedbacks() {
         return { error: `Não foi possível buscar os feedbacks: ${error.message}` };
     }
 }
-// Se tiver outras actions, como getAdminCosts, elas seguiriam o mesmo padrão.
+// --- Métricas Report Analyzer ---
+
+export async function getReportAnalyzerMetricsSummary(fromMonth: string, toMonth: string) {
+    try {
+        const data = await fetchReportAnalyzerMetricsSummary(fromMonth, toMonth);
+        if (data && 'error' in data) return { error: data.error };
+        return data;
+    } catch (e: any) {
+        console.error('Error in action getReportAnalyzerMetricsSummary:', e);
+        return { error: e?.message || 'Não foi possível carregar as métricas do Report Analyzer.' };
+    }
+}

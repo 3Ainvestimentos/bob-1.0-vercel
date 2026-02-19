@@ -7,8 +7,8 @@
 | **Feature** | Dashboard de métricas report_analyzer (painel admin) |
 | **Fase** | 1 – Define |
 | **Input** | Backend já implementado (agregação + GET /api/report/metrics-summary); painel admin existente em `/admin` |
-| **Status** | ✅ Complete (Designed) |
-| **Próximo passo** | /build |
+| **Status** | ✅ Complete (Built) |
+| **Próximo passo** | /ship |
 
 ---
 

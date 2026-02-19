@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import ReportAnalyzerMetricsTab from './components/ReportAnalyzerMetricsTab';
 
 
 interface AdminInsights {
@@ -538,16 +539,22 @@ export default function AdminPage() {
                 {error}
             </div>
         )}
-        <Tabs defaultValue="analytics" className="w-full">
-            <TabsList className="grid w-full grid-cols-7">
-                <TabsTrigger value="analytics">Análise Geral</TabsTrigger>
-                <TabsTrigger value="rag">Análise RAG</TabsTrigger>
-                <TabsTrigger value="latency">Latência</TabsTrigger>
-                <TabsTrigger value="users">Usuários</TabsTrigger>
+        <Tabs defaultValue="chat-rag" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="chat-rag">Chat/RAG</TabsTrigger>
+                <TabsTrigger value="report-analyzer">Report Analyzer</TabsTrigger>
                 <TabsTrigger value="feedback">Feedbacks</TabsTrigger>
-                <TabsTrigger value="legal">Alertas Jurídicos</TabsTrigger>
+                <TabsTrigger value="users">Usuários</TabsTrigger>
                 <TabsTrigger value="system">Sistema</TabsTrigger>
             </TabsList>
+            <TabsContent value="chat-rag" className="mt-4">
+              <Tabs defaultValue="analytics" className="w-full">
+                <TabsList>
+                    <TabsTrigger value="analytics">Análise Geral</TabsTrigger>
+                    <TabsTrigger value="rag">Análise RAG</TabsTrigger>
+                    <TabsTrigger value="latency">Latência</TabsTrigger>
+                    <TabsTrigger value="legal">Alertas Jurídicos</TabsTrigger>
+                </TabsList>
             <TabsContent value="analytics" className="mt-4">
                 <div className="flex flex-1 flex-col gap-4 md:gap-8">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 md:gap-8">
@@ -1008,6 +1015,69 @@ export default function AdminPage() {
                     </div>
                 </div>
             </TabsContent>
+            <TabsContent value="legal" className="mt-4">
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+                            <CardTitle>Alertas Jurídicos Reportados ({legalAlerts.length})</CardTitle>
+                        </div>
+                        <CardDescription>
+                            Análise detalhada de todos os problemas jurídicos reportados pelos usuários.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {legalAlerts.length > 0 ? (
+                            <Accordion type="single" collapsible className="w-full">
+                                {legalAlerts?.map(alert => (
+                                    <AccordionItem value={alert.id} key={alert.id}>
+                                        <AccordionTrigger>
+                                            <div className="flex w-full items-center justify-between pr-4 text-sm">
+                                                <div className='text-left'>
+                                                    <p className='font-semibold'>{alert.user.displayName || alert.user.email}</p>
+                                                    <p className='text-xs text-muted-foreground'>{alert.user.email}</p>
+                                                </div>
+                                                <span className="text-xs text-muted-foreground">{alert.reportedAt}</span>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent>
+                                            <div className="space-y-4 rounded-md border bg-muted/50 p-4">
+                                                <div>
+                                                    <h4 className="font-semibold text-xs uppercase text-muted-foreground">Consulta do Usuário</h4>
+                                                    <p className="mt-1 text-sm">{alert.userQuery}</p>
+                                                </div>
+                                                <div className='h-px bg-border'></div>
+                                                <div>
+                                                    <h4 className="font-semibold text-xs uppercase text-muted-foreground">Resposta da IA</h4>
+                                                    <p className="mt-1 text-sm">{alert.assistantResponse}</p>
+                                                </div>
+                                                {alert.comment && (
+                                                     <>
+                                                        <div className='h-px bg-border'></div>
+                                                        <div>
+                                                            <h4 className="font-semibold text-xs uppercase text-muted-foreground">Comentário do Usuário</h4>
+                                                            <p className="mt-1 text-sm italic">"{alert.comment}"</p>
+                                                        </div>
+                                                     </>
+                                                )}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </Accordion>
+                        ) : (
+                            <div className="text-center text-muted-foreground py-10">
+                                Nenhum alerta jurídico reportado.
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </TabsContent>
+              </Tabs>
+            </TabsContent>
+            <TabsContent value="report-analyzer" className="mt-4">
+                <ReportAnalyzerMetricsTab />
+            </TabsContent>
             <TabsContent value="users" className="mt-4 space-y-8">
                  <Card>
                     <CardHeader>
@@ -1186,64 +1256,6 @@ export default function AdminPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </TabsContent>
-            <TabsContent value="legal" className="mt-4">
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-                            <CardTitle>Alertas Jurídicos Reportados ({legalAlerts.length})</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Análise detalhada de todos os problemas jurídicos reportados pelos usuários.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {legalAlerts.length > 0 ? (
-                            <Accordion type="single" collapsible className="w-full">
-                                {legalAlerts?.map(alert => (
-                                    <AccordionItem value={alert.id} key={alert.id}>
-                                        <AccordionTrigger>
-                                            <div className="flex w-full items-center justify-between pr-4 text-sm">
-                                                <div className='text-left'>
-                                                    <p className='font-semibold'>{alert.user.displayName || alert.user.email}</p>
-                                                    <p className='text-xs text-muted-foreground'>{alert.user.email}</p>
-                                                </div>
-                                                <span className="text-xs text-muted-foreground">{alert.reportedAt}</span>
-                                            </div>
-                                        </AccordionTrigger>
-                                        <AccordionContent>
-                                            <div className="space-y-4 rounded-md border bg-muted/50 p-4">
-                                                <div>
-                                                    <h4 className="font-semibold text-xs uppercase text-muted-foreground">Consulta do Usuário</h4>
-                                                    <p className="mt-1 text-sm">{alert.userQuery}</p>
-                                                </div>
-                                                <div className='h-px bg-border'></div>
-                                                <div>
-                                                    <h4 className="font-semibold text-xs uppercase text-muted-foreground">Resposta da IA</h4>
-                                                    <p className="mt-1 text-sm">{alert.assistantResponse}</p>
-                                                </div>
-                                                {alert.comment && (
-                                                     <>
-                                                        <div className='h-px bg-border'></div>
-                                                        <div>
-                                                            <h4 className="font-semibold text-xs uppercase text-muted-foreground">Comentário do Usuário</h4>
-                                                            <p className="mt-1 text-sm italic">"{alert.comment}"</p>
-                                                        </div>
-                                                     </>
-                                                )}
-                                            </div>
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                ))}
-                            </Accordion>
-                        ) : (
-                            <div className="text-center text-muted-foreground py-10">
-                                Nenhum alerta jurídico reportado.
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
             </TabsContent>
             <TabsContent value="costs" className="mt-4">
                 <div className="flex flex-1 flex-col gap-4 md:gap-8">
