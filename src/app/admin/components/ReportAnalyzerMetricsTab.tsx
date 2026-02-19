@@ -62,6 +62,12 @@ function metricColor(value: number, target: number): string {
   return value >= target ? 'text-green-600' : 'text-red-600';
 }
 
+function formatMonthLabel(ym: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  const date = new Date(y, m - 1, 1);
+  return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
 export default function ReportAnalyzerMetricsTab() {
   const defaultRange = getDefaultDateRange();
   const [fromMonth, setFromMonth] = useState(defaultRange.from);
@@ -100,8 +106,10 @@ export default function ReportAnalyzerMetricsTab() {
     fetchData(fromMonth, toMonth);
   };
 
-  const latestSummary =
-    summaries.length > 0 ? summaries[summaries.length - 1] : null;
+  const summaryForCards =
+    summaries.length > 0
+      ? summaries.find((s) => s.month === toMonth) ?? summaries[summaries.length - 1]
+      : null;
 
   const chartData = summaries.map((s) => ({
     month: s.month,
@@ -165,8 +173,11 @@ export default function ReportAnalyzerMetricsTab() {
         </div>
       )}
 
-      {latestSummary && (
+      {summaryForCards && (
         <>
+          <div className="rounded-md border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            Os valores dos cards abaixo referem-se ao mês selecionado em <strong>Até</strong> ({formatMonthLabel(toMonth)}) — não são média do intervalo. A tabela e o gráfico de tendência usam todo o período De–Até.
+          </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -178,15 +189,15 @@ export default function ReportAnalyzerMetricsTab() {
                   className={cn(
                     'text-2xl font-bold',
                     metricColor(
-                      latestSummary.adoption.mau_percent,
+                      summaryForCards.adoption.mau_percent,
                       TARGETS.adoption_mau_percent
                     )
                   )}
                 >
-                  {latestSummary.adoption.mau_percent.toFixed(1)}%
+                  {summaryForCards.adoption.mau_percent.toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {latestSummary.adoption.mau} usuários | Meta:{' '}
+                  {summaryForCards.adoption.mau} usuários | Meta:{' '}
                   {TARGETS.adoption_mau_percent}%
                 </p>
               </CardContent>
@@ -202,12 +213,12 @@ export default function ReportAnalyzerMetricsTab() {
                   className={cn(
                     'text-2xl font-bold',
                     metricColor(
-                      latestSummary.volume.total_analyses,
+                      summaryForCards.volume.total_analyses,
                       TARGETS.volume_total_analyses
                     )
                   )}
                 >
-                  {latestSummary.volume.total_analyses.toLocaleString()}
+                  {summaryForCards.volume.total_analyses.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   análises/mês | Meta:{' '}
@@ -226,12 +237,12 @@ export default function ReportAnalyzerMetricsTab() {
                   className={cn(
                     'text-2xl font-bold',
                     metricColor(
-                      latestSummary.intensity.analyses_per_assessor_avg,
+                      summaryForCards.intensity.analyses_per_assessor_avg,
                       TARGETS.intensity_analyses_per_assessor
                     )
                   )}
                 >
-                  {latestSummary.intensity.analyses_per_assessor_avg.toFixed(1)}
+                  {summaryForCards.intensity.analyses_per_assessor_avg.toFixed(1)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   por assessor | Meta: ≥ {TARGETS.intensity_analyses_per_assessor}
@@ -251,12 +262,12 @@ export default function ReportAnalyzerMetricsTab() {
                   className={cn(
                     'text-2xl font-bold',
                     metricColor(
-                      latestSummary.quality.ultra_batch_success_rate_pct,
+                      summaryForCards.quality.ultra_batch_success_rate_pct,
                       TARGETS.quality_file_success
                     )
                   )}
                 >
-                  {latestSummary.quality.ultra_batch_success_rate_pct.toFixed(1)}%
+                  {summaryForCards.quality.ultra_batch_success_rate_pct.toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground">
                   sucesso por arquivo | Meta: ≥ {TARGETS.quality_file_success}%
@@ -276,12 +287,12 @@ export default function ReportAnalyzerMetricsTab() {
                   className={cn(
                     'text-2xl font-bold',
                     metricColor(
-                      latestSummary.quality.ultra_batch_jobs_completed_rate_pct,
+                      summaryForCards.quality.ultra_batch_jobs_completed_rate_pct,
                       TARGETS.quality_jobs_completed
                     )
                   )}
                 >
-                  {latestSummary.quality.ultra_batch_jobs_completed_rate_pct.toFixed(
+                  {summaryForCards.quality.ultra_batch_jobs_completed_rate_pct.toFixed(
                     1
                   )}
                   %
@@ -302,12 +313,12 @@ export default function ReportAnalyzerMetricsTab() {
                   className={cn(
                     'text-2xl font-bold',
                     metricColor(
-                      latestSummary.scale.pct_volume_ultra_batch,
+                      summaryForCards.scale.pct_volume_ultra_batch,
                       TARGETS.scale_ultra_batch
                     )
                   )}
                 >
-                  {latestSummary.scale.pct_volume_ultra_batch.toFixed(1)}%
+                  {summaryForCards.scale.pct_volume_ultra_batch.toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground">
                   via ultra-batch | Meta: ≥ {TARGETS.scale_ultra_batch}%
