@@ -1,9 +1,9 @@
 """
 Endpoints para análise de relatórios XP.
 """
-from typing import Dict, Any
+from typing import Dict, Any, List
 import json
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request, Query
 from fastapi.responses import StreamingResponse
 
 from app.models.requests import (    
@@ -15,7 +15,9 @@ from app.models.requests import (
     UltraBatchReportRequest, 
     UltraBatchReportResponse,
     GenerateUploadUrlsRequest,
-    GenerateUploadUrlsResponse 
+    GenerateUploadUrlsResponse,
+    MetricsSummaryResponse,
+    MetricsSummaryItem,
 )
 from app.workflows.report_workflow import create_report_analysis_workflow, create_report_analysis_workflow_from_data
 
@@ -502,6 +504,60 @@ async def get_ultra_batch_status(job_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao consultar job: {str(e)}")
 
+
+def _month_range(from_month: str, to_month: str, max_months: int = 24) -> list[str]:
+    from datetime import datetime
+    f = datetime.strptime(from_month, "%Y-%m")
+    t = datetime.strptime(to_month, "%Y-%m")
+    if f > t:
+        return []
+    out: list[str] = []
+    y, m = f.year, f.month
+    ty, tm = t.year, t.month
+    while (y, m) <= (ty, tm) and len(out) < max_months:
+        out.append(f"{y}-{m:02d}")
+        if m == 12:
+            y, m = y + 1, 1
+        else:
+            m += 1
+    return out
+
+
+@router.get("/metrics-summary", response_model=MetricsSummaryResponse)
+async def get_metrics_summary(
+    from_month: str = Query(..., description="Mês inicial YYYY-MM"),
+    to_month: str = Query(..., description="Mês final YYYY-MM"),
+):
+    """
+    Retorna resumos mensais de métricas do report_analyzer (MAU, volume, intensidade, qualidade, escala).
+    Dados pré-agregados pelo job Cloud Scheduler; intervalo limitado a 24 meses.
+    """
+    try:
+        months = _month_range(from_month, to_month)
+        if not months:
+            raise HTTPException(
+                status_code=400,
+                detail="from_month deve ser anterior ou igual a to_month",
+            )
+        db = get_firestore_client()
+        summaries: List[MetricsSummaryItem] = []
+        for month in months:
+            ref = db.collection("metrics_summary").document(month)
+            doc = ref.get()
+            if doc.exists:
+                data = doc.to_dict() or {}
+                data["month"] = month
+                if "updated_at" in data and hasattr(data["updated_at"], "isoformat"):
+                    data["updated_at"] = data["updated_at"].isoformat()
+                summaries.append(MetricsSummaryItem(**data))
+        return MetricsSummaryResponse(summaries=summaries)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Erro ao obter metrics-summary: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============= STREAMING ENDPOINTS (SSE) =============

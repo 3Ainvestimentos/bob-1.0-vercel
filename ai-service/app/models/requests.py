@@ -569,3 +569,43 @@ class GenerateUploadUrlsResponse(BaseModel):
                 ]
             }
         }
+
+
+class MetricsSummaryAdoption(BaseModel):
+    mau: int = 0
+    mau_percent: float = 0.0
+
+
+class MetricsSummaryVolume(BaseModel):
+    total_analyses: int = 0
+
+
+class MetricsSummaryIntensity(BaseModel):
+    analyses_per_assessor_avg: float = 0.0
+
+
+class MetricsSummaryQuality(BaseModel):
+    ultra_batch_success_rate_pct: float = 0.0
+    ultra_batch_jobs_completed_rate_pct: float = 0.0
+
+
+class MetricsSummaryScale(BaseModel):
+    pct_volume_ultra_batch: float = 0.0
+
+
+class MetricsSummaryItem(BaseModel):
+    month: str = Field(..., description="YYYY-MM")
+    closed: bool = False
+    adoption: Optional[MetricsSummaryAdoption] = None
+    volume: Optional[MetricsSummaryVolume] = None
+    intensity: Optional[MetricsSummaryIntensity] = None
+    quality: Optional[MetricsSummaryQuality] = None
+    scale: Optional[MetricsSummaryScale] = None
+    updated_at: Optional[Any] = None
+
+
+class MetricsSummaryResponse(BaseModel):
+    summaries: List[MetricsSummaryItem] = Field(
+        default_factory=list,
+        description="Lista de resumos mensais no intervalo solicitado",
+    )
