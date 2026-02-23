@@ -7,8 +7,8 @@
 | **Feature** | Digital – Google Sheets (ultra lote) + métricas por setor |
 | **Fase** | 1 – Define |
 | **Input** | docs/BRAINSTORM_DIGITAL_GOOGLE_SHEETS.md |
-| **Status** | ✅ Complete (Designed) |
-| **Próximo passo** | /build — implementação a partir de docs/DESIGN_DIGITAL_GOOGLE_SHEETS.md |
+| **Status** | ✅ Complete (Built) |
+| **Próximo passo** | /ship — validação e deploy |
 
 ---
 

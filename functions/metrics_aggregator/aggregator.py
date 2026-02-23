@@ -68,6 +68,32 @@ def _compute_volume_and_ultra_files(
     return total_analyses, ultra_total
 
 
+def _compute_digital_analyses(
+    db: firestore.Client, date_list: list[str]
+) -> int:
+    """
+    Soma de análises de usuários com sector == 'digital'.
+    Para cada usuário digital: automatica + personalized + sum(file_count em ultra_batch_runs).
+    """
+    digital_total = 0
+    for date_str in date_list:
+        users_ref = (
+            db.collection(COLLECTION_METRICS)
+            .document(date_str)
+            .collection(SUBDOC_USERS)
+        )
+        for doc in users_ref.stream():
+            data = doc.to_dict() or {}
+            if data.get("sector") != "digital":
+                continue
+            automatica = data.get("automatica") or 0
+            personalized = data.get("personalized") or 0
+            runs = data.get("ultra_batch_runs") or []
+            file_count = sum(r.get("file_count") or 0 for r in runs)
+            digital_total += automatica + personalized + file_count
+    return digital_total
+
+
 def _compute_quality_and_scale(
     db: firestore.Client, start_ts: datetime, end_ts: datetime
 ) -> tuple[float, float, int]:
@@ -144,6 +170,9 @@ def run_monthly_aggregation(
     mau_percent = (mau / TOTAL_ASSESSORS * 100.0) if TOTAL_ASSESSORS else 0.0
 
     total_analyses, ultra_total = _compute_volume_and_ultra_files(db, date_list)
+    digital_analyses = _compute_digital_analyses(db, date_list)
+    rest_analyses = max(total_analyses - digital_analyses, 0)
+
     analyses_per_assessor = (
         (total_analyses / mau) if mau > 0 else 0.0
     )
@@ -162,7 +191,11 @@ def run_monthly_aggregation(
         "month": month_key,
         "closed": closed,
         "adoption": {"mau": mau, "mau_percent": round(mau_percent, 2)},
-        "volume": {"total_analyses": total_analyses},
+        "volume": {
+            "total_analyses": total_analyses,
+            "digital_analyses": digital_analyses,
+            "rest_analyses": rest_analyses,
+        },
         "intensity": {
             "analyses_per_assessor_avg": round(analyses_per_assessor, 2)
         },

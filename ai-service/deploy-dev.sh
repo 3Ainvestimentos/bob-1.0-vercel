@@ -81,6 +81,8 @@ ALLOWED_ORIGINS_DEV="http://localhost:3000,http://localhost:3001,https://www.3ar
 SERVICE_ACCOUNT_SECRET_NAME="SERVICE_ACCOUNT_KEY_INTERNAL" # <-- CONFIRME ESTE NOME
 GOOGLE_SECRET_NAME="GOOGLE_API_KEY_SECRET" # Exemplo: GOOGLE_API_KEY_DEV
 LANGCHAIN_SECRET_NAME="LANGCHAIN_API_KEY_SECRET" # Exemplo: LANGCHAIN_API_KEY_DEV
+GOOGLE_SHEETS_SA_SECRET_NAME="GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY"
+GOOGLE_SHEETS_SHARED_DRIVE_ID_SECRET="GOOGLE_SHEETS_SHARED_DRIVE_ID"
 
 
 # Verificar se secrets existem
@@ -100,6 +102,18 @@ if ! gcloud secrets describe ${SERVICE_ACCOUNT_SECRET_NAME} --project=$PROJECT_I
     echo "❌ Secret ${SERVICE_ACCOUNT_SECRET_NAME} não encontrado."
     echo "   IMPORTANTE: O valor deste secret deve ser o conteúdo do arquivo JSON da chave, codificado em base64."
     echo "   Crie com o comando: gcloud secrets create ${SERVICE_ACCOUNT_SECRET_NAME} --data-file=<(base64 -w0 /path/to/your-key.json)"
+    exit 1
+fi
+
+if ! gcloud secrets describe ${GOOGLE_SHEETS_SA_SECRET_NAME} --project=$PROJECT_ID &> /dev/null; then
+    echo "❌ Secret ${GOOGLE_SHEETS_SA_SECRET_NAME} não encontrado."
+    echo "   Crie com: gcloud secrets create ${GOOGLE_SHEETS_SA_SECRET_NAME} --data-file=path/to/sheets-sa-key.json"
+    exit 1
+fi
+
+if ! gcloud secrets describe ${GOOGLE_SHEETS_SHARED_DRIVE_ID_SECRET} --project=$PROJECT_ID &> /dev/null; then
+    echo "❌ Secret ${GOOGLE_SHEETS_SHARED_DRIVE_ID_SECRET} não encontrado."
+    echo "   Crie com: echo -n 'DRIVE_ID' | gcloud secrets create ${GOOGLE_SHEETS_SHARED_DRIVE_ID_SECRET} --data-file=-"
     exit 1
 fi
 
@@ -132,7 +146,7 @@ gcloud run deploy $SERVICE_NAME \
     --no-cpu-throttling \
     --execution-environment gen2 \
     --set-env-vars "^@^ENVIRONMENT=development@ALLOWED_ORIGINS=${ALLOWED_ORIGINS_DEV}@FIREBASE_STORAGE_BUCKET=${PROJECT_ID}.firebasestorage.app" \
-    --set-secrets "GOOGLE_API_KEY=${GOOGLE_SECRET_NAME}:latest,LANGCHAIN_API_KEY=${LANGCHAIN_SECRET_NAME}:latest,SERVICE_ACCOUNT_KEY_INTERNAL=${SERVICE_ACCOUNT_SECRET_NAME}:latest"
+    --set-secrets "GOOGLE_API_KEY=${GOOGLE_SECRET_NAME}:latest,LANGCHAIN_API_KEY=${LANGCHAIN_SECRET_NAME}:latest,SERVICE_ACCOUNT_KEY_INTERNAL=${SERVICE_ACCOUNT_SECRET_NAME}:latest,GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY=${GOOGLE_SHEETS_SA_SECRET_NAME}:latest,GOOGLE_SHEETS_SHARED_DRIVE_ID=${GOOGLE_SHEETS_SHARED_DRIVE_ID_SECRET}:latest"
 
 
 

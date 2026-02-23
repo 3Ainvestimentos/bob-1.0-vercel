@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from firebase_admin import firestore
 from app.config import get_firestore_client
+from app.services.digital_whitelist import is_digital
 import logging
 
 logger = logging.getLogger(__name__)
@@ -57,20 +58,22 @@ def record_metric_call(user_id: str, metric_type: str, date: Optional[str] = Non
         doc_ref = db.collection('metrics').document(date_str).collection('users').document(user_id)
         
         # Usar transação para garantir atomicidade
+        sector_value = "digital" if is_digital(user_id) else None
+
         @firestore.transactional
         def update_metric(transaction):
             doc = doc_ref.get(transaction=transaction)
             
             if doc.exists:
-                # Documento existe: incrementar contador
-                current_value = doc.get(metric_type) or 0
-                transaction.update(doc_ref, {
-                    metric_type: current_value + 1,
+                updates = {
+                    metric_type: (doc.get(metric_type) or 0) + 1,
                     'last_updated': firestore.SERVER_TIMESTAMP,
                     'date': date_str
-                })
+                }
+                if sector_value:
+                    updates['sector'] = sector_value
+                transaction.update(doc_ref, updates)
             else:
-                # Documento não existe: criar com contador inicializado
                 initial_data = {
                     'automatica': 0,
                     'personalized': 0,
@@ -79,6 +82,8 @@ def record_metric_call(user_id: str, metric_type: str, date: Optional[str] = Non
                     'date': date_str
                 }
                 initial_data[metric_type] = 1
+                if sector_value:
+                    initial_data['sector'] = sector_value
                 transaction.set(doc_ref, initial_data)
         
         transaction = db.transaction()
@@ -156,7 +161,8 @@ def record_ultra_batch_start(user_id: str, job_id: str, file_count: int, date: O
         # Estrutura: metrics/days/{date}/users/{userId}
         doc_ref = db.collection('metrics').document(date_str).collection('users').document(user_id)
         
-        # Usar transação para garantir atomicidade
+        sector_value = "digital" if is_digital(user_id) else None
+
         @firestore.transactional
         def update_ultra_batch(transaction):
             doc = doc_ref.get(transaction=transaction)
@@ -167,25 +173,28 @@ def record_ultra_batch_start(user_id: str, job_id: str, file_count: int, date: O
             }
             
             if doc.exists:
-                # Documento existe: adicionar ao array
                 current_runs = doc.get('ultra_batch_runs') or []
-                # Verificar se job_id já existe (evitar duplicatas)
                 if not any(run.get('jobId') == job_id for run in current_runs):
                     current_runs.append(new_entry)
-                    transaction.update(doc_ref, {
+                    updates = {
                         'ultra_batch_runs': current_runs,
                         'last_updated': firestore.SERVER_TIMESTAMP,
                         'date': date_str
-                    })
+                    }
+                    if sector_value:
+                        updates['sector'] = sector_value
+                    transaction.update(doc_ref, updates)
             else:
-                # Documento não existe: criar com array inicializado
-                transaction.set(doc_ref, {
+                initial_data = {
                     'automatica': 0,
                     'personalized': 0,
                     'ultra_batch_runs': [new_entry],
                     'last_updated': firestore.SERVER_TIMESTAMP,
                     'date': date_str
-                })
+                }
+                if sector_value:
+                    initial_data['sector'] = sector_value
+                transaction.set(doc_ref, initial_data)
         
         transaction = db.transaction()
         update_ultra_batch(transaction)
@@ -245,6 +254,8 @@ def record_ultra_batch_complete(user_id: str, job_id: str, date: Optional[str] =
         db = get_firestore_client()
         doc_ref = db.collection("metrics").document(date_str).collection("users").document(user_id)
 
+        sector_value = "digital" if is_digital(user_id) else None
+
         @firestore.transactional
         def update_complete(transaction):
             doc = doc_ref.get(transaction=transaction)
@@ -257,16 +268,16 @@ def record_ultra_batch_complete(user_id: str, job_id: str, date: Optional[str] =
                     runs[i] = {
                         **run,
                         "status": "completed",
-                        "completedAt": firestore.SERVER_TIMESTAMP,
+                        "completedAt": datetime.now(timezone.utc).isoformat(),
                     }
-                    transaction.update(
-                        doc_ref,
-                        {
-                            "ultra_batch_runs": runs,
-                            "last_updated": firestore.SERVER_TIMESTAMP,
-                            "date": date_str,
-                        },
-                    )
+                    updates = {
+                        "ultra_batch_runs": runs,
+                        "last_updated": firestore.SERVER_TIMESTAMP,
+                        "date": date_str,
+                    }
+                    if sector_value:
+                        updates["sector"] = sector_value
+                    transaction.update(doc_ref, updates)
                     return
             logger.warning(f"Job {job_id} não encontrado em ultra_batch_runs para user {user_id}")
 

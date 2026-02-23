@@ -39,6 +39,8 @@ import { BobIcon } from '@/components/icons/BobIcon';
 import rehypeRaw from 'rehype-raw';
 import { POSICAO_CONSOLIDADA_PREAMBLE } from './preambles';
 import { cn } from '@/lib/utils';
+import { useDigitalWhitelist } from '@/hooks/use-google-sheets-whitelist';
+import { GoogleSheetsConfigButton } from '@/components/chat/GoogleSheetsConfigButton';
 
 
 interface ChatMessageAreaProps {
@@ -141,8 +143,8 @@ export function ChatMessageArea({
   onRemoveFile,
 }: ChatMessageAreaProps) {
 
-  // ✅ MOVER o useState para DENTRO do componente
   const [messageFormat, setMessageFormat] = useState<'whatsapp' | 'email'>('whatsapp');
+  const { isAuthorized: isSheetsAuthorized } = useDigitalWhitelist(user?.uid ?? null);
 
   // ✅ Função para verificar se há ultra lote processando
   const isUltraBatchProcessing = () => {
@@ -344,9 +346,17 @@ export function ChatMessageArea({
         <span className="ml-1">Preparando análise dos {msg.ultraBatchTotal || 0} arquivos...</span>
       </p>
     ) : (
-      <p className="text-xs text-muted-foreground mt-2">
-        ✅ {Math.round(((msg.ultraBatchProgress?.current || 0) / (msg.ultraBatchTotal || 1)) * 100)}% concluído
-      </p>
+      <div className="flex items-center justify-between mt-2">
+        <p className="text-xs text-muted-foreground">
+          ✅ {Math.round(((msg.ultraBatchProgress?.current || 0) / (msg.ultraBatchTotal || 1)) * 100)}% concluído
+        </p>
+        {isSheetsAuthorized && msg.ultraBatchJobId && user?.uid && (
+          <GoogleSheetsConfigButton
+            jobId={msg.ultraBatchJobId}
+            userId={user.uid}
+          />
+        )}
+      </div>
     )}
   </div>
 )}

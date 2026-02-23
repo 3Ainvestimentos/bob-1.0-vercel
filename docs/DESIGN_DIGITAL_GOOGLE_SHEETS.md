@@ -5,9 +5,9 @@
 | Atributo | Valor |
 |----------|--------|
 | **Feature** | Digital – Google Sheets (ultra lote) + métricas por setor |
-| **Fase** | 2 – Design |
+| **Fase** | 3 – Build (✅ Complete) |
 | **Input** | docs/DEFINE_DIGITAL_GOOGLE_SHEETS.md |
-| **Output** | Este documento + status DEFINE atualizado |
+| **Output** | Código implementado + BUILD_REPORT abaixo |
 
 ---
 

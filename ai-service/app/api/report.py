@@ -30,11 +30,26 @@ from pydantic import BaseModel
 from app.config import get_firestore_client, logger
 from firebase_admin import firestore  
 import uuid
-from app.services.metrics import record_metric_call, record_ultra_batch_start, record_ultra_batch_complete 
+from app.services.metrics import record_metric_call, record_ultra_batch_start, record_ultra_batch_complete
+from app.services.digital_whitelist import is_digital
+from app.services.report_analyzer.google_sheets_service import (
+    create_spreadsheet_for_job,
+    get_sheets_config,
+    backfill_sheets_from_results,
+)
 
 
+class ConfigureSheetsRequest(BaseModel):
+    job_id: str
+    user_id: str
+    custom_name: str | None = None
 
-router = APIRouter(tags=["report"])  # Remover o prefix
+
+class CheckWhitelistRequest(BaseModel):
+    user_id: str
+
+
+router = APIRouter(tags=["report"])
 
 
 @router.post("/analyze-auto", response_model=ReportAnalyzeResponse)
@@ -558,6 +573,79 @@ async def get_metrics_summary(
     except Exception as e:
         logger.exception("Erro ao obter metrics-summary: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============= GOOGLE SHEETS / DIGITAL WHITELIST =============
+
+
+@router.post("/ultra-batch/check-whitelist")
+async def check_whitelist(body: CheckWhitelistRequest):
+    """Verifica se o usuário pertence à lista digital (retorna apenas booleano)."""
+    try:
+        authorized = is_digital(body.user_id)
+        return {"authorized": authorized}
+    except Exception as e:
+        logger.error("Erro ao verificar whitelist: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro ao verificar whitelist")
+
+
+@router.post("/ultra-batch/configure-sheets")
+async def configure_sheets(body: ConfigureSheetsRequest):
+    """
+    Cria planilha Google Sheets para um job de ultra batch.
+    Apenas usuários na lista digital podem configurar.
+    """
+    if not is_digital(body.user_id):
+        raise HTTPException(status_code=403, detail="Usuário não autorizado")
+
+    db = get_firestore_client()
+    job_doc = db.collection("ultra_batch_jobs").document(body.job_id).get()
+    if not job_doc.exists:
+        raise HTTPException(status_code=404, detail="Job não encontrado")
+    if job_doc.to_dict().get("user_id") != body.user_id:
+        raise HTTPException(status_code=403, detail="Job não pertence ao usuário")
+
+    existing = get_sheets_config(body.job_id)
+    if existing and existing.get("enabled"):
+        return {
+            "success": True,
+            "spreadsheet_id": existing["spreadsheet_id"],
+            "spreadsheet_url": existing["spreadsheet_url"],
+            "spreadsheet_name": existing.get("spreadsheet_name", ""),
+        }
+
+    try:
+        result = await create_spreadsheet_for_job(
+            body.job_id, body.user_id, body.custom_name
+        )
+        backfilled = await backfill_sheets_from_results(body.job_id)
+        return {
+            "success": True,
+            "spreadsheet_id": result["spreadsheet_id"],
+            "spreadsheet_url": result["spreadsheet_url"],
+            "spreadsheet_name": result["spreadsheet_name"],
+            "backfilled_rows": backfilled,
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=500, detail=str(ve))
+    except Exception as e:
+        logger.error("Erro ao configurar Sheets: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro ao criar planilha")
+
+
+@router.get("/ultra-batch/sheets-config/{job_id}")
+async def get_sheets_config_endpoint(job_id: str):
+    """Retorna configuração de Sheets para um job."""
+    config = get_sheets_config(job_id)
+    if not config:
+        return {"configured": False}
+    return {
+        "configured": True,
+        "spreadsheet_id": config.get("spreadsheet_id"),
+        "spreadsheet_url": config.get("spreadsheet_url"),
+        "spreadsheet_name": config.get("spreadsheet_name", ""),
+        "enabled": config.get("enabled", False),
+    }
 
 
 # ============= STREAMING ENDPOINTS (SSE) =============

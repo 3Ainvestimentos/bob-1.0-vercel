@@ -24,6 +24,8 @@ dependencies = [
     "zhipuai>=1.0.7",
     "google-api-core>=2.25.2",
     "google-cloud-logging>=3.12.1",
+    "google-api-python-client>=2.100.0",
+    "google-auth>=2.25.0",
 ]
 
 [project.optional-dependencies]

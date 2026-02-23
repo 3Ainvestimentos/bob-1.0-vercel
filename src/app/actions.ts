@@ -1256,7 +1256,96 @@ export async function generateUploadUrls(
     }
   }
 
-  // Em src/app/actions.ts
+// ============= GOOGLE SHEETS / DIGITAL WHITELIST =============
+
+export async function checkDigitalWhitelist(
+  userId: string
+): Promise<{ authorized: boolean }> {
+  try {
+    const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+
+    const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch/check-whitelist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ao verificar whitelist: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error('Erro em checkDigitalWhitelist:', error);
+    return { authorized: false };
+  }
+}
+
+export async function configureGoogleSheets(
+  jobId: string,
+  userId: string,
+  customName?: string
+): Promise<{
+  success: boolean;
+  spreadsheet_id?: string;
+  spreadsheet_url?: string;
+  spreadsheet_name?: string;
+  error?: string;
+}> {
+  try {
+    const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+
+    const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch/configure-sheets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        job_id: jobId,
+        user_id: userId,
+        ...(customName && { custom_name: customName }),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Erro: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error('Erro em configureGoogleSheets:', error);
+    return { success: false, error: error.message || 'Erro ao configurar Google Sheets' };
+  }
+}
+
+export async function getGoogleSheetsConfig(
+  jobId: string
+): Promise<{
+  configured: boolean;
+  spreadsheet_id?: string;
+  spreadsheet_url?: string;
+  spreadsheet_name?: string;
+  enabled?: boolean;
+}> {
+  try {
+    const pythonServiceUrl = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8000';
+
+    const response = await fetch(`${pythonServiceUrl}/api/report/ultra-batch/sheets-config/${jobId}`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error('Erro em getGoogleSheetsConfig:', error);
+    return { configured: false };
+  }
+}
+
+// ============= PERSONALIZED FROM DATA =============
+
 export async function analyzeReportPersonalizedFromData(
   extractedData: ExtractedData,
   selectedFields: any,

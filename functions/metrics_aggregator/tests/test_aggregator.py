@@ -9,6 +9,7 @@ sys.path.insert(0, ".")
 from aggregator import (
     _compute_mau,
     _compute_volume_and_ultra_files,
+    _compute_digital_analyses,
     _compute_quality_and_scale,
     run_monthly_aggregation,
     run_monthly_aggregation_for_scheduler,
@@ -102,6 +103,51 @@ def test_compute_volume_skips_missing_days():
     assert ultra_total == 0
 
 
+def test_compute_digital_analyses_with_digital_users():
+    u1 = _mock_doc(
+        {"sector": "digital", "automatica": 3, "personalized": 2, "ultra_batch_runs": [{"file_count": 5}]},
+        "u1",
+    )
+    u2 = _mock_doc(
+        {"automatica": 10, "personalized": 1, "ultra_batch_runs": []},
+        "u2",
+    )
+    users_col = MagicMock()
+    users_col.stream.return_value = iter([u1, u2])
+    doc_ref = MagicMock()
+    doc_ref.collection.return_value = users_col
+    db = MagicMock()
+    db.collection.return_value.document.return_value = doc_ref
+    digital = _compute_digital_analyses(db, ["2025-01-01"])
+    assert digital == 3 + 2 + 5
+
+
+def test_compute_digital_analyses_no_digital_users():
+    u1 = _mock_doc(
+        {"automatica": 5, "personalized": 1, "ultra_batch_runs": []},
+        "u1",
+    )
+    users_col = MagicMock()
+    users_col.stream.return_value = iter([u1])
+    doc_ref = MagicMock()
+    doc_ref.collection.return_value = users_col
+    db = MagicMock()
+    db.collection.return_value.document.return_value = doc_ref
+    digital = _compute_digital_analyses(db, ["2025-01-01"])
+    assert digital == 0
+
+
+def test_compute_digital_analyses_empty():
+    users_col = MagicMock()
+    users_col.stream.return_value = iter([])
+    doc_ref = MagicMock()
+    doc_ref.collection.return_value = users_col
+    db = MagicMock()
+    db.collection.return_value.document.return_value = doc_ref
+    digital = _compute_digital_analyses(db, ["2025-01-01"])
+    assert digital == 0
+
+
 def test_compute_quality_and_scale():
     start = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     end = datetime(2025, 1, 31, 23, 59, 59, tzinfo=timezone.utc)
@@ -128,11 +174,13 @@ def test_compute_quality_and_scale():
 
 
 @patch("aggregator._compute_quality_and_scale")
+@patch("aggregator._compute_digital_analyses")
 @patch("aggregator._compute_volume_and_ultra_files")
 @patch("aggregator._compute_mau")
-def test_run_monthly_aggregation_writes_doc(mock_mau, mock_vol, mock_qual):
+def test_run_monthly_aggregation_writes_doc(mock_mau, mock_vol, mock_digital, mock_qual):
     mock_mau.return_value = 0
     mock_vol.return_value = (0, 0)
+    mock_digital.return_value = 0
     mock_qual.return_value = (0.0, 0.0, 0)
     db = MagicMock()
     summary_ref = MagicMock()
@@ -146,6 +194,8 @@ def test_run_monthly_aggregation_writes_doc(mock_mau, mock_vol, mock_qual):
     assert payload["adoption"]["mau"] == 0
     assert "volume" in payload
     assert payload["volume"]["total_analyses"] == 0
+    assert payload["volume"]["digital_analyses"] == 0
+    assert payload["volume"]["rest_analyses"] == 0
     assert "intensity" in payload
     assert "quality" in payload
     assert "scale" in payload
@@ -153,11 +203,37 @@ def test_run_monthly_aggregation_writes_doc(mock_mau, mock_vol, mock_qual):
 
 
 @patch("aggregator._compute_quality_and_scale")
+@patch("aggregator._compute_digital_analyses")
 @patch("aggregator._compute_volume_and_ultra_files")
 @patch("aggregator._compute_mau")
-def test_run_monthly_aggregation_for_scheduler_current_only(mock_mau, mock_vol, mock_qual):
+def test_run_monthly_aggregation_invariant_total_eq_digital_plus_rest(
+    mock_mau, mock_vol, mock_digital, mock_qual
+):
+    """AT-DS-008: total_analyses === digital_analyses + rest_analyses."""
+    mock_mau.return_value = 5
+    mock_vol.return_value = (100, 20)
+    mock_digital.return_value = 40
+    mock_qual.return_value = (95.0, 100.0, 100)
+    db = MagicMock()
+    summary_ref = MagicMock()
+    db.collection.return_value.document.return_value = summary_ref
+    run_monthly_aggregation(db, "2025-02", closed=True)
+    payload = summary_ref.set.call_args[0][0]
+    vol = payload["volume"]
+    assert vol["total_analyses"] == 100
+    assert vol["digital_analyses"] == 40
+    assert vol["rest_analyses"] == 60
+    assert vol["total_analyses"] == vol["digital_analyses"] + vol["rest_analyses"]
+
+
+@patch("aggregator._compute_quality_and_scale")
+@patch("aggregator._compute_digital_analyses")
+@patch("aggregator._compute_volume_and_ultra_files")
+@patch("aggregator._compute_mau")
+def test_run_monthly_aggregation_for_scheduler_current_only(mock_mau, mock_vol, mock_digital, mock_qual):
     mock_mau.return_value = 0
     mock_vol.return_value = (0, 0)
+    mock_digital.return_value = 0
     mock_qual.return_value = (0.0, 0.0, 0)
     db = MagicMock()
     summary_ref = MagicMock()
@@ -171,11 +247,13 @@ def test_run_monthly_aggregation_for_scheduler_current_only(mock_mau, mock_vol, 
 
 
 @patch("aggregator._compute_quality_and_scale")
+@patch("aggregator._compute_digital_analyses")
 @patch("aggregator._compute_volume_and_ultra_files")
 @patch("aggregator._compute_mau")
-def test_run_monthly_aggregation_for_scheduler_closes_previous(mock_mau, mock_vol, mock_qual):
+def test_run_monthly_aggregation_for_scheduler_closes_previous(mock_mau, mock_vol, mock_digital, mock_qual):
     mock_mau.return_value = 0
     mock_vol.return_value = (0, 0)
+    mock_digital.return_value = 0
     mock_qual.return_value = (0.0, 0.0, 0)
     db = MagicMock()
     summary_ref = MagicMock()

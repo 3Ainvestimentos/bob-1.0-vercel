@@ -195,6 +195,27 @@ def get_firebase_bucket():
         return client.bucket(bucket_name)
 
 
+# ==================== GOOGLE SHEETS CREDENTIALS ====================
+
+def get_google_sheets_credentials() -> dict:
+    """
+    Retorna credenciais do Service Account para Google Sheets.
+    Lê de variável de ambiente GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY.
+    Suporta Base64 ou JSON direto.
+    """
+    service_account_key = os.getenv("GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY")
+
+    if not service_account_key:
+        raise ValueError("GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY não configurada")
+
+    stripped = service_account_key.strip()
+    if stripped.startswith("{"):
+        return json.loads(stripped)
+
+    decoded = base64.b64decode(stripped).decode("utf-8")
+    return json.loads(decoded)
+
+
 # ========================================
 # MONITORAMENTO
 # ========================================

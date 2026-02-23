@@ -10,6 +10,7 @@ from typing import AsyncGenerator
 from firebase_admin import firestore
 from app.config import get_firestore_client, get_firebase_bucket
 from app.services.report_analyzer.batch_processing import process_batch_reports
+from app.services.report_analyzer.google_sheets_service import write_ultra_batch_result_to_sheets
 from app.services.metrics import record_ultra_batch_complete
 
 async def read_file_from_gcs(storage_path: str) -> bytes:
@@ -189,10 +190,10 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) 
                     
                     error_msg = f"Erro de leitura: {error_file.get('error')}"
                     
-                    # Salvar erro no Firestore (persistência)
                     result_ref = job_ref.collection('results').document(str(global_file_index))
                     result_ref.set({
                         "fileName": error_file["name"],
+                        "accountNumber": "",
                         "success": False,
                         "final_message": None,
                         "error": error_msg,
@@ -248,9 +249,27 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) 
                         if result.get("success"):
                             result_data["final_message"] = result.get("data", {}).get("final_message")
                             result_data["error"] = None
+
+                            extracted_data = result.get("data", {}).get("extracted_data")
+                            account_number = ""
+                            if extracted_data and isinstance(extracted_data, dict):
+                                account_number = extracted_data.get("accountNumber", "")
+                            result_data["accountNumber"] = account_number
+
                             success_count += 1
-                            
-                            # Emitir evento de sucesso com payload COMPLETO
+
+                            if account_number and result_data.get("final_message"):
+                                try:
+                                    asyncio.create_task(
+                                        write_ultra_batch_result_to_sheets(
+                                            job_id,
+                                            account_number,
+                                            result_data["final_message"],
+                                        )
+                                    )
+                                except Exception as sheets_err:
+                                    print(f"[ULTRA-BATCH] Erro ao agendar Sheets: {sheets_err}")
+
                             yield f"data: {json.dumps({
                                 'event': 'file_completed',
                                 'index': global_file_index,
@@ -304,6 +323,7 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) 
                             result_ref = job_ref.collection('results').document(str(global_file_index))
                             result_ref.set({
                                 "fileName": file_name,
+                                "accountNumber": "",
                                 "success": False,
                                 "error": error_msg,
                                 "processedAt": firestore.SERVER_TIMESTAMP
