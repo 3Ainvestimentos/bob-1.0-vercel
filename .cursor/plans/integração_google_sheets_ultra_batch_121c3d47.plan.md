@@ -50,6 +50,7 @@ todos:
       - create-sheets-service
       - add-sheets-endpoints
       - integrate-button-ui
+isProject: false
 ---
 
 # Plano: Integração Google Sheets para Ultra Batch
@@ -82,6 +83,8 @@ flowchart TD
     Q --> R
     R --> S[Próximo arquivo]
 ```
+
+
 
 ## Estrutura de Dados Firestore
 
@@ -441,10 +444,8 @@ interface GoogleSheetsConfigButtonProps {
 1. Criar Service Account no Google Cloud Console
 2. Gerar chave JSON
 3. Habilitar APIs necessárias:
-
-   - Google Sheets API
-   - Google Drive API (para criar arquivos)
-
+  - Google Sheets API
+  - Google Drive API (para criar arquivos)
 4. Codificar JSON em base64 (ou usar JSON direto)
 5. Configurar variável de ambiente no Cloud Run / ambiente de produção
 
@@ -463,99 +464,79 @@ GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY='{"type":"service_account",...}'
 ## Fluxo de Uso
 
 1. **Usuário inicia ultra batch**
-
-   - Job é criado no Firestore
-   - Mensagens são criadas com `ultraBatchJobId`
-
+  - Job é criado no Firestore
+  - Mensagens são criadas com `ultraBatchJobId`
 2. **Usuário (whitelist) configura Google Sheets**
-
-   - Clica no botão "Configurar Google Sheets"
-   - Confirma criação da planilha (modal simples)
-   - Opcionalmente fornece nome personalizado
-   - Backend busca credenciais de variável de ambiente
-   - Backend cria planilha automaticamente
-   - Backend configura cabeçalhos automaticamente
-   - Backend salva spreadsheet_id e URL no Firestore
-   - Frontend exibe link para a planilha criada
-
+  - Clica no botão "Configurar Google Sheets"
+  - Confirma criação da planilha (modal simples)
+  - Opcionalmente fornece nome personalizado
+  - Backend busca credenciais de variável de ambiente
+  - Backend cria planilha automaticamente
+  - Backend configura cabeçalhos automaticamente
+  - Backend salva spreadsheet_id e URL no Firestore
+  - Frontend exibe link para a planilha criada
 3. **Processamento**
-
-   - Para cada arquivo:
-     - Extrai `accountNumber` do `extracted_data`
-     - Salva em `results/{index}` com `accountNumber`
-     - Se Google Sheets configurado: escreve linha assincronamente
-
+  - Para cada arquivo:
+    - Extrai `accountNumber` do `extracted_data`
+    - Salva em `results/{index}` com `accountNumber`
+    - Se Google Sheets configurado: escreve linha assincronamente
 4. **Resultado**
-
-   - Planilha é atualizada em tempo real
-   - Colunas: `Número da Conta` | `Mensagem WhatsApp`
+  - Planilha é atualizada em tempo real
+  - Colunas: `Número da Conta` | `Mensagem WhatsApp`
 
 ## Segurança
 
 1. **Whitelist:**
-
-   - Verificação no backend (não confiar apenas no frontend)
-   - Roles com acesso automático: `admin`
-   - Lista específica de `user_ids` no Firestore
-
+  - Verificação no backend (não confiar apenas no frontend)
+  - Roles com acesso automático: `admin`
+  - Lista específica de `user_ids` no Firestore
 2. **Credenciais:**
-
-   - Credenciais armazenadas em variável de ambiente (não no Firestore)
-   - Mais seguro: credenciais não expostas no frontend
-   - Validação de existência da variável no backend
-   - Não retornar credenciais em endpoints GET
-   - Tratamento de erro se variável não estiver configurada
-
+  - Credenciais armazenadas em variável de ambiente (não no Firestore)
+  - Mais seguro: credenciais não expostas no frontend
+  - Validação de existência da variável no backend
+  - Não retornar credenciais em endpoints GET
+  - Tratamento de erro se variável não estiver configurada
 3. **Validação:**
-
-   - Verificar que job pertence ao usuário antes de configurar
-   - Verificar se `GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY` está configurada
-   - Validar que Service Account tem permissões necessárias (Sheets + Drive APIs)
-   - Tratamento de erro se credenciais forem inválidas ou APIs não habilitadas
-   - Não precisa validar permissões em planilha existente (planilha é criada automaticamente)
+  - Verificar que job pertence ao usuário antes de configurar
+  - Verificar se `GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY` está configurada
+  - Validar que Service Account tem permissões necessárias (Sheets + Drive APIs)
+  - Tratamento de erro se credenciais forem inválidas ou APIs não habilitadas
+  - Não precisa validar permissões em planilha existente (planilha é criada automaticamente)
 
 ## Testes
 
 1. **Backend:**
-
-   - Testar extração de `accountNumber` em diferentes cenários
-   - Testar criação dinâmica de planilhas
-   - Testar leitura de credenciais de variável de ambiente (base64 e JSON)
-   - Testar escrita no Google Sheets com retry
-   - Testar validação de whitelist
-   - Testar tratamento de erros (variável não configurada, credenciais inválidas, APIs não habilitadas, rate limits)
-
+  - Testar extração de `accountNumber` em diferentes cenários
+  - Testar criação dinâmica de planilhas
+  - Testar leitura de credenciais de variável de ambiente (base64 e JSON)
+  - Testar escrita no Google Sheets com retry
+  - Testar validação de whitelist
+  - Testar tratamento de erros (variável não configurada, credenciais inválidas, APIs não habilitadas, rate limits)
 2. **Frontend:**
-
-   - Testar renderização condicional do botão
-   - Testar modal de confirmação (sem formulário complexo)
-   - Testar campo opcional de nome personalizado
-   - Testar exibição de link da planilha após criação
-   - Testar feedback visual (loading, success, error)
+  - Testar renderização condicional do botão
+  - Testar modal de confirmação (sem formulário complexo)
+  - Testar campo opcional de nome personalizado
+  - Testar exibição de link da planilha após criação
+  - Testar feedback visual (loading, success, error)
 
 ## Considerações
 
 1. **Rate Limits:**
-
-   - Google Sheets: ~60 requests/segundo
-   - Com 4500 arquivos: ~75 segundos mínimo
-   - Retry com backoff garante resiliência
-
+  - Google Sheets: ~60 requests/segundo
+  - Com 4500 arquivos: ~75 segundos mínimo
+  - Retry com backoff garante resiliência
 2. **Performance:**
-
-   - Escrita assíncrona não bloqueia processamento
-   - Cache de serviços Google reduz overhead
-   - Thread pool evita bloqueio do event loop
-
+  - Escrita assíncrona não bloqueia processamento
+  - Cache de serviços Google reduz overhead
+  - Thread pool evita bloqueio do event loop
 3. **Manutenção:**
-
-   - Documentar processo de criação de Service Account
-   - Documentar como habilitar APIs (Sheets + Drive)
-   - Documentar como configurar variável de ambiente `GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY`
-   - Documentar como adicionar usuários à whitelist
-   - Considerar limpeza de configurações e planilhas antigas
-   - Considerar política de retenção de planilhas criadas
-   - Considerar rotação de credenciais (atualizar variável de ambiente)
+  - Documentar processo de criação de Service Account
+  - Documentar como habilitar APIs (Sheets + Drive)
+  - Documentar como configurar variável de ambiente `GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY`
+  - Documentar como adicionar usuários à whitelist
+  - Considerar limpeza de configurações e planilhas antigas
+  - Considerar política de retenção de planilhas criadas
+  - Considerar rotação de credenciais (atualizar variável de ambiente)
 
 ## Ordem de Implementação
 
@@ -584,3 +565,4 @@ GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY='{"type":"service_account",...}'
 3. **Controle:** Uma Service Account gerenciada centralmente
 4. **Manutenção:** Atualização em um único lugar (variável de ambiente)
 5. **Consistência:** Todas as planilhas criadas com as mesmas permissões
+
