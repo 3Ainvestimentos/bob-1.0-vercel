@@ -78,6 +78,7 @@ def _create_spreadsheet_sync(
     """
     Cria planilha via Drive API dentro do Shared Drive e configura headers via Sheets API.
     Retorna spreadsheet_id, spreadsheet_url, spreadsheet_name, sheet_name.
+    Usa retry com backoff em falhas de rede transitórias (Connection reset, etc.).
     """
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     short_id = job_id[:8] if len(job_id) > 8 else job_id
@@ -88,48 +89,64 @@ def _create_spreadsheet_sync(
         raise ValueError("GOOGLE_SHEETS_SHARED_DRIVE_ID não configurada")
 
     drive_service = _get_drive_service()
+    sheets_service = _get_sheets_service()
+
     file_metadata = {
         "name": spreadsheet_name,
         "mimeType": "application/vnd.google-apps.spreadsheet",
         "parents": [SHARED_DRIVE_ID],
     }
-    created_file = drive_service.files().create(
-        body=file_metadata,
-        fields="id,webViewLink",
-        supportsAllDrives=True,
-    ).execute()
 
-    spreadsheet_id = created_file["id"]
-    spreadsheet_url = created_file.get(
-        "webViewLink",
-        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}",
-    )
+    max_attempts = 3
+    transient_errors = (ConnectionResetError, ConnectionError, TimeoutError, OSError)
 
-    sheets_service = _get_sheets_service()
+    for attempt in range(max_attempts):
+        try:
+            created_file = drive_service.files().create(
+                body=file_metadata,
+                fields="id,webViewLink",
+                supportsAllDrives=True,
+            ).execute()
 
-    sheets_service.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheet_id,
-        body={"requests": [{"updateSheetProperties": {
-            "properties": {"sheetId": 0, "title": sheet_name},
-            "fields": "title",
-        }}]},
-    ).execute()
+            spreadsheet_id = created_file["id"]
+            spreadsheet_url = created_file.get(
+                "webViewLink",
+                f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}",
+            )
 
-    sheets_service.spreadsheets().values().update(
-        spreadsheetId=spreadsheet_id,
-        range=f"{sheet_name}!A1:B1",
-        valueInputOption="RAW",
-        body={"values": [SHEET_HEADERS]},
-    ).execute()
+            sheets_service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"requests": [{"updateSheetProperties": {
+                    "properties": {"sheetId": 0, "title": sheet_name},
+                    "fields": "title",
+                }}]},
+            ).execute()
 
-    logger.info("Planilha criada no Shared Drive: %s (%s)", spreadsheet_name, spreadsheet_id)
+            sheets_service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=f"{sheet_name}!A1:B1",
+                valueInputOption="RAW",
+                body={"values": [SHEET_HEADERS]},
+            ).execute()
 
-    return {
-        "spreadsheet_id": spreadsheet_id,
-        "spreadsheet_url": spreadsheet_url,
-        "spreadsheet_name": spreadsheet_name,
-        "sheet_name": sheet_name,
-    }
+            logger.info("Planilha criada no Shared Drive: %s (%s)", spreadsheet_name, spreadsheet_id)
+
+            return {
+                "spreadsheet_id": spreadsheet_id,
+                "spreadsheet_url": spreadsheet_url,
+                "spreadsheet_name": spreadsheet_name,
+                "sheet_name": sheet_name,
+            }
+        except transient_errors as e:
+            if attempt < max_attempts - 1:
+                wait = 2 ** (attempt + 1)
+                logger.warning(
+                    "Falha de rede ao criar planilha (tentativa %d/%d), retry em %ds: %s",
+                    attempt + 1, max_attempts, wait, e,
+                )
+                time.sleep(wait)
+            else:
+                raise
 
 
 async def create_spreadsheet_for_job(
