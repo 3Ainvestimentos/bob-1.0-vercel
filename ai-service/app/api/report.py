@@ -1,9 +1,11 @@
 """
 Endpoints para análise de relatórios XP.
 """
-from typing import Dict, Any, List
+import asyncio
 import json
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Request, Query
+from typing import Any, Dict, List
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
 from app.models.requests import (    
@@ -33,9 +35,9 @@ import uuid
 from app.services.metrics import record_metric_call, record_ultra_batch_start, record_ultra_batch_complete
 from app.services.digital_whitelist import is_digital
 from app.services.report_analyzer.google_sheets_service import (
+    backfill_sheets_from_results_sync,
     create_spreadsheet_for_job,
     get_sheets_config,
-    backfill_sheets_from_results,
 )
 
 
@@ -582,7 +584,8 @@ async def get_metrics_summary(
 async def check_whitelist(body: CheckWhitelistRequest):
     """Verifica se o usuário pertence à lista digital (retorna apenas booleano)."""
     try:
-        authorized = is_digital(body.user_id)
+        loop = asyncio.get_running_loop()
+        authorized = await loop.run_in_executor(None, is_digital, body.user_id)
         return {"authorized": authorized}
     except Exception as e:
         logger.error("Erro ao verificar whitelist: %s", e, exc_info=True)
@@ -590,12 +593,15 @@ async def check_whitelist(body: CheckWhitelistRequest):
 
 
 @router.post("/ultra-batch/configure-sheets")
-async def configure_sheets(body: ConfigureSheetsRequest):
+async def configure_sheets(body: ConfigureSheetsRequest, background_tasks: BackgroundTasks):
     """
     Cria planilha Google Sheets para um job de ultra batch.
     Apenas usuários na lista digital podem configurar.
+    Backfill roda em background; resposta retorna com backfill_status "pending".
     """
-    if not is_digital(body.user_id):
+    loop = asyncio.get_running_loop()
+    authorized = await loop.run_in_executor(None, is_digital, body.user_id)
+    if not authorized:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
     db = get_firestore_client()
@@ -607,6 +613,8 @@ async def configure_sheets(body: ConfigureSheetsRequest):
 
     existing = get_sheets_config(body.job_id)
     if existing and existing.get("enabled"):
+        if existing.get("backfill_status") in ("failed", "pending"):
+            background_tasks.add_task(backfill_sheets_from_results_sync, body.job_id)
         return {
             "success": True,
             "spreadsheet_id": existing["spreadsheet_id"],
@@ -618,13 +626,13 @@ async def configure_sheets(body: ConfigureSheetsRequest):
         result = await create_spreadsheet_for_job(
             body.job_id, body.user_id, body.custom_name
         )
-        backfilled = await backfill_sheets_from_results(body.job_id)
+        background_tasks.add_task(backfill_sheets_from_results_sync, body.job_id)
         return {
             "success": True,
             "spreadsheet_id": result["spreadsheet_id"],
             "spreadsheet_url": result["spreadsheet_url"],
             "spreadsheet_name": result["spreadsheet_name"],
-            "backfilled_rows": backfilled,
+            "backfill_status": "pending",
         }
     except ValueError as ve:
         raise HTTPException(status_code=500, detail=str(ve))
@@ -639,13 +647,18 @@ async def get_sheets_config_endpoint(job_id: str):
     config = get_sheets_config(job_id)
     if not config:
         return {"configured": False}
-    return {
+    out: Dict[str, Any] = {
         "configured": True,
         "spreadsheet_id": config.get("spreadsheet_id"),
         "spreadsheet_url": config.get("spreadsheet_url"),
         "spreadsheet_name": config.get("spreadsheet_name", ""),
         "enabled": config.get("enabled", False),
     }
+    if "backfill_status" in config:
+        out["backfill_status"] = config["backfill_status"]
+    if "backfilled_rows" in config:
+        out["backfilled_rows"] = config["backfilled_rows"]
+    return out
 
 
 # ============= STREAMING ENDPOINTS (SSE) =============

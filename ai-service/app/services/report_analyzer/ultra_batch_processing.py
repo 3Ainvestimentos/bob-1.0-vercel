@@ -1,17 +1,28 @@
 """
 Serviço de processamento ultra batch para relatórios XP.
+Escrita no Sheets: função sync em run_in_executor sem await (fire-and-forget);
+buffer por job (50 linhas ou 2s) para não saturar o thread pool.
 """
 import asyncio
 import base64
+import gc
 import json
 import time
-import gc
+from collections import defaultdict
 from typing import AsyncGenerator
+
 from firebase_admin import firestore
+
 from app.config import get_firestore_client, get_firebase_bucket
 from app.services.report_analyzer.batch_processing import process_batch_reports
-from app.services.report_analyzer.google_sheets_service import write_ultra_batch_result_to_sheets
+from app.services.report_analyzer.google_sheets_service import (
+    batch_flush_rows_to_sheets_sync,
+    write_ultra_batch_result_to_sheets_sync,
+)
 from app.services.metrics import record_ultra_batch_complete
+
+SHEETS_BUFFER_SIZE = 50
+SHEETS_BUFFER_SECONDS = 2.0
 
 async def read_file_from_gcs(storage_path: str) -> bytes:
     """
@@ -66,9 +77,23 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) 
     """
     print(f"[ULTRA-BATCH] Iniciando processamento STREAM para job {job_id}, batch {batch_id}")
     start_time = time.time()
-    
-    # Lista para coletar storage_paths para limpeza
-    storage_paths_to_delete = []
+    loop = asyncio.get_running_loop()
+    sheets_buffer: dict[str, list[tuple[str, str, int]]] = defaultdict(list)
+    sheets_last_flush: dict[str, float] = {job_id: time.monotonic()}
+
+    def flush_sheets_buffer(jid: str, force: bool = False) -> None:
+        buf = sheets_buffer.get(jid, [])
+        if not buf:
+            return
+        if not force and len(buf) < SHEETS_BUFFER_SIZE:
+            if jid in sheets_last_flush and (time.monotonic() - sheets_last_flush[jid]) < SHEETS_BUFFER_SECONDS:
+                return
+        rows = buf.copy()
+        sheets_buffer[jid] = []
+        sheets_last_flush[jid] = time.monotonic()
+        loop.run_in_executor(None, batch_flush_rows_to_sheets_sync, jid, rows)
+
+    storage_paths_to_delete: list[str] = []
     
     try:
         # 1. Obter cliente Firestore
@@ -197,7 +222,8 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) 
                         "success": False,
                         "final_message": None,
                         "error": error_msg,
-                        "processedAt": firestore.SERVER_TIMESTAMP
+                        "processedAt": firestore.SERVER_TIMESTAMP,
+                        "processedAt_epoch_ms": int(time.time() * 1000),
                     })
                     
                     processed_files += 1
@@ -239,11 +265,12 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) 
                             
                         global_file_index = current_chunk_offset + relative_index
                         
-                        # Preparar dados
+                        processed_at_epoch_ms = int(time.time() * 1000)
                         result_data = {
                             "fileName": file_name,
                             "success": result.get("success", False),
-                            "processedAt": firestore.SERVER_TIMESTAMP
+                            "processedAt": firestore.SERVER_TIMESTAMP,
+                            "processedAt_epoch_ms": processed_at_epoch_ms,
                         }
                         
                         if result.get("success"):
@@ -259,16 +286,13 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) 
                             success_count += 1
 
                             if account_number and result_data.get("final_message"):
-                                try:
-                                    asyncio.create_task(
-                                        write_ultra_batch_result_to_sheets(
-                                            job_id,
-                                            account_number,
-                                            result_data["final_message"],
-                                        )
-                                    )
-                                except Exception as sheets_err:
-                                    print(f"[ULTRA-BATCH] Erro ao agendar Sheets: {sheets_err}")
+                                sheets_buffer[job_id].append(
+                                    (account_number, result_data["final_message"], processed_at_epoch_ms)
+                                )
+                                flush_sheets_buffer(
+                                    job_id,
+                                    force=(len(sheets_buffer[job_id]) >= SHEETS_BUFFER_SIZE),
+                                )
 
                             yield f"data: {json.dumps({
                                 'event': 'file_completed',
@@ -326,7 +350,8 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) 
                                 "accountNumber": "",
                                 "success": False,
                                 "error": error_msg,
-                                "processedAt": firestore.SERVER_TIMESTAMP
+                                "processedAt": firestore.SERVER_TIMESTAMP,
+                                "processedAt_epoch_ms": int(time.time() * 1000),
                             })
                             processed_files += 1
                             failure_count += 1
@@ -360,7 +385,9 @@ async def process_ultra_batch_reports(batch_id: str, user_id: str, job_id: str) 
         # =========================================================================================
         # FIM DO LOOP DE CHUNKS - PROCESSO DE CONCLUSÃO NORMAL
         # =========================================================================================
-        
+
+        flush_sheets_buffer(job_id, force=True)
+
         # 6. Marcar job como concluído
         job_ref.update({
             "status": "completed",
