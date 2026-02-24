@@ -34,6 +34,21 @@ _sheets_service_cache: Any = None
 _drive_service_cache: Any = None
 
 
+def _limpar_resposta_para_sheets(text: Optional[str]) -> str:
+    """
+    Remove aspas triplas iniciais e finais da mensagem antes de gravar na planilha.
+    Retorna string vazia se text for None ou vazio.
+    """
+    if not text:
+        return ""
+    s = text.strip()
+    if s.startswith("'''"):
+        s = s[3:].lstrip()
+    if s.endswith("'''"):
+        s = s[:-3].rstrip()
+    return s
+
+
 def _get_credentials() -> Credentials:
     creds_dict = get_google_sheets_credentials()
     return Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
@@ -181,13 +196,14 @@ async def write_ultra_batch_result_to_sheets(
         spreadsheet_id = config["spreadsheet_id"]
         sheet_name = config.get("sheet_name", "Resultados")
 
+        message_limpa = _limpar_resposta_para_sheets(final_message)
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
             _write_row_sync,
             spreadsheet_id,
             sheet_name,
-            [account_number, final_message],
+            [account_number, message_limpa],
         )
         logger.debug("Linha escrita no Sheets job=%s account=%s", job_id, account_number)
 
@@ -225,7 +241,8 @@ async def backfill_sheets_from_results(job_id: str) -> int:
         account = data.get("accountNumber", "")
         message = data.get("final_message", "")
         if account and message:
-            rows.append([account, message])
+            message_limpa = _limpar_resposta_para_sheets(message)
+            rows.append([account, message_limpa])
 
     if not rows:
         return 0
