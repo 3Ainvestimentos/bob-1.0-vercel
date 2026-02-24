@@ -39,7 +39,8 @@ SHARED_DRIVE_ID = os.getenv("GOOGLE_SHEETS_SHARED_DRIVE_ID", "")
 
 def _limpar_resposta_para_sheets(text: Optional[str]) -> str:
     """
-    Remove delimitadores triplos iniciais e finais (''' ou ```) da mensagem antes de gravar na planilha.
+    Prepara a mensagem para gravação na planilha: remove delimitadores triplos (''' ou ```),
+    e asteriscos (*) usados para negrito no WhatsApp, deixando o texto cru para envio por email.
     Retorna string vazia se text for None ou vazio.
     """
     if not text:
@@ -53,6 +54,7 @@ def _limpar_resposta_para_sheets(text: Optional[str]) -> str:
         if s.endswith(suffix):
             s = s[: -len(suffix)].rstrip()
             break
+    s = s.replace("*", "")
     return s
 
 
