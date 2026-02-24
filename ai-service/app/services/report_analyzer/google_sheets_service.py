@@ -36,16 +36,20 @@ _drive_service_cache: Any = None
 
 def _limpar_resposta_para_sheets(text: Optional[str]) -> str:
     """
-    Remove aspas triplas iniciais e finais da mensagem antes de gravar na planilha.
+    Remove delimitadores triplos iniciais e finais (''' ou ```) da mensagem antes de gravar na planilha.
     Retorna string vazia se text for None ou vazio.
     """
     if not text:
         return ""
     s = text.strip()
-    if s.startswith("'''"):
-        s = s[3:].lstrip()
-    if s.endswith("'''"):
-        s = s[:-3].rstrip()
+    for prefix in ("'''", "```"):
+        if s.startswith(prefix):
+            s = s[len(prefix) :].lstrip()
+            break
+    for suffix in ("'''", "```"):
+        if s.endswith(suffix):
+            s = s[: -len(suffix)].rstrip()
+            break
     return s
 
 

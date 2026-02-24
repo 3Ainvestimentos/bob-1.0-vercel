@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node ./node_modules/next/dist/bin/next dev --turbopack",
+    "dev:local": "NEXT_PUBLIC_PYTHON_SERVICE_URL=http://localhost:8080 node ./node_modules/next/dist/bin/next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
