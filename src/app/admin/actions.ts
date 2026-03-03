@@ -9,6 +9,7 @@ import { getUsersWithRolesService, getPreRegisteredUsersService, preRegisterUser
 import { getMaintenanceModeService, setMaintenanceModeService, runApiHealthCheckService,} from './lib/system_service';
 import { getLegalIssueAlertsService, getFeedbacksService} from './lib/content_service';
 import { fetchReportAnalyzerMetricsSummary } from './lib/report_analyzer_metrics_service';
+import { getAuthenticatedFirestoreAdmin } from '@/lib/server/firebase';
 
 
 // Esta é a única função que o seu front-end (page.tsx) irá importar.
@@ -164,5 +165,68 @@ export async function getReportAnalyzerMetricsSummary(fromMonth: string, toMonth
     } catch (e: any) {
         console.error('Error in action getReportAnalyzerMetricsSummary:', e);
         return { error: e?.message || 'Não foi possível carregar as métricas do Report Analyzer.' };
+    }
+}
+
+export async function getTotalAssessors(): Promise<{ value: number } | { error: string }> {
+    try {
+        const db = await getAuthenticatedFirestoreAdmin();
+        const doc = await db.collection('config').doc('metrics_config').get();
+        const value = doc.exists ? (doc.data()?.total_assessors ?? 139) : 139;
+        return { value };
+    } catch (e: any) {
+        return { error: e?.message ?? 'Erro ao ler total_assessors' };
+    }
+}
+
+export async function updateTotalAssessors(
+    value: number
+): Promise<{ success: boolean; error?: string }> {
+    if (!Number.isInteger(value) || value <= 0) {
+        return { success: false, error: 'Valor deve ser um inteiro positivo.' };
+    }
+    try {
+        const db = await getAuthenticatedFirestoreAdmin();
+        await db.collection('config').doc('metrics_config').set(
+            { total_assessors: value },
+            { merge: true }
+        );
+        return { success: true };
+    } catch (e: any) {
+        console.error('Erro em updateTotalAssessors:', e);
+        return { success: false, error: e?.message ?? 'Erro ao salvar.' };
+    }
+}
+
+export async function triggerCurrentMonthAggregation(): Promise<{ success: boolean; error?: string }> {
+    const url = process.env.METRICS_AGGREGATOR_URL;
+    const secret = process.env.METRICS_AGGREGATOR_SECRET;
+
+    if (!url) {
+        return { success: false, error: 'METRICS_AGGREGATOR_URL não configurado.' };
+    }
+
+    const now = new Date();
+    const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(secret ? { 'X-Scheduler-Secret': secret } : {}),
+            },
+            body: JSON.stringify({ backfill_months: [currentMonth] }),
+        });
+
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            return { success: false, error: `Aggregator retornou ${res.status}: ${text}` };
+        }
+
+        return { success: true };
+    } catch (e: any) {
+        console.error('Erro em triggerCurrentMonthAggregation:', e);
+        return { success: false, error: e?.message ?? 'Falha ao acionar o aggregator.' };
     }
 }

@@ -23,7 +23,7 @@ import {
   Loader2,
   Users,
   BarChart2,
-  Activity,
+  Repeat,
   CheckCircle2,
   Zap,
   TrendingUp,
@@ -38,13 +38,13 @@ import {
   Line,
   LineChart,
 } from 'recharts';
-import { getReportAnalyzerMetricsSummary } from '../actions';
+import { getReportAnalyzerMetricsSummary, getTotalAssessors, updateTotalAssessors, triggerCurrentMonthAggregation } from '../actions';
 import type { MetricsSummaryItem } from '../lib/report_analyzer_metrics_service';
 
 const TARGETS = {
   adoption_mau_percent: 30,
   volume_total_analyses: 10_000,
-  intensity_analyses_per_assessor: 30,
+  persistence_3m_streak: 30,
   quality_file_success: 90,
   quality_jobs_completed: 98,
   scale_ultra_batch: 30,
@@ -75,6 +75,11 @@ export default function ReportAnalyzerMetricsTab() {
   const [summaries, setSummaries] = useState<MetricsSummaryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalAssessors, setTotalAssessors] = useState<number>(139);
+  const [editingAssessors, setEditingAssessors] = useState<number>(139);
+  const [savingAssessors, setSavingAssessors] = useState(false);
+  const [assessorsError, setAssessorsError] = useState<string | null>(null);
+  const [assessorsStatus, setAssessorsStatus] = useState<string | null>(null);
 
   const fetchData = useCallback(async (from: string, to: string) => {
     setIsLoading(true);
@@ -99,10 +104,43 @@ export default function ReportAnalyzerMetricsTab() {
 
   useEffect(() => {
     fetchData(fromMonth, toMonth);
+    getTotalAssessors().then((res) => {
+      if ('value' in res) {
+        setTotalAssessors(res.value);
+        setEditingAssessors(res.value);
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = () => {
+    fetchData(fromMonth, toMonth);
+  };
+
+  const handleSaveAssessors = async () => {
+    setSavingAssessors(true);
+    setAssessorsError(null);
+    setAssessorsStatus(null);
+
+    const saveRes = await updateTotalAssessors(editingAssessors);
+    if (!saveRes.success) {
+      setAssessorsError(saveRes.error ?? 'Erro ao salvar.');
+      setSavingAssessors(false);
+      return;
+    }
+
+    setTotalAssessors(editingAssessors);
+    setAssessorsStatus('Salvando e recalculando métricas…');
+
+    const triggerRes = await triggerCurrentMonthAggregation();
+    if (!triggerRes.success) {
+      setAssessorsError(`Valor salvo, mas o recálculo falhou: ${triggerRes.error}`);
+      setSavingAssessors(false);
+      return;
+    }
+
+    setAssessorsStatus(null);
+    setSavingAssessors(false);
     fetchData(fromMonth, toMonth);
   };
 
@@ -137,7 +175,7 @@ export default function ReportAnalyzerMetricsTab() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row items-end gap-4">
+          <div className="flex flex-col sm:flex-row items-end gap-4 flex-wrap">
             <div className="space-y-2">
               <Label htmlFor="ra-from-month">De</Label>
               <Input
@@ -157,6 +195,40 @@ export default function ReportAnalyzerMetricsTab() {
               />
             </div>
             <Button onClick={handleSearch}>Buscar</Button>
+            <div className="border-l pl-4 space-y-2">
+              <Label htmlFor="total-assessors">Total de Assessores</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="total-assessors"
+                  type="number"
+                  min={1}
+                  value={editingAssessors}
+                  onChange={(e) => setEditingAssessors(Number(e.target.value))}
+                  className="w-24"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={savingAssessors || editingAssessors === totalAssessors}
+                  onClick={handleSaveAssessors}
+                >
+                  {savingAssessors ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Salvar'
+                  )}
+                </Button>
+              </div>
+              {assessorsStatus && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {assessorsStatus}
+                </p>
+              )}
+              {assessorsError && (
+                <p className="text-xs text-destructive">{assessorsError}</p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -213,12 +285,12 @@ export default function ReportAnalyzerMetricsTab() {
                   className={cn(
                     'text-2xl font-bold',
                     metricColor(
-                      summaryForCards.volume.total_analyses,
+                      summaryForCards.volume?.total_analyses ?? 0,
                       TARGETS.volume_total_analyses
                     )
                   )}
                 >
-                  {summaryForCards.volume.total_analyses.toLocaleString()}
+                  {(summaryForCards.volume?.total_analyses ?? 0).toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   análises/mês | Meta:{' '}
@@ -229,23 +301,25 @@ export default function ReportAnalyzerMetricsTab() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Intensidade</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Persistência de Uso</CardTitle>
+                <Repeat className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div
                   className={cn(
                     'text-2xl font-bold',
-                    metricColor(
-                      summaryForCards.intensity.analyses_per_assessor_avg,
-                      TARGETS.intensity_analyses_per_assessor
-                    )
+                    summaryForCards.persistence
+                      ? metricColor(
+                          summaryForCards.persistence.users_3m_streak,
+                          TARGETS.persistence_3m_streak
+                        )
+                      : 'text-muted-foreground'
                   )}
                 >
-                  {summaryForCards.intensity.analyses_per_assessor_avg.toFixed(1)}
+                  {summaryForCards.persistence?.users_3m_streak ?? '—'}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  por assessor | Meta: ≥ {TARGETS.intensity_analyses_per_assessor}
+                  usuários 3 meses seguidos | Meta: ≥ {TARGETS.persistence_3m_streak}
                 </p>
               </CardContent>
             </Card>
@@ -342,7 +416,7 @@ export default function ReportAnalyzerMetricsTab() {
                       <TableHead>Mês</TableHead>
                       <TableHead className="text-right">MAU %</TableHead>
                       <TableHead className="text-right">Volume</TableHead>
-                      <TableHead className="text-right">Intensidade</TableHead>
+                      <TableHead className="text-right">Persistência</TableHead>
                       <TableHead className="text-right">
                         Qualidade Arquivo %
                       </TableHead>
@@ -363,7 +437,7 @@ export default function ReportAnalyzerMetricsTab() {
                         {TARGETS.volume_total_analyses.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right">
-                        ≥ {TARGETS.intensity_analyses_per_assessor}
+                        ≥ {TARGETS.persistence_3m_streak}
                       </TableCell>
                       <TableCell className="text-right">
                         ≥ {TARGETS.quality_file_success}%
@@ -394,23 +468,25 @@ export default function ReportAnalyzerMetricsTab() {
                           className={cn(
                             'text-right',
                             metricColor(
-                              s.volume.total_analyses,
+                              s.volume?.total_analyses ?? 0,
                               TARGETS.volume_total_analyses
                             )
                           )}
                         >
-                          {s.volume.total_analyses.toLocaleString()}
+                          {(s.volume?.total_analyses ?? 0).toLocaleString()}
                         </TableCell>
                         <TableCell
                           className={cn(
                             'text-right',
-                            metricColor(
-                              s.intensity.analyses_per_assessor_avg,
-                              TARGETS.intensity_analyses_per_assessor
-                            )
+                            s.persistence
+                              ? metricColor(
+                                  s.persistence.users_3m_streak,
+                                  TARGETS.persistence_3m_streak
+                                )
+                              : 'text-muted-foreground'
                           )}
                         >
-                          {s.intensity.analyses_per_assessor_avg.toFixed(1)}
+                          {s.persistence?.users_3m_streak ?? '—'}
                         </TableCell>
                         <TableCell
                           className={cn(
@@ -535,4 +611,3 @@ export default function ReportAnalyzerMetricsTab() {
     </div>
   );
 }
-

@@ -1,10 +1,14 @@
 import os
 from typing import Final
 
-TOTAL_ASSESSORS: Final[int] = 213
+DEFAULT_TOTAL_ASSESSORS: Final[int] = 139
 COLLECTION_METRICS: Final[str] = "metrics"
 COLLECTION_METRICS_SUMMARY: Final[str] = "metrics_summary"
 COLLECTION_ULTRA_BATCH_JOBS: Final[str] = "ultra_batch_jobs"
+COLLECTION_CONFIG: Final[str] = "config"
+COLLECTION_USERS: Final[str] = "users"
+DOC_METRICS_CONFIG: Final[str] = "metrics_config"
+DOC_DIGITAL_TEAM: Final[str] = "digital_team"
 SUBDOC_USERS: Final[str] = "users"
 SUBDOC_TOTAL: Final[str] = "total"
 DOC_TOTAL: Final[str] = "total"

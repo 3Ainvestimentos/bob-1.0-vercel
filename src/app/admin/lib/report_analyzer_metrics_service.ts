@@ -1,14 +1,27 @@
+export interface MetricsSummaryPersistence {
+  users_3m_streak: number;
+}
+
+export interface MetricsSummaryDigital {
+  mau: number;
+  mau_percent: number;
+  total_analyses: number;
+  users_3m_streak: number;
+}
+
 export interface MetricsSummaryItem {
   month: string;
   closed: boolean;
   adoption: { mau: number; mau_percent: number };
-  volume: { total_analyses: number };
-  intensity: { analyses_per_assessor_avg: number };
+  volume?: { total_analyses: number };
+  persistence?: MetricsSummaryPersistence;
+  intensity?: { analyses_per_assessor_avg: number };
   quality: {
     ultra_batch_success_rate_pct: number;
     ultra_batch_jobs_completed_rate_pct: number;
   };
   scale: { pct_volume_ultra_batch: number };
+  digital?: MetricsSummaryDigital;
   updated_at?: string;
 }
 

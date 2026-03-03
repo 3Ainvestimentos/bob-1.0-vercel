@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ReportAnalyzerMetricsTab from './components/ReportAnalyzerMetricsTab';
+import DigitalMetricsTab from './components/DigitalMetricsTab';
 
 
 interface AdminInsights {
@@ -1076,7 +1077,18 @@ export default function AdminPage() {
               </Tabs>
             </TabsContent>
             <TabsContent value="report-analyzer" className="mt-4">
-                <ReportAnalyzerMetricsTab />
+                <Tabs defaultValue="geral" className="w-full">
+                    <TabsList>
+                        <TabsTrigger value="geral">Análise Geral</TabsTrigger>
+                        <TabsTrigger value="digital">Análise Digital</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="geral" className="mt-4">
+                        <ReportAnalyzerMetricsTab />
+                    </TabsContent>
+                    <TabsContent value="digital" className="mt-4">
+                        <DigitalMetricsTab />
+                    </TabsContent>
+                </Tabs>
             </TabsContent>
             <TabsContent value="users" className="mt-4 space-y-8">
                  <Card>
