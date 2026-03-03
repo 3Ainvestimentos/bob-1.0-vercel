@@ -206,17 +206,15 @@ export async function triggerCurrentMonthAggregation(): Promise<{ success: boole
         return { success: false, error: 'METRICS_AGGREGATOR_URL não configurado.' };
     }
 
-    const now = new Date();
-    const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-
     try {
+        // POST sem body — usa run_monthly_aggregation_for_scheduler,
+        // que define closed=False para o mês atual (comportamento correto)
         const res = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 ...(secret ? { 'X-Scheduler-Secret': secret } : {}),
             },
-            body: JSON.stringify({ backfill_months: [currentMonth] }),
         });
 
         if (!res.ok) {
