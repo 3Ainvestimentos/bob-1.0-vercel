@@ -219,8 +219,8 @@ XP_MESSAGE_FORMAT_PROMPT_AUTO = """
 
       🌎 *Cenário Econômico de [mês de referência]:*
 
-      - Cenário Nacional: Em janeiro de 2026, no Brasil, os mercados foram puxados pela forte entrada de capital estrangeiro: o Ibovespa subiu 12,56% no mês, registrando o melhor janeiro desde 2006. No câmbio, o real se fortaleceu, com o dólar chegando a fechar abaixo de R$ 5,20. A prévia da inflação desacelerou para 0,20% e ficou em 4,50% em 12 meses, enquanto o Copom manteve a Selic em 15% e sinalizou que pode iniciar cortes na reunião seguinte (março).
-      - Cenário Internacional: No mundo, o Fed manteve os juros em 3,50%–3,75% (após cortes em 2025), preservando a leitura de política ainda restritiva. Em paralelo, houve sinais de rotação de portfólio e busca por diversificação: ETFs de ações de emergentes concentraram entradas relevantes no mês, enquanto produtos focados em EUA registraram saídas em alguns recortes. Nas commodities, o mês foi dominado pela volatilidade alta de ouro e prata. Ambos finalizaram o mês em alta relevante, mas não antes de ajustes no final de mês.
+      - Cenário Nacional: Em fevereiro, o Ibovespa subiu 4%, sustentado por um fluxo de capital estrangeiro superior a R$ 15 bilhões no mês — tendência que vem se consolidando desde o início do ano. Na contramão, o IPCA-15 acelerou para 0,84%, ante 0,20% em janeiro, mantendo o Banco Central em postura cautelosa na condução dos juros.
+      - Cenário Internacional: O Federal Reserve manteve os juros em 3,50%–3,75%, enquanto a confiança do consumidor americano caiu ao menor nível desde 2014. O ambiente de incerteza com tarifas e câmbio pressionou bolsas como Nasdaq e o euro. O Bitcoin, que já vinha corrigindo desde o pico acima de US$ 126 mil em outubro de 2025, intensificou o movimento em fevereiro e oscilou em torno dos US$ 68 mil — queda acumulada de cerca de 45%, reflexo do menor apetite por risco global.
       ```
 
       **IMPORTANTE: Comece com ``` e termine com ```**
@@ -476,8 +476,8 @@ Olá, [N° do Cliente]!
 
 🌎 *Cenário Econômico de [mês de referência]:*
 
-- Cenário Nacional: Em janeiro de 2026, no Brasil, os mercados foram puxados pela forte entrada de capital estrangeiro: o Ibovespa subiu 12,56% no mês, registrando o melhor janeiro desde 2006. No câmbio, o real se fortaleceu, com o dólar chegando a fechar abaixo de R$ 5,20. A prévia da inflação desacelerou para 0,20% e ficou em 4,50% em 12 meses, enquanto o Copom manteve a Selic em 15% e sinalizou que pode iniciar cortes na reunião seguinte (março).
-- Cenário Internacional: No mundo, o Fed manteve os juros em 3,50%–3,75% (após cortes em 2025), preservando a leitura de política ainda restritiva. Em paralelo, houve sinais de rotação de portfólio e busca por diversificação: ETFs de ações de emergentes concentraram entradas relevantes no mês, enquanto produtos focados em EUA registraram saídas em alguns recortes. Nas commodities, o mês foi dominado pela volatilidade alta de ouro e prata. Ambos finalizaram o mês em alta relevante, mas não antes de ajustes no final de mês.
+- Cenário Nacional: Em fevereiro, o Ibovespa subiu 4%, sustentado por um fluxo de capital estrangeiro superior a R$ 15 bilhões no mês — tendência que vem se consolidando desde o início do ano. Na contramão, o IPCA-15 acelerou para 0,84%, ante 0,20% em janeiro, mantendo o Banco Central em postura cautelosa na condução dos juros.
+- Cenário Internacional: O Federal Reserve manteve os juros em 3,50%–3,75%, enquanto a confiança do consumidor americano caiu ao menor nível desde 2014. O ambiente de incerteza com tarifas e câmbio pressionou bolsas como Nasdaq e o euro. O Bitcoin, que já vinha corrigindo desde o pico acima de US$ 126 mil em outubro de 2025, intensificou o movimento em fevereiro e oscilou em torno dos US$ 68 mil — queda acumulada de cerca de 45%, reflexo do menor apetite por risco global.
 ```
 
 **REGRAS IMPORTANTES:**
