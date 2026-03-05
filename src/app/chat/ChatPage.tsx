@@ -77,7 +77,7 @@ import React, {
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { FaqDialog } from '@/components/chat/FaqDialog';
-import { FileUp } from 'lucide-react';
+import { FileUp, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AttachedFile, UserRole, Message } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -2377,7 +2377,11 @@ const handleUltraBatchResults = async (results: any[], totalFiles: number, jobId
 
   if (authLoading || isCheckingTerms) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
+      <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-background">
+        <Loader2
+          className="h-12 w-12 animate-spin"
+          style={{ color: 'hsl(170, 60%, 50%)' }}
+        />
         <p className="text-lg text-muted-foreground">Carregando Bob 1.0...</p>
       </div>
     );

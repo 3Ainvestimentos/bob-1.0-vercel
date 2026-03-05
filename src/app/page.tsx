@@ -13,7 +13,7 @@ import { getMaintenanceMode } from './admin/actions';
 import { validateAndOnboardUser } from './actions';
 import { doc, getDoc } from 'firebase/firestore';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
-import { Wrench } from 'lucide-react';
+import { Loader2, Wrench } from 'lucide-react';
 
 
 export default function LoginPage() {
@@ -103,8 +103,12 @@ export default function LoginPage() {
     
     if (loading || isCheckingMaintenance) {
         return (
-            <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
-                <p>Carregando Bob 1.0...</p>
+            <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-background text-foreground">
+                <Loader2
+                    className="h-12 w-12 animate-spin"
+                    style={{ color: 'hsl(170, 60%, 50%)' }}
+                />
+                <p className="text-lg text-muted-foreground">Carregando Bob 1.0...</p>
             </div>
         );
     }
